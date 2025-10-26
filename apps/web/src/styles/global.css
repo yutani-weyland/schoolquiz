@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Typography + variables */
+:root {
+  --app-font: "Atkinson Hyperlegible", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans";
+  --round-1: #F4A261;
+  --round-2: #7FB3FF;
+  --round-3: #F7A8C0;
+  --round-4: #9EE6B4;
+  --round-5: #F7D57A;
+}
+
+html[data-font="dyslexic"] { 
+  --app-font: "OpenDyslexic", var(--app-font); 
+}
+
+html { 
+  font-family: var(--app-font); 
+}
+
+.prose { 
+  max-width: 70ch; 
+}
+
+[data-motion="off"] * {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}

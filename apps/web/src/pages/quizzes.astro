@@ -1,0 +1,58 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { Card } from "@schoolquiz/ui";
+---
+
+<Layout title="Browse Quizzes - SchoolQuiz">
+  <main class="min-h-screen py-12 px-4">
+    <div class="max-w-6xl mx-auto">
+      <h1 class="text-4xl font-bold text-gray-900 mb-8">Browse Quizzes</h1>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <Card className="p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-semibold text-gray-900">Demo Quiz 001</h2>
+            <span class="text-sm text-gray-500">Week of Jan 15, 2024</span>
+          </div>
+          <p class="text-gray-600 mb-4">
+            A sample quiz featuring questions across all five categories: 
+            history, science, pop culture, sport, and civics.
+          </p>
+          <div class="flex flex-wrap gap-2 mb-4">
+            <span class="px-2 py-1 text-white text-xs rounded-full" style="background-color: var(--round-1)">History</span>
+            <span class="px-2 py-1 text-white text-xs rounded-full" style="background-color: var(--round-2)">Science</span>
+            <span class="px-2 py-1 text-white text-xs rounded-full" style="background-color: var(--round-3)">Pop Culture</span>
+            <span class="px-2 py-1 text-white text-xs rounded-full" style="background-color: var(--round-4)">Sport</span>
+            <span class="px-2 py-1 text-white text-xs rounded-full" style="background-color: var(--round-5)">Civics</span>
+          </div>
+          <a 
+            href="/quiz/demo-001" 
+            class="inline-flex items-center justify-center w-full px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+          >
+            Start Quiz
+          </a>
+        </Card>
+        
+        <!-- Placeholder for more quizzes -->
+        <Card className="p-6 opacity-50">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-semibold text-gray-900">Coming Soon</h2>
+            <span class="text-sm text-gray-500">TBD</span>
+          </div>
+          <p class="text-gray-600 mb-4">
+            More quizzes will be published every Monday at 7:00 AM AEST.
+          </p>
+          <div class="flex flex-wrap gap-2 mb-4">
+            <span class="px-2 py-1 bg-gray-300 text-gray-600 text-xs rounded-full">TBD</span>
+          </div>
+          <button 
+            disabled
+            class="inline-flex items-center justify-center w-full px-4 py-2 bg-gray-300 text-gray-500 rounded-lg font-medium cursor-not-allowed"
+          >
+            Coming Soon
+          </button>
+        </Card>
+      </div>
+    </div>
+  </main>
+</Layout>

@@ -1,0 +1,19 @@
+---
+import Layout from "../layouts/Layout.astro";
+import SimpleThemeToggle from "../components/SimpleThemeToggle.tsx";
+---
+
+<Layout title="Theme Toggle Test">
+  <div class="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#1A1A1A] text-gray-900 dark:text-white">
+    <div class="text-center">
+      <h1 class="text-4xl font-bold mb-8">Theme Toggle Test</h1>
+      <p class="mb-8">Click the button below to toggle between light and dark themes:</p>
+      
+      <SimpleThemeToggle client:only="react" />
+      
+      <div class="mt-8 p-4 bg-white dark:bg-gray-800 rounded-lg border">
+        <p class="text-sm">This box should change color when you toggle the theme.</p>
+      </div>
+    </div>
+  </div>
+</Layout>
