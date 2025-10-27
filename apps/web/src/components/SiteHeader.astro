@@ -1,0 +1,112 @@
+---
+import SimpleThemeToggle from "./SimpleThemeToggle.tsx";
+
+export interface Props {
+  fadeLogo?: boolean;
+}
+
+const { fadeLogo = false } = Astro.props as Props;
+---
+
+<!-- Transparent, fixed header shared across pages -->
+<header class="fixed top-0 left-0 right-0 z-50 py-3 px-6">
+  <div class="flex items-center justify-between">
+    <div id="site-logo" data-fade={fadeLogo ? 'true' : 'false'} class="text-2xl font-bold text-gray-900 dark:text-white tracking-tight transition-opacity duration-300">
+      The School Quiz
+    </div>
+    <div class="flex items-center gap-3">
+      <SimpleThemeToggle client:only="react" />
+      <button 
+        id="menu-button"
+        class="w-12 h-12 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full font-medium transition-all duration-300 flex items-center justify-center relative"
+        onclick="toggleMenu()"
+      >
+        <svg id="hamburger-icon" class="w-5 h-5 transition-all duration-300 absolute" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+        </svg>
+        <svg id="close-icon" class="w-5 h-5 transition-all duration-300 absolute opacity-0 rotate-90 scale-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- Slide-out menu overlay -->
+<div id="menu-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden transition-opacity duration-300 backdrop-blur-sm">
+  <div class="fixed top-20 right-4 w-80 bg-white dark:bg-gray-800 transform translate-x-full transition-transform duration-300 ease-out rounded-2xl border border-gray-200 dark:border-gray-700" id="menu-panel">
+    <div class="p-6">
+      <div class="space-y-1">
+        <a href="/quizzes" class="block px-4 py-3 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white rounded-full transition-colors">Quizzes</a>
+        <a href="/about" class="block px-4 py-3 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white rounded-full transition-colors">About</a>
+        <a href="/contact" class="block px-4 py-3 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white rounded-full transition-colors">Contact</a>
+        <a href="/subscribe" class="block px-4 py-3 text-base font-medium text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-700 dark:hover:text-green-300 rounded-full transition-colors">Subscribe</a>
+        <a href="/sign-in" class="block px-4 py-3 text-base font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-700 dark:hover:text-blue-300 rounded-full transition-colors">Sign In</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script is:inline>
+  function toggleMenu() {
+    const overlay = document.getElementById('menu-overlay');
+    const panel = document.getElementById('menu-panel');
+    const hamburgerIcon = document.getElementById('hamburger-icon');
+    const closeIcon = document.getElementById('close-icon');
+    if (!overlay || !panel || !hamburgerIcon || !closeIcon) return;
+    if (overlay.classList.contains('hidden')) {
+      overlay.classList.remove('hidden');
+      hamburgerIcon.classList.add('opacity-0', 'rotate-90', 'scale-0');
+      closeIcon.classList.remove('opacity-0', 'rotate-90', 'scale-0');
+      setTimeout(() => { panel.classList.remove('translate-x-full'); }, 10);
+    } else {
+      panel.classList.add('translate-x-full');
+      closeIcon.classList.add('opacity-0', 'rotate-90', 'scale-0');
+      hamburgerIcon.classList.remove('opacity-0', 'rotate-90', 'scale-0');
+      setTimeout(() => { overlay.classList.add('hidden'); }, 300);
+    }
+  }
+  window.toggleMenu = toggleMenu;
+
+  // Close when clicking outside
+  document.addEventListener('click', function(event) {
+    const menuButton = document.getElementById('menu-button');
+    const overlay = document.getElementById('menu-overlay');
+    const panel = document.getElementById('menu-panel');
+    const hamburgerIcon = document.getElementById('hamburger-icon');
+    const closeIcon = document.getElementById('close-icon');
+    if (!menuButton || !overlay || !panel || !hamburgerIcon || !closeIcon) return;
+    if (!menuButton.contains(event.target) && !overlay.contains(event.target)) {
+      panel.classList.add('translate-x-full');
+      closeIcon.classList.add('opacity-0', 'rotate-90', 'scale-0');
+      hamburgerIcon.classList.remove('opacity-0', 'rotate-90', 'scale-0');
+      setTimeout(() => { overlay.classList.add('hidden'); }, 300);
+    }
+  });
+
+  // Optional fade-out on scroll for logo
+  function initLogoFade() {
+    const logo = document.getElementById('site-logo');
+    const fadeAttribute = logo?.getAttribute('data-fade');
+    const shouldFade = fadeAttribute === 'true';
+
+    if (shouldFade && logo) {
+      const maxFade = 140;
+      function onScroll() {
+        const y = Math.min(window.scrollY, maxFade);
+        const opacity = 1 - y / maxFade;
+        logo.style.opacity = String(opacity);
+      }
+      window.addEventListener('scroll', () => requestAnimationFrame(onScroll), { passive: true });
+      onScroll();
+    }
+  }
+
+  // Initialize when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initLogoFade);
+  } else {
+    initLogoFade();
+  }
+</script>
+ 

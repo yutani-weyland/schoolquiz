@@ -689,7 +689,7 @@ export default function CreateQuiz() {
                              type="number"
                              value={quiz.number || ''}
                              onChange={(e) => updateQuizNumber(parseInt(e.target.value) || 0)}
-                             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                             className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm transition-colors"
                              placeholder="Week #"
                              min="1"
                            />
@@ -704,7 +704,7 @@ export default function CreateQuiz() {
                              value={quiz.title}
                              onChange={(value) => setQuiz(prev => ({ ...prev, title: value }))}
                              placeholder="Weekly Quiz – Week 25"
-                             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                             className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm transition-colors"
                            />
                          </div>
                        </div>
@@ -712,7 +712,7 @@ export default function CreateQuiz() {
                          value={quiz.description}
                          onChange={(value) => setQuiz(prev => ({ ...prev, description: value }))}
                          placeholder="Brief description..."
-                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                         className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm transition-colors"
                        />
                      </div>
 
@@ -803,7 +803,7 @@ export default function CreateQuiz() {
                         setShowDropdown(true);
                       }}
                       onFocus={() => setShowDropdown(true)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                      className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm transition-colors"
                       placeholder="Search and select category..."
                     />
                     
@@ -881,7 +881,7 @@ export default function CreateQuiz() {
                           value={activeRound.blurb}
                           onChange={(value) => updateRoundBlurb(activeRound.id, value)}
                           placeholder={`Brief description for this ${activeRound.category} round...`}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                          className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm transition-colors"
                           type="textarea"
                           rows={2}
                         />
@@ -941,13 +941,13 @@ export default function CreateQuiz() {
                                        value={question.question}
                                        onChange={(value) => updateQuestion(activeRound.id, question.id, 'question', value)}
                                        placeholder="Question..."
-                                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"
+                                       className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm transition-colors"
                                      />
                                      <SpellCheckInput
                                        value={question.answer}
                                        onChange={(value) => updateQuestion(activeRound.id, question.id, 'answer', value)}
                                        placeholder="Answer..."
-                                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"
+                                       className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm transition-colors"
                                      />
                             </div>
                           </div>
@@ -1139,7 +1139,7 @@ export default function CreateQuiz() {
                   value={scheduledDate}
                   onChange={(e) => setScheduledDate(e.target.value)}
                   min={new Date().toISOString().slice(0, 16)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm transition-colors"
                 />
               </div>
               <div className="text-sm text-gray-600 dark:text-gray-400">
@@ -1257,7 +1257,7 @@ export default function CreateQuiz() {
                   type="text"
                   value={newCategoryName}
                   onChange={(e) => setNewCategoryName(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm transition-colors"
                   placeholder="Enter category name..."
                   autoFocus
                 />

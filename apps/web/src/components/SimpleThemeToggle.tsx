@@ -29,7 +29,7 @@ export default function SimpleThemeToggle() {
   return (
     <button
       onClick={toggleTheme}
-      className="w-10 h-10 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full font-medium transition-colors duration-200 flex items-center justify-center"
+      className="w-12 h-12 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full font-medium transition-colors duration-200 flex items-center justify-center"
       aria-label="Toggle theme"
     >
       {/* Sun Icon (Light Mode) */}

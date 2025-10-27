@@ -393,11 +393,11 @@ export default function Questions() {
       </header>
 
       {/* Main Layout */}
-      <div className="flex h-[calc(100vh-5rem)]">
+      <div className="flex pt-[73px] h-screen">
         {/* Desktop Filter Sidebar */}
-        <aside className="hidden lg:flex flex-col w-64 border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 sticky top-0 h-full">
+        <aside className="hidden lg:flex flex-col w-64 border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 h-full overflow-y-auto">
           <div className="px-4 py-3">
-            <div className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800 pb-2 mb-2 border-b border-gray-200 dark:border-gray-700">
+            <div className="pb-2 mb-2 border-b border-gray-200 dark:border-gray-700">
               <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Filters</h3>
             </div>
             
@@ -542,9 +542,9 @@ export default function Questions() {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto px-6 py-6">
+        <main className="flex-1 overflow-y-auto px-6">
           {/* Search Bar */}
-          <div className="border-b border-gray-200 dark:border-gray-700 pb-6 mb-6">
+          <div className="pt-6 border-b border-gray-200 dark:border-gray-700 pb-6 mb-6">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Questions</h1>
@@ -591,7 +591,7 @@ export default function Questions() {
                 placeholder="Search questions, categories, or use filters..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
               />
             </div>
 
@@ -662,7 +662,7 @@ export default function Questions() {
           </div>
 
           {/* Results */}
-          <div className="flex-1">
+          <div className="flex-1 pb-6">
               <div className="flex items-center justify-between mb-4">
                 <div className="text-sm text-gray-600 dark:text-gray-400">
                   {filteredQuestions.length} questions found

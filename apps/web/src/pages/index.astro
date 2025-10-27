@@ -1,70 +1,14 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import NextQuizCountdown from "../components/NextQuizCountdown.tsx";
-import SimpleThemeToggle from "../components/SimpleThemeToggle.tsx";
+import SiteHeader from "../components/SiteHeader.astro";
 import QuizSafariPreview from "../components/QuizSafariPreview.tsx";
 import QuizPhonePreview from "../components/QuizPhonePreview.tsx";
 ---
 
 <Layout title="The School Quiz - Weekly Quiz for High School Students">
 
-  <!-- Header with logo and menu -->
-  <header class="fixed top-0 left-0 right-0 z-50 py-3 px-6">
-    <div class="flex items-center justify-between">
-      <!-- Logo -->
-      <div class="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
-        The School Quiz
-      </div>
-
-      <!-- Header Actions -->
-      <div class="flex items-center gap-3">
-        <!-- Theme Toggle -->
-        <SimpleThemeToggle client:only="react" />
-        
-             <!-- Menu Button -->
-             <button 
-               id="menu-button"
-               class="w-12 h-12 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full font-medium transition-all duration-300 flex items-center justify-center relative"
-               onclick="toggleMenu()"
-             >
-             <!-- Hamburger Icon -->
-             <svg id="hamburger-icon" class="w-5 h-5 transition-all duration-300 absolute" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-             </svg>
-             <!-- Close Icon -->
-             <svg id="close-icon" class="w-5 h-5 transition-all duration-300 absolute opacity-0 rotate-90 scale-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-             </svg>
-             </button>
-      </div>
-    </div>
-  </header>
-
-  <!-- Menu Overlay -->
-  <div id="menu-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden transition-opacity duration-300 backdrop-blur-sm">
-    <div class="fixed top-20 right-4 w-80 bg-white dark:bg-gray-800 transform translate-x-full transition-transform duration-300 ease-out rounded-2xl border border-gray-200 dark:border-gray-700" id="menu-panel">
-      <div class="p-6">
-        <!-- Menu Items -->
-        <div class="space-y-1">
-          <a href="/quizzes" class="block px-4 py-3 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white rounded-full transition-colors">
-            Quizzes
-          </a>
-          <a href="/about" class="block px-4 py-3 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white rounded-full transition-colors">
-            About
-          </a>
-          <a href="/contact" class="block px-4 py-3 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white rounded-full transition-colors">
-            Contact
-          </a>
-          <a href="/subscribe" class="block px-4 py-3 text-base font-medium text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-700 dark:hover:text-green-300 rounded-full transition-colors">
-            Subscribe
-          </a>
-          <a href="/sign-in" class="block px-4 py-3 text-base font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-700 dark:hover:text-blue-300 rounded-full transition-colors">
-            Sign In
-          </a>
-        </div>
-      </div>
-    </div>
-  </div>
+  <SiteHeader fadeLogo={true} />
 
 
               <main class="min-h-screen">
@@ -79,7 +23,7 @@ import QuizPhonePreview from "../components/QuizPhonePreview.tsx";
                       id="headline"
                     >
                       A weekly quiz for<br />
-                      high school students
+                      <span class="text-blue-600 dark:text-blue-400">high school students</span>
                     </h1>
 
                     <p
@@ -119,31 +63,31 @@ import QuizPhonePreview from "../components/QuizPhonePreview.tsx";
                 <!-- Spacer between Safari and Footer -->
                 <div class="py-6"></div>
 
-              <footer class="bg-gray-900 dark:bg-black text-white py-6 px-4">
+              <footer class="bg-gray-50 dark:bg-[#1A1A1A] py-12 px-4">
                 <div class="max-w-6xl mx-auto">
                   <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                     <!-- Logo -->
-                    <div class="text-2xl font-bold tracking-tight">
+                    <div class="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
                       The School Quiz
                     </div>
                     
                     <!-- Navigation Links -->
                     <div class="flex flex-col md:flex-row gap-8 md:gap-12">
                       <div class="flex flex-col gap-3">
-                        <a href="/quizzes" class="text-gray-300 hover:text-white transition-colors">Quizzes</a>
-                        <a href="/about" class="text-gray-300 hover:text-white transition-colors">About</a>
-                        <a href="/contact" class="text-gray-300 hover:text-white transition-colors">Contact</a>
+                        <a href="/quizzes" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">Quizzes</a>
+                        <a href="/about" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">About</a>
+                        <a href="/contact" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">Contact</a>
                       </div>
                       <div class="flex flex-col gap-3">
-                        <a href="/privacy" class="text-gray-300 hover:text-white transition-colors">Privacy</a>
-                        <a href="/terms" class="text-gray-300 hover:text-white transition-colors">Terms</a>
-                        <a href="/help" class="text-gray-300 hover:text-white transition-colors">Help</a>
+                        <a href="/privacy" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">Privacy</a>
+                        <a href="/terms" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">Terms</a>
+                        <a href="/help" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">Help</a>
                       </div>
                     </div>
                   </div>
                   
                   <!-- Copyright -->
-                  <div class="mt-6 pt-6 border-t border-gray-800 text-center text-gray-400">
+                  <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700 text-center text-gray-500 dark:text-gray-400">
                     <p>&copy; 2026 The School Quiz. All rights reserved.</p>
                   </div>
                 </div>
@@ -167,69 +111,5 @@ import QuizPhonePreview from "../components/QuizPhonePreview.tsx";
               }
             </style>
 
-            <script>
-              function toggleMenu() {
-                console.log('Menu button clicked!');
-                const overlay = document.getElementById('menu-overlay');
-                const panel = document.getElementById('menu-panel');
-                const hamburgerIcon = document.getElementById('hamburger-icon');
-                const closeIcon = document.getElementById('close-icon');
-                
-                if (overlay && panel && hamburgerIcon && closeIcon) {
-                  if (overlay.classList.contains('hidden')) {
-                    // Show menu
-                    overlay.classList.remove('hidden');
-                    
-                    // Transform hamburger to close icon
-                    hamburgerIcon.classList.add('opacity-0', 'rotate-90', 'scale-0');
-                    closeIcon.classList.remove('opacity-0', 'rotate-90', 'scale-0');
-                    
-                    // Trigger slide-in animation
-                    setTimeout(() => {
-                      panel.classList.remove('translate-x-full');
-                    }, 10);
-                  } else {
-                    // Hide menu
-                    panel.classList.add('translate-x-full');
-                    
-                    // Transform close back to hamburger icon
-                    closeIcon.classList.add('opacity-0', 'rotate-90', 'scale-0');
-                    hamburgerIcon.classList.remove('opacity-0', 'rotate-90', 'scale-0');
-                    
-                    // Hide overlay after animation
-                    setTimeout(() => {
-                      overlay.classList.add('hidden');
-                    }, 300);
-                  }
-                  console.log('Menu overlay toggled:', overlay.classList.contains('hidden') ? 'hidden' : 'visible');
-                } else {
-                  console.error('Menu elements not found!');
-                }
-              }
-
-              // Close menu when clicking outside
-              document.addEventListener('click', function(event) {
-                const menuButton = document.getElementById('menu-button');
-                const overlay = document.getElementById('menu-overlay');
-                const panel = document.getElementById('menu-panel');
-                const hamburgerIcon = document.getElementById('hamburger-icon');
-                const closeIcon = document.getElementById('close-icon');
-                
-                if (menuButton && overlay && panel && hamburgerIcon && closeIcon && !menuButton.contains(event.target) && !overlay.contains(event.target)) {
-                  panel.classList.add('translate-x-full');
-                  
-                  // Transform close back to hamburger icon
-                  closeIcon.classList.add('opacity-0', 'rotate-90', 'scale-0');
-                  hamburgerIcon.classList.remove('opacity-0', 'rotate-90', 'scale-0');
-                  
-                  setTimeout(() => {
-                    overlay.classList.add('hidden');
-                  }, 300);
-                }
-              });
-
-              // Make toggleMenu globally accessible
-              window.toggleMenu = toggleMenu;
-            </script>
           </body>
         </html>

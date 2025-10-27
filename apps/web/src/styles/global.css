@@ -10,6 +10,13 @@
   --round-3: #F7A8C0;
   --round-4: #9EE6B4;
   --round-5: #F7D57A;
+  
+  /* Quiz theme tokens - dynamically updated per question */
+  --quiz-accent: #FFD84D;
+  --quiz-on-accent: #0B0B0B;
+  --quiz-surface: #0B0B0B;
+  --quiz-on-surface: #FFFFFF;
+  --quiz-ring: #2F6FEB;
 }
 
 html[data-font="dyslexic"] { 
@@ -28,4 +35,39 @@ html {
   animation-duration: 0.01ms !important;
   animation-iteration-count: 1 !important;
   transition-duration: 0.01ms !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* View Transitions for quiz card → intro animation */
+@view-transition {
+  navigation: auto;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.3s;
+}
+
+/* Custom animation for quiz cards expanding to full screen */
+[style*="view-transition-name: quiz-"] {
+  view-transition-name: var(--quiz-transition-name);
+}
+
+::view-transition-old(quiz),
+::view-transition-new(quiz) {
+  animation-duration: 0.4s;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Smooth morph from card to full screen */
+::view-transition-group(*) {
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
 }

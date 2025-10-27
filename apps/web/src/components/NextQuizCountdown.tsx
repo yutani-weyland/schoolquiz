@@ -11,6 +11,7 @@ export default function NextQuizCountdown() {
   const [currentMessage, setCurrentMessage] = useState(0);
   const [isRetracted, setIsRetracted] = useState(false);
   const [scrollY, setScrollY] = useState(0);
+  const [isNarrowViewport, setIsNarrowViewport] = useState(false);
 
   const messages = [
     {
@@ -86,22 +87,50 @@ export default function NextQuizCountdown() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [isRetracted]);
 
+  // Resize listener to detect narrow viewports
+  useEffect(() => {
+    const handleResize = () => {
+      const viewportWidth = window.innerWidth;
+      
+      // Retract at a lower threshold (750px) instead of ~650px
+      const isNarrow = viewportWidth < 750;
+      setIsNarrowViewport(isNarrow);
+      
+      // Auto-retract on narrow viewports
+      if (isNarrow && !isRetracted) {
+        setIsRetracted(true);
+      }
+    };
+
+    // Check on mount
+    handleResize();
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isRetracted]);
+
   const handleNotchClick = () => {
-    setIsRetracted(!isRetracted);
+    // Don't allow manual toggle on narrow viewports - keep it retracted
+    if (!isNarrowViewport) {
+      setIsRetracted(!isRetracted);
+    }
   };
 
   return (
       <div className={`fixed top-0 left-0 right-0 z-40 transition-transform duration-500 ease-out ${isRetracted ? '-translate-y-full' : 'translate-y-0'}`}>
         {/* Apple-style notch with curved top edges */}
         <div 
-          className="bg-[#3B82F6] text-white mx-auto w-[500px] px-6 py-3 shadow-lg overflow-hidden relative rounded-b-2xl cursor-pointer hover:bg-[#2563EB] transition-colors" 
-          onClick={handleNotchClick}
+          className={`bg-[#3B82F6] text-white mx-auto px-6 py-3 shadow-lg overflow-hidden relative rounded-b-2xl transition-colors ${
+            isNarrowViewport ? 'cursor-default' : 'cursor-pointer hover:bg-[#2563EB]'
+          }`}
           style={{
+            width: isNarrowViewport ? '100%' : '500px',
             borderTopLeftRadius: '0px',
             borderTopRightRadius: '0px',
             borderBottomLeftRadius: '16px',
             borderBottomRightRadius: '16px'
           }}
+          onClick={handleNotchClick}
         >
         <div className="relative h-8">
           <div 
@@ -125,7 +154,7 @@ export default function NextQuizCountdown() {
                         {/* Latest Quiz Message */}
                         <div className="w-full flex-shrink-0 flex items-center justify-center gap-3">
                           <span className="text-base font-medium opacity-90">Latest Quiz:</span>
-                          <span className="text-base font-medium">{messages[1].content}</span>
+                          <span className="text-base font-medium">{typeof messages[1].content === 'string' ? messages[1].content : ''}</span>
                         </div>
           </div>
         </div>
