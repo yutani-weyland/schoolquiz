@@ -29,27 +29,18 @@ export default function AnswerReveal({
 	onMarkCorrect,
 	onUnmarkCorrect,
 }: Props) {
-	// One source of truth for sizes → prevents layout jank
-	const HEIGHT = 64;
+	// Fixed sizes for consistency
+	const HEIGHT = 72;
+	const WIDTH = 600;
 	const RADIUS = HEIGHT / 2;
 
-	// Calculate inverted colors
-	const buttonBg = revealed
-		? textColor === "white"
-			? "#0B0B0B"
-			: "#FFFFFF"
-		: accentColor;
-	const buttonColor = revealed
-		? textColor === "white"
-			? "#FFFFFF"
-			: "#0B0B0B"
-		: textColor === "white"
-		? "#FFFFFF"
-		: "#0B0B0B";
+	// ALWAYS BLACK BUTTON with WHITE TEXT - simple as that!
+	const buttonBg = "#0B0B0B";
+	const buttonColor = "#FFFFFF";
 
 	return (
 		<div className="relative flex items-center justify-center gap-4" style={{ minHeight: HEIGHT }}>
-			{/* Wide button that accommodates both states */}
+			{/* Fixed-size button that stays consistent */}
 			<motion.button
 				type="button"
 				disabled={disabled}
@@ -61,10 +52,12 @@ export default function AnswerReveal({
 					}
 				}}
 				aria-pressed={revealed}
-				className="select-none focus:outline-none shadow-lg ring-1 ring-black/5 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-[var(--quiz-ring)] min-w-[400px]"
+				className="select-none focus:outline-none shadow-2xl ring-2 ring-black/10 transition-all duration-200 focus-visible:ring-4 focus-visible:ring-blue-500 overflow-hidden"
 				style={{
 					borderRadius: RADIUS,
 					height: HEIGHT,
+					width: WIDTH,
+					maxWidth: '90vw',
 					paddingInline: 40,
 					background: buttonBg,
 					color: buttonColor,
@@ -73,15 +66,20 @@ export default function AnswerReveal({
 				whileTap={{ scale: 0.98 }}
 			>
 				<AnimatePresence mode="wait">
-					<motion.span
+					<motion.div
 						key={revealed ? "answer" : "cta"}
 						initial={{ opacity: 0 }}
 						animate={{ opacity: 1, transition: { duration: 0.2 } }}
 						exit={{ opacity: 0, transition: { duration: 0.15 } }}
-						className="text-2xl md:text-3xl font-bold tracking-tight"
+						className="text-2xl font-bold tracking-tight truncate px-2"
+						style={{
+							whiteSpace: 'nowrap',
+							overflow: 'hidden',
+							textOverflow: 'ellipsis',
+						}}
 					>
 						{revealed ? answerText : "Reveal answer"}
-					</motion.span>
+					</motion.div>
 				</AnimatePresence>
 			</motion.button>
 
@@ -107,26 +105,25 @@ export default function AnswerReveal({
 						}}
 						className="shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--quiz-ring)] rounded-full"
 					>
-						<motion.div
-							className="grid place-items-center cursor-pointer"
-							style={{
-								width: HEIGHT,
-								height: HEIGHT,
-								borderRadius: "9999px",
-								background: isMarkedCorrect
-									? "linear-gradient(135deg, #10b981 0%, #059669 100%)"
-									: textColor === "white"
-									? "#0B0B0B"
-									: "#FFFFFF",
-								color: textColor === "white" ? "#FFFFFF" : "#0B0B0B",
-								boxShadow: isMarkedCorrect
-									? "0 4px 14px rgba(16,185,129,0.4), inset 0 0 0 3px #10b981"
-									: "0 4px 14px rgba(0,0,0,0.3), inset 0 0 0 3px #3B6CFF",
-							}}
-							whileHover={{ scale: 1.08 }}
-							whileTap={{ scale: 0.92 }}
-							aria-label={isMarkedCorrect ? "Mark as incorrect" : "Mark as correct"}
-						>
+					<motion.div
+						className="grid place-items-center cursor-pointer"
+						style={{
+							width: HEIGHT,
+							height: HEIGHT,
+							borderRadius: "9999px",
+							background: isMarkedCorrect ? buttonBg : "transparent",
+							color: isMarkedCorrect ? buttonColor : textColor,
+							border: isMarkedCorrect 
+								? `3px solid ${buttonBg}`
+								: textColor === "white"
+								? "3px solid rgba(255,255,255,0.3)"
+								: "3px solid rgba(0,0,0,0.2)",
+							boxShadow: "0 4px 14px rgba(0,0,0,0.15)",
+						}}
+						whileHover={{ scale: 1.08 }}
+						whileTap={{ scale: 0.92 }}
+						aria-label={isMarkedCorrect ? "Mark as incorrect" : "Mark as correct"}
+					>
 							<AnimatePresence mode="wait">
 								{isMarkedCorrect ? (
 									<motion.div

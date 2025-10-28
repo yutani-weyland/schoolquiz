@@ -4,6 +4,7 @@ import NextQuizCountdown from "../components/NextQuizCountdown.tsx";
 import SiteHeader from "../components/SiteHeader.astro";
 import QuizSafariPreview from "../components/QuizSafariPreview.tsx";
 import QuizPhonePreview from "../components/QuizPhonePreview.tsx";
+import { RotatingText } from "../components/RotatingText.tsx";
 ---
 
 <Layout title="The School Quiz - Weekly Quiz for High School Students">
@@ -19,11 +20,16 @@ import QuizPhonePreview from "../components/QuizPhonePreview.tsx";
                 <section class="min-h-screen flex flex-col items-center justify-center px-4 pt-32 relative">
                   <div class="max-w-4xl mx-auto text-center mb-16">
                     <h1
-                      class="text-6xl md:text-7xl lg:text-8xl font-bold text-gray-900 dark:text-white mb-6"
+                      class="text-6xl md:text-7xl lg:text-8xl font-bold text-gray-900 dark:text-white mb-10 pb-4"
                       id="headline"
                     >
                       A weekly quiz for<br />
-                      <span class="text-blue-600 dark:text-blue-400">high school students</span>
+                      high school <span class="text-blue-600 dark:text-blue-400 inline-block min-h-[1.2em]"><RotatingText 
+                          client:only="react"
+                          text={["students", "tutor groups", "homerooms"]}
+                          duration={3000}
+                          transition={{ duration: 0.5, ease: "easeInOut" }}
+                        /></span>
                     </h1>
 
                     <p

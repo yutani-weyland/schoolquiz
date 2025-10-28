@@ -112,68 +112,69 @@ export default function QuizIntro({ quiz }: QuizIntroProps) {
 
 	return (
 		<LayoutGroup>
-			<motion.main
+			<motion.section
 				layoutId={`quiz-bg-${quiz.id}`}
-				className="min-h-dvh w-full flex flex-col px-6 sm:px-8 md:px-12 lg:px-16 fixed inset-0"
+				className="quiz-safe min-h-dvh grid fixed inset-0"
 				style={{ 
 					backgroundColor: quiz.colorHex,
-					viewTransitionName: `quiz-${quiz.id}`
+					viewTransitionName: `quiz-${quiz.id}`,
+					gridTemplateRows: "auto 1fr auto",
+					transition: "background-color 0.25s ease-out"
 				}}
 				initial={{ opacity: 0 }}
 				animate={{ opacity: 1 }}
 				exit={{ opacity: 0 }}
 				transition={{ duration: 0.2 }}
 			>
-				{/* Header with Logo and X Button */}
-				<div className="flex items-center justify-between py-6">
-					{/* Site Logo - Top Left */}
+				{/* Top bar - consistent with site header */}
+				<header className="container flex items-center justify-between py-4 md:py-6">
 					<motion.div
 						initial={{ opacity: 0, x: -10 }}
 						animate={{ opacity: 1, x: 0 }}
 						transition={{ duration: 0.4 }}
-						className={`text-2xl font-bold tracking-tight ${text}`}
+						className={`text-xl md:text-2xl font-semibold tracking-tight ${text}`}
 					>
 						The School Quiz
 					</motion.div>
-
-					{/* X Button - Top Right */}
+					
 					<motion.button
 						initial={{ opacity: 0, scale: 0.8 }}
 						animate={{ opacity: 1, scale: 1 }}
 						transition={{ delay: 0.2 }}
 						onClick={onBack}
-						className={`p-3 rounded-full transition ${
-							tone === "white" 
-								? "bg-white/15 hover:bg-white/25 text-white backdrop-blur-sm" 
-								: "bg-black/10 hover:bg-black/15 text-gray-900 backdrop-blur-sm"
-						}`}
-						whileHover={{ scale: 1.1 }}
-						whileTap={{ scale: 0.9 }}
 						aria-label="Close"
+						className={`w-10 h-10 md:w-11 md:h-11 grid place-items-center rounded-full transition ${
+							tone === "white" 
+								? "bg-white/10 hover:bg-white/15 text-white" 
+								: "bg-black/10 hover:bg-black/15 text-gray-900"
+						}`}
+						whileHover={{ scale: 1.05 }}
+						whileTap={{ scale: 0.95 }}
 					>
-						<X className="h-6 w-6" />
+						<X className="h-5 w-5 md:h-6 md:w-6" />
 					</motion.button>
-				</div>
+				</header>
 
-				{/* Centered Content */}
-				<div className="flex-1 flex items-center justify-center">
+				{/* Main stack */}
+				<main className="container grid place-items-center px-0">
 					<motion.div
 						initial={{ opacity: 0, y: 8 }}
 						animate={{ opacity: 1, y: 0 }}
 						transition={{ duration: 0.3, staggerChildren: 0.04 }}
-						className="max-w-5xl w-full mx-auto text-center"
+						className="w-full grid gap-6 text-center"
+						style={{ maxWidth: 'var(--maxw-reading)' }}
 					>
-						{/* Edition Badge - Prominent */}
+						{/* Edition Badge */}
 						<motion.div
 							initial={{ opacity: 0, scale: 0.9 }}
 							animate={{ opacity: 1, scale: 1 }}
 							transition={{ duration: 0.4, delay: 0.05 }}
-							className="mb-6"
+							className="justify-self-center"
 						>
-							<span className={`inline-flex items-center px-6 py-3 rounded-full text-2xl sm:text-3xl font-black ${
+							<span className={`inline-flex items-center rounded-full px-5 py-2 text-lg font-bold ${
 								tone === "white" 
-									? "bg-white/20 text-white backdrop-blur-sm ring-2 ring-white/30" 
-									: "bg-black/15 text-gray-900 backdrop-blur-sm ring-2 ring-black/20"
+									? "bg-white/10 text-white" 
+									: "bg-black/10 text-gray-900"
 							}`}>
 								#{quiz.id}
 							</span>
@@ -183,130 +184,154 @@ export default function QuizIntro({ quiz }: QuizIntroProps) {
 							initial={{ opacity: 0, y: 6 }}
 							animate={{ opacity: 1, y: 0 }}
 							transition={{ duration: 0.4, delay: 0.1 }}
-							className={`font-extrabold ${text} text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl mb-6 leading-tight px-4`}
+							className={`font-extrabold text-balance tracking-tight ${text}`}
+							style={{ 
+								fontSize: 'clamp(2.5rem, 5vw, 4rem)',
+								lineHeight: '1.1'
+							}}
 						>
 							{quiz.title}
 						</motion.h1>
-					<motion.p
-						initial={{ opacity: 0, y: 6 }}
-						animate={{ opacity: 1, y: 0 }}
-						transition={{ duration: 0.4, delay: 0.15 }}
-						className={`mx-auto max-w-2xl ${sub} text-base sm:text-lg md:text-xl mb-8 px-4`}
-					>
-						{quiz.blurb}
-					</motion.p>
-					<motion.div
+						
+						{quiz.blurb && (
+							<motion.p
+								initial={{ opacity: 0, y: 6 }}
+								animate={{ opacity: 1, y: 0 }}
+								transition={{ duration: 0.4, delay: 0.15 }}
+								className={`text-title ${tone === "white" ? "opacity-80" : "opacity-70"} ${text}`}
+							>
+								{quiz.blurb}
+							</motion.p>
+						)}
+					</motion.div>
+				</main>
+
+				{/* Footer actions */}
+				<footer className="container flex flex-wrap items-center justify-center gap-2x py-3x">
+					<motion.a
+						href={`/quiz/${quiz.slug}/play?mode=presenter`}
+						autoFocus
 						initial={{ opacity: 0, y: 6 }}
 						animate={{ opacity: 1, y: 0 }}
 						transition={{ duration: 0.4, delay: 0.2 }}
-						className="flex items-center justify-center gap-3 mb-8 flex-wrap"
+						className={`rounded-full px-5 py-2.5 text-sm font-semibold transition ${
+							tone === "white" ? "bg-white text-gray-900 hover:bg-white/90" : "bg-gray-900 text-white hover:bg-gray-800"
+						}`}
+						whileHover={{ scale: 1.02 }}
+						whileTap={{ scale: 0.98 }}
 					>
-						<a
-							href={`/quiz/${quiz.slug}/play`}
-							autoFocus
-							className={`px-6 py-3 rounded-full font-semibold transition inline-block ${
-								tone === "white" ? "bg-white text-gray-900 hover:bg-white/90" : "bg-gray-900 text-white hover:bg-gray-800"
+						{hasProgress ? "Continue" : "Presenter Mode"}
+					</motion.a>
+					
+					<motion.a
+						href={`/quiz/${quiz.slug}/play?mode=grid`}
+						initial={{ opacity: 0, y: 6 }}
+						animate={{ opacity: 1, y: 0 }}
+						transition={{ duration: 0.4, delay: 0.25 }}
+						className={`rounded-full px-5 py-2.5 text-sm font-semibold transition ${
+							tone === "white" ? "bg-white/10 text-white hover:bg-white/15" : "bg-black/10 text-gray-900 hover:bg-black/15"
+						}`}
+						whileHover={{ scale: 1.02 }}
+						whileTap={{ scale: 0.98 }}
+					>
+						Grid View
+					</motion.a>
+					
+					
+					{hasProgress && (
+						<motion.button
+							initial={{ opacity: 0, y: 6 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ duration: 0.4, delay: 0.3 }}
+							onClick={handleReset}
+							className={`rounded-full px-5 py-2.5 text-sm font-semibold transition ${
+								tone === "white" ? "bg-white/10 text-white hover:bg-white/15" : "bg-black/10 text-gray-900 hover:bg-black/15"
 							}`}
 						>
-							{hasProgress ? "Continue" : "Start"}
-						</a>
-						<button
-							onClick={onBack}
-							className={`px-6 py-3 rounded-full font-semibold transition ${
-								tone === "white" ? "text-white hover:bg-white/10" : "text-gray-900 hover:bg-black/5"
+							Reset
+						</motion.button>
+					)}
+					
+					<div className="relative">
+						<motion.button
+							initial={{ opacity: 0, y: 6 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ duration: 0.4, delay: 0.35 }}
+							onClick={() => setShowShareMenu(!showShareMenu)}
+							className={`inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-sm font-semibold transition ${
+								tone === "white" ? "bg-white/10 text-white hover:bg-white/15" : "bg-black/10 text-gray-900 hover:bg-black/15"
 							}`}
 						>
-							Back
-						</button>
-						{hasProgress && (
-							<motion.button
-								initial={{ opacity: 0, scale: 0.8 }}
-								animate={{ opacity: 1, scale: 1 }}
-								onClick={handleReset}
-								className={`px-6 py-3 rounded-full font-semibold transition ${
-									tone === "white" ? "text-white hover:bg-white/10" : "text-gray-900 hover:bg-black/5"
-								}`}
-							>
-								Reset
-							</motion.button>
-						)}
-						<div className="relative">
-							<motion.button
-								onClick={() => setShowShareMenu(!showShareMenu)}
-								className={`inline-flex items-center gap-2 px-6 py-3 rounded-full font-semibold transition ${
-									tone === "white" ? "text-white hover:bg-white/10" : "text-gray-900 hover:bg-black/5"
-								}`}
-								whileHover={{ scale: 1.05 }}
-								whileTap={{ scale: 0.95 }}
-							>
-								<Share2 className="h-5 w-5" />
-								Share
-							</motion.button>
+							<Share2 className="h-4 w-4" />
+							Share
+						</motion.button>
 
-							<AnimatePresence>
-								{showShareMenu && (
-									<motion.div
-										initial={{ opacity: 0, scale: 0.9, y: -10 }}
-										animate={{ opacity: 1, scale: 1, y: 0 }}
-										exit={{ opacity: 0, scale: 0.9, y: -10 }}
-										transition={{ duration: 0.2 }}
-										className={`absolute top-full left-1/2 -translate-x-1/2 mt-2 rounded-xl shadow-2xl overflow-hidden z-50 ${
-											tone === "white" ? "bg-white text-gray-900" : "bg-gray-900 text-white"
-										}`}
-										style={{ minWidth: '180px' }}
-									>
-										<div className="p-2">
-											{navigator.share && (
-												<button
-													onClick={handleShare}
-													className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left transition ${
-														tone === "white" 
-															? "hover:bg-gray-100" 
-															: "hover:bg-gray-800"
-													}`}
-												>
-													<Share2 className="h-4 w-4" />
-													<span className="text-sm font-medium">Share</span>
-												</button>
-											)}
+						<AnimatePresence>
+							{showShareMenu && (
+								<motion.div
+									initial={{ opacity: 0, scale: 0.9, y: -10 }}
+									animate={{ opacity: 1, scale: 1, y: 0 }}
+									exit={{ opacity: 0, scale: 0.9, y: -10 }}
+									transition={{ duration: 0.2 }}
+									className={`absolute top-full left-1/2 -translate-x-1/2 mt-2 rounded-xl shadow-2xl overflow-hidden z-50 ${
+										tone === "white" ? "bg-white text-gray-900" : "bg-gray-900 text-white"
+									}`}
+									style={{ minWidth: '180px' }}
+								>
+									<div className="p-2">
+										{navigator.share && (
 											<button
-												onClick={handleCopy}
+												onClick={handleShare}
 												className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left transition ${
 													tone === "white" 
 														? "hover:bg-gray-100" 
 														: "hover:bg-gray-800"
 												}`}
 											>
-												{copied ? (
-													<>
-														<Check className="h-4 w-4" />
-														<span className="text-sm font-medium">Copied!</span>
-													</>
-												) : (
-													<>
-														<Copy className="h-4 w-4" />
-														<span className="text-sm font-medium">Copy link</span>
-													</>
-												)}
+												<Share2 className="h-4 w-4" />
+												<span className="text-sm font-medium">Share</span>
 											</button>
-										</div>
-									</motion.div>
-								)}
-							</AnimatePresence>
-						</div>
-					</motion.div>
-					<motion.div
+										)}
+										<button
+											onClick={handleCopy}
+											className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left transition ${
+												tone === "white" 
+													? "hover:bg-gray-100" 
+													: "hover:bg-gray-800"
+											}`}
+										>
+											{copied ? (
+												<>
+													<Check className="h-4 w-4" />
+													<span className="text-sm font-medium">Copied!</span>
+												</>
+											) : (
+												<>
+													<Copy className="h-4 w-4" />
+													<span className="text-sm font-medium">Copy link</span>
+												</>
+											)}
+										</button>
+									</div>
+								</motion.div>
+							)}
+						</AnimatePresence>
+					</div>
+					
+					{/* Line break to push date to next line */}
+					<div className="basis-full h-0" />
+					
+					<motion.time
 						initial={{ opacity: 0, y: 6 }}
 						animate={{ opacity: 1, y: 0 }}
-						transition={{ duration: 0.4, delay: 0.25 }}
-						className={`flex items-center justify-center gap-2 ${sub} text-sm sm:text-base px-4`}
+						transition={{ duration: 0.4, delay: 0.4 }}
+						className={`flex items-center gap-1.5 text-sm ${tone === "white" ? "opacity-70" : "opacity-60"} ${text}`}
 					>
 						<Calendar className="h-4 w-4" aria-hidden />
 						{formatWeek(quiz.weekISO)}
-					</motion.div>
-					</motion.div>
-				</div>
-			</motion.main>
+					</motion.time>
+				</footer>
+			</motion.section>
 		</LayoutGroup>
 	);
 }

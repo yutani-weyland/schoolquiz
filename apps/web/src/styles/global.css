@@ -17,6 +17,22 @@
   --quiz-surface: #0B0B0B;
   --quiz-on-surface: #FFFFFF;
   --quiz-ring: #2F6FEB;
+  
+  /* Fluid spacing scale */
+  --space-0_5: clamp(4px, 0.25vw, 6px);
+  --space-1:   clamp(8px, 0.6vw, 14px);
+  --space-2:   clamp(12px, 1vw, 18px);
+  --space-3:   clamp(16px, 1.6vw, 26px);
+  --space-4:   clamp(22px, 2.2vw, 36px);
+  --space-6:   clamp(30px, 3.2vw, 64px);
+  --space-8:   clamp(36px, 3.3vw, 64px);
+
+  --gutter: var(--space-3);
+  --maxw-reading: 78ch;
+  --maxw: 90ch;
+  
+  /* Quiz theme - overridden per quiz */
+  --quiz: #111;
 }
 
 html[data-font="dyslexic"] { 
@@ -70,4 +86,31 @@ html {
 /* Smooth morph from card to full screen */
 ::view-transition-group(*) {
   animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Utility classes for consistent spacing and layout */
+@layer utilities {
+  /* Respect device cut-outs */
+  .quiz-safe {
+    padding: env(safe-area-inset-top) env(safe-area-inset-right)
+             env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+
+  /* Balance long headings */
+  .text-balance { 
+    text-wrap: balance; 
+  }
+
+  /* Prevent layout shift on icons/buttons */
+  .icon-btn { 
+    inline-size: 44px; 
+    block-size: 44px; 
+    display: grid; 
+    place-items: center; 
+  }
+  
+  /* Quiz surface with theme colour */
+  .quiz-surface {
+    background: var(--quiz);
+  }
 }

@@ -6,6 +6,7 @@ import { Grid3x3, Maximize2, ChevronLeft, ChevronRight, X, Check } from "lucide-
 import confetti from "canvas-confetti";
 import AnswerReveal from "./AnswerReveal";
 import QuizProgress from "./QuizProgress";
+import { AnimatedTooltip } from "../AnimatedTooltip";
 
 interface Question {
 	id: number;
@@ -38,8 +39,24 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds }
 		console.log('QuizPlayer mounted', { quizTitle, quizColor, quizSlug, questionsCount: questions?.length, roundsCount: rounds?.length });
 	}, []);
 
-	const [viewMode, setViewMode] = useState<ViewMode>("presenter");
-	const [currentScreen, setCurrentScreen] = useState<ScreenType>("round-intro");
+	const [viewMode, setViewMode] = useState<ViewMode>(() => {
+		// Read mode from URL params
+		if (typeof window !== 'undefined') {
+			const params = new URLSearchParams(window.location.search);
+			const mode = params.get('mode');
+			if (mode === 'grid') return 'grid';
+		}
+		return 'presenter';
+	});
+	const [currentScreen, setCurrentScreen] = useState<ScreenType>(() => {
+		// Skip round intro if starting in grid mode
+		if (typeof window !== 'undefined') {
+			const params = new URLSearchParams(window.location.search);
+			const mode = params.get('mode');
+			if (mode === 'grid') return 'question';
+		}
+		return 'round-intro';
+	});
 	const [currentRound, setCurrentRound] = useState(1);
 	const [currentIndex, setCurrentIndex] = useState(0);
 	const [revealedAnswers, setRevealedAnswers] = useState<Set<number>>(new Set());
@@ -54,7 +71,15 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds }
 		}
 		return 0;
 	});
-	const [isTimerRunning, setIsTimerRunning] = useState(false); // Don't start until first question
+	const [isTimerRunning, setIsTimerRunning] = useState(() => {
+		// Auto-start timer in grid mode
+		if (typeof window !== 'undefined') {
+			const params = new URLSearchParams(window.location.search);
+			const mode = params.get('mode');
+			if (mode === 'grid') return true;
+		}
+		return false; // Don't start until first question in presenter mode
+	});
 	
 	// Safety check
 	if (!questions || questions.length === 0) {
@@ -120,31 +145,40 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds }
 	const handleMarkCorrect = (id: number) => {
 		setCorrectAnswers((prev) => new Set([...prev, id]));
 		
-		// Get complementary colors based on quiz color
-		const getComplementaryColors = (hex: string) => {
-			const r = parseInt(hex.slice(1, 3), 16);
-			const g = parseInt(hex.slice(3, 5), 16);
-			const b = parseInt(hex.slice(5, 7), 16);
-			
-			// Create variations of the main color
-			const lighter = `rgb(${Math.min(255, r + 60)}, ${Math.min(255, g + 60)}, ${Math.min(255, b + 60)})`;
-			const darker = `rgb(${Math.max(0, r - 60)}, ${Math.max(0, g - 60)}, ${Math.max(0, b - 60)})`;
-			
-			// Complementary color (opposite on color wheel)
-			const compR = 255 - r;
-			const compG = 255 - g;
-			const compB = 255 - b;
-			const complementary = `rgb(${compR}, ${compG}, ${compB})`;
-			
-			return [hex, lighter, darker, complementary, "#FFD700"];
-		};
+		// Get current round number to determine color
+		const question = questions.find(q => q.id === id);
+		const roundNumber = question?.roundNumber || 1;
 		
-		const colors = getComplementaryColors(quizColor);
+		// Round colors matching the UI
+		const roundColors = [
+			quizColor, // Round 1 uses quiz base color
+			"#9b87f5", // Round 2 - Purple
+			"#10b981", // Round 3 - Green
+			"#f59e0b", // Round 4 - Amber
+			"#ec4899", // Round 5 - Pink
+		];
 		
-		// Multi-burst confetti animation for more satisfaction
-		const duration = 2000;
+		const roundColor = roundColors[roundNumber - 1] || quizColor;
+		
+		// Create star shape for confetti
+		const star = confetti.shapeFromPath({
+			path: 'M0 -1 L0.588 0.809 L-0.951 -0.309 L0.951 -0.309 L-0.588 0.809 Z',
+		});
+		
+		// Elegant star burst animation
+		const duration = 1200;
 		const animationEnd = Date.now() + duration;
-		const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 9999 };
+		const defaults = { 
+			startVelocity: 25,
+			spread: 360,
+			ticks: 60,
+			zIndex: 9999,
+			gravity: 0.8,
+			decay: 0.94,
+			scalar: 1.2,
+			shapes: [star],
+			colors: [roundColor, '#FFFFFF']
+		};
 
 		function randomInRange(min: number, max: number) {
 			return Math.random() * (max - min) + min;
@@ -159,20 +193,18 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds }
 
 			const particleCount = 50 * (timeLeft / duration);
 			
-			// Launch from two sides
+			// Multiple star bursts from different positions
 			confetti({
 				...defaults,
 				particleCount,
-				origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
-				colors: colors
+				origin: { x: randomInRange(0.2, 0.4), y: randomInRange(0.3, 0.7) },
 			});
 			confetti({
 				...defaults,
 				particleCount,
-				origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
-				colors: colors
+				origin: { x: randomInRange(0.6, 0.8), y: randomInRange(0.3, 0.7) },
 			});
-		}, 250);
+		}, 150);
 	};
 
 	const handleUnmarkCorrect = (id: number) => {
@@ -243,30 +275,45 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds }
 		return `rgba(${r}, ${g}, ${b}, 0.95)`;
 	};
 
+	// Get round-specific color
+	const getRoundColor = (roundNumber: number, baseColor: string) => {
+		const roundColors = [
+			baseColor, // Round 1 - quiz card color
+			"#39FF14", // Round 2 - neon green
+			"#FF69B4", // Round 3 - hot pink
+			"#FFD84D", // Round 4 - yellow
+			"#7FB3FF", // Round 5 - blue
+		];
+		return roundColors[roundNumber - 1] || baseColor;
+	};
+
+	const currentRoundNumber = currentQuestion?.roundNumber || 1;
+	const roundColor = getRoundColor(currentRoundNumber, quizColor);
+	
 	const backgroundColor = themeMode === "colored" 
-		? getDesaturatedColor(quizColor)
+		? getDesaturatedColor(roundColor)
 		: themeMode === "light" 
 		? "#ffffff" 
 		: "#1a1a1a";
 	
 	const textColor = themeMode === "colored" 
-		? getTextColor(quizColor)
+		? getTextColor(roundColor)
 		: themeMode === "light"
 		? "black"
 		: "white";
 
 	return (
 		<LayoutGroup>
-			<div className="fixed inset-0 flex flex-col" style={{ backgroundColor }}>
+			<div className="fixed inset-0 flex flex-col transition-colors duration-700 ease-in-out" style={{ backgroundColor }}>
 			{/* New Progress Header - Temporarily disabled for debugging */}
 			{questions && questions.length > 0 && (
 				<QuizProgress
 					total={questions.length}
 					currentIndex={currentIndex}
-					rounds={rounds?.map((r, i) => ({ label: `R${i + 1}`, count: 5 })) || []}
-					timeText={showTimer ? formatTime(timer) : undefined}
 					correctCount={correctAnswers.size}
 					textColor={textColor}
+					questions={questions}
+					baseColor={quizColor}
 					onSegmentClick={(index) => {
 						setCurrentIndex(index);
 						setCurrentScreen("question");
@@ -276,7 +323,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds }
 
 			{/* Top-Right Icons - Absolute Position */}
 			<div className="absolute right-6 top-6 flex items-center gap-2 z-50">
-				<div className="relative group">
+				<AnimatedTooltip content="Change theme" position="bottom">
 					<motion.button
 						onClick={() => {
 							const modes: ThemeMode[] = ["colored", "light", "dark"];
@@ -295,12 +342,9 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds }
 							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
 						</svg>
 					</motion.button>
-					<div className="absolute top-full right-0 mt-2 px-3 py-2 rounded-lg text-xs font-medium bg-gray-900 text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-lg z-50">
-						Change theme
-					</div>
-				</div>
+				</AnimatedTooltip>
 
-				<div className="relative group">
+				<AnimatedTooltip content={viewMode === "presenter" ? "Grid view" : "Presenter view"} position="bottom">
 					<motion.button
 						onClick={() => setViewMode(viewMode === "presenter" ? "grid" : "presenter")}
 						className={`p-3 rounded-full transition ${
@@ -313,12 +357,9 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds }
 					>
 						{viewMode === "presenter" ? <Grid3x3 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
 					</motion.button>
-					<div className="absolute top-full right-0 mt-2 px-3 py-2 rounded-lg text-xs font-medium bg-gray-900 text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-lg z-50">
-						{viewMode === "presenter" ? "Grid view" : "Presenter view"}
-					</div>
-				</div>
+				</AnimatedTooltip>
 
-				<div className="relative group">
+				<AnimatedTooltip content="Exit quiz" position="bottom">
 					<motion.button
 						onClick={() => window.location.href = '/quizzes'}
 						className={`p-3 rounded-full transition ${
@@ -331,10 +372,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds }
 					>
 						<X className="h-5 w-5" />
 					</motion.button>
-					<div className="absolute top-full right-0 mt-2 px-3 py-2 rounded-lg text-xs font-medium bg-gray-900 text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-lg z-50">
-						Exit quiz
-					</div>
-				</div>
+				</AnimatedTooltip>
 			</div>
 
 			{/* Content Area */}
@@ -357,7 +395,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds }
 								isAnswerRevealed={isAnswerRevealed}
 								isMarkedCorrect={isMarkedCorrect}
 								textColor={textColor}
-								quizColor={quizColor}
+								quizColor={roundColor}
 								revealedAnswers={revealedAnswers}
 								setRevealedAnswers={setRevealedAnswers}
 								onRevealAnswer={() => handleRevealAnswer(currentQuestion.id)}
@@ -378,10 +416,13 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds }
 							revealedAnswers={revealedAnswers}
 							correctAnswers={correctAnswers}
 							textColor={textColor}
+							quizTitle={quizTitle}
+							quizId={quizSlug}
+							baseColor={quizColor}
 							onRevealAnswer={handleRevealAnswer}
 							onMarkCorrect={handleMarkCorrect}
 							onUnmarkCorrect={handleUnmarkCorrect}
-							onSelectQuestion={(index) => {
+							onSelectQuestion={(index: number) => {
 								setCurrentIndex(index);
 								setCurrentScreen("question");
 								setViewMode("presenter");
@@ -413,7 +454,7 @@ function RoundIntro({ round, textColor, onStart }: any) {
 				>
 					<div
 						className={`text-xl md:text-2xl font-bold mb-4 ${
-							textColor === "white" ? "text-white/60" : "text-gray-600"
+							textColor === "white" ? "text-white" : "text-gray-900"
 						}`}
 					>
 						Round {round.number}
@@ -426,29 +467,26 @@ function RoundIntro({ round, textColor, onStart }: any) {
 						{round.title}
 					</h2>
 					<p
-						className={`text-xl md:text-2xl ${
-							textColor === "white" ? "text-white/80" : "text-gray-700"
+						className={`text-title ${
+							textColor === "white" ? "text-white opacity-80" : "text-gray-900 opacity-70"
 						}`}
 					>
 						{round.blurb}
 					</p>
 				</motion.div>
 
-				<motion.button
-					initial={{ y: 20, opacity: 0 }}
-					animate={{ y: 0, opacity: 1 }}
-					transition={{ delay: 0.5, duration: 0.6 }}
-					onClick={onStart}
-					className={`px-10 py-5 rounded-full text-2xl font-bold transition shadow-2xl ${
-						textColor === "white"
-							? "bg-white text-gray-900 hover:bg-white/90"
-							: "bg-gray-900 text-white hover:bg-gray-800"
-					}`}
-					whileHover={{ scale: 1.05 }}
-					whileTap={{ scale: 0.95 }}
-				>
-					Let's go! →
-				</motion.button>
+			<motion.button
+				onClick={onStart}
+				className={`px-10 py-5 rounded-full text-2xl font-bold transition shadow-2xl ${
+					textColor === "white"
+						? "bg-white text-gray-900 hover:bg-white/90"
+						: "bg-gray-900 text-white hover:bg-gray-800"
+				}`}
+				whileHover={{ scale: 1.05 }}
+				whileTap={{ scale: 0.95 }}
+			>
+				Let's go! →
+			</motion.button>
 			</div>
 		</motion.div>
 	);
@@ -486,7 +524,12 @@ function PresenterMode({
 			animate={{ opacity: 1 }}
 			exit={{ opacity: 0 }}
 			transition={{ duration: 0.25, ease: "easeInOut" }}
-			className="min-h-full flex items-start justify-center px-24 md:px-32 lg:px-40 pt-24 pb-12 relative"
+			className="min-h-full flex flex-col items-center relative"
+			style={{ 
+				minHeight: 'calc(100vh - 120px)',
+				paddingTop: '6vh',
+				paddingBottom: '25vh'
+			}}
 		>
 			{/* Fixed Navigation Arrows */}
 			<div className="fixed left-8 top-1/2 -translate-y-1/2 z-40">
@@ -525,51 +568,47 @@ function PresenterMode({
 				</motion.button>
 			</div>
 
-			<div className="max-w-4xl w-full">
-				{/* Category Pill with Info - More Prominent */}
-				<motion.div
-					initial={{ opacity: 0, y: -10 }}
-					animate={{ opacity: 1, y: 0 }}
-					transition={{ duration: 0.3, delay: 0.1 }}
-					className="flex items-center gap-3 mb-12"
-				>
-					<div 
-						className={`relative inline-flex items-center px-6 py-3 rounded-full shadow-lg backdrop-blur-sm ${
-							textColor === "white" 
-								? "bg-white/20 text-white ring-2 ring-white/30" 
-								: "bg-black/15 text-gray-900 ring-2 ring-black/20"
-						}`}
-						onMouseEnter={() => setShowRoundInfo(true)}
-						onMouseLeave={() => setShowRoundInfo(false)}
+			{/* Main centered content - constrained to not overlap answer button */}
+			<div className="w-full flex-1 flex flex-col items-center justify-center px-8 md:px-16" style={{
+				maxWidth: '90vw',
+				marginBottom: 'calc(14vh + 100px)' // Reserve space for answer button
+			}}>
+				<div className="w-full grid gap-6 text-center" style={{ maxWidth: 'min(78ch, 85vw)' }}>
+					{/* Subtle round indicator above question */}
+					<motion.div
+						initial={{ opacity: 0, y: -10 }}
+						animate={{ opacity: 1, y: 0 }}
+						transition={{ duration: 0.3, delay: 0.1 }}
 					>
-						<span className="text-base font-bold">
+						<span 
+							className={`text-sm font-semibold tracking-wide uppercase ${
+								textColor === "white" ? "text-white/50" : "text-black/50"
+							}`}
+						>
 							{getRoundTitle(question.roundNumber)}
 						</span>
-						<svg className="ml-2 h-4 w-4 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-						</svg>
-						
-						{showRoundInfo && (
-							<div className="absolute top-full left-0 mt-2 px-3 py-2 rounded-lg text-xs font-medium bg-gray-900 text-white whitespace-nowrap shadow-lg z-50">
-								Round {question.roundNumber} • Question {((currentIndex) % 5) + 1} of 5
-							</div>
-						)}
-					</div>
-				</motion.div>
+					</motion.div>
 
-				{/* Question - Large, Centered, Generous Line Height */}
-				<motion.h1
-					initial={{ opacity: 0 }}
-					animate={{ opacity: 1 }}
-					transition={{ duration: 0.25, delay: 0.15 }}
-					className={`text-5xl md:text-6xl lg:text-7xl font-extrabold leading-[1.3] mb-16 ${
-						textColor === "white" ? "text-white" : "text-gray-900"
-					}`}
-				>
-					{question.question}
-				</motion.h1>
+					{/* Question - Large, Centered, won't overlap button */}
+					<motion.h1
+						initial={{ opacity: 0 }}
+						animate={{ opacity: 1 }}
+						transition={{ duration: 0.25, delay: 0.15 }}
+						className={`text-4xl md:text-5xl lg:text-6xl font-extrabold leading-[1.15] text-balance ${
+							textColor === "white" ? "text-white" : "text-gray-900"
+						}`}
+					>
+						{question.question}
+					</motion.h1>
+				</div>
+			</div>
 
-				{/* Answer Section - New Reveal Component */}
+			{/* Answer Section - Fixed distance from bottom */}
+			<div className="w-full flex items-center justify-center absolute" style={{
+				bottom: 'clamp(16vh, 22vh, 240px)',
+				left: 0,
+				right: 0
+			}}>
 				<AnswerReveal
 					answerText={question.answer}
 					revealed={isAnswerRevealed}
@@ -597,6 +636,9 @@ function GridMode({
 	onMarkCorrect,
 	onUnmarkCorrect,
 	onSelectQuestion,
+	quizTitle,
+	quizId,
+	baseColor,
 }: any) {
 	// Group questions by round
 	const questionsByRound = questions.reduce((acc: any, q: Question) => {
@@ -604,115 +646,179 @@ function GridMode({
 		acc[q.roundNumber].push(q);
 		return acc;
 	}, {});
+
+	// Round colors matching presenter mode
+	const roundColors = [
+		baseColor, // Round 1 uses quiz base color
+		"#9b87f5", // Round 2 - Purple
+		"#10b981", // Round 3 - Green
+		"#f59e0b", // Round 4 - Amber
+		"#ec4899", // Round 5 - Pink
+	];
+
+	const getRoundColor = (roundNumber: number) => {
+		return roundColors[roundNumber - 1] || baseColor;
+	};
+
 	return (
 		<motion.div
 			initial={{ opacity: 0 }}
 			animate={{ opacity: 1 }}
 			exit={{ opacity: 0 }}
-			className="p-6 md:p-10"
+			className="p-6 md:p-10 overflow-y-auto"
+			style={{ maxHeight: 'calc(100vh - 120px)' }}
 		>
-			<div className="max-w-7xl mx-auto space-y-10">
-				{rounds.map((round: any) => (
-					<div key={round.number}>
-						<h2
-							className={`text-3xl font-bold mb-4 ${
-								textColor === "white" ? "text-white" : "text-gray-900"
-							}`}
-						>
-							Round {round.number}: {round.title}
-						</h2>
-						<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-							{questionsByRound[round.number]?.map((q: Question, idx: number) => {
-								const globalIndex = questions.findIndex((qu: Question) => qu.id === q.id);
-								const isRevealed = revealedAnswers.has(q.id);
-								const isCorrect = correctAnswers.has(q.id);
-
-								return (
-									<motion.div
-										key={q.id}
-										initial={{ opacity: 0, y: 20 }}
-										animate={{ opacity: 1, y: 0 }}
-										transition={{ delay: idx * 0.05 }}
-										className={`p-6 rounded-2xl cursor-pointer hover:scale-[1.02] transition ${
-											textColor === "white" ? "bg-white/10 backdrop-blur-sm" : "bg-black/10"
-										} ${isCorrect ? "ring-4 ring-green-500" : ""}`}
-										onClick={() => onSelectQuestion(globalIndex)}
-									>
-										<div className="flex items-start gap-4">
-											<div
-												className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center font-bold ${
-													textColor === "white" ? "bg-white/20 text-white" : "bg-black/15 text-gray-900"
-												}`}
-											>
-												{idx + 1}
-											</div>
-
-								<div className="flex-1 min-w-0">
-									<div className={`text-base font-bold mb-2 ${textColor === "white" ? "text-white" : "text-gray-900"}`}>
-										{q.question}
-									</div>
-
-									{!isRevealed ? (
-										<button
-											onClick={() => onRevealAnswer(q.id)}
-											className={`text-sm px-4 py-2 rounded-full transition ${
-												textColor === "white"
-													? "bg-white/20 hover:bg-white/30 text-white"
-													: "bg-black/15 hover:bg-black/20 text-gray-900"
-											}`}
-										>
-											Reveal answer
-										</button>
-									) : (
-										<div
-											className={`text-sm font-semibold mb-3 ${
-												textColor === "white" ? "text-white/90" : "text-gray-800"
-											}`}
-										>
-											{q.answer}
-										</div>
-									)}
-								</div>
-
-										{isRevealed && (
-											<motion.button
-												onClick={(e) => {
-													e.stopPropagation();
-													isCorrect ? onUnmarkCorrect(q.id) : onMarkCorrect(q.id);
-												}}
-												className={`relative flex-shrink-0 w-12 h-12 rounded-full transition-all ${
-													isCorrect
-														? "bg-green-500 shadow-lg ring-2 ring-green-300"
-														: textColor === "white"
-														? "bg-transparent border-2 border-white/40 hover:border-white/60 hover:bg-white/10"
-														: "bg-transparent border-2 border-gray-400 hover:border-gray-600 hover:bg-black/5"
-												}`}
-												whileHover={{ scale: 1.1 }}
-												whileTap={{ scale: 0.9 }}
-												aria-label={isCorrect ? "Mark as incorrect" : "Mark as correct"}
-											>
-												<AnimatePresence>
-													{isCorrect && (
-														<motion.div
-															initial={{ scale: 0, rotate: -180 }}
-															animate={{ scale: 1, rotate: 0 }}
-															exit={{ scale: 0, rotate: 180 }}
-															transition={{ type: "spring", bounce: 0.6, duration: 0.5 }}
-															className="absolute inset-0 flex items-center justify-center"
-														>
-															<Check className="h-6 w-6 text-white" strokeWidth={3} />
-														</motion.div>
-													)}
-												</AnimatePresence>
-											</motion.button>
-										)}
-									</div>
-								</motion.div>
-							);
-						})}
+			<div className="max-w-7xl mx-auto space-y-8">
+				{/* Wide Title Card */}
+				<motion.div
+					initial={{ opacity: 0, y: 20 }}
+					animate={{ opacity: 1, y: 0 }}
+					className="rounded-3xl p-8 md:p-12 shadow-xl relative overflow-hidden"
+					style={{ 
+						backgroundColor: baseColor,
+						color: textColor === "white" ? "#fff" : "#000"
+					}}
+				>
+					<div className="relative z-10">
+						<div className="text-sm font-semibold uppercase tracking-wider mb-3 opacity-70">
+							Quiz #{quizId}
+						</div>
+						<h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold mb-4">
+							{quizTitle}
+						</h1>
+						<div className="flex items-center gap-4 text-lg opacity-80">
+							<span>{questions.length} questions</span>
+							<span>•</span>
+							<span>{rounds.length} rounds</span>
+							<span>•</span>
+							<span>{correctAnswers.size}/{questions.length} correct</span>
 						</div>
 					</div>
-				))}
+				</motion.div>
+
+				{/* Round Sections */}
+				{rounds.map((round: any, roundIdx: number) => {
+					const roundColor = getRoundColor(round.number);
+					const roundTextColor = getTextColor(roundColor);
+					
+					return (
+						<motion.div
+							key={round.number}
+							initial={{ opacity: 0, y: 20 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ delay: 0.1 + roundIdx * 0.1 }}
+						>
+							{/* Round Header */}
+							<div
+								className="rounded-2xl p-6 mb-4 shadow-lg"
+								style={{
+									backgroundColor: roundColor,
+									color: roundTextColor === "white" ? "#fff" : "#000"
+								}}
+							>
+								<div className="flex items-center justify-between">
+									<div>
+										<div className="text-sm font-semibold uppercase tracking-wide mb-1 opacity-70">
+											Round {round.number}
+										</div>
+										<h2 className="text-3xl font-extrabold">
+											{round.title}
+										</h2>
+									</div>
+									<div className="text-right">
+										<div className="text-4xl font-black">
+											{questionsByRound[round.number]?.filter((q: Question) => correctAnswers.has(q.id)).length || 0}/5
+										</div>
+										<div className="text-sm opacity-70">correct</div>
+									</div>
+								</div>
+							</div>
+
+							{/* Questions Grid */}
+							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+								{questionsByRound[round.number]?.map((q: Question, idx: number) => {
+									const globalIndex = questions.findIndex((qu: Question) => qu.id === q.id);
+									const isRevealed = revealedAnswers.has(q.id);
+									const isCorrect = correctAnswers.has(q.id);
+
+									return (
+										<motion.div
+											key={q.id}
+											initial={{ opacity: 0, scale: 0.95 }}
+											animate={{ opacity: 1, scale: 1 }}
+											transition={{ delay: 0.05 * idx }}
+											className={`p-5 rounded-xl cursor-pointer transition-all hover:shadow-lg ${
+												isCorrect 
+													? "ring-4 ring-green-500 bg-green-50 dark:bg-green-950" 
+													: "bg-white dark:bg-gray-800 hover:scale-[1.02]"
+											}`}
+											style={{
+												boxShadow: isCorrect 
+													? "0 10px 40px rgba(16,185,129,0.3)" 
+													: "0 4px 15px rgba(0,0,0,0.1)"
+											}}
+											onClick={() => onSelectQuestion(globalIndex)}
+										>
+											<div className="flex items-start gap-3 mb-3">
+												<div
+													className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm"
+													style={{
+														backgroundColor: roundColor,
+														color: roundTextColor === "white" ? "#fff" : "#000"
+													}}
+												>
+													{idx + 1}
+												</div>
+												{isCorrect && (
+													<div className="ml-auto flex-shrink-0 w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
+														<Check className="h-5 w-5 text-white" strokeWidth={3} />
+													</div>
+												)}
+											</div>
+
+											<div className="text-sm font-bold mb-3 text-gray-900 dark:text-white line-clamp-2">
+												{q.question}
+											</div>
+
+											{isRevealed && (
+												<div className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 line-clamp-2">
+													{q.answer}
+												</div>
+											)}
+
+											{!isRevealed ? (
+												<button
+													onClick={(e) => {
+														e.stopPropagation();
+														onRevealAnswer(q.id);
+													}}
+													className="text-xs px-3 py-1.5 rounded-full font-medium transition"
+													style={{
+														backgroundColor: roundColor,
+														color: roundTextColor === "white" ? "#fff" : "#000",
+														opacity: 0.9
+													}}
+												>
+													Reveal answer
+												</button>
+											) : !isCorrect && (
+												<button
+													onClick={(e) => {
+														e.stopPropagation();
+														onMarkCorrect(q.id);
+													}}
+													className="text-xs px-3 py-1.5 rounded-full bg-green-500 text-white font-medium hover:bg-green-600 transition"
+												>
+													Mark correct
+												</button>
+											)}
+										</motion.div>
+									);
+								})}
+							</div>
+						</motion.div>
+					);
+				})}
 			</div>
 		</motion.div>
 	);
