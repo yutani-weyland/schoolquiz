@@ -714,7 +714,7 @@ function PresenterMode({
 	);
 }
 
-// Grid Mode Component with Collapsible Round Sections
+// Grid Mode Component - Flat "All Rounds" Layout
 function GridMode({
 	questions,
 	rounds,
@@ -748,7 +748,6 @@ function GridMode({
 	quizId: string;
 	baseColor: string;
 }) {
-	const [openRoundId, setOpenRoundId] = React.useState<number>(rounds[0]?.number || 1);
 
 	// Group questions by round
 	const questionsByRound = questions.reduce((acc: any, q: Question) => {
@@ -770,9 +769,6 @@ function GridMode({
 		return roundColors[roundNumber - 1] || baseColor;
 	};
 
-	const handleToggleRound = (roundNumber: number) => {
-		setOpenRoundId((prev) => (prev === roundNumber ? 0 : roundNumber));
-	};
 
 	// Determine question status
 	const getQuestionStatus = (q: Question): "idle" | "revealed" | "correct" | "incorrect" => {
@@ -784,41 +780,6 @@ function GridMode({
 	const totalCorrect = correctAnswers.size;
 	const progress = Math.round((totalCorrect / questions.length) * 100);
 
-	// Keyboard navigation
-	React.useEffect(() => {
-		const handleKeyDown = (e: KeyboardEvent) => {
-			if (["INPUT", "TEXTAREA"].includes((e.target as HTMLElement)?.tagName || "")) return;
-
-			const currentIndex = openRoundId ? rounds.findIndex((r: Round) => r.number === openRoundId) : -1;
-
-			if (e.key === "ArrowDown") {
-				e.preventDefault();
-				const nextIndex = Math.min(rounds.length - 1, Math.max(0, currentIndex + 1));
-				setOpenRoundId(rounds[nextIndex]?.number || rounds[0]?.number || 1);
-			} else if (e.key === "ArrowUp") {
-				e.preventDefault();
-				const prevIndex = Math.max(0, currentIndex - 1);
-				setOpenRoundId(rounds[prevIndex]?.number || rounds[0]?.number || 1);
-			} else if (e.key === "Enter" || e.key === " ") {
-				e.preventDefault();
-				if (!openRoundId) {
-					setOpenRoundId(rounds[0]?.number || 1);
-				} else {
-					setOpenRoundId(0);
-				}
-			} else if (/^[1-5]$/.test(e.key) && openRoundId) {
-				const qIndex = Number(e.key) - 1;
-				const roundQuestions = questionsByRound[openRoundId] || [];
-				if (roundQuestions[qIndex]) {
-					const globalIndex = questions.findIndex((q: Question) => q.id === roundQuestions[qIndex].id);
-					if (globalIndex !== -1) onSelectQuestion(globalIndex);
-				}
-			}
-		};
-
-		window.addEventListener("keydown", handleKeyDown);
-		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, [openRoundId, rounds, questions, questionsByRound, onSelectQuestion]);
 
 	const isDark = themeMode === "dark";
 	const isLight = themeMode === "light";
@@ -852,11 +813,11 @@ function GridMode({
 
 	return (
 		<div className="min-h-dvh overflow-y-auto" style={{ paddingBottom: 'env(safe-area-inset-bottom)', backgroundColor }}>
-			{/* Header - non-sticky, flows with content */}
-			<div className="pt-20">
-				<header className={`border-b ${borderColorClass} pb-4`}
-						style={{ background: themeMode === "colored" ? baseColor : undefined }}>
-					<div className="mx-auto max-w-6xl px-4 py-3">
+			{/* Header - Sticky */}
+			<div className="pt-16">
+				<header className={`sticky top-0 bg-[${backgroundColor}]/90 backdrop-blur-sm py-4 mb-4 border-b ${borderColorClass} z-10`}
+						style={{ background: themeMode === "colored" ? `${baseColor}E6` : undefined }}>
+					<div className="mx-auto max-w-6xl px-4 sm:px-6">
 						<div className="flex flex-col min-w-0">
 							<span className={`text-xs font-semibold tracking-wide uppercase opacity-70 ${
 								isColored ? (textColor === "white" ? "text-white/90" : "text-gray-900/70") : textColorClass
@@ -875,197 +836,164 @@ function GridMode({
 					</div>
 				</header>
 
-				{/* Content */}
-				<main className="mx-auto max-w-6xl px-4 py-6 pb-24 space-y-4">
+				{/* Content - Flat rounds layout */}
+				<main className="mx-auto max-w-6xl px-4 sm:px-6 pb-24 space-y-8">
 				{rounds.map((round: any) => {
 					const roundColor = getRoundColor(round.number);
 					const roundQuestions = questionsByRound[round.number] || [];
 					const roundCorrect = roundQuestions.filter((q: Question) => correctAnswers.has(q.id)).length;
-					const isOpen = openRoundId === round.number;
 					
 					return (
 						<motion.section
 							key={round.number}
 							initial={{ opacity: 0, y: 10 }}
 							animate={{ opacity: 1, y: 0 }}
-							className={`rounded-2xl ${roundCardBgClass} backdrop-blur-[1px] ring-1 ${borderColorClass} shadow-sm overflow-hidden`}
+							className={`rounded-2xl ${cardBgClass} ring-1 ${borderColorClass} shadow-sm p-4 sm:p-6`}
 						>
-							{/* Round Header - Collapsible */}
-							<motion.button
-								onClick={() => handleToggleRound(round.number)}
-								className="w-full flex items-center justify-between gap-4 px-4 sm:px-5 py-3 text-left"
-								aria-expanded={isOpen}
-								whileHover={{ backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.02)" }}
-							>
+							{/* Round Header */}
+							<div className="flex items-center justify-between mb-4">
 								<div className="flex items-center gap-3 min-w-0">
-									<div className="h-6 w-6 rounded-full shrink-0" style={{ background: roundColor }} />
-									<div className="min-w-0">
-										<p className={`text-xs font-semibold tracking-wide uppercase opacity-70 ${
-											isColored ? (textColor === "white" ? "text-white/70" : "text-gray-900/70") : textColorClass
-										}`}>Round {round.number}</p>
-										<h2 className={`text-lg sm:text-xl font-extrabold truncate ${
-											isColored ? (textColor === "white" ? "text-white" : "text-gray-900") : textColorClass
-										}`}>{round.title}</h2>
-									</div>
+									<div className="h-4 w-4 rounded-full shrink-0" style={{ background: roundColor }} />
+									<h2 className={`text-xl font-extrabold leading-tight ${
+										isColored ? (textColor === "white" ? "text-white" : "text-gray-900") : textColorClass
+									}`}>
+										Round {round.number}: {round.title}
+									</h2>
 								</div>
-								<div className="flex items-center gap-3 pl-3 shrink-0">
-									<span className={`text-sm font-semibold tabular-nums ${
-										isColored ? (textColor === "white" ? "text-white/90" : "text-gray-900/90") : textColorClass
-									}`}>{roundCorrect}/{roundQuestions.length} correct</span>
-									<motion.svg
-																		className={`h-5 w-5 ${
-											isColored ? (textColor === "white" ? "text-white" : "text-gray-900") : textColorClass
-										}`}
-										viewBox="0 0 20 20"
-										fill="currentColor"
-										animate={{ rotate: isOpen ? 180 : 0 }}
-										transition={{ type: "spring", stiffness: 300, damping: 20 }}
-									>
-										<path d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" />
-									</motion.svg>
-								</div>
-							</motion.button>
+								<span className={`text-sm font-semibold tabular-nums ${
+									isColored ? (textColor === "white" ? "text-white/90" : "text-gray-900/90") : textColorClass
+								}`}>
+									{roundCorrect}/{roundQuestions.length} correct
+								</span>
+							</div>
 
-							{/* Questions Grid - Collapsible */}
-							<AnimatePresence initial={false}>
-								{isOpen && (
-									<motion.div
-										key="content"
-										initial={{ height: 0, opacity: 0 }}
-										animate={{ height: "auto", opacity: 1 }}
-										exit={{ height: 0, opacity: 0 }}
-										transition={{ type: "spring", bounce: 0, duration: 0.35 }}
-										className="px-3 sm:px-4 pb-4 overflow-hidden"
-									>
-										<div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4 pt-2">
-											{roundQuestions.map((q: Question, idx: number) => {
-												const globalIndex = questions.findIndex((qu: Question) => qu.id === q.id);
-												const status = getQuestionStatus(q);
-												const isRevealed = revealedAnswers.has(q.id);
-												const isCorrect = correctAnswers.has(q.id);
-												const statusStyles: Record<typeof status, string> = {
-													idle: "ring-black/5",
-													revealed: "ring-yellow-600/30",
-													correct: "ring-green-600/30",
-													incorrect: "ring-red-600/30",
-												};
-												const badgeStyles: Record<typeof status, string> = {
-													idle: "bg-black/70 text-white",
-													revealed: "bg-yellow-600/90 text-white",
-													correct: "bg-green-600 text-white",
-													incorrect: "bg-red-600 text-white",
-												};
+							{/* Questions Grid - Always Visible */}
+							<div className="grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-4">
+								{roundQuestions.map((q: Question, idx: number) => {
+									const globalIndex = questions.findIndex((qu: Question) => qu.id === q.id);
+									const status = getQuestionStatus(q);
+									const isRevealed = revealedAnswers.has(q.id);
+									const isCorrect = correctAnswers.has(q.id);
+									const statusStyles: Record<typeof status, string> = {
+										idle: "ring-black/5",
+										revealed: "ring-yellow-600/30",
+										correct: "ring-green-600/30",
+										incorrect: "ring-red-600/30",
+									};
+									const badgeStyles: Record<typeof status, string> = {
+										idle: "bg-black/70 text-white",
+										revealed: "bg-yellow-600/90 text-white",
+										correct: "bg-green-600 text-white",
+										incorrect: "bg-red-600 text-white",
+									};
 
-												return (
-													<motion.div
-														key={q.id}
-														initial={{ opacity: 0, scale: 0.95 }}
-														animate={{ opacity: 1, scale: 1 }}
-														transition={{ delay: idx * 0.03 }}
-														whileHover={{ y: -2 }}
-														className={`group rounded-xl ${cardBgClass} ring-1 ${statusStyles[status]} shadow-sm p-4 transition cursor-pointer flex flex-col min-h-[240px]`}
-														onClick={() => onSelectQuestion(globalIndex)}
-													>
-														{/* Header */}
-														<div className="flex items-start justify-between gap-2 mb-3">
-															<div className="flex items-center gap-2">
-																<span className={`inline-flex items-center justify-center h-7 w-7 rounded-full text-xs font-bold ${badgeStyles[status]}`}>
-																	{idx + 1}
-																</span>
-																<div className="h-2 w-2 rounded-full shrink-0" style={{ background: roundColor }} />
-															</div>
-														</div>
+									return (
+										<motion.div
+											key={q.id}
+											initial={{ opacity: 0, scale: 0.95 }}
+											animate={{ opacity: 1, scale: 1 }}
+											transition={{ delay: idx * 0.03 }}
+											whileHover={{ y: -2 }}
+											className={`group rounded-xl ${cardBgClass} ring-1 ${statusStyles[status]} shadow-sm p-4 transition cursor-pointer flex flex-col min-h-[240px]`}
+											onClick={() => onSelectQuestion(globalIndex)}
+										>
+											{/* Header */}
+											<div className="flex items-start justify-between gap-2 mb-3">
+												<div className="flex items-center gap-2">
+													<span className={`inline-flex items-center justify-center h-7 w-7 rounded-full text-xs font-bold ${badgeStyles[status]}`}>
+														{idx + 1}
+													</span>
+													<div className="h-2 w-2 rounded-full shrink-0" style={{ background: roundColor }} />
+												</div>
+											</div>
 
-														{/* Content area - takes up available space */}
-														<div className="flex-1 flex flex-col">
-															{/* Question Text */}
-															<p className={`${isDark ? "text-base font-medium" : "text-sm"} leading-snug line-clamp-4 [text-wrap:balance] mb-3 ${
-																isColored ? (textColor === "white" ? "text-white" : "text-gray-900") : textColorClass
-															}`}>
-																{q.question}
-															</p>
+											{/* Content area - takes up available space */}
+											<div className="flex-1 flex flex-col">
+												{/* Question Text */}
+												<p className={`${isDark ? "text-base font-medium" : "text-sm"} leading-snug line-clamp-4 [text-wrap:balance] mb-3 ${
+													isColored ? (textColor === "white" ? "text-white" : "text-gray-900") : textColorClass
+												}`}>
+													{q.question}
+												</p>
 
-															{/* Answer (when revealed) */}
-															{isRevealed && (
-																<p className={`text-xs font-semibold mb-3 line-clamp-3 ${
-																	isDark ? "text-gray-300" 
-																	: isColored ? (textColor === "white" ? "text-white/90" : "text-gray-700")
-																	: "text-gray-700"
-																}`}>
-																	{q.answer}
-																</p>
-															)}
+												{/* Answer (when revealed) */}
+												{isRevealed && (
+													<p className={`text-xs font-semibold mb-3 line-clamp-3 ${
+														isDark ? "text-gray-300" 
+														: isColored ? (textColor === "white" ? "text-white/90" : "text-gray-700")
+														: "text-gray-700"
+													}`}>
+														{q.answer}
+													</p>
+												)}
 
-															{/* Spacer to push actions to bottom */}
-															<div className="flex-1" />
-														</div>
+												{/* Spacer to push actions to bottom */}
+												<div className="flex-1" />
+											</div>
 
-														{/* Actions - anchored to bottom */}
-														<div className="flex items-center justify-between gap-2 mt-auto pt-3">
-															{/* Mini Reveal/Checkbox Section */}
-															<div className="flex items-center gap-2 flex-1">
-																{!isRevealed ? (
-																	<button
-																		onClick={(e) => {
-																			e.stopPropagation();
-																			onRevealAnswer(q.id);
-																		}}
-																		className="px-3 py-1.5 bg-black text-white text-xs font-semibold rounded-full hover:opacity-90 transition-opacity"
+											{/* Actions - anchored to bottom */}
+											<div className="flex items-center justify-between gap-2 mt-auto pt-3">
+												{/* Mini Reveal/Checkbox Section */}
+												<div className="flex items-center gap-2 flex-1">
+													{!isRevealed ? (
+														<button
+															onClick={(e) => {
+																e.stopPropagation();
+																onRevealAnswer(q.id);
+															}}
+															className="px-3 py-1.5 bg-black text-white text-xs font-semibold rounded-full hover:opacity-90 transition-opacity"
+														>
+															Reveal
+														</button>
+													) : (
+														<>
+															<button
+																onClick={(e) => {
+																	e.stopPropagation();
+																	onHideAnswer(q.id);
+																}}
+																className="px-3 py-1.5 bg-gray-200 text-gray-800 text-xs font-semibold rounded-full hover:bg-gray-300 transition-colors"
+															>
+																Hide
+															</button>
+															{/* Mini Checkbox Circle */}
+															<button
+																onClick={(e) => {
+																	e.stopPropagation();
+																	if (isCorrect) {
+																		onUnmarkCorrect(q.id);
+																	} else {
+																		onMarkCorrect(q.id, e);
+																	}
+																}}
+																className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+																	isCorrect 
+																		? "bg-green-600 ring-2 ring-green-600 ring-offset-2" 
+																		: "bg-white border-2 border-gray-300 hover:border-gray-400"
+																}`}
+																aria-label={isCorrect ? "Mark as incorrect" : "Mark as correct"}
+															>
+																{isCorrect && (
+																	<motion.div
+																		initial={{ scale: 0 }}
+																		animate={{ scale: 1 }}
+																		transition={{ type: "spring", stiffness: 300, damping: 20 }}
 																	>
-																		Reveal
-																	</button>
-																) : (
-																	<>
-																		<button
-																			onClick={(e) => {
-																				e.stopPropagation();
-																				onHideAnswer(q.id);
-																			}}
-																			className="px-3 py-1.5 bg-gray-200 text-gray-800 text-xs font-semibold rounded-full hover:bg-gray-300 transition-colors"
-																		>
-																			Hide
-																		</button>
-																		{/* Mini Checkbox Circle */}
-																		<button
-																			onClick={(e) => {
-																				e.stopPropagation();
-																				if (isCorrect) {
-																					onUnmarkCorrect(q.id);
-																				} else {
-																					onMarkCorrect(q.id, e);
-																				}
-																			}}
-																			className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-																				isCorrect 
-																					? "bg-green-600 ring-2 ring-green-600 ring-offset-2" 
-																					: "bg-white border-2 border-gray-300 hover:border-gray-400"
-																			}`}
-																			aria-label={isCorrect ? "Mark as incorrect" : "Mark as correct"}
-																		>
-																			{isCorrect && (
-																				<motion.div
-																					initial={{ scale: 0 }}
-																					animate={{ scale: 1 }}
-																					transition={{ type: "spring", stiffness: 300, damping: 20 }}
-																				>
-																					<Check className="h-4 w-4 text-white" strokeWidth={3} />
-																				</motion.div>
-																			)}
-																		</button>
-																	</>
+																		<Check className="h-4 w-4 text-white" strokeWidth={3} />
+																	</motion.div>
 																)}
-															</div>
-															
-															{/* Click to open indicator */}
-															<span className={`text-xs ${isDark ? "text-gray-400" : "text-gray-500"}`}>→</span>
-														</div>
-													</motion.div>
-												);
-											})}
-										</div>
-									</motion.div>
-								)}
-							</AnimatePresence>
+															</button>
+														</>
+													)}
+												</div>
+												
+												{/* Click to open indicator */}
+												<span className={`text-xs ${isDark ? "text-gray-400" : "text-gray-500"}`}>→</span>
+											</div>
+										</motion.div>
+									);
+								})}
+							</div>
 						</motion.section>
 					);
 				})}
