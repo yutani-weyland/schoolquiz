@@ -74,7 +74,7 @@ const quizzes = [
   <main class="min-h-screen pt-24 pb-0">
     <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
       <!-- Page Title -->
-      <h1 class="text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 dark:text-white text-center mb-16">
+      <h1 id="page-title" class="text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 dark:text-white text-center mb-16">
         Your Quizzes
       </h1>
       
@@ -156,5 +156,32 @@ const quizzes = [
       animation: fadeIn 0.3s ease-out;
     }
   </style>
+
+  <script is:inline>
+    // Update page title with personalized greeting if logged in
+    function updatePageTitle() {
+      const titleElement = document.getElementById('page-title');
+      if (!titleElement) return;
+
+      // Check if user is logged in (using localStorage/sessionStorage)
+      const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+      const username = sessionStorage.getItem('username') || localStorage.getItem('username') || '';
+
+      if (isLoggedIn && username) {
+        // Personalized greeting
+        titleElement.textContent = `G'day ${username}, here are your quizzes`;
+      } else {
+        // Default title
+        titleElement.textContent = 'Your Quizzes';
+      }
+    }
+
+    // Run on load
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', updatePageTitle);
+    } else {
+      updatePageTitle();
+    }
+  </script>
   
 </Layout>

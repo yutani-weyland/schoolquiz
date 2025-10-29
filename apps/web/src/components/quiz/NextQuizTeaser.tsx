@@ -51,8 +51,16 @@ export function NextQuizTeaser() {
 		>
 			<motion.div
 				className="rounded-3xl p-6 sm:p-8 shadow-lg h-full min-h-[420px] flex flex-col relative overflow-hidden bg-gray-100 dark:bg-gray-800 border-2 border-dashed border-gray-300 dark:border-gray-600"
-				whileHover={{ scale: 1.02, boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)" }}
-				transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+				whileHover={{ 
+					rotate: 1.4,
+					scale: 1.02, 
+					boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)" 
+				}}
+				transition={{ 
+					type: "spring",
+					stiffness: 300,
+					damping: 25
+				}}
 			>
 				{/* Subtle pattern background */}
 				<div className="absolute inset-0 opacity-5 dark:opacity-10" style={{

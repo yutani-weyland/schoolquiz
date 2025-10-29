@@ -50,9 +50,9 @@ export default function QuizProgress({
 	};
 
 	return (
-		<div className="fixed bottom-0 left-0 right-0 z-50 w-full pb-safe">
+		<div className="fixed bottom-0 left-0 right-0 z-50 w-full pb-safe" style={{ overflow: "visible" }}>
 			<div className="mx-auto flex items-center gap-4 px-6 py-4 max-w-6xl backdrop-blur-md rounded-t-3xl"
-				 style={{ background: isDark ? "rgba(0, 0, 0, 0.4)" : "rgba(255, 255, 255, 0.4)" }}>
+				 style={{ background: isDark ? "rgba(0, 0, 0, 0.4)" : "rgba(255, 255, 255, 0.4)", overflow: "visible" }}>
 				
 				{/* Score - Large and prominent */}
 				<motion.div
@@ -68,8 +68,12 @@ export default function QuizProgress({
 				</motion.div>
 
 				{/* 25-segment progress bar */}
-				<div className="relative flex-1 h-3 rounded-full overflow-hidden shadow-inner"
-					 style={{ background: isDark ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.15)" }}>
+				<div className="relative flex-1" style={{ minHeight: "12px", overflow: "visible" }}>
+					{/* Background bar with overflow-hidden for visual effect */}
+					<div className="absolute inset-0 h-3 rounded-full overflow-hidden shadow-inner"
+						 style={{ background: isDark ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.15)" }}>
+					</div>
+					{/* Tooltip-enabled segments grid - no overflow clipping */}
 					<div
 						className="relative z-10 grid h-full"
 						style={{ gridTemplateColumns: `repeat(${total}, 1fr)`, gap: "2px" }}
@@ -80,12 +84,6 @@ export default function QuizProgress({
 						const roundColor = getRoundColor(i);
 						const question = questions?.[i];
 						
-						// Show preview for viewed questions (completed or current)
-						const showPreview = (isComplete || isCurrent) && question;
-						const truncatedQuestion = showPreview 
-							? (question.question.length > 50 ? question.question.slice(0, 50) + "..." : question.question)
-							: "";
-						
 						// Helper function to convert hex to rgba
 						const hexToRgba = (hex: string, alpha: number) => {
 							const r = parseInt(hex.slice(1, 3), 16);
@@ -94,29 +92,37 @@ export default function QuizProgress({
 							return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 						};
 						
-						const tooltipContent = showPreview ? `Q${i + 1}: ${truncatedQuestion}` : `Question ${i + 1}`;
+						// Show question preview in tooltip for all questions
+						let tooltipContent = `Q${i + 1}`;
+						if (question?.question) {
+							const truncated = question.question.length > 40 
+								? question.question.slice(0, 40) + "..." 
+								: question.question;
+							tooltipContent = `Q${i + 1}: ${truncated}`;
+						}
 						
-						return (
-							<div key={i} className="relative h-full">
-								<AnimatedTooltip content={tooltipContent} position="top" className="h-full block">
-									<button
-										type="button"
-										onClick={() => onSegmentClick?.(i)}
-										aria-label={`Question ${i + 1} ${isComplete ? "completed" : isCurrent ? "current" : "pending"}`}
-										className="w-full h-full transition-all hover:brightness-125 hover:scale-110 rounded-sm"
-										style={{
-											background: isComplete || isCurrent
-												? hexToRgba(roundColor, 0.95)
-												: hexToRgba(roundColor, 0.15),
-											opacity: isCurrent ? 1 : isComplete ? 0.95 : 0.45,
-											border: isCurrent ? `2px solid ${hexToRgba(roundColor, 1)}` : 'none',
-											boxShadow: isCurrent ? `0 0 10px ${hexToRgba(roundColor, 0.6)}` : 'none'
-										}}
-									/>
-								</AnimatedTooltip>
-							</div>
-						);
-					})}
+							return (
+								<div key={i} className="relative" style={{ minHeight: "12px" }}>
+									<AnimatedTooltip content={tooltipContent} position="top" className="w-full h-full block">
+										<button
+											type="button"
+											onClick={() => onSegmentClick?.(i)}
+											aria-label={`Question ${i + 1} ${isComplete ? "completed" : isCurrent ? "current" : "pending"}`}
+											className="w-full h-full transition-all hover:brightness-125 hover:scale-110 rounded-sm"
+											style={{
+												background: isComplete || isCurrent
+													? hexToRgba(roundColor, 0.95)
+													: hexToRgba(roundColor, 0.15),
+												opacity: isCurrent ? 1 : isComplete ? 0.95 : 0.45,
+												border: isCurrent ? `2px solid ${hexToRgba(roundColor, 1)}` : 'none',
+												boxShadow: isCurrent ? `0 0 10px ${hexToRgba(roundColor, 0.6)}` : 'none',
+												minHeight: "12px"
+											}}
+										/>
+									</AnimatedTooltip>
+								</div>
+							);
+						})}
 					</div>
 				</div>
 			</div>

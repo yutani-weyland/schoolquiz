@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { Check } from "lucide-react";
 
 type Props = {
@@ -29,73 +29,119 @@ export default function AnswerReveal({
 	onMarkCorrect,
 	onUnmarkCorrect,
 }: Props) {
-	// Fixed sizes for consistency
-	const HEIGHT = 72;
+	// Fixed width, but flexible height for 2 lines
+	const MIN_HEIGHT = 72;
 	const WIDTH = 600;
-	const RADIUS = HEIGHT / 2;
+	const RADIUS = MIN_HEIGHT / 2;
+	const CIRCLE_SIZE = 80; // Bigger circle for tick
 
 	// ALWAYS BLACK BUTTON with WHITE TEXT - simple as that!
 	const buttonBg = "#0B0B0B";
 	const buttonColor = "#FFFFFF";
 
 	return (
-		<div className="relative flex items-center justify-center gap-4" style={{ minHeight: HEIGHT }}>
-			{/* Fixed-size button that stays consistent */}
-			<motion.button
-				type="button"
-				disabled={disabled}
-				onClick={() => {
-					if (!revealed) {
-						onReveal();
-					} else {
-						onHide();
-					}
-				}}
-				aria-pressed={revealed}
-				className="select-none focus:outline-none shadow-2xl ring-2 ring-black/10 transition-all duration-200 focus-visible:ring-4 focus-visible:ring-blue-500 overflow-hidden"
-				style={{
-					borderRadius: RADIUS,
-					height: HEIGHT,
-					width: WIDTH,
-					maxWidth: '90vw',
-					paddingInline: 40,
-					background: buttonBg,
-					color: buttonColor,
-				}}
-				whileHover={{ scale: 1.02 }}
-				whileTap={{ scale: 0.98 }}
-			>
-				<AnimatePresence mode="wait">
-					<motion.div
-						key={revealed ? "answer" : "cta"}
-						initial={{ opacity: 0 }}
-						animate={{ opacity: 1, transition: { duration: 0.2 } }}
-						exit={{ opacity: 0, transition: { duration: 0.15 } }}
-						className="text-2xl font-bold tracking-tight truncate px-2"
-						style={{
-							whiteSpace: 'nowrap',
-							overflow: 'hidden',
-							textOverflow: 'ellipsis',
-						}}
-					>
-						{revealed ? answerText : "Reveal answer"}
-					</motion.div>
-				</AnimatePresence>
-			</motion.button>
+		<LayoutGroup>
+			<div className="relative flex items-center justify-center gap-4" style={{ minHeight: MIN_HEIGHT }}>
+				{/* Button that smoothly narrows when circle appears */}
+				<motion.button
+					type="button"
+					disabled={disabled}
+					onClick={() => {
+						if (!revealed) {
+							onReveal();
+						} else {
+							onHide();
+						}
+					}}
+					aria-pressed={revealed}
+					className="select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 overflow-hidden"
+					animate={{
+						width: revealed ? WIDTH - CIRCLE_SIZE - 32 : WIDTH, // Narrow when circle appears
+						transition: { 
+							type: "spring", 
+							stiffness: 300, 
+							damping: 30,
+							duration: 0.5
+						}
+					}}
+					style={{
+						borderRadius: RADIUS,
+						minHeight: MIN_HEIGHT,
+						maxWidth: '90vw',
+						paddingInline: 40,
+						paddingBlock: 20,
+						background: buttonBg,
+						color: buttonColor,
+						boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1)",
+					}}
+					whileHover={{ scale: 1.02 }}
+					whileTap={{ scale: 0.98 }}
+				>
+					<AnimatePresence mode="wait">
+						<motion.div
+							key={revealed ? "answer" : "cta"}
+							initial={{ opacity: 0, y: 5 }}
+							animate={{ 
+								opacity: 1, 
+								y: 0,
+								transition: { 
+									duration: 0.35,
+									ease: [0.22, 1, 0.36, 1]
+								}
+							}}
+							exit={{ 
+								opacity: 0, 
+								y: -5,
+								transition: { 
+									duration: 0.25,
+									ease: [0.22, 1, 0.36, 1]
+								}
+							}}
+							className="text-2xl font-extrabold tracking-tight px-2 text-center"
+							style={{
+								lineHeight: '1.4',
+								maxHeight: '4em',
+								overflow: 'hidden',
+								display: '-webkit-box',
+								WebkitLineClamp: 2,
+								WebkitBoxOrient: 'vertical',
+							}}
+						>
+							{revealed ? answerText : "Reveal answer"}
+						</motion.div>
+					</AnimatePresence>
+				</motion.button>
 
-			{/* Circular check badge appears AFTER reveal */}
+			{/* Circular check badge - slides in smoothly */}
 			<AnimatePresence>
 				{revealed && (
 					<motion.button
 						type="button"
-						initial={{ scale: 0.6, opacity: 0, filter: "blur(8px)" }}
+						initial={{ 
+							x: -20,
+							scale: 0.8, 
+							opacity: 0,
+						}}
 						animate={{
+							x: 0,
 							scale: 1,
 							opacity: 1,
-							filter: "blur(0px)",
-							transition: { type: "spring", stiffness: 420, damping: 30 },
+							transition: { 
+								type: "spring", 
+								stiffness: 300, 
+								damping: 30,
+								delay: 0.1
+							},
 						}}
-						exit={{ scale: 0.8, opacity: 0, transition: { duration: 0.12 } }}
+						exit={{ 
+							x: -20,
+							scale: 0.8, 
+							opacity: 0,
+							transition: { 
+								duration: 0.3,
+								ease: [0.22, 1, 0.36, 1]
+							}
+						}}
 						onClick={() => {
 							if (isMarkedCorrect) {
 								onUnmarkCorrect?.();
@@ -106,26 +152,23 @@ export default function AnswerReveal({
 						className="shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--quiz-ring)] rounded-full"
 					>
 					<motion.div
-						className="grid place-items-center cursor-pointer"
+						className="grid place-items-center cursor-pointer relative focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
 						style={{
-							width: HEIGHT,
-							height: HEIGHT,
+							width: CIRCLE_SIZE,
+							height: CIRCLE_SIZE,
 							borderRadius: "9999px",
-							background: isMarkedCorrect ? buttonBg : "transparent",
-							color: isMarkedCorrect ? buttonColor : textColor,
+							background: isMarkedCorrect ? "#0B0B0B" : "transparent",
 							border: isMarkedCorrect 
-								? `3px solid ${buttonBg}`
-								: textColor === "white"
-								? "3px solid rgba(255,255,255,0.3)"
-								: "3px solid rgba(0,0,0,0.2)",
-							boxShadow: "0 4px 14px rgba(0,0,0,0.15)",
+								? "2px solid #0B0B0B"
+								: "2px solid rgba(255, 255, 255, 0.5)",
+							boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1)",
 						}}
 						whileHover={{ scale: 1.08 }}
 						whileTap={{ scale: 0.92 }}
 						aria-label={isMarkedCorrect ? "Mark as incorrect" : "Mark as correct"}
 					>
 							<AnimatePresence mode="wait">
-								{isMarkedCorrect ? (
+								{isMarkedCorrect && (
 									<motion.div
 										key="check"
 										initial={{ scale: 0, rotate: -180 }}
@@ -133,18 +176,7 @@ export default function AnswerReveal({
 										exit={{ scale: 0, rotate: 180 }}
 										transition={{ type: "spring", bounce: 0.6, duration: 0.6 }}
 									>
-										<Check className="w-7 h-7 text-white" strokeWidth={4} aria-hidden="true" />
-									</motion.div>
-								) : (
-									<motion.div
-										key="question"
-										initial={{ opacity: 0 }}
-										animate={{ opacity: 1 }}
-										exit={{ opacity: 0 }}
-										className="text-2xl font-bold"
-										style={{ color: textColor === "white" ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.4)" }}
-									>
-										?
+										<Check className="w-10 h-10 text-white" strokeWidth={3.5} aria-hidden="true" />
 									</motion.div>
 								)}
 							</AnimatePresence>
@@ -153,6 +185,7 @@ export default function AnswerReveal({
 				)}
 			</AnimatePresence>
 		</div>
+		</LayoutGroup>
 	);
 }
 

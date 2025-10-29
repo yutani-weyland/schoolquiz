@@ -117,24 +117,29 @@ export function QuizCard({ quiz, isNewest = false }: QuizCardProps) {
 		<motion.div
 			layoutId={`quiz-bg-${quiz.id}`}
 			className="rounded-3xl p-6 sm:p-8 shadow-lg h-full min-h-[420px] flex flex-col relative overflow-hidden"
-				style={{ 
-					backgroundColor: quiz.colorHex,
-					viewTransitionName: `quiz-${quiz.id}`
-				}}
-				whileHover={{ 
-					scale: 1.02,
-					boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)"
-				}}
-				whileTap={{ scale: 0.98 }}
-				transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-			>
-				{/* Animated gradient overlay on hover */}
-				<motion.div
-					className="absolute inset-0 bg-gradient-to-br from-white/0 to-black/0 pointer-events-none"
-					initial={{ opacity: 0 }}
-					whileHover={{ opacity: 0.1 }}
-					transition={{ duration: 0.3 }}
-				/>
+			style={{ 
+				backgroundColor: quiz.colorHex,
+				viewTransitionName: `quiz-${quiz.id}`
+			}}
+			whileHover={{ 
+				rotate: 1.4,
+				scale: 1.02,
+				boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)"
+			}}
+			whileTap={{ scale: 0.98 }}
+			transition={{ 
+				type: "spring",
+				stiffness: 300,
+				damping: 25
+			}}
+		>
+			{/* Subtle gradient overlay on hover */}
+			<motion.div
+				className="absolute inset-0 bg-gradient-to-br from-white/0 to-black/0 pointer-events-none rounded-3xl"
+				initial={{ opacity: 0 }}
+				whileHover={{ opacity: 0.1 }}
+				transition={{ duration: 0.3 }}
+			/>
 
 				<div className="flex items-start justify-between mb-4 relative z-10">
 					<div className="flex items-center gap-2">
@@ -227,21 +232,28 @@ export function QuizCard({ quiz, isNewest = false }: QuizCardProps) {
 							{quiz.status === "coming_soon" ? "Coming soon" : hasProgress ? "Continue quiz" : "Play quiz"}
 						</motion.button>
 						<div className="relative">
-							<motion.button
-								type="button"
-								aria-label="Share quiz"
-								className={`inline-flex h-11 w-11 items-center justify-center rounded-full ${
-									text === "white" ? "bg-white/15 text-white hover:bg-white/25" : "bg-black/5 text-gray-900 hover:bg-black/10"
-								}`}
-								onClick={(e) => {
-									e.preventDefault();
-									setShowShareMenu(!showShareMenu);
-								}}
-								whileHover={{ scale: 1.1 }}
-								whileTap={{ scale: 0.9 }}
-							>
-								<Share2 className="h-5 w-5" />
-							</motion.button>
+						<motion.button
+							type="button"
+							aria-label="Share quiz"
+							className={`inline-flex h-11 w-11 items-center justify-center rounded-full ${
+								text === "white" ? "bg-white/15 text-white hover:bg-white/25" : "bg-black/5 text-gray-900 hover:bg-black/10"
+							}`}
+							onClick={(e) => {
+								e.preventDefault();
+								setShowShareMenu(!showShareMenu);
+							}}
+							whileHover={{ 
+								scale: 1.1,
+								rotate: [0, -12, 12, 0],
+								transition: { 
+									rotate: { duration: 0.5, ease: "easeInOut" },
+									scale: { type: "spring", stiffness: 400, damping: 10 }
+								}
+							}}
+							whileTap={{ scale: 0.85, rotate: -8 }}
+						>
+							<Share2 className="h-5 w-5" />
+						</motion.button>
 
 							<AnimatePresence>
 								{showShareMenu && (
@@ -256,22 +268,23 @@ export function QuizCard({ quiz, isNewest = false }: QuizCardProps) {
 										style={{ minWidth: '180px' }}
 									>
 										<div className="p-2">
-											{navigator.share && (
-												<button
-													onClick={(e) => {
-														e.preventDefault();
-														handleShare();
-													}}
-													className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left transition ${
-														text === "white" 
-															? "hover:bg-gray-100" 
-															: "hover:bg-gray-800"
-													}`}
-												>
-													<Share2 className="h-4 w-4" />
-													<span className="text-sm font-medium">Share</span>
-												</button>
-											)}
+										{navigator.share && (
+											<motion.button
+												onClick={(e) => {
+													e.preventDefault();
+													handleShare();
+												}}
+												className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left transition ${
+													text === "white" 
+														? "hover:bg-gray-100" 
+														: "hover:bg-gray-800"
+												}`}
+												whileHover={{ x: 4 }}
+											>
+												<Share2 className="h-4 w-4" />
+												<span className="text-sm font-medium">Share</span>
+											</motion.button>
+										)}
 											<button
 												onClick={(e) => {
 													e.preventDefault();

@@ -11,9 +11,14 @@ const { fadeLogo = false } = Astro.props as Props;
 <!-- Transparent, fixed header shared across pages -->
 <header class="fixed top-0 left-0 right-0 z-50 py-3 px-6">
   <div class="flex items-center justify-between">
-    <div id="site-logo" data-fade={fadeLogo ? 'true' : 'false'} class="text-2xl font-bold text-gray-900 dark:text-white tracking-tight transition-opacity duration-300">
+    <a 
+      id="site-logo" 
+      data-fade={fadeLogo ? 'true' : 'false'} 
+      href="/"
+      class="text-2xl font-bold text-gray-900 dark:text-white tracking-tight transition-opacity duration-300 hover:opacity-80 cursor-pointer"
+    >
       The School Quiz
-    </div>
+    </a>
     <div class="flex items-center gap-3">
       <SimpleThemeToggle client:only="react" />
       <button 
@@ -107,6 +112,31 @@ const { fadeLogo = false } = Astro.props as Props;
     document.addEventListener('DOMContentLoaded', initLogoFade);
   } else {
     initLogoFade();
+  }
+
+  // Set logo link based on login state
+  function updateLogoLink() {
+    const logo = document.getElementById('site-logo');
+    if (!logo) return;
+    
+    // Check if user is logged in (using localStorage for now - can be replaced with real auth check)
+    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    const username = localStorage.getItem('username') || '';
+    
+    // Update href based on login state
+    logo.setAttribute('href', isLoggedIn ? '/quizzes' : '/');
+    
+    // Store username in sessionStorage for quizzes page to use
+    if (isLoggedIn && username) {
+      sessionStorage.setItem('username', username);
+    }
+  }
+
+  // Run on load
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', updateLogoLink);
+  } else {
+    updateLogoLink();
   }
 </script>
  

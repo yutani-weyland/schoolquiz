@@ -126,16 +126,24 @@ export default function QuizIntro({ quiz }: QuizIntroProps) {
 				exit={{ opacity: 0 }}
 				transition={{ duration: 0.2 }}
 			>
-				{/* Top bar - consistent with site header */}
-				<header className="container flex items-center justify-between py-4 md:py-6">
-					<motion.div
+				{/* Top bar - consistent with site header (py-3 px-6) */}
+				<header className="flex items-center justify-between py-3 px-6">
+					<motion.a
+						href="#"
+						onClick={(e) => {
+							e.preventDefault();
+							if (typeof window !== 'undefined') {
+								const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+								window.location.href = isLoggedIn ? '/quizzes' : '/';
+							}
+						}}
 						initial={{ opacity: 0, x: -10 }}
 						animate={{ opacity: 1, x: 0 }}
 						transition={{ duration: 0.4 }}
-						className={`text-xl md:text-2xl font-semibold tracking-tight ${text}`}
+						className={`text-2xl font-bold tracking-tight cursor-pointer hover:opacity-80 transition-opacity ${text}`}
 					>
 						The School Quiz
-					</motion.div>
+					</motion.a>
 					
 					<motion.button
 						initial={{ opacity: 0, scale: 0.8 }}
@@ -143,7 +151,7 @@ export default function QuizIntro({ quiz }: QuizIntroProps) {
 						transition={{ delay: 0.2 }}
 						onClick={onBack}
 						aria-label="Close"
-						className={`w-10 h-10 md:w-11 md:h-11 grid place-items-center rounded-full transition ${
+						className={`w-12 h-12 grid place-items-center rounded-full transition ${
 							tone === "white" 
 								? "bg-white/10 hover:bg-white/15 text-white" 
 								: "bg-black/10 hover:bg-black/15 text-gray-900"
@@ -151,7 +159,7 @@ export default function QuizIntro({ quiz }: QuizIntroProps) {
 						whileHover={{ scale: 1.05 }}
 						whileTap={{ scale: 0.95 }}
 					>
-						<X className="h-5 w-5 md:h-6 md:w-6" />
+						<X className="h-5 w-5" />
 					</motion.button>
 				</header>
 
@@ -253,18 +261,30 @@ export default function QuizIntro({ quiz }: QuizIntroProps) {
 					)}
 					
 					<div className="relative">
-						<motion.button
-							initial={{ opacity: 0, y: 6 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{ duration: 0.4, delay: 0.35 }}
-							onClick={() => setShowShareMenu(!showShareMenu)}
-							className={`inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-sm font-semibold transition ${
-								tone === "white" ? "bg-white/10 text-white hover:bg-white/15" : "bg-black/10 text-gray-900 hover:bg-black/15"
-							}`}
+					<motion.button
+						initial={{ opacity: 0, y: 6 }}
+						animate={{ opacity: 1, y: 0 }}
+						transition={{ duration: 0.4, delay: 0.35 }}
+						onClick={() => setShowShareMenu(!showShareMenu)}
+						className={`inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-sm font-semibold transition ${
+							tone === "white" ? "bg-white/10 text-white hover:bg-white/15" : "bg-black/10 text-gray-900 hover:bg-black/15"
+						}`}
+						whileHover={{ 
+							scale: 1.05,
+							transition: { type: "spring", stiffness: 400, damping: 10 }
+						}}
+						whileTap={{ scale: 0.95 }}
+					>
+						<motion.div
+							whileHover={{ 
+								rotate: [0, -12, 12, 0],
+								transition: { duration: 0.5, ease: "easeInOut" }
+							}}
 						>
 							<Share2 className="h-4 w-4" />
-							Share
-						</motion.button>
+						</motion.div>
+						Share
+					</motion.button>
 
 						<AnimatePresence>
 							{showShareMenu && (
@@ -279,19 +299,20 @@ export default function QuizIntro({ quiz }: QuizIntroProps) {
 									style={{ minWidth: '180px' }}
 								>
 									<div className="p-2">
-										{navigator.share && (
-											<button
-												onClick={handleShare}
-												className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left transition ${
-													tone === "white" 
-														? "hover:bg-gray-100" 
-														: "hover:bg-gray-800"
-												}`}
-											>
-												<Share2 className="h-4 w-4" />
-												<span className="text-sm font-medium">Share</span>
-											</button>
-										)}
+									{navigator.share && (
+										<motion.button
+											onClick={handleShare}
+											className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left transition ${
+												tone === "white" 
+													? "hover:bg-gray-100" 
+													: "hover:bg-gray-800"
+											}`}
+											whileHover={{ x: 4 }}
+										>
+											<Share2 className="h-4 w-4" />
+											<span className="text-sm font-medium">Share</span>
+										</motion.button>
+									)}
 										<button
 											onClick={handleCopy}
 											className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left transition ${
