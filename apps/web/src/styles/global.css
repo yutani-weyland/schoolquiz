@@ -1,0 +1,203 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Typography + variables */
+:root {
+  --app-font: "Atkinson Hyperlegible", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans";
+  --round-1: #F4A261;
+  --round-2: #7FB3FF;
+  --round-3: #F7A8C0;
+  --round-4: #9EE6B4;
+  --round-5: #F7D57A;
+  
+  /* Quiz theme tokens - dynamically updated per question */
+  --quiz-accent: #FFD84D;
+  --quiz-on-accent: #0B0B0B;
+  --quiz-surface: #0B0B0B;
+  --quiz-on-surface: #FFFFFF;
+  --quiz-ring: #2F6FEB;
+
+  /* Brand surface system */
+  --color-bg: #ffe669;
+  --color-surface: rgba(255, 255, 255, 0.08);
+  --color-surface-strong: rgba(255, 255, 255, 0.16);
+  --color-correct: #20c997;
+  --color-wrong: #ff6b6b;
+  --color-text: #111;
+  
+  /* Fluid spacing scale */
+  --space-0_5: clamp(4px, 0.25vw, 6px);
+  --space-1:   clamp(8px, 0.6vw, 14px);
+  --space-2:   clamp(12px, 1vw, 18px);
+  --space-3:   clamp(16px, 1.6vw, 26px);
+  --space-4:   clamp(22px, 2.2vw, 36px);
+  --space-6:   clamp(30px, 3.2vw, 64px);
+  --space-8:   clamp(36px, 3.3vw, 64px);
+
+  --gutter: var(--space-3);
+  --maxw-reading: 78ch;
+  --maxw: 90ch;
+  
+  /* Quiz theme - overridden per quiz */
+  --quiz: #111;
+}
+
+html[data-font="dyslexic"] { 
+  --app-font: "OpenDyslexic", var(--app-font); 
+}
+
+html { 
+  font-family: var(--app-font); 
+}
+
+.prose { 
+  max-width: 70ch; 
+}
+
+[data-motion="off"] * {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* View Transitions for quiz card → intro animation */
+@view-transition {
+  navigation: auto;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.3s;
+}
+
+/* Custom animation for quiz cards expanding to full screen */
+[style*="view-transition-name: quiz-"] {
+  view-transition-name: var(--quiz-transition-name);
+}
+
+::view-transition-old(quiz),
+::view-transition-new(quiz) {
+  animation-duration: 0.4s;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Smooth morph from card to full screen */
+::view-transition-group(*) {
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Utility classes for consistent spacing and layout */
+@layer utilities {
+  /* Respect device cut-outs */
+  .quiz-safe {
+    padding: env(safe-area-inset-top) env(safe-area-inset-right)
+             env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+
+  /* Balance long headings */
+  .text-balance { 
+    text-wrap: balance; 
+  }
+
+  /* Prevent layout shift on icons/buttons */
+  .icon-btn { 
+    inline-size: 44px; 
+    block-size: 44px; 
+    display: grid; 
+    place-items: center; 
+  }
+  
+  /* Quiz surface with theme colour */
+  .quiz-surface {
+    background: var(--quiz);
+  }
+
+  /* Hide scrollbars while maintaining scroll functionality */
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+@layer components {
+  .quiz-grid-background {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(120% 120% at 50% 0%, rgba(255, 255, 255, 0.22) 0%, rgba(255, 230, 105, 0) 60%) var(--color-bg);
+    overflow: hidden;
+  }
+
+  .quiz-grid-background::before {
+    content: "";
+    position: absolute;
+    inset: -25%;
+    background: conic-gradient(from 0deg, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.4));
+    filter: blur(60px);
+    opacity: 0.6;
+    animation: quiz-gradient-pan 18s linear infinite;
+  }
+
+  .quiz-grid-background::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+      radial-gradient(12px 12px at 10% 20%, rgba(255, 255, 255, 0.18), transparent 60%),
+      radial-gradient(16px 16px at 80% 10%, rgba(255, 255, 255, 0.14), transparent 65%),
+      radial-gradient(10px 10px at 70% 70%, rgba(255, 255, 255, 0.2), transparent 70%);
+    animation: quiz-particles-float 26s ease-in-out infinite alternate;
+  }
+
+  .quiz-grid-layout {
+    display: grid;
+    gap: clamp(18px, 3vw, 36px);
+    grid-template-columns: minmax(0, 1fr);
+    transition: grid-template-columns 0.5s ease, gap 0.4s ease;
+  }
+
+  @media (min-width: 768px) {
+    .quiz-grid-layout {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .quiz-grid-layout {
+      grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+    }
+  }
+}
+
+@keyframes quiz-gradient-pan {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes quiz-particles-float {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-2%, -1.5%, 0) scale(1.02);
+  }
+  100% {
+    transform: translate3d(2%, 1.5%, 0) scale(1.04);
+  }
+}

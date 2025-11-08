@@ -1,0 +1,11 @@
+---
+import Layout from "../layouts/Layout.astro";
+import SiteHeader from "../components/SiteHeader.astro";
+import PremiumPage from "../components/premium/PremiumPage.tsx";
+---
+
+<Layout title="Upgrade to Premium - The School Quiz">
+  <SiteHeader fadeLogo={true} />
+  <PremiumPage client:load />
+</Layout>
+

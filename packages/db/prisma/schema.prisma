@@ -1,0 +1,172 @@
+// Prisma schema for PostgreSQL production database
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model School {
+  id        String   @id @default(cuid())
+  name      String
+  region    String?
+  createdAt DateTime @default(now())
+
+  teachers Teacher[]
+  runs     Run[]
+  quizzes  Quiz[]
+
+  @@map("schools")
+}
+
+model Teacher {
+  id          String   @id @default(cuid())
+  schoolId    String
+  email       String   @unique
+  name        String
+  role        String   @default("teacher") // admin, editor, teacher, viewer
+  lastLoginAt DateTime?
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  
+  questions Question[]
+  quizzes  Quiz[]
+  runs     Run[]
+
+  @@map("teachers")
+}
+
+model Category {
+  id            String   @id @default(cuid())
+  name          String   @unique
+  description   String?
+  seasonalTag   String?
+  difficultyMin Float    @default(0)
+  difficultyMax Float    @default(1)
+  isActive      Boolean  @default(true)
+  createdBy     String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  questions Question[]
+  rounds   Round[]
+
+  @@map("categories")
+}
+
+model Question {
+  id          String  @id @default(cuid())
+  categoryId  String
+  text        String
+  answer      String
+  explanation String?
+  difficulty  Float   // 0-1 scale
+  tags        String  @default("") // Comma-separated tags
+  status      String  @default("draft") // draft, review, published, archived
+  createdBy   String
+  usageCount  Int     @default(0)
+  lastUsedAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  category  Category          @relation(fields: [categoryId], references: [id])
+  creator   Teacher           @relation(fields: [createdBy], references: [id])
+  rounds    QuizRoundQuestion[]
+  stats     RunQuestionStat[]
+
+  @@index([status, updatedAt])
+  @@index([categoryId])
+  @@map("questions")
+}
+
+model Quiz {
+  id             String   @id @default(cuid())
+  schoolId       String?
+  title          String
+  blurb          String?
+  audience       String?
+  difficultyBand String?
+  theme          String?
+  seasonalTag    String?
+  publicationDate DateTime?
+  status         String   @default("draft") // draft, scheduled, published
+  createdBy      String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  school School? @relation(fields: [schoolId], references: [id])
+  creator Teacher @relation(fields: [createdBy], references: [id])
+  rounds Round[]
+  runs   Run[]
+
+  @@map("quizzes")
+}
+
+model Round {
+  id               String  @id @default(cuid())
+  quizId           String
+  index            Int
+  categoryId       String
+  blurb            String?
+  targetDifficulty Float?
+
+  quiz     Quiz                @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  category Category            @relation(fields: [categoryId], references: [id])
+  questions QuizRoundQuestion[]
+
+  @@unique([quizId, index])
+  @@map("rounds")
+}
+
+model QuizRoundQuestion {
+  id         String @id @default(cuid())
+  roundId    String
+  questionId String
+  order      Int
+
+  round    Round    @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  question Question @relation(fields: [questionId], references: [id])
+
+  @@unique([roundId, questionId])
+  @@map("quiz_round_questions")
+}
+
+model Run {
+  id           String   @id @default(cuid())
+  quizId       String
+  schoolId     String
+  teacherId    String
+  startedAt    DateTime @default(now())
+  finishedAt   DateTime?
+  audienceSize Int      @default(0)
+  notes        String?
+  source       String   @default("projected") // projected, printed, online, other
+
+  quiz     Quiz              @relation(fields: [quizId], references: [id])
+  school   School            @relation(fields: [schoolId], references: [id])
+  teacher  Teacher           @relation(fields: [teacherId], references: [id])
+  stats    RunQuestionStat[]
+
+  @@index([schoolId, startedAt])
+  @@map("runs")
+}
+
+model RunQuestionStat {
+  id         String  @id @default(cuid())
+  runId      String
+  questionId String
+  shownOrder Int
+  correct    Int     @default(0)
+  incorrect  Int     @default(0)
+  skipped    Int     @default(0)
+  avgSecs    Float?
+
+  run      Run      @relation(fields: [runId], references: [id], onDelete: Cascade)
+  question Question @relation(fields: [questionId], references: [id])
+
+  @@unique([runId, questionId])
+  @@index([questionId])
+  @@map("run_question_stats")
+}

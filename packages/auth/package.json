@@ -1,0 +1,23 @@
+{
+  "name": "@schoolquiz/auth",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "next-auth": "^4.24.0",
+    "@schoolquiz/db": "workspace:*",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@schoolquiz/config": "workspace:*",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.1.0"
+  }
+}

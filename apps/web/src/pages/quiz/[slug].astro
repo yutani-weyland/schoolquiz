@@ -1,0 +1,319 @@
+---
+import Layout from "../../layouts/Layout.astro";
+
+// Define static paths for demo
+export async function getStaticPaths() {
+  return [
+    { params: { slug: "demo-001" } }
+  ];
+}
+
+const { slug } = Astro.params;
+---
+
+<Layout title="Demo Quiz 001 - SchoolQuiz">
+  <main class="min-h-screen py-8 px-4">
+    <div class="max-w-4xl mx-auto">
+      <header class="text-center mb-12">
+        <h1 class="text-4xl font-bold text-gray-900 mb-4">Demo Quiz 001</h1>
+        <p class="text-gray-600">Week of January 15, 2024</p>
+      </header>
+
+      <div class="space-y-12">
+        <!-- Round 1: Australian History -->
+        <section class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+          <div class="flex items-center mb-6">
+            <div class="w-1 h-8 rounded-full mr-4" style="background-color: var(--round-1)"></div>
+            <div>
+              <h2 class="text-2xl font-bold text-gray-900">Round 1: Australian History</h2>
+              <p class="text-gray-600 mt-1">Test your knowledge of Australia's rich historical past</p>
+            </div>
+          </div>
+          
+          <div class="space-y-4">
+            <div class="bg-gray-50 rounded-lg p-4">
+              <h3 class="text-lg font-medium text-gray-900 mb-2">Q1: In what year did Captain James Cook first land in Australia?</h3>
+              <button class="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">
+                Reveal answer
+              </button>
+            </div>
+            
+            <div class="bg-gray-50 rounded-lg p-4">
+              <h3 class="text-lg font-medium text-gray-900 mb-2">Q2: What was the name of the first British settlement in Australia?</h3>
+              <button class="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">
+                Reveal answer
+              </button>
+            </div>
+            
+            <div class="bg-gray-50 rounded-lg p-4">
+              <h3 class="text-lg font-medium text-gray-900 mb-2">Q3: Which gold rush began in 1851 and transformed Victoria?</h3>
+              <button class="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">
+                Reveal answer
+              </button>
+            </div>
+            
+            <div class="bg-gray-50 rounded-lg p-4">
+              <h3 class="text-lg font-medium text-gray-900 mb-2">Q4: What year did Australia become a federation?</h3>
+              <button class="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">
+                Reveal answer
+              </button>
+            </div>
+            
+            <div class="bg-gray-50 rounded-lg p-4">
+              <h3 class="text-lg font-medium text-gray-900 mb-2">Q5: Who was Australia's first Prime Minister?</h3>
+              <button class="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">
+                Reveal answer
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Round 2: Science & Technology -->
+        <section class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+          <div class="flex items-center mb-6">
+            <div class="w-1 h-8 rounded-full mr-4" style="background-color: var(--round-2)"></div>
+            <div>
+              <h2 class="text-2xl font-bold text-gray-900">Round 2: Science & Technology</h2>
+              <p class="text-gray-600 mt-1">Explore the wonders of science and modern technology</p>
+            </div>
+          </div>
+          
+          <div class="space-y-4">
+            <div class="bg-gray-50 rounded-lg p-4">
+              <h3 class="text-lg font-medium text-gray-900 mb-2">Q6: What is the chemical symbol for gold?</h3>
+              <button class="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">
+                Reveal answer
+              </button>
+            </div>
+            
+            <div class="bg-gray-50 rounded-lg p-4">
+              <h3 class="text-lg font-medium text-gray-900 mb-2">Q7: Which planet is known as the Red Planet?</h3>
+              <button class="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">
+                Reveal answer
+              </button>
+            </div>
+            
+            <div class="bg-gray-50 rounded-lg p-4">
+              <h3 class="text-lg font-medium text-gray-900 mb-2">Q8: What does DNA stand for?</h3>
+              <button class="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">
+                Reveal answer
+              </button>
+            </div>
+            
+            <div class="bg-gray-50 rounded-lg p-4">
+              <h3 class="text-lg font-medium text-gray-900 mb-2">Q9: What is the speed of light in a vacuum?</h3>
+              <button class="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">
+                Reveal answer
+              </button>
+            </div>
+            
+            <div class="bg-gray-50 rounded-lg p-4">
+              <h3 class="text-lg font-medium text-gray-900 mb-2">Q10: Which element has the atomic number 1?</h3>
+              <button class="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">
+                Reveal answer
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Round 3: Pop Culture -->
+        <section class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+          <div class="flex items-center mb-6">
+            <div class="w-1 h-8 rounded-full mr-4" style="background-color: var(--round-3)"></div>
+            <div>
+              <h2 class="text-2xl font-bold text-gray-900">Round 3: Pop Culture</h2>
+              <p class="text-gray-600 mt-1">From music to movies, test your pop culture knowledge</p>
+            </div>
+          </div>
+          
+          <div class="space-y-4">
+            <div class="bg-gray-50 rounded-lg p-4">
+              <h3 class="text-lg font-medium text-gray-900 mb-2">Q11: Which Australian band released the album 'Highway to Hell'?</h3>
+              <button class="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">
+                Reveal answer
+              </button>
+            </div>
+            
+            <div class="bg-gray-50 rounded-lg p-4">
+              <h3 class="text-lg font-medium text-gray-900 mb-2">Q12: What is the highest-grossing Australian film of all time?</h3>
+              <button class="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">
+                Reveal answer
+              </button>
+            </div>
+            
+            <div class="bg-gray-50 rounded-lg p-4">
+              <h3 class="text-lg font-medium text-gray-900 mb-2">Q13: Which Australian actor played Wolverine in the X-Men films?</h3>
+              <button class="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">
+                Reveal answer
+              </button>
+            </div>
+            
+            <div class="bg-gray-50 rounded-lg p-4">
+              <h3 class="text-lg font-medium text-gray-900 mb-2">Q14: What is the name of the Australian soap opera that has been running since 1988?</h3>
+              <button class="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">
+                Reveal answer
+              </button>
+            </div>
+            
+            <div class="bg-gray-50 rounded-lg p-4">
+              <h3 class="text-lg font-medium text-gray-900 mb-2">Q15: Which Australian singer is known as the 'Queen of Pop'?</h3>
+              <button class="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">
+                Reveal answer
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Round 4: Sport -->
+        <section class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+          <div class="flex items-center mb-6">
+            <div class="w-1 h-8 rounded-full mr-4" style="background-color: var(--round-4)"></div>
+            <div>
+              <h2 class="text-2xl font-bold text-gray-900">Round 4: Sport</h2>
+              <p class="text-gray-600 mt-1">From cricket to AFL, test your sporting knowledge</p>
+            </div>
+          </div>
+          
+          <div class="space-y-4">
+            <div class="bg-gray-50 rounded-lg p-4">
+              <h3 class="text-lg font-medium text-gray-900 mb-2">Q16: Which sport is played in the Australian Football League (AFL)?</h3>
+              <button class="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">
+                Reveal answer
+              </button>
+            </div>
+            
+            <div class="bg-gray-50 rounded-lg p-4">
+              <h3 class="text-lg font-medium text-gray-900 mb-2">Q17: How many players are on each team in AFL?</h3>
+              <button class="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">
+                Reveal answer
+              </button>
+            </div>
+            
+            <div class="bg-gray-50 rounded-lg p-4">
+              <h3 class="text-lg font-medium text-gray-900 mb-2">Q18: Which Australian cricketer is known as 'The Don'?</h3>
+              <button class="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">
+                Reveal answer
+              </button>
+            </div>
+            
+            <div class="bg-gray-50 rounded-lg p-4">
+              <h3 class="text-lg font-medium text-gray-900 mb-2">Q19: What is the name of the annual tennis tournament held in Melbourne?</h3>
+              <button class="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">
+                Reveal answer
+              </button>
+            </div>
+            
+            <div class="bg-gray-50 rounded-lg p-4">
+              <h3 class="text-lg font-medium text-gray-900 mb-2">Q20: Which Australian swimmer won 5 gold medals at the 2008 Beijing Olympics?</h3>
+              <button class="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">
+                Reveal answer
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Round 5: Civics & Government -->
+        <section class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+          <div class="flex items-center mb-6">
+            <div class="w-1 h-8 rounded-full mr-4" style="background-color: var(--round-5)"></div>
+            <div>
+              <h2 class="text-2xl font-bold text-gray-900">Round 5: Civics & Government</h2>
+              <p class="text-gray-600 mt-1">Understanding Australia's political system and civic responsibilities</p>
+            </div>
+          </div>
+          
+          <div class="space-y-4">
+            <div class="bg-gray-50 rounded-lg p-4">
+              <h3 class="text-lg font-medium text-gray-900 mb-2">Q21: What is the capital city of Australia?</h3>
+              <button class="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">
+                Reveal answer
+              </button>
+            </div>
+            
+            <div class="bg-gray-50 rounded-lg p-4">
+              <h3 class="text-lg font-medium text-gray-900 mb-2">Q22: How many states are there in Australia?</h3>
+              <button class="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">
+                Reveal answer
+              </button>
+            </div>
+            
+            <div class="bg-gray-50 rounded-lg p-4">
+              <h3 class="text-lg font-medium text-gray-900 mb-2">Q23: What is the name of Australia's national anthem?</h3>
+              <button class="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">
+                Reveal answer
+              </button>
+            </div>
+            
+            <div class="bg-gray-50 rounded-lg p-4">
+              <h3 class="text-lg font-medium text-gray-900 mb-2">Q24: At what age can Australians vote in federal elections?</h3>
+              <button class="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">
+                Reveal answer
+              </button>
+            </div>
+            
+            <div class="bg-gray-50 rounded-lg p-4">
+              <h3 class="text-lg font-medium text-gray-900 mb-2">Q25: What is the name of Australia's upper house of parliament?</h3>
+              <button class="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">
+                Reveal answer
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div class="text-center mt-12">
+        <button class="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors mr-4">
+          Play solo
+        </button>
+        <button class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors">
+          Sign in to save class scores
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Score Counter -->
+  <div class="fixed top-4 right-4 bg-white rounded-lg shadow-lg px-4 py-2 border border-gray-200">
+    <div class="text-sm text-gray-600">Score</div>
+    <div class="text-2xl font-bold text-gray-900" data-score>0/25</div>
+  </div>
+</Layout>
+
+<script>
+  // Quiz logic
+  let score = 0;
+  const totalQuestions = 25;
+
+  // Update score counter
+  function updateScore() {
+    const scoreElement = document.querySelector('[data-score]');
+    if (scoreElement) {
+      scoreElement.textContent = `${score}/${totalQuestions}`;
+    }
+  }
+
+  // Handle keyboard shortcuts
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'F' || e.key === 'f') {
+      // Toggle fullscreen
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+      } else {
+        document.exitFullscreen();
+      }
+    }
+    
+    if (e.key === 'T' || e.key === 't') {
+      // Toggle timer (placeholder)
+      console.log('Timer toggled');
+    }
+    
+    if (e.key === '?' || e.key === '/') {
+      // Show keyboard help
+      alert('Keyboard shortcuts:\nF - Toggle fullscreen\nT - Toggle timer\n↑/↓ - Navigate questions\nSpace - Reveal answer');
+    }
+  });
+
+  // Initialize
+  updateScore();
+</script>
