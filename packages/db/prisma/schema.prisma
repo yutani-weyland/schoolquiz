@@ -22,18 +22,18 @@ model School {
 }
 
 model Teacher {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   schoolId    String
-  email       String   @unique
+  email       String    @unique
   name        String
-  role        String   @default("teacher") // admin, editor, teacher, viewer
+  role        String    @default("teacher") // admin, editor, teacher, viewer
   lastLoginAt DateTime?
 
   school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  
+
   questions Question[]
-  quizzes  Quiz[]
-  runs     Run[]
+  quizzes   Quiz[]
+  runs      Run[]
 
   @@map("teachers")
 }
@@ -51,30 +51,30 @@ model Category {
   updatedAt     DateTime @updatedAt
 
   questions Question[]
-  rounds   Round[]
+  rounds    Round[]
 
   @@map("categories")
 }
 
 model Question {
-  id          String  @id @default(cuid())
+  id          String    @id @default(cuid())
   categoryId  String
   text        String
   answer      String
   explanation String?
-  difficulty  Float   // 0-1 scale
-  tags        String  @default("") // Comma-separated tags
-  status      String  @default("draft") // draft, review, published, archived
+  difficulty  Float // 0-1 scale
+  tags        String    @default("") // Comma-separated tags
+  status      String    @default("draft") // draft, review, published, archived
   createdBy   String
-  usageCount  Int     @default(0)
+  usageCount  Int       @default(0)
   lastUsedAt  DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
-  category  Category          @relation(fields: [categoryId], references: [id])
-  creator   Teacher           @relation(fields: [createdBy], references: [id])
-  rounds    QuizRoundQuestion[]
-  stats     RunQuestionStat[]
+  category Category            @relation(fields: [categoryId], references: [id])
+  creator  Teacher             @relation(fields: [createdBy], references: [id])
+  rounds   QuizRoundQuestion[]
+  stats    RunQuestionStat[]
 
   @@index([status, updatedAt])
   @@index([categoryId])
@@ -82,24 +82,24 @@ model Question {
 }
 
 model Quiz {
-  id             String   @id @default(cuid())
-  schoolId       String?
-  title          String
-  blurb          String?
-  audience       String?
-  difficultyBand String?
-  theme          String?
-  seasonalTag    String?
+  id              String    @id @default(cuid())
+  schoolId        String?
+  title           String
+  blurb           String?
+  audience        String?
+  difficultyBand  String?
+  theme           String?
+  seasonalTag     String?
   publicationDate DateTime?
-  status         String   @default("draft") // draft, scheduled, published
-  createdBy      String
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  status          String    @default("draft") // draft, scheduled, published
+  createdBy       String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
-  school School? @relation(fields: [schoolId], references: [id])
+  school  School? @relation(fields: [schoolId], references: [id])
   creator Teacher @relation(fields: [createdBy], references: [id])
-  rounds Round[]
-  runs   Run[]
+  rounds  Round[]
+  runs    Run[]
 
   @@map("quizzes")
 }
@@ -112,8 +112,8 @@ model Round {
   blurb            String?
   targetDifficulty Float?
 
-  quiz     Quiz                @relation(fields: [quizId], references: [id], onDelete: Cascade)
-  category Category            @relation(fields: [categoryId], references: [id])
+  quiz      Quiz                @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  category  Category            @relation(fields: [categoryId], references: [id])
   questions QuizRoundQuestion[]
 
   @@unique([quizId, index])
@@ -134,33 +134,33 @@ model QuizRoundQuestion {
 }
 
 model Run {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   quizId       String
   schoolId     String
   teacherId    String
-  startedAt    DateTime @default(now())
+  startedAt    DateTime  @default(now())
   finishedAt   DateTime?
-  audienceSize Int      @default(0)
+  audienceSize Int       @default(0)
   notes        String?
-  source       String   @default("projected") // projected, printed, online, other
+  source       String    @default("projected") // projected, printed, online, other
 
-  quiz     Quiz              @relation(fields: [quizId], references: [id])
-  school   School            @relation(fields: [schoolId], references: [id])
-  teacher  Teacher           @relation(fields: [teacherId], references: [id])
-  stats    RunQuestionStat[]
+  quiz    Quiz              @relation(fields: [quizId], references: [id])
+  school  School            @relation(fields: [schoolId], references: [id])
+  teacher Teacher           @relation(fields: [teacherId], references: [id])
+  stats   RunQuestionStat[]
 
   @@index([schoolId, startedAt])
   @@map("runs")
 }
 
 model RunQuestionStat {
-  id         String  @id @default(cuid())
+  id         String @id @default(cuid())
   runId      String
   questionId String
   shownOrder Int
-  correct    Int     @default(0)
-  incorrect  Int     @default(0)
-  skipped    Int     @default(0)
+  correct    Int    @default(0)
+  incorrect  Int    @default(0)
+  skipped    Int    @default(0)
   avgSecs    Float?
 
   run      Run      @relation(fields: [runId], references: [id], onDelete: Cascade)
@@ -169,4 +169,342 @@ model RunQuestionStat {
   @@unique([runId, questionId])
   @@index([questionId])
   @@map("run_question_stats")
+}
+
+// ============================================================================
+// Organisation & Licensing Models
+// ============================================================================
+
+model User {
+  id          String    @id @default(cuid())
+  email       String    @unique
+  phone       String?   @unique
+  name        String?
+  passwordHash String?   // For email/password auth
+  signupCode  String?   // Code used to sign up (if applicable)
+  signupMethod String   @default("email") // email, phone, code
+  
+  // Free trial tracking (5 weeks from signup)
+  freeTrialStartedAt DateTime?
+  freeTrialEndsAt   DateTime?
+  
+  // Subscription status
+  subscriptionStatus String @default("FREE_TRIAL") // FREE_TRIAL, ACTIVE, EXPIRED, CANCELLED
+  subscriptionPlan   String? // PREMIUM_MONTHLY, PREMIUM_ANNUAL, etc.
+  subscriptionEndsAt DateTime?
+  
+  // User tier (basic = free, premium = paid)
+  tier String @default("basic") // "basic" or "premium"
+  
+  // Referral system
+  referralCode String? @unique // Unique code for this user to share
+  referredBy String? // User ID who referred this user
+  referralCount Int @default(0) // Number of successful referrals (verified users)
+  freeTrialUntil DateTime? // Date when free trial from referrals ends
+  
+  // Email verification
+  emailVerified Boolean @default(false)
+  emailVerificationToken String?
+  emailVerificationExpires DateTime?
+  
+  // Phone verification
+  phoneVerified Boolean @default(false)
+  phoneVerificationCode String?
+  phoneVerificationExpires DateTime?
+  
+  // Profile settings
+  profileVisibility String @default("PUBLIC") // PUBLIC, LEAGUES_ONLY, PRIVATE
+  teamName String?
+  bio String?
+  profileColorScheme String? // e.g., "blue", "purple", "green", "orange", "red"
+  avatar String? // e.g., "avatar-1", "avatar-2", or URL to custom avatar
+  
+  lastLoginAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Organisation relations
+  organisationMembers  OrganisationMember[]
+  leaderboardMembers   LeaderboardMember[]
+  createdOrganisations Organisation[]         @relation("OrganisationOwner")
+  createdGroups        OrganisationGroup[]
+  createdLeaderboards  Leaderboard[]
+  createdActivity      OrganisationActivity[]
+
+  // Profile relations
+  achievements     UserAchievement[]
+  streaks          UserStreak[]
+  quizCompletions  QuizCompletion[]
+
+  // Referral relations
+  referrals        User[] @relation("UserReferrals") // Users referred by this user
+  referrer         User?  @relation("UserReferrals", fields: [referredBy], references: [id])
+
+  // Note: Question/Quiz/Run still reference Teacher for backward compatibility
+  // These can be migrated to User in a future migration
+
+  @@index([email])
+  @@index([phone])
+  @@index([signupCode])
+  @@index([profileVisibility])
+  @@index([tier])
+  @@index([referralCode])
+  @@index([referredBy])
+  @@map("users")
+}
+
+model Organisation {
+  id          String  @id @default(cuid())
+  name        String
+  emailDomain String? // e.g. "staug.nsw.edu.au" (without @)
+  ownerUserId String
+
+  // Stripe integration
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+
+  // Licensing
+  maxSeats           Int       @default(0)
+  plan               String    @default("INDIVIDUAL") // INDIVIDUAL, ORG_MONTHLY, ORG_ANNUAL
+  status             String    @default("TRIALING") // TRIALING, ACTIVE, PAST_DUE, CANCELLED, EXPIRED
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  gracePeriodEnd     DateTime?
+
+  // Feature flags (JSON)
+  featureFlags String? @default("{}")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner        User                   @relation("OrganisationOwner", fields: [ownerUserId], references: [id])
+  members      OrganisationMember[]
+  groups       OrganisationGroup[]
+  leaderboards Leaderboard[]
+  activity     OrganisationActivity[]
+
+  @@index([ownerUserId])
+  @@index([status, currentPeriodEnd])
+  @@map("organisations")
+}
+
+enum OrganisationMemberRole {
+  OWNER
+  ADMIN
+  TEACHER
+  BILLING_ADMIN
+}
+
+enum OrganisationMemberStatus {
+  PENDING
+  ACTIVE
+  INACTIVE
+}
+
+model OrganisationMember {
+  id             String                   @id @default(cuid())
+  organisationId String
+  userId         String
+  role           OrganisationMemberRole   @default(TEACHER)
+  status         OrganisationMemberStatus @default(PENDING)
+
+  // Seat tracking
+  seatAssignedAt DateTime?
+  seatReleasedAt DateTime?
+
+  deletedAt DateTime? // Soft delete
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organisation       Organisation              @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  user               User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  groupMembers       OrganisationGroupMember[]
+  leaderboardMembers LeaderboardMember[]
+
+  @@unique([organisationId, userId])
+  @@index([organisationId, status])
+  @@index([userId])
+  @@map("organisation_members")
+}
+
+enum OrganisationGroupType {
+  HOUSE
+  FACULTY
+  YEAR_GROUP
+  CUSTOM
+}
+
+model OrganisationGroup {
+  id              String                @id @default(cuid())
+  organisationId  String
+  name            String
+  type            OrganisationGroupType @default(CUSTOM)
+  description     String?
+  createdByUserId String
+
+  deletedAt DateTime? // Soft delete
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organisation Organisation              @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  creator      User                      @relation(fields: [createdByUserId], references: [id])
+  members      OrganisationGroupMember[]
+  leaderboards Leaderboard[]
+
+  @@index([organisationId, deletedAt])
+  @@map("organisation_groups")
+}
+
+model OrganisationGroupMember {
+  id                   String @id @default(cuid())
+  organisationGroupId  String
+  organisationMemberId String
+
+  createdAt DateTime @default(now())
+
+  group  OrganisationGroup  @relation(fields: [organisationGroupId], references: [id], onDelete: Cascade)
+  member OrganisationMember @relation(fields: [organisationMemberId], references: [id], onDelete: Cascade)
+
+  @@unique([organisationGroupId, organisationMemberId])
+  @@map("organisation_group_members")
+}
+
+enum LeaderboardVisibility {
+  ORG_WIDE
+  GROUP
+  AD_HOC
+}
+
+model Leaderboard {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+
+  organisationId      String? // Null for ad-hoc cross-school boards
+  organisationGroupId String? // For group-based leaderboards
+
+  visibility      LeaderboardVisibility @default(ORG_WIDE)
+  createdByUserId String
+
+  deletedAt DateTime? // Soft delete
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organisation      Organisation?       @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  organisationGroup OrganisationGroup?  @relation(fields: [organisationGroupId], references: [id], onDelete: SetNull)
+  creator           User                @relation(fields: [createdByUserId], references: [id])
+  members           LeaderboardMember[]
+
+  @@index([organisationId, deletedAt])
+  @@index([organisationGroupId])
+  @@index([createdByUserId])
+  @@map("leaderboards")
+}
+
+model LeaderboardMember {
+  id                   String  @id @default(cuid())
+  leaderboardId        String
+  userId               String
+  organisationMemberId String? // For org members, track via OrganisationMember
+
+  joinedAt DateTime  @default(now())
+  leftAt   DateTime?
+  muted    Boolean   @default(false) // For org-wide boards, allow muting
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  leaderboard        Leaderboard         @relation(fields: [leaderboardId], references: [id], onDelete: Cascade)
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organisationMember OrganisationMember? @relation(fields: [organisationMemberId], references: [id], onDelete: SetNull)
+
+  @@unique([leaderboardId, userId])
+  @@index([userId])
+  @@index([leaderboardId, leftAt])
+  @@map("leaderboard_members")
+}
+
+enum OrganisationActivityType {
+  INVITE_SENT
+  MEMBER_ADDED
+  MEMBER_REMOVED
+  MEMBER_ROLE_CHANGED
+  SEAT_ASSIGNED
+  SEAT_RELEASED
+  LEADERBOARD_CREATED
+  LEADERBOARD_DELETED
+  GROUP_CREATED
+  GROUP_DELETED
+  SUBSCRIPTION_UPDATED
+}
+
+model OrganisationActivity {
+  id             String                   @id @default(cuid())
+  organisationId String
+  userId         String // Actor
+  type           OrganisationActivityType
+  metadata       String? // JSON string for additional context
+
+  createdAt DateTime @default(now())
+
+  organisation Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  actor        User         @relation(fields: [userId], references: [id])
+
+  @@index([organisationId, createdAt])
+  @@index([userId])
+  @@map("organisation_activity")
+}
+
+// ============================================================================
+// User Profile & Achievements Models
+// ============================================================================
+
+model UserAchievement {
+  id            String   @id @default(cuid())
+  userId        String
+  achievementKey String   // e.g., "perfect_round", "speed_demon", "perfect_quiz"
+  quizSlug      String?  // Optional: which quiz it was earned in
+  metadata      String?  // JSON string for additional context (e.g., round number)
+  unlockedAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementKey, quizSlug]) // Prevent duplicates for same quiz
+  @@index([userId, unlockedAt])
+  @@map("user_achievements")
+}
+
+model UserStreak {
+  id            String   @id @default(cuid())
+  userId        String
+  currentStreak Int      @default(0) // Current consecutive weeks
+  longestStreak Int      @default(0) // All-time longest streak
+  lastQuizDate  DateTime? // Date of last quiz completion
+  streakStartDate DateTime? // When current streak started
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId])
+  @@index([userId])
+  @@map("user_streaks")
+}
+
+model QuizCompletion {
+  id            String   @id @default(cuid())
+  userId        String
+  quizSlug      String
+  score         Int      // Number of correct answers
+  totalQuestions Int     // Total questions in quiz
+  completedAt   DateTime @default(now())
+  timeSeconds   Int?     // Time taken in seconds
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, quizSlug]) // One completion per quiz per user
+  @@index([userId, completedAt])
+  @@index([quizSlug])
+  @@map("quiz_completions")
 }

@@ -13,7 +13,7 @@ export const Card: React.FC<CardProps> = ({
   className = "",
   hover = true
 }) => {
-  const baseClasses = "bg-white rounded-xl border border-gray-200 shadow-sm";
+  const baseClasses = "bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm";
   
   return (
     <motion.div

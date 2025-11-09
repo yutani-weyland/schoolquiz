@@ -2,6 +2,22 @@
 @tailwind components;
 @tailwind utilities;
 
+/* OpenMoji Font */
+@font-face {
+  font-family: 'OpenMoji';
+  src: url('/fonts/OpenMoji-Color.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* OpenMoji emoji class */
+.openmoji {
+  font-family: 'OpenMoji', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif;
+  font-feature-settings: normal;
+  font-variant-emoji: emoji;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -25,11 +41,26 @@
     --ring: 222.2 84% 4.9%;
     --radius: 0.5rem;
     
+    /* Round colors - unified with tokens.ts */
     --round-1: #F4A261;
     --round-2: #7FB3FF;
     --round-3: #F7A8C0;
     --round-4: #9EE6B4;
     --round-5: #F7D57A;
+    
+    /* Card colors - unified system */
+    --card-bg-light: #ffffff;
+    --card-bg-dark: #1e293b;
+    --card-border-light: #e2e8f0;
+    --card-border-dark: #334155;
+    
+    /* Quiz theme tokens */
+    --color-correct: #20c997;
+    --color-wrong: #ff6b6b;
+    --color-text: #111;
+    
+    /* Layout tokens */
+    --maxw-reading: 78ch;
   }
 
   .dark {
@@ -52,6 +83,15 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
+    
+    /* Card colors in dark mode */
+    --card-bg: var(--card-bg-dark);
+    --card-border: var(--card-border-dark);
+  }
+  
+  :root:not(.dark) {
+    --card-bg: var(--card-bg-light);
+    --card-border: var(--card-border-light);
   }
 }
 
@@ -61,5 +101,79 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Site Header Styles - Matching main site */
+.site-header {
+  --header-padding-x: 1.5rem;
+  --header-padding-y: 0.75rem;
+  padding-top: calc(env(safe-area-inset-top, 0px) + var(--header-padding-y));
+  padding-bottom: var(--header-padding-y);
+  padding-left: calc(env(safe-area-inset-left, 0px) + var(--header-padding-x));
+  padding-right: calc(env(safe-area-inset-right, 0px) + var(--header-padding-x));
+}
+
+/* Smooth scroll with edge masking for menu - bottom fade only */
+.menu-scroll-mask {
+  -webkit-mask-image: 
+    linear-gradient(to bottom, black calc(100% - 40px), transparent);
+  mask-image: 
+    linear-gradient(to bottom, black calc(100% - 40px), transparent);
+}
+
+/* Custom scrollbar styling for menu */
+.menu-scroll-mask::-webkit-scrollbar {
+  width: 8px;
+}
+
+.menu-scroll-mask::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.menu-scroll-mask::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.3);
+  border-radius: 4px;
+}
+
+.menu-scroll-mask::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.5);
+}
+
+/* Dark mode scrollbar */
+.dark .menu-scroll-mask::-webkit-scrollbar-thumb {
+  background: rgba(75, 85, 99, 0.4);
+}
+
+.dark .menu-scroll-mask::-webkit-scrollbar-thumb:hover {
+  background: rgba(75, 85, 99, 0.6);
+}
+
+/* Hide scrollbars while maintaining scroll functionality */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Quiz grid layout - spacing between cards */
+.quiz-grid-layout {
+  display: grid;
+  gap: clamp(18px, 3vw, 36px);
+  grid-template-columns: minmax(0, 1fr);
+  transition: grid-template-columns 0.5s ease, gap 0.4s ease;
+}
+
+@media (min-width: 768px) {
+  .quiz-grid-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .quiz-grid-layout {
+    grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
   }
 }

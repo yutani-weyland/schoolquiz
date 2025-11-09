@@ -4,7 +4,7 @@ import tailwind from "@astrojs/tailwind";
 
 export default defineConfig({
   integrations: [react(), tailwind()],
-  output: "static",
+  output: "hybrid", // Enable API routes
   site: "https://schoolquiz.app",
   vite: {
     define: {

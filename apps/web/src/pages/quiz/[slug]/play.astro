@@ -133,6 +133,14 @@ export function getStaticPaths() {
 }
 
 const { quiz } = Astro.props;
+
+// Determine if this is the newest quiz (first in the list)
+const quizzes = [
+  { slug: "279" },
+  { slug: "278" },
+  { slug: "277" },
+];
+const isNewest = quizzes[0].slug === quiz.slug;
 ---
 
 <Layout title={`${quiz.title} - The School Quiz`}>
@@ -143,6 +151,7 @@ const { quiz } = Astro.props;
     questions={quiz.questions}
     rounds={quiz.rounds}
     weekISO={quiz.weekISO}
+    isNewest={isNewest}
     client:only="react"
   />
 </Layout>

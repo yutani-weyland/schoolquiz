@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, ChevronDown, ChevronUp, Star, Trophy, BarChart3, Zap } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Star, Trophy, BarChart3, Zap, Users, Building2, TrendingDown } from "lucide-react";
 
 type Plan = "monthly" | "yearly";
 
@@ -16,6 +16,7 @@ interface Feature {
 export default function PremiumPage() {
 	const [plan, setPlan] = useState<Plan>("monthly");
 	const [hoveredFeature, setHoveredFeature] = useState<number | null>(null);
+	const [teacherCount, setTeacherCount] = useState(5); // For organization pricing
 
 	const monthlyPrice = 5;
 	const yearlyPrice = 50;
@@ -219,7 +220,7 @@ export default function PremiumPage() {
 									<p className="text-gray-600 dark:text-gray-400 mb-6">
 										{features[hoveredFeature].description}
 									</p>
-									<div className="bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl overflow-hidden ring-4 ring-blue-200 dark:ring-blue-800 shadow-xl">
+									<div className="bg-blue-600 dark:bg-blue-800 rounded-2xl overflow-hidden ring-4 ring-blue-200 dark:ring-blue-800 shadow-xl">
 										<div className="aspect-[4/3] flex items-center justify-center text-white">
 											<p className="text-lg font-semibold text-center px-4">
 												{features[hoveredFeature].preview}
@@ -234,7 +235,7 @@ export default function PremiumPage() {
 									exit={{ opacity: 0 }}
 									className="text-center py-12"
 								>
-									<div className="bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/20 dark:to-blue-800/20 rounded-2xl p-8 mb-4 border-2 border-dashed border-blue-300 dark:border-blue-700">
+									<div className="bg-blue-50 dark:bg-blue-900/20 rounded-2xl p-8 mb-4 border-2 border-dashed border-blue-300 dark:border-blue-700">
 										<p className="text-gray-600 dark:text-gray-400 text-sm font-medium">
 											Preview will appear here
 										</p>

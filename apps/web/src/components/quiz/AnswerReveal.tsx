@@ -18,6 +18,7 @@ type Props = {
 	onMarkCorrect?: (event: React.MouseEvent<HTMLButtonElement>) => void;
 	onUnmarkCorrect?: () => void;
 	size?: "default" | "compact";
+	className?: string;
 };
 
 export default function AnswerReveal({
@@ -33,6 +34,7 @@ export default function AnswerReveal({
 	onMarkCorrect,
 	onUnmarkCorrect,
 	size = "default",
+	className,
 }: Props) {
 	const isCompact = size === "compact";
 	const BUTTON_HEIGHT = isCompact ? 56 : 68;
@@ -118,10 +120,19 @@ export default function AnswerReveal({
 	// This width should never change - it's the fixed width for the button
 	const fixedButtonWidthRef = useRef<number | null>(null);
 	const [isWidthReady, setIsWidthReady] = useState(false);
+	const [isMobileViewport, setIsMobileViewport] = useState(() => {
+		if (typeof window === "undefined") return false;
+		return window.innerWidth < 768;
+	});
+	const [targetWidth, setTargetWidth] = useState(() => {
+		if (typeof window === "undefined") return calculateInitialWidth();
+		const viewport = window.innerWidth;
+		return viewport < 768 ? viewport * 0.92 : calculateInitialWidth();
+	});
 
 	// Pre-calculate a reliable width estimate based on "Reveal answer" text
 	// This ensures the button has a consistent width from the start
-	const calculateInitialWidth = () => {
+	function calculateInitialWidth() {
 		if (typeof window === 'undefined') return 500;
 		
 		const viewportWidth = window.innerWidth;
@@ -131,7 +142,7 @@ export default function AnswerReveal({
 		const estimatedWidth = isCompact ? 360 : 450;
 		
 		return Math.min(estimatedWidth, maxAllowedWidth);
-	};
+	}
 
 	// Calculate the fixed width based on "Reveal answer" text - do this once
 	// This width is calculated once and NEVER changes
@@ -142,6 +153,11 @@ export default function AnswerReveal({
 			const initialWidth = calculateInitialWidth();
 			fixedButtonWidthRef.current = initialWidth;
 			setIsWidthReady(true);
+			setTargetWidth(prev => {
+				if (typeof window === "undefined") return initialWidth;
+				const viewport = window.innerWidth;
+				return viewport < 768 ? viewport * 0.92 : initialWidth;
+			});
 			
 			// Then refine it by measuring the actual button once it renders
 			const timer = setTimeout(() => {
@@ -156,6 +172,11 @@ export default function AnswerReveal({
 						// Use the measured width, but make it wider (add 150px) and cap at viewport
 						const extra = isCompact ? 100 : 150;
 						fixedButtonWidthRef.current = Math.min(measuredWidth + extra, maxAllowedWidth);
+						setTargetWidth(prev => {
+							if (typeof window === "undefined") return fixedButtonWidthRef.current ?? measuredWidth;
+							const viewport = window.innerWidth;
+							return viewport < 768 ? viewport * 0.92 : (fixedButtonWidthRef.current ?? measuredWidth);
+						});
 					}
 				}
 			}, 50); // Reduced delay for faster measurement
@@ -180,6 +201,18 @@ export default function AnswerReveal({
 			setShowRedFlash(false); // Reset red flash when answer is hidden
 		}
 	}, [revealed, hasShownEncouragement, isMarkedCorrect]);
+
+	useEffect(() => {
+		if (typeof window === "undefined") return;
+		const handleResize = () => {
+			const viewport = window.innerWidth;
+			setIsMobileViewport(viewport < 768);
+			const base = fixedButtonWidthRef.current ?? calculateInitialWidth();
+			setTargetWidth(viewport < 768 ? viewport * 0.92 : base);
+		};
+		window.addEventListener("resize", handleResize, { passive: true });
+		return () => window.removeEventListener("resize", handleResize);
+	}, [isCompact]);
 
 	// Check if answer text overflows and needs scrolling
 	useEffect(() => {
@@ -255,7 +288,7 @@ export default function AnswerReveal({
 	const tooltipContent = revealed ? "Click ✓ if you got it right, or ✗ if you got it wrong" : null;
 	
 	// Get the button width - use initial estimate if available, otherwise use calculated
-	const buttonWidth = fixedButtonWidthRef.current || calculateInitialWidth();
+	const resolvedWidth = isMobileViewport ? "100%" : `${Math.round(targetWidth)}px`;
 	
 	const minHorizontalPadding = Math.max(CIRCLE_SIZE + CIRCLE_PADDING + 12, 32);
 	const buttonContent = (
@@ -269,14 +302,15 @@ export default function AnswerReveal({
 						}
 					}}
 					aria-pressed={revealed}
-					className="relative flex select-none items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+					className={`relative flex select-none items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 ${className ?? ""}`}
 					style={{
 						alignSelf: "flex-start",
 						marginLeft: 0,
-						borderRadius: window.innerWidth < 768 ? "32px" : `${BUTTON_RADIUS}px`,
+						borderRadius: isMobileViewport ? "32px" : `${BUTTON_RADIUS}px`,
 						height: BUTTON_HEIGHT,
-						width: "100%",
-						maxWidth: window.innerWidth < 768 ? "100%" : "min(100%, 460px)",
+						width: resolvedWidth,
+						minWidth: resolvedWidth,
+						maxWidth: resolvedWidth,
 						paddingLeft: minHorizontalPadding,
 						paddingRight: minHorizontalPadding,
 						paddingTop: 16,

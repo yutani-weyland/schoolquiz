@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Menu, X, RotateCcw } from "lucide-react";
+import { Menu, X, RotateCcw, Share2, LayoutList, MonitorPlay } from "lucide-react";
 import { AchievementNotification, Achievement } from "../AchievementNotification";
 import { QuizThemeMode } from "./types";
 
@@ -16,6 +16,9 @@ interface QuizHeaderProps {
   onRestartQuiz: () => void;
   onExitQuiz: () => void;
   currentScreen: "round-intro" | "question";
+  onOpenGridView?: () => void;
+  onOpenPresenterView?: () => void;
+  isGridView?: boolean;
 }
 
 const THEME_MODES: QuizThemeMode[] = ["colored", "light", "dark"];
@@ -51,13 +54,18 @@ export function QuizHeader({
   onRestartQuiz,
   onExitQuiz,
   currentScreen,
+  onOpenGridView,
+  onOpenPresenterView,
+  isGridView = false,
 }: QuizHeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isTopBarHovered, setIsTopBarHovered] = useState(false);
   const [bucketRotate, setBucketRotate] = useState(0);
+  const [shareFeedback, setShareFeedback] = useState<string | null>(null);
 
   const isLightText = textColor === "white";
-  const logoClass = isLightText ? "text-white" : "text-gray-900";
+  const isDarkMode = themeMode === "dark";
+  const logoColorClass = isDarkMode ? "text-white" : "text-[#0f0f0f]";
   const labelClass = isLightText ? "text-white/70" : "text-gray-600";
   const menuButtonClass = isLightText
     ? "bg-white/15 text-white hover:bg-white/25"
@@ -66,6 +74,56 @@ export function QuizHeader({
   const menuPanelClass = isLightText
     ? "bg-gray-900/95 border-gray-700"
     : "bg-white/95 border-gray-200";
+
+  const shareButtonClass = menuButtonClass;
+
+  const resolveShareUrl = () => {
+    if (typeof window === "undefined") return "/";
+    try {
+      return window.location.href;
+    } catch {
+      return "/";
+    }
+  };
+
+  const handleShareQuiz = async () => {
+    const url = resolveShareUrl();
+    const shareTitle = quizLabel ? `${quizLabel} · The School Quiz` : "The School Quiz";
+
+    const nav = typeof navigator !== "undefined" ? navigator : null;
+
+    try {
+      if (nav?.share) {
+        await nav.share({
+          title: shareTitle,
+          url,
+        });
+        setShareFeedback("Quiz shared");
+        return;
+      }
+    } catch (error) {
+      // fall back to clipboard when share is cancelled or fails
+      console.warn("Native share failed, falling back to clipboard", error);
+    }
+
+    try {
+      if (nav?.clipboard?.writeText) {
+        await nav.clipboard.writeText(url);
+        setShareFeedback("Link copied to clipboard");
+      } else {
+        throw new Error("Clipboard API unavailable");
+      }
+    } catch (error) {
+      console.warn("Clipboard copy failed", error);
+      setShareFeedback(`Copy link manually: ${url}`);
+    }
+  };
+
+  useEffect(() => {
+    if (!shareFeedback) return;
+    const timeout = setTimeout(() => setShareFeedback(null), 3500);
+    return () => clearTimeout(timeout);
+  }, [shareFeedback]);
 
   const handleThemeToggle = () => {
     const currentIndex = THEME_MODES.indexOf(themeMode);
@@ -104,13 +162,17 @@ export function QuizHeader({
     };
   }, []);
 
-  const showBranding = !(isMobile && isScrolled);
+  const showBranding = !(isMobile && isScrolled) && !(isGridView && isScrolled);
   const headerBackground = showBranding ? backgroundColor : "transparent";
 
   return (
     <div
       className="fixed top-0 left-0 right-0 z-50 py-3 px-6 transition-colors duration-300 ease-out"
-      style={{ pointerEvents: "auto", backgroundColor: headerBackground }}
+      style={{
+        pointerEvents: "auto",
+        backgroundColor: headerBackground,
+        transition: "background-color 300ms ease-in-out, color 300ms ease-in-out",
+      }}
     >
       <div className="flex items-center justify-between w-full gap-4">
         {showBranding ? (
@@ -125,7 +187,7 @@ export function QuizHeader({
                     window.location.href = isLoggedIn ? "/quizzes" : "/";
                   }
                 }}
-                className={`text-2xl font-bold tracking-tight cursor-pointer ${logoClass}`}
+                className={`text-2xl font-bold tracking-tight transition-opacity duration-300 hover:opacity-80 cursor-pointer ${logoColorClass}`}
               >
                 The School Quiz
               </motion.a>
@@ -155,24 +217,62 @@ export function QuizHeader({
           <div className="flex-1" />
         )}
 
-        <motion.button
-          onClick={() => setIsMenuOpen(!isMenuOpen)}
-          className={`w-12 h-12 rounded-full transition-colors duration-300 ease-out flex items-center justify-center relative ${menuButtonClass}`}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <AnimatePresence mode="wait">
-            {isMenuOpen ? (
-              <motion.div key="close" initial={{ opacity: 0, rotate: -90 }} animate={{ opacity: 1, rotate: 0 }} exit={{ opacity: 0, rotate: 90 }} transition={{ duration: 0.2 }}>
-                <X className="h-5 w-5" />
-              </motion.div>
-            ) : (
-              <motion.div key="menu" initial={{ opacity: 0, rotate: 90 }} animate={{ opacity: 1, rotate: 0 }} exit={{ opacity: 0, rotate: -90 }} transition={{ duration: 0.2 }}>
-                <Menu className="h-5 w-5" />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.button>
+        <div className="flex items-center gap-3">
+          {onOpenPresenterView && (
+            <motion.button
+              onClick={onOpenPresenterView}
+              className={`hidden sm:flex h-12 w-12 items-center justify-center rounded-full transition-colors duration-300 ease-out ${menuButtonClass}`}
+              whileHover={{ scale: 1.07 }}
+              whileTap={{ scale: 0.95 }}
+              title="Switch to presenter view"
+              aria-label="Switch to presenter view"
+            >
+              <MonitorPlay className="h-5 w-5" />
+            </motion.button>
+          )}
+          {onOpenGridView && (
+            <motion.button
+              onClick={onOpenGridView}
+              className={`hidden sm:flex h-12 w-12 items-center justify-center rounded-full transition-colors duration-300 ease-out ${menuButtonClass}`}
+              whileHover={{ scale: 1.07 }}
+              whileTap={{ scale: 0.95 }}
+              title="Switch to grid view"
+              aria-label="Switch to grid view"
+            >
+              <LayoutList className="h-5 w-5" />
+            </motion.button>
+          )}
+          <motion.button
+            onClick={handleShareQuiz}
+            className={`w-12 h-12 rounded-full transition-colors duration-300 ease-out flex items-center justify-center ${shareButtonClass}`}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            aria-label="Share quiz"
+          >
+            <Share2 className="h-5 w-5" />
+          </motion.button>
+          <motion.button
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className={`w-12 h-12 rounded-full transition-colors duration-300 ease-out flex items-center justify-center relative ${menuButtonClass}`}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            aria-haspopup="menu"
+            aria-expanded={isMenuOpen}
+            aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+          >
+            <AnimatePresence mode="wait">
+              {isMenuOpen ? (
+                <motion.div key="close" initial={{ opacity: 0, rotate: -90 }} animate={{ opacity: 1, rotate: 0 }} exit={{ opacity: 0, rotate: 90 }} transition={{ duration: 0.2 }}>
+                  <X className="h-5 w-5" />
+                </motion.div>
+              ) : (
+                <motion.div key="menu" initial={{ opacity: 0, rotate: 90 }} animate={{ opacity: 1, rotate: 0 }} exit={{ opacity: 0, rotate: -90 }} transition={{ duration: 0.2 }}>
+                  <Menu className="h-5 w-5" />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.button>
+        </div>
       </div>
 
       <AnimatePresence>
@@ -238,6 +338,10 @@ export function QuizHeader({
           </>
         )}
       </AnimatePresence>
+
+      <span className="sr-only" aria-live="polite">
+        {shareFeedback || ""}
+      </span>
     </div>
   );
 }

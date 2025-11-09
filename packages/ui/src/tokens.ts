@@ -64,6 +64,28 @@ export const tokens = {
     md: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
     lg: "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
     xl: "0 20px 25px -5px rgba(0, 0, 0, 0.1)"
+  },
+  
+  // Card colors - unified system
+  card: {
+    background: {
+      light: "#ffffff",
+      dark: "#1e293b" // gray-800
+    },
+    border: {
+      light: "#e2e8f0", // gray-200
+      dark: "#334155" // gray-700
+    },
+    borderOpacity: {
+      light: "rgba(226, 232, 240, 0.5)", // gray-200/50
+      dark: "rgba(51, 65, 85, 0.5)" // gray-700/50
+    },
+    shadow: {
+      sm: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
+      md: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+      lg: "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
+      xl: "0 20px 25px -5px rgba(0, 0, 0, 0.1)"
+    }
   }
 };
 
@@ -81,6 +103,25 @@ export const cssVariables = `
     
     --text-fluid-h1: ${tokens.typography.fontSize["fluid-h1"]};
     --text-fluid-body: ${tokens.typography.fontSize["fluid-body"]};
+    
+    --card-bg-light: ${tokens.card.background.light};
+    --card-bg-dark: ${tokens.card.background.dark};
+    --card-border-light: ${tokens.card.border.light};
+    --card-border-dark: ${tokens.card.border.dark};
+    --card-border-opacity-light: ${tokens.card.borderOpacity.light};
+    --card-border-opacity-dark: ${tokens.card.borderOpacity.dark};
+  }
+  
+  .dark {
+    --card-bg: var(--card-bg-dark);
+    --card-border: var(--card-border-dark);
+    --card-border-opacity: var(--card-border-opacity-dark);
+  }
+  
+  :root:not(.dark) {
+    --card-bg: var(--card-bg-light);
+    --card-border: var(--card-border-light);
+    --card-border-opacity: var(--card-border-opacity-light);
   }
   
   .font-dyslexic {

@@ -6,6 +6,7 @@ import QuizSafariPreview from "../components/QuizSafariPreview.tsx";
 import QuizPhonePreview from "../components/QuizPhonePreview.tsx";
 import { RotatingText } from "../components/RotatingText.tsx";
 import WhySection from "../components/marketing/WhySection.tsx";
+import HeroCTA from "../components/HeroCTA.tsx";
 ---
 
 <Layout title="The School Quiz - Weekly Quiz for High School Students">
@@ -40,22 +41,8 @@ import WhySection from "../components/marketing/WhySection.tsx";
                       The School Quiz blends general knowledge, educational content, and entertainment - covering music, sport, movies, current affairs, pop culture, and topics relevant to high school students. No insanely hard questions, no AI slop. Just a solid quiz that drops every Monday morning.
                     </p>
 
-                    <div
-                      class="flex flex-col sm:flex-row items-center gap-4 justify-center"
-                      id="buttons"
-                    >
-                      <a
-                        href="/quizzes"
-                        class="inline-flex items-center justify-center px-6 py-3 bg-[#3B82F6] text-white rounded-full font-medium hover:bg-[#2563EB] transition-colors focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:ring-offset-2 min-w-[200px]"
-                      >
-                        Play this week's quiz
-                      </a>
-                      <a
-                        href="/premium"
-                        class="inline-flex items-center justify-center px-6 py-3 border border-gray-300 dark:border-[#DCDCDC] text-gray-700 dark:text-[#DCDCDC] rounded-full font-medium hover:bg-gray-100 dark:hover:bg-[#DCDCDC] hover:text-gray-900 dark:hover:text-[#1A1A1A] transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-[#DCDCDC] focus:ring-offset-2 min-w-[200px]"
-                      >
-                        Upgrade to Premium
-                      </a>
+                    <div id="buttons">
+                      <HeroCTA client:only="react" />
                     </div>
                   </div>
 

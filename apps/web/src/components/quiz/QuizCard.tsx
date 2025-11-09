@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Calendar, Share2, Copy, Check } from "lucide-react";
 import React, { useState } from "react";
+import { isLoggedIn } from "../../lib/auth";
 
 export type Quiz = {
 	id: number;
@@ -49,6 +50,7 @@ export function QuizCard({ quiz, isNewest = false }: QuizCardProps) {
 	const [showShareMenu, setShowShareMenu] = useState(false);
 	const [copied, setCopied] = useState(false);
 	const [hasProgress, setHasProgress] = useState(false);
+	const [isHovered, setIsHovered] = useState(false);
 	
 	// Check if quiz has been started
 	React.useEffect(() => {
@@ -96,50 +98,64 @@ export function QuizCard({ quiz, isNewest = false }: QuizCardProps) {
 		}
 	};
 
+	const handleCardClick = (e: React.MouseEvent) => {
+		// Require sign-up
+		if (!isLoggedIn()) {
+			e.preventDefault();
+			window.location.href = "/sign-up";
+			return;
+		}
+		
+		// Save scroll position for transition
+		try {
+			sessionStorage.setItem("quizzes.scrollY", String(window.scrollY));
+			sessionStorage.setItem("quizzes.scrollParams", window.location.search);
+			sessionStorage.setItem("quiz.transition.id", String(quiz.id));
+		} catch {}
+	};
+
 	return (
-		<motion.a
-			href={quiz.status === "available" ? `/quiz/${quiz.slug}/intro` : "#"}
-			aria-label={`Play Quiz ${quiz.id}: ${quiz.title}`}
-			className="block focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 rounded-3xl group"
-			tabIndex={0}
-			onClick={() => {
-				try {
-					sessionStorage.setItem("quizzes.scrollY", String(window.scrollY));
-					sessionStorage.setItem("quizzes.scrollParams", window.location.search);
-					sessionStorage.setItem("quiz.transition.id", String(quiz.id));
-				} catch {}
-			}}
+		<motion.div
 			initial={{ opacity: 0, y: 20 }}
 			whileInView={{ opacity: 1, y: 0 }}
-			viewport={{ once: true, margin: "-50px" }}
+			viewport={{ once: true, margin: "-100px" }}
 			transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+			className="h-full"
 		>
-		<motion.div
-			layoutId={`quiz-bg-${quiz.id}`}
-			className="rounded-3xl p-7 sm:p-9 shadow-lg h-full min-h-[430px] flex flex-col relative overflow-hidden"
-			style={{ 
-				backgroundColor: quiz.colorHex,
-				viewTransitionName: `quiz-${quiz.id}`
-			}}
-			whileHover={{ 
-				rotate: 1.4,
-				scale: 1.02,
-				boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)"
-			}}
-			whileTap={{ scale: 0.98 }}
-			transition={{ 
-				type: "spring",
-				stiffness: 300,
-				damping: 25
-			}}
-		>
-			{/* Subtle gradient overlay on hover */}
-			<motion.div
-				className="absolute inset-0 bg-gradient-to-br from-white/0 to-black/0 pointer-events-none rounded-3xl"
-				initial={{ opacity: 0 }}
-				whileHover={{ opacity: 0.1 }}
-				transition={{ duration: 0.3 }}
-			/>
+			<motion.a
+				href={quiz.status === "available" && isLoggedIn() ? `/quiz/${quiz.slug}/intro` : (isLoggedIn() ? "#" : "/sign-up")}
+				aria-label={`Play Quiz ${quiz.id}: ${quiz.title}`}
+				className="block focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 rounded-3xl group h-full"
+				tabIndex={0}
+				onClick={handleCardClick}
+				onMouseEnter={() => setIsHovered(true)}
+				onMouseLeave={() => setIsHovered(false)}
+				layoutId={`quiz-bg-${quiz.id}`}
+				style={{ 
+					backgroundColor: quiz.colorHex,
+					viewTransitionName: `quiz-${quiz.id}`,
+					transformOrigin: 'center',
+				}}
+				whileHover={{ 
+					rotate: 1.4,
+					scale: 1.02,
+					boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)"
+				}}
+				whileTap={{ scale: 0.98 }}
+				transition={{ 
+					type: "spring",
+					stiffness: 300,
+					damping: 25
+				}}
+			>
+				<div className="rounded-3xl p-7 sm:p-9 shadow-lg h-full min-h-[430px] flex flex-col relative overflow-hidden">
+					{/* Subtle gradient overlay on hover */}
+					<motion.div
+						className="absolute inset-0 bg-gradient-to-br from-white/10 to-black/10 pointer-events-none rounded-3xl"
+						initial={{ opacity: 0 }}
+						animate={{ opacity: isHovered ? 1 : 0 }}
+						transition={{ duration: 0.3 }}
+					/>
 
 				<div className="flex items-start justify-between mb-4 relative z-10">
 					<div className="flex items-center gap-3">
@@ -219,15 +235,15 @@ export function QuizCard({ quiz, isNewest = false }: QuizCardProps) {
 					<div className={`flex items-center justify-between ${footerMuted}`}>
 						<motion.button
 							disabled={quiz.status === "coming_soon"}
-							className={`px-8 py-3.5 rounded-full text-lg font-semibold transition ${
+							className={`px-6 py-3 rounded-full text-base font-semibold transition whitespace-nowrap ${
 								quiz.status === "coming_soon"
 									? "bg-white/40 text-black/60 cursor-not-allowed"
 									: text === "white"
 									? "bg-white text-gray-900 hover:bg-white/90"
 									: "bg-gray-900 text-white hover:bg-gray-800"
 							}`}
-							whileHover={quiz.status !== "coming_soon" ? { scale: 1.05 } : {}}
-							whileTap={quiz.status !== "coming_soon" ? { scale: 0.95 } : {}}
+							whileHover={quiz.status !== "coming_soon" ? { scale: 1.04 } : {}}
+							whileTap={quiz.status !== "coming_soon" ? { scale: 0.96 } : {}}
 						>
 							{quiz.status === "coming_soon" ? "Coming soon" : hasProgress ? "Continue quiz" : "Play quiz"}
 						</motion.button>
@@ -341,8 +357,8 @@ export function QuizCard({ quiz, isNewest = false }: QuizCardProps) {
 						</div>
 					</div>
 				</div>
-			</motion.div>
-		</motion.a>
+			</motion.a>
+		</motion.div>
 	);
 }
 

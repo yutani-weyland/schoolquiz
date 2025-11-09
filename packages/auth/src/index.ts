@@ -12,6 +12,7 @@ declare module 'next-auth' {
       role: string
       schoolId: string
       schoolName: string
+      tier: string // "basic" or "premium"
     }
   }
 }
@@ -56,6 +57,37 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (token.sub) {
+        // Try User model first (newer)
+        const user = await prisma.user.findUnique({
+          where: { id: token.sub },
+          include: {
+            organisationMembers: {
+              where: { status: 'ACTIVE' },
+              include: { organisation: true },
+              take: 1,
+            },
+          },
+        })
+        
+        if (user) {
+          // Determine tier: premium if tier is "premium" OR subscription is active
+          const isPremium = user.tier === 'premium' || 
+            (user.subscriptionStatus === 'ACTIVE' || user.subscriptionStatus === 'TRIALING') ||
+            (user.freeTrialUntil && new Date(user.freeTrialUntil) > new Date())
+          
+          session.user = {
+            id: user.id,
+            email: user.email,
+            name: user.name || '',
+            role: 'teacher', // Default role for User model
+            schoolId: user.organisationMembers[0]?.organisationId || '',
+            schoolName: user.organisationMembers[0]?.organisation.name || '',
+            tier: isPremium ? 'premium' : 'basic',
+          }
+          return session
+        }
+        
+        // Fallback to Teacher model (legacy)
         const teacher = await prisma.teacher.findUnique({
           where: { id: token.sub },
           include: { school: true }
@@ -69,6 +101,7 @@ export const authOptions: NextAuthOptions = {
             role: teacher.role,
             schoolId: teacher.schoolId,
             schoolName: teacher.school.name,
+            tier: 'basic', // Legacy users default to basic
           }
         }
       }

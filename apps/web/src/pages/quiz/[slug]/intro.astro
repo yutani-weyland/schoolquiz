@@ -19,9 +19,20 @@ export function getStaticPaths() {
 }
 
 const { quiz } = Astro.props;
+
+// Determine if this is the newest quiz (first in the list)
+const quizzes = [
+  { id: 279, slug: "279", title: "Shape Up, Pumpkins, Famous First Words, Crazes, and Next In Sequence.", blurb: "A weekly selection mixing patterns, pop culture and logic.", weekISO: "2024-01-15", colorHex: "#FFE135" },
+  { id: 278, slug: "278", title: "Opposite Day, Lights, Common Ground, Robots Etc, and First Ladies.", blurb: "Wordplay meets trivia.", weekISO: "2024-01-08", colorHex: "#FF69B4" },
+  { id: 277, slug: "277", title: "Back to the Past, Name That Nation, Name the Other, Analog Games, and What Does It Stand For?", blurb: "History, geography and acronyms.", weekISO: "2024-01-01", colorHex: "#39FF14" },
+  { id: 276, slug: "276", title: "Holiday Trivia, Winter Sports, Year End Review, and Festive Fun.", blurb: "Seasonal mixed bag.", weekISO: "2023-12-25", colorHex: "#00E5FF" },
+  { id: 275, slug: "275", title: "Movie Magic, Tech Trends, Sports Moments, and Pop Culture.", blurb: "Headlines and highlights.", weekISO: "2023-12-18", colorHex: "#FF10F0" },
+  { id: 274, slug: "274", title: "World Wonders, Historical Events, Science Facts, and Geography.", blurb: "Curiosities around the world.", weekISO: "2023-12-11", colorHex: "#FF7F00" }
+];
+const isNewest = quizzes[0].slug === quiz.slug;
 ---
 
 <Layout title={`${quiz.title} - The School Quiz`}>
-  <QuizIntro quiz={quiz} client:only="react" />
+  <QuizIntro quiz={quiz} isNewest={isNewest} client:only="react" />
 </Layout>
 

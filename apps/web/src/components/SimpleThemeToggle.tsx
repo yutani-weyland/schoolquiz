@@ -1,69 +1,114 @@
 import React, { useState, useEffect } from 'react';
 
-export default function SimpleThemeToggle() {
+declare global {
+  interface Window {
+    setThemePreference?: (isDark: boolean) => void;
+  }
+}
+
+interface SimpleThemeToggleProps {
+  className?: string;
+}
+
+function applyThemePreference(isDark: boolean) {
+  if (typeof window === 'undefined') return;
+  const setter = window.setThemePreference;
+
+  if (typeof setter === 'function') {
+    setter(isDark);
+    return;
+  }
+
+  if (isDark) {
+    document.documentElement.classList.add('dark');
+  } else {
+    document.documentElement.classList.remove('dark');
+  }
+
+  try {
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+  } catch {
+    // ignore storage errors
+  }
+
+  window.dispatchEvent(new CustomEvent('themechange', { detail: { isDark } }));
+}
+
+export default function SimpleThemeToggle({ className = '' }: SimpleThemeToggleProps) {
   const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
     // Initialize from localStorage first, then check DOM
-    const savedTheme = localStorage.getItem('theme');
+    let savedTheme: string | null = null;
+
+    try {
+      savedTheme = localStorage.getItem('theme');
+    } catch {
+      savedTheme = null;
+    }
+
     let shouldBeDark = false;
     
     if (savedTheme === 'light') {
       shouldBeDark = false;
-      document.documentElement.classList.remove('dark');
     } else if (savedTheme === 'dark') {
       shouldBeDark = true;
-      document.documentElement.classList.add('dark');
     } else {
       // No saved theme, default to dark
       shouldBeDark = true;
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
+      try {
+        localStorage.setItem('theme', 'dark');
+      } catch {
+        // ignore storage errors
+      }
     }
     
+    applyThemePreference(shouldBeDark);
     setIsDark(shouldBeDark);
     
     // Listen for storage events (in case theme changes in another tab/window)
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'theme') {
         const newTheme = e.newValue === 'dark';
+        applyThemePreference(newTheme);
         setIsDark(newTheme);
-        if (newTheme) {
-          document.documentElement.classList.add('dark');
-        } else {
-          document.documentElement.classList.remove('dark');
-        }
+      }
+    };
+
+    const handleThemeChange = (event: Event) => {
+      const detail = (event as CustomEvent<{ isDark?: boolean }>).detail;
+      if (detail && typeof detail.isDark === 'boolean') {
+        setIsDark(detail.isDark);
       }
     };
     
     window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('themechange', handleThemeChange);
     
     return () => {
       window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('themechange', handleThemeChange);
     };
   }, []);
 
   const toggleTheme = () => {
     console.log('Simple toggle clicked!');
     const currentIsDark = document.documentElement.classList.contains('dark');
+    const nextIsDark = !currentIsDark;
     
-    if (currentIsDark) {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-      setIsDark(false);
-      console.log('Switched to light mode');
-    } else {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-      setIsDark(true);
-      console.log('Switched to dark mode');
-    }
+    applyThemePreference(nextIsDark);
+    setIsDark(nextIsDark);
+    console.log(nextIsDark ? 'Switched to dark mode' : 'Switched to light mode');
   };
+
+  const baseClassName =
+    'w-12 h-12 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full font-medium transition-colors duration-200 flex items-center justify-center';
+  const combinedClassName = `${baseClassName} ${className}`.trim();
 
   return (
     <button
       onClick={toggleTheme}
-      className="w-12 h-12 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full font-medium transition-colors duration-200 flex items-center justify-center"
+      className={combinedClassName}
       aria-label="Toggle theme"
     >
       {/* Sun Icon (Light Mode) */}

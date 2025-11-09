@@ -13,6 +13,8 @@ import { QuestionArea } from "./play/QuestionArea";
 import { QuizStatusBar } from "./play/QuizStatusBar";
 import { QuestionProgressBar } from "./play/QuestionProgressBar";
 import { QuizQuestion, QuizRound, QuizThemeMode } from "./play/types";
+import { trackQuizPlayed, hasExceededFreeQuizzes, hasPlayedQuiz } from "../../lib/quizAttempts";
+import { isLoggedIn, fetchUser, hasActiveSubscription } from "../../lib/auth";
 
 const STANDARD_ROUND_COUNT = 4;
 const QUESTIONS_PER_STANDARD_ROUND = 6;
@@ -255,6 +257,7 @@ interface QuizPlayerProps {
 	questions: QuizQuestion[];
 	rounds: QuizRound[];
 	weekISO?: string;
+	isNewest?: boolean; // Whether this is the latest quiz
 }
 
 type ViewMode = "presenter" | "grid";
@@ -291,11 +294,49 @@ function getNotchTextColor(backgroundColor: string): string {
 	return luminance > 0.5 ? 'white' : 'black';
 }
 
-export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, weekISO }: QuizPlayerProps) {
+export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, weekISO, isNewest = false }: QuizPlayerProps) {
 	// Debug logging
 	React.useEffect(() => {
 		console.log('QuizPlayer mounted', { quizTitle, quizColor, quizSlug, questionsCount: questions?.length, roundsCount: rounds?.length });
 	}, []);
+
+	// Safeguard: Check authentication and quiz limits
+	React.useEffect(() => {
+		if (typeof window === 'undefined') return;
+		
+		const userLoggedIn = isLoggedIn();
+		
+		// Require sign-up
+		if (!userLoggedIn) {
+			window.location.href = `/quiz/${quizSlug}/intro`;
+			return;
+		}
+		
+		// Check if user is premium
+		fetchUser().then((user) => {
+			const premium = hasActiveSubscription(user);
+			
+			// If not premium, check quiz limits
+			if (!premium) {
+				// Check if they've exceeded free quizzes
+				if (hasExceededFreeQuizzes()) {
+					window.location.href = `/quiz/${quizSlug}/intro`;
+					return;
+				}
+				
+				// Check if trying to access non-latest quiz
+				if (!isNewest) {
+					window.location.href = `/quiz/${quizSlug}/intro`;
+					return;
+				}
+				
+				// Track quiz play (only once per quiz)
+				if (!hasPlayedQuiz(quizSlug)) {
+					trackQuizPlayed(quizSlug);
+				}
+			}
+		});
+	}, [quizSlug, isNewest]);
 
 	const [viewMode, setViewMode] = useState<ViewMode>(() => {
 		// Read mode from URL params
@@ -322,6 +363,25 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 	const [correctAnswers, setCorrectAnswers] = useState<Set<number>>(new Set());
 	const [incorrectAnswers, setIncorrectAnswers] = useState<Set<number>>(new Set());
 	const [showPlusOne, setShowPlusOne] = useState(false);
+	const switchToGridView = useCallback(() => {
+		setViewMode("grid");
+		setCurrentScreen("question");
+		if (typeof window !== "undefined") {
+			const url = new URL(window.location.href);
+			url.searchParams.set("mode", "grid");
+			window.history.replaceState({}, "", url.toString());
+		}
+	}, []);
+
+	const switchToPresenterView = useCallback(() => {
+		setViewMode("presenter");
+		setCurrentScreen("question");
+		if (typeof window !== "undefined") {
+			const url = new URL(window.location.href);
+			url.searchParams.set("mode", "presenter");
+			window.history.replaceState({}, "", url.toString());
+		}
+	}, []);
 	const [plusOneKey, setPlusOneKey] = useState(0);
 	const [themeMode, setThemeMode] = useState<ThemeMode>("colored");
 	const [showTimer, setShowTimer] = useState(true);
@@ -947,11 +1007,17 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 	const currentRoundDetails = rounds.find(r => r.number === currentRoundNumber);
 	const containerClass =
 		viewMode === "presenter"
-			? "fixed inset-0 flex flex-col"
-			: "min-h-dvh flex flex-col overflow-y-auto";
+			? "fixed inset-0 flex flex-col transition-colors duration-300 ease-in-out"
+			: "min-h-dvh flex flex-col overflow-y-auto transition-colors duration-300 ease-in-out";
 
 	return (
-		<div className={`${containerClass} transition-colors duration-700 ease-in-out`} style={{ backgroundColor }}>
+		<div
+			className={containerClass}
+			style={{
+				backgroundColor,
+				transition: "background-color 300ms ease-in-out, color 300ms ease-in-out",
+			}}
+		>
 			{/* New Progress Header - Only show in presenter mode */}
 			{viewMode === "presenter" && questions && questions.length > 0 && (
 				<QuestionProgressBar
@@ -977,6 +1043,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 						// Mark question as viewed
 						setViewedQuestions(prev => new Set([...prev, questions[n - 1].id]));
 					}}
+					isMouseActive={isMouseMoving}
 				/>
 			)}
 
@@ -999,7 +1066,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 			<QuizHeader
 												textColor={textColor}
 				headerTone={headerTone}
-				backgroundColor={quizColor}
+				backgroundColor={backgroundColor}
 				achievements={achievements}
 				onDismissAchievement={dismissAchievement}
 				themeMode={themeMode}
@@ -1007,6 +1074,9 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 				onRestartQuiz={restartQuiz}
 				onExitQuiz={exitQuiz}
 				currentScreen={currentScreen}
+				onOpenGridView={viewMode === "presenter" ? switchToGridView : undefined}
+				onOpenPresenterView={viewMode === "grid" ? switchToPresenterView : undefined}
+				isGridView={viewMode === "grid"}
 			/>
 
 			{/* Content Area */}
@@ -1054,6 +1124,8 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 						onHideAnswer={handleHideAnswer}
 						onMarkCorrect={handleMarkCorrect}
 						onUnmarkCorrect={handleUnmarkCorrect}
+						quizSlug={quizSlug}
+						weekISO={weekISO}
 					/>
 					)}
 			</div>

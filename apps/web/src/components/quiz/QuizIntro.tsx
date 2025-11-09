@@ -3,6 +3,10 @@
 import React, { useEffect, useState } from "react";
 import { motion, LayoutGroup, AnimatePresence } from "framer-motion";
 import { Calendar, Share2, Copy, Check, X } from "lucide-react";
+import { isLoggedIn, fetchUser, hasActiveSubscription } from "../../lib/auth";
+import { hasExceededFreeQuizzes, getQuizzesPlayedCount, getRemainingFreeQuizzes } from "../../lib/quizAttempts";
+import { QuizSignupModal } from "./QuizSignupModal";
+import { QuizLimitModal } from "./QuizLimitModal";
 
 interface Quiz {
 	id: number;
@@ -15,6 +19,7 @@ interface Quiz {
 
 interface QuizIntroProps {
 	quiz: Quiz;
+	isNewest?: boolean; // Whether this is the latest quiz
 }
 
 function textOn(bg: string): "black" | "white" {
@@ -42,12 +47,23 @@ function formatWeek(weekISO: string): string {
 	});
 }
 
-export default function QuizIntro({ quiz }: QuizIntroProps) {
+export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 	const [showShareMenu, setShowShareMenu] = useState(false);
 	const [copied, setCopied] = useState(false);
 	const [hasProgress, setHasProgress] = useState(false);
+	const [loggedIn, setLoggedIn] = useState(false);
+	const [isPremium, setIsPremium] = useState(false);
+	const [mounted, setMounted] = useState(false);
+	const [showSignupModal, setShowSignupModal] = useState(false);
+	const [showLimitModal, setShowLimitModal] = useState(false);
+	const [quizzesPlayed, setQuizzesPlayed] = useState(0);
+	const [remainingQuizzes, setRemainingQuizzes] = useState(3);
 	
 	useEffect(() => {
+		setMounted(true);
+		const userLoggedIn = isLoggedIn();
+		setLoggedIn(userLoggedIn);
+		
 		// Disable scroll restoration for the intro page
 		window.history.scrollRestoration = "manual";
 		window.scrollTo(0, 0);
@@ -56,8 +72,86 @@ export default function QuizIntro({ quiz }: QuizIntroProps) {
 		if (typeof window !== 'undefined') {
 			const timer = sessionStorage.getItem(`quiz-${quiz.slug}-timer`);
 			setHasProgress(!!(timer && parseInt(timer, 10) > 0));
+			
+			// If not logged in, show signup modal
+			if (!userLoggedIn) {
+				setShowSignupModal(true);
+			} else {
+				// Check if user is premium
+				fetchUser().then((user) => {
+					const premium = hasActiveSubscription(user);
+					setIsPremium(premium);
+					
+					// If not premium, check quiz limits
+					if (!premium) {
+						const played = getQuizzesPlayedCount();
+						const remaining = getRemainingFreeQuizzes();
+						setQuizzesPlayed(played);
+						setRemainingQuizzes(remaining);
+						
+						// Check if they've exceeded free quizzes
+						if (hasExceededFreeQuizzes()) {
+							setShowLimitModal(true);
+						}
+						
+						// Check if trying to access non-latest quiz
+						if (!isNewest) {
+							setShowLimitModal(true);
+						}
+					}
+				});
+			}
 		}
-	}, [quiz.slug]);
+		
+		// Listen for auth changes
+		const handleStorageChange = () => {
+			const userLoggedIn = isLoggedIn();
+			setLoggedIn(userLoggedIn);
+			if (userLoggedIn) {
+				setShowSignupModal(false);
+				fetchUser().then((user) => {
+					setIsPremium(hasActiveSubscription(user));
+				});
+			} else {
+				setShowSignupModal(true);
+			}
+		};
+		
+		window.addEventListener("storage", handleStorageChange);
+		window.addEventListener("focus", handleStorageChange);
+		
+		return () => {
+			window.removeEventListener("storage", handleStorageChange);
+			window.removeEventListener("focus", handleStorageChange);
+		};
+	}, [quiz.slug, isNewest]);
+	
+	const handlePlayClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+		if (!mounted) return;
+		
+		// Require sign-up
+		if (!loggedIn) {
+			e.preventDefault();
+			setShowSignupModal(true);
+			return;
+		}
+		
+		// Check if basic user has exceeded free quizzes
+		if (!isPremium && hasExceededFreeQuizzes()) {
+			e.preventDefault();
+			setShowLimitModal(true);
+			return;
+		}
+		
+		// Check if basic user is trying to access non-latest quiz
+		if (!isPremium && !isNewest) {
+			e.preventDefault();
+			setShowLimitModal(true);
+			return;
+		}
+		
+		// Allow navigation for premium users or basic users with remaining quizzes on latest quiz
+	};
 
 	const tone = textOn(quiz.colorHex);
 	const text = tone === "white" ? "text-white" : "text-gray-900";
@@ -229,6 +323,25 @@ export default function QuizIntro({ quiz }: QuizIntroProps) {
 							{formatWeek(quiz.weekISO)}
 						</motion.time>
 
+						{/* Warning - Show for basic users */}
+						{loggedIn && !isPremium && remainingQuizzes > 0 && remainingQuizzes < 3 && isNewest && (
+							<motion.div
+								initial={{ opacity: 0, y: 10 }}
+								animate={{ opacity: 1, y: 0 }}
+								className={`mb-6 px-4 py-3 rounded-xl border ${
+									tone === "white"
+										? "bg-white/10 border-white/20 text-white"
+										: "bg-black/10 border-black/20 text-gray-900"
+								}`}
+							>
+								<p className="text-sm font-medium text-center">
+									{remainingQuizzes === 1 
+										? "⚠️ Last free quiz! Upgrade to Premium for unlimited access."
+										: `${remainingQuizzes} free quiz${remainingQuizzes !== 1 ? 'es' : ''} remaining. Upgrade to Premium for unlimited access.`}
+								</p>
+							</motion.div>
+						)}
+
 						{/* Action Buttons - Centered between date and toggle */}
 						<motion.div
 							initial={{ opacity: 0, y: 10 }}
@@ -245,6 +358,7 @@ export default function QuizIntro({ quiz }: QuizIntroProps) {
 								<>
 									<motion.a
 										href={`/quiz/${quiz.slug}/play`}
+										onClick={handlePlayClick}
 										className={`rounded-full px-10 py-5 text-xl font-semibold cursor-pointer ${
 											tone === "white" ? "bg-white text-gray-900" : "bg-gray-900 text-white"
 										}`}
@@ -314,43 +428,72 @@ export default function QuizIntro({ quiz }: QuizIntroProps) {
 									</motion.button>
 								</>
 							) : (
-								<motion.a
-									href={`/quiz/${quiz.slug}/play`}
-									autoFocus
-									className={`rounded-full px-10 py-5 text-xl font-semibold cursor-pointer ${
-										tone === "white" ? "bg-white text-gray-900" : "bg-gray-900 text-white"
-									}`}
-									whileHover={{ 
-										scale: 1.05,
-										transition: { 
-											type: "spring",
-											stiffness: 500,
-											damping: 20,
-											mass: 0.5
-										}
-									}}
-									transition={{
-										type: "spring",
-										stiffness: 600,
-										damping: 25,
-										mass: 0.3
-									}}
-									whileTap={{ 
-										scale: 0.98,
-										transition: { 
-											type: "spring",
-											stiffness: 500,
-											damping: 30
-										}
-									}}
-									style={{
-										boxShadow: tone === "white" 
-											? "0 4px 14px 0 rgba(0, 0, 0, 0.15)" 
-											: "0 4px 14px 0 rgba(0, 0, 0, 0.3)"
-									}}
-								>
-									Start Quiz
-								</motion.a>
+								<>
+									{!loggedIn ? (
+										<motion.button
+											onClick={() => setShowSignupModal(true)}
+											autoFocus
+											className={`rounded-full px-10 py-5 text-xl font-semibold cursor-pointer ${
+												tone === "white" ? "bg-white/50 text-gray-900" : "bg-gray-400 text-white"
+											}`}
+											whileHover={{ scale: 1.02 }}
+											whileTap={{ scale: 0.98 }}
+										>
+											Sign Up to Play
+										</motion.button>
+									) : !isPremium && (hasExceededFreeQuizzes() || !isNewest) ? (
+										<motion.button
+											onClick={() => setShowLimitModal(true)}
+											autoFocus
+											className={`rounded-full px-10 py-5 text-xl font-semibold cursor-pointer ${
+												tone === "white" ? "bg-white/50 text-gray-900" : "bg-gray-400 text-white"
+											}`}
+											whileHover={{ scale: 1.02 }}
+											whileTap={{ scale: 0.98 }}
+										>
+											{hasExceededFreeQuizzes() ? "Upgrade to Play" : "Premium Required"}
+										</motion.button>
+									) : (
+										<motion.a
+											href={`/quiz/${quiz.slug}/play`}
+											onClick={handlePlayClick}
+											autoFocus
+											className={`rounded-full px-10 py-5 text-xl font-semibold cursor-pointer ${
+												tone === "white" ? "bg-white text-gray-900" : "bg-gray-900 text-white"
+											}`}
+											whileHover={{ 
+												scale: 1.05,
+												transition: { 
+													type: "spring",
+													stiffness: 500,
+													damping: 20,
+													mass: 0.5
+												}
+											}}
+											transition={{
+												type: "spring",
+												stiffness: 600,
+												damping: 25,
+												mass: 0.3
+											}}
+											whileTap={{ 
+												scale: 0.98,
+												transition: { 
+													type: "spring",
+													stiffness: 500,
+													damping: 30
+												}
+											}}
+											style={{
+												boxShadow: tone === "white" 
+													? "0 4px 14px 0 rgba(0, 0, 0, 0.15)" 
+													: "0 4px 14px 0 rgba(0, 0, 0, 0.3)"
+											}}
+										>
+											Start Quiz
+										</motion.a>
+									)}
+								</>
 							)}
 							
 							<div className="relative">
@@ -455,6 +598,20 @@ export default function QuizIntro({ quiz }: QuizIntroProps) {
 				</main>
 
 			</motion.section>
+			
+			{/* Signup Modal */}
+			<QuizSignupModal
+				isOpen={showSignupModal}
+				onClose={() => setShowSignupModal(false)}
+			/>
+			
+			{/* Limit Modal */}
+			<QuizLimitModal
+				isOpen={showLimitModal}
+				onClose={() => setShowLimitModal(false)}
+				quizzesPlayed={quizzesPlayed}
+				maxQuizzes={3}
+			/>
 		</LayoutGroup>
 	);
 }

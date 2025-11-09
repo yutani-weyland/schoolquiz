@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
-import { Grid3x3, X, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
+import { Grid3x3, X, ChevronLeft, ChevronRight, Eye, Check, Menu, Share2, LayoutList } from 'lucide-react';
 import AnswerReveal from './quiz/AnswerReveal';
-import { SimpleAnimatedTooltip } from '@/components/ui/animated-tooltip';
 
 // Custom Paint Bucket Icon with thicker outlines
 function PaintBucketIcon({ className }: { className?: string }) {
@@ -31,75 +30,19 @@ function textOn(bg: string): "black" | "white" {
 	return luminance > 0.5 ? "black" : "white";
 }
 
-// Circular Progress Component for Score Display
-function CircularProgress({
-	value,
-	size = 100,
-	strokeWidth = 10,
-	isDark = false,
-}: {
-	value: number;
-	size?: number;
-	strokeWidth?: number;
-	isDark?: boolean;
-}) {
-	const radius = size / 2 - strokeWidth;
-	const circumference = Math.ceil(2 * Math.PI * radius);
-	const percentage = Math.ceil(circumference * ((100 - value) / 100));
-	const viewBox = `-${size * 0.125} -${size * 0.125} ${size * 1.25} ${size * 1.25}`;
-
-	return (
-		<div className="relative">
-			<svg
-				width={size}
-				height={size}
-				viewBox={viewBox}
-				version="1.1"
-				xmlns="http://www.w3.org/2000/svg"
-				style={{ transform: "rotate(-90deg)" }}
-				className="relative"
-			>
-				{/* Base Circle */}
-				<circle
-					r={radius}
-					cx={size / 2}
-					cy={size / 2}
-					fill="transparent"
-					strokeWidth={strokeWidth}
-					strokeDasharray={circumference}
-					strokeDashoffset="0"
-					className={isDark ? "stroke-white/20" : "stroke-black/20"}
-				/>
-
-				{/* Progress */}
-				<circle
-					r={radius}
-					cx={size / 2}
-					cy={size / 2}
-					strokeWidth={strokeWidth}
-					strokeLinecap="round"
-					strokeDashoffset={percentage}
-					fill="transparent"
-					strokeDasharray={circumference}
-					className={isDark ? "stroke-white" : "stroke-black"}
-				/>
-			</svg>
-			{/* Label */}
-			<div
-				className="absolute inset-0 flex items-center justify-center text-3xl font-bold"
-				style={{ color: isDark ? "#fff" : "#000" }}
-			>
-				{value}
-			</div>
-		</div>
-	);
-}
 
 export default function QuizSafariPreview() {
 	const [showAnswer, setShowAnswer] = useState(false);
 	const [isChecked, setIsChecked] = useState(false);
 	const [score] = useState(3); // Showing 3 correct answers
+	const [totalQuestions] = useState(25);
 	const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+	const [isMouseMoving, setIsMouseMoving] = useState(false);
+	const [revealButtonPosition, setRevealButtonPosition] = useState({ top: 0, left: 0 });
+	const [isPositionCalculated, setIsPositionCalculated] = useState(false);
+	const [questionScale, setQuestionScale] = useState(1);
+	const questionTextRef = useRef<HTMLParagraphElement>(null);
+	const mainContainerRef = useRef<HTMLElement>(null);
 	
 	// Marketing questions that showcase features
 	const marketingQuestions = [
@@ -110,6 +53,7 @@ export default function QuizSafariPreview() {
 	];
 	
 	const currentQuestion = marketingQuestions[currentQuestionIndex];
+	const currentQuestionNumber = 4 + currentQuestionIndex; // Maps to 4-7 based on index
 	
 	// Theme colors
 	const colors = [
@@ -126,6 +70,7 @@ export default function QuizSafariPreview() {
 	// Randomly pick initial theme color
 	const [themeColor, setThemeColor] = useState(() => colors[Math.floor(Math.random() * colors.length)]);
 	const [bucketRotate, setBucketRotate] = useState(0);
+	const [isMenuOpen, setIsMenuOpen] = useState(false);
 	
 	const handleNextQuestion = () => {
 		setShowAnswer(false);
@@ -203,12 +148,97 @@ export default function QuizSafariPreview() {
 		return themeColor; // For preview, all rounds use the same theme color
 	};
 
-	const backgroundColor = getDesaturatedColor(themeColor);
+	const backgroundColor = themeColor; // Use full color, not desaturated
 	const textColor = textOn(themeColor);
+
+	// Calculate AnswerReveal button position dynamically
+	useEffect(() => {
+		setIsPositionCalculated(false);
+
+		const updatePosition = () => {
+			const questionEl = questionTextRef.current;
+			const containerEl = mainContainerRef.current;
+			if (!questionEl || !containerEl) return;
+
+			const questionRect = questionEl.getBoundingClientRect();
+			const containerRect = containerEl.getBoundingClientRect();
+			const computedLineHeight = parseFloat(window.getComputedStyle(questionEl).lineHeight || "0");
+			const approxLines = computedLineHeight > 0 ? Math.round(questionRect.height / computedLineHeight) : 1;
+
+			if (approxLines > 6) {
+				setQuestionScale(0.78);
+			} else if (approxLines > 5) {
+				setQuestionScale(0.85);
+			} else if (approxLines > 4) {
+				setQuestionScale(0.9);
+			} else {
+				setQuestionScale(1);
+			}
+
+			const approximateButtonHeight = 88;
+			const containerHeight = containerRect.height;
+			const maxTop = containerHeight - approximateButtonHeight - 40;
+			const relativeTop = questionRect.bottom - containerRect.top;
+			const desiredTop = relativeTop + 80;
+
+			setRevealButtonPosition({
+				top: Math.min(desiredTop, maxTop),
+				left: containerRect.width / 2,
+			});
+
+			setIsPositionCalculated(true);
+		};
+
+		const timer1 = setTimeout(updatePosition, 100);
+		const timer2 = setTimeout(updatePosition, 300);
+		const timer3 = setTimeout(updatePosition, 600);
+
+		window.addEventListener("resize", updatePosition);
+		window.addEventListener("scroll", updatePosition, true);
+
+		const observer = new ResizeObserver(updatePosition);
+		if (questionTextRef.current) {
+			observer.observe(questionTextRef.current);
+		}
+		if (mainContainerRef.current) {
+			observer.observe(mainContainerRef.current);
+		}
+
+		return () => {
+			window.removeEventListener("resize", updatePosition);
+			window.removeEventListener("scroll", updatePosition, true);
+			observer.disconnect();
+			clearTimeout(timer1);
+			clearTimeout(timer2);
+			clearTimeout(timer3);
+		};
+	}, [currentQuestion.question]);
+
+	// Track mouse movement for navigation arrows
+	useEffect(() => {
+		let timeoutId: NodeJS.Timeout;
+		const handleMouseMove = () => {
+			setIsMouseMoving(true);
+			clearTimeout(timeoutId);
+			timeoutId = setTimeout(() => setIsMouseMoving(false), 2000);
+		};
+		window.addEventListener("mousemove", handleMouseMove);
+		return () => {
+			window.removeEventListener("mousemove", handleMouseMove);
+			clearTimeout(timeoutId);
+		};
+	}, []);
+
+	const shouldShowFullOpacity = isMouseMoving || showAnswer;
+	const arrowOpacity = shouldShowFullOpacity ? 1 : 0.2;
+	const isDarkText = textColor === "white";
+	const menuButtonClass = isDarkText
+		? "bg-white/15 text-white hover:bg-white/25"
+		: "bg-black/10 text-gray-900 hover:bg-black/15";
 
 	return (
 		<div className="w-full max-w-5xl mx-auto">
-			<div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl overflow-hidden relative">
+			<div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl overflow-hidden relative" style={{ height: '800px' }}>
 				{/* Browser-like header */}
 				<div className="bg-gray-100 dark:bg-gray-700 px-6 py-4 flex items-center gap-3">
 					<div className="flex gap-2">
@@ -222,134 +252,195 @@ export default function QuizSafariPreview() {
 				</div>
 
 				{/* Quiz content - Presenter Mode */}
-				<div style={{ backgroundColor }}>
-					<div className="pt-8 pb-8 px-8">
-						<div className="max-w-4xl mx-auto relative" style={{ minHeight: '500px' }}>
-							{/* Top Bar - Score, Logo and Icons */}
-							<div className="flex items-start justify-between mb-8">
-								{/* Circular Score - Top Left */}
-							<div className="flex-shrink-0">
-								<CircularProgress 
-									value={score} 
-									size={80} 
-									strokeWidth={8} 
-									isDark={textColor === "white"}
-								/>
+				<div 
+					className="relative overflow-hidden"
+					style={{ 
+						backgroundColor,
+						height: 'calc(800px - 60px)',
+						transition: "background-color 300ms ease-in-out, color 300ms ease-in-out",
+					}}
+				>
+					{/* QuizHeader - Absolute at top */}
+					<div
+						className="absolute top-0 left-0 right-0 z-50 py-3 px-6 transition-colors duration-300 ease-out"
+						style={{
+							pointerEvents: "auto",
+							backgroundColor: backgroundColor,
+							transition: "background-color 300ms ease-in-out, color 300ms ease-in-out",
+						}}
+					>
+						<div className="flex items-center justify-between w-full gap-4">
+							<div className="flex flex-col items-start gap-4 relative">
+								<motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.4 }}>
+									<div className={`text-2xl font-bold tracking-tight transition-opacity duration-300 cursor-pointer ${isDarkText ? "text-white" : "text-[#0f0f0f]"}`}>
+										The School Quiz
+									</div>
+								</motion.div>
 							</div>
 
-							{/* Logo - Centered */}
-							<div className="absolute left-1/2 -translate-x-1/2" style={{ top: '28px' }}>
-								<div 
-									className="text-3xl font-bold tracking-tight"
-									style={{ color: textColor === "white" ? "#ffffff" : "#000000" }}
-								>
-									The School Quiz
-								</div>
-							</div>
-							
-							{/* Icons - Top Right */}
-							<div className="flex items-center gap-2" style={{ marginTop: '20px' }}>
+							<div className="flex items-center gap-3">
 								<motion.button
 									onClick={handleThemeChange}
-									className="p-2 rounded-full transition"
-									style={{
-										backgroundColor: textColor === "white" ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.1)",
-										color: textColor === "white" ? "#ffffff" : "#000000",
-									}}
-									whileHover={{ 
-										scale: 1.1,
-										backgroundColor: textColor === "white" ? "rgba(255, 255, 255, 0.25)" : "rgba(0, 0, 0, 0.15)"
-									}}
-									whileTap={{ scale: 0.85 }}
+									className={`h-12 w-12 items-center justify-center rounded-full transition-colors duration-300 ease-out flex ${menuButtonClass}`}
+									whileHover={{ scale: 1.05 }}
+									whileTap={{ scale: 0.95 }}
+									title="Change theme"
+									aria-label="Change theme"
 								>
 									<motion.div
 										animate={{ rotate: bucketRotate }}
 										transition={{ type: "spring", stiffness: 260, damping: 20 }}
 									>
-										<PaintBucketIcon className="h-4 w-4" />
+										<PaintBucketIcon className="h-5 w-5" />
 									</motion.div>
 								</motion.button>
-
 								<motion.button
-									className="p-2 rounded-full transition"
-									style={{
-										backgroundColor: textColor === "white" ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.1)",
-										color: textColor === "white" ? "#ffffff" : "#000000",
-									}}
-									whileHover={{ 
-										scale: 1.1,
-										backgroundColor: textColor === "white" ? "rgba(255, 255, 255, 0.25)" : "rgba(0, 0, 0, 0.15)"
-									}}
-									whileTap={{ scale: 0.85 }}
-								>
-									<Grid3x3 className="h-4 w-4" />
-								</motion.button>
-
-								<motion.button
-									className="p-2 rounded-full transition"
-									style={{
-										backgroundColor: textColor === "white" ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.1)",
-										color: textColor === "white" ? "#ffffff" : "#000000",
-									}}
-									whileHover={{ 
-										scale: 1.05,
-										backgroundColor: textColor === "white" ? "rgba(255, 255, 255, 0.25)" : "rgba(0, 0, 0, 0.15)"
-									}}
-									whileTap={{ scale: 0.95 }}
-								>
-									<X className="h-4 w-4" />
-								</motion.button>
-							</div>
-							</div>
-
-							{/* Main Question */}
-							<div className="flex items-center justify-center relative" style={{ minHeight: '320px' }}>
-								{/* Previous Button */}
-								<motion.button
-									onClick={handlePreviousQuestion}
-									className="absolute left-0 p-2 rounded-full transition z-10"
-									style={{
-										backgroundColor: textColor === "white" ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.1)",
-										color: textColor === "white" ? "#ffffff" : "#000000",
-									}}
+									className={`h-12 w-12 items-center justify-center rounded-full transition-colors duration-300 ease-out flex ${menuButtonClass}`}
 									whileHover={{ scale: 1.05 }}
 									whileTap={{ scale: 0.95 }}
+									title="Grid view"
+									aria-label="Grid view"
 								>
-									<ChevronLeft className="h-6 w-6" />
+									<LayoutList className="h-5 w-5" />
 								</motion.button>
-								
-								<div className="max-w-3xl text-center">
-									<motion.p
-										key={currentQuestionIndex}
-										initial={{ opacity: 0 }}
-										animate={{ opacity: 1 }}
-										className="font-extrabold leading-tight break-words"
-										style={{ 
-											fontSize: 'clamp(24px, 4vw, 48px)',
-											color: textColor === "white" ? "#ffffff" : "#000000"
-										}}
-									>
-										{currentQuestion.question}
-									</motion.p>
-								</div>
-								
-								{/* Next Button */}
 								<motion.button
-									onClick={handleNextQuestion}
-									className="absolute right-0 p-2 rounded-full transition z-10"
-									style={{
-										backgroundColor: textColor === "white" ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.1)",
-										color: textColor === "white" ? "#ffffff" : "#000000",
-									}}
+									className={`h-12 w-12 items-center justify-center rounded-full transition-colors duration-300 ease-out flex ${menuButtonClass}`}
 									whileHover={{ scale: 1.05 }}
 									whileTap={{ scale: 0.95 }}
+									title="Share"
+									aria-label="Share"
 								>
-									<ChevronRight className="h-6 w-6" />
+									<Share2 className="h-5 w-5" />
+								</motion.button>
+								<motion.button
+									onClick={() => setIsMenuOpen(!isMenuOpen)}
+									className={`h-12 w-12 items-center justify-center rounded-full transition-colors duration-300 ease-out flex relative ${menuButtonClass}`}
+									whileHover={{ scale: 1.05 }}
+									whileTap={{ scale: 0.95 }}
+									aria-haspopup="menu"
+									aria-expanded={isMenuOpen}
+									aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+								>
+									<AnimatePresence mode="wait">
+										{isMenuOpen ? (
+											<motion.div key="close" initial={{ opacity: 0, rotate: -90 }} animate={{ opacity: 1, rotate: 0 }} exit={{ opacity: 0, rotate: 90 }} transition={{ duration: 0.2 }}>
+												<X className="h-5 w-5" />
+											</motion.div>
+										) : (
+											<motion.div key="menu" initial={{ opacity: 0, rotate: 90 }} animate={{ opacity: 1, rotate: 0 }} exit={{ opacity: 0, rotate: -90 }} transition={{ duration: 0.2 }}>
+												<Menu className="h-5 w-5" />
+											</motion.div>
+										)}
+									</AnimatePresence>
 								</motion.button>
 							</div>
+						</div>
+					</div>
 
-							{/* CTA: Reveal Answer */}
-							<div className="mt-8 flex items-center justify-center">
+					{/* QuizStatusBar - Absolute below header */}
+					<div className="absolute top-0 left-1/2 -translate-x-1/2 z-40 pt-24 pb-3 px-4 sm:px-6">
+						<div className="flex flex-row gap-3 sm:gap-4 items-center justify-center flex-nowrap">
+							<div
+								className={`relative rounded-full font-semibold flex items-center gap-4 transition-colors duration-200 whitespace-nowrap ${
+									isDarkText
+										? "bg-white/20 text-white hover:bg-white/28"
+										: "bg-black/10 text-gray-900 hover:bg-black/15"
+								} px-12 py-6 backdrop-blur-sm`}
+								aria-label={`Score: ${score} out of ${totalQuestions}`}
+							>
+								<span className="text-2xl font-medium opacity-90">Score:</span>
+								<span className="text-5xl font-bold tabular-nums leading-none" style={{ letterSpacing: "-0.045em" }}>
+									{score} / {totalQuestions}
+								</span>
+							</div>
+						</div>
+					</div>
+
+					{/* Navigation Arrows - Absolute at 45% from top */}
+					<AnimatePresence>
+						{currentQuestionIndex > 0 && (
+							<motion.button
+								onClick={handlePreviousQuestion}
+								initial={{ opacity: 0, x: -20 }}
+								animate={{ opacity: arrowOpacity, x: 0 }}
+								exit={{ opacity: 0, x: -20 }}
+								whileHover={{ opacity: 1, scale: 1.05 }}
+								transition={{ duration: 0.3 }}
+								className={`absolute left-4 sm:left-8 z-40 p-3 sm:p-4 rounded-full transition-colors duration-700 ease-in-out ${
+									isDarkText ? "bg-white/15 hover:bg-white/25 text-white" : "bg-black/10 hover:bg-black/15 text-gray-900"
+								}`}
+								style={{ top: "45%", transform: "translateY(-50%)" }}
+								whileTap={{ scale: 0.95 }}
+								aria-label="Previous question"
+							>
+								<ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6" />
+							</motion.button>
+						)}
+					</AnimatePresence>
+
+					<motion.button
+						onClick={handleNextQuestion}
+						animate={{
+							opacity: arrowOpacity,
+						}}
+						whileHover={{ opacity: 1, scale: 1.05 }}
+						transition={{ duration: 0.3 }}
+						className={`absolute right-4 sm:right-8 z-40 p-3 sm:p-4 rounded-full transition-colors duration-700 ease-in-out ${
+							isDarkText ? "bg-white/15 hover:bg-white/25 text-white" : "bg-black/10 hover:bg-black/15 text-gray-900"
+						}`}
+						style={{ top: "45%", transform: "translateY(-50%)" }}
+						whileTap={{ scale: 0.95 }}
+						aria-label="Next question"
+					>
+						<ChevronRight className="h-5 w-5 sm:h-6 sm:w-6" />
+					</motion.button>
+
+					{/* Question Area - Absolute at 46% from top */}
+					<main
+						ref={mainContainerRef}
+						className="absolute inset-0 overflow-y-auto px-4 sm:px-6 md:px-8 transition-colors duration-700 ease-in-out"
+						style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}
+						aria-live="polite"
+					>
+						<div
+							className="absolute left-0 right-0 flex justify-center z-30"
+							style={{ top: "46%", transform: "translateY(-50%)", padding: "0 1.5rem" }}
+						>
+							<div className="max-w-[92ch] md:max-w-[108ch] lg:max-w-[128ch] xl:max-w-[150ch] text-center [text-wrap:balance] w-full mx-16 sm:mx-20 md:mx-24 lg:mx-28 px-4 sm:px-6 pt-16 sm:pt-20">
+								<motion.p
+									ref={questionTextRef}
+									key={currentQuestionIndex}
+									initial={{ opacity: 0 }}
+									animate={{ opacity: 1 }}
+									transition={{ duration: 0.25, delay: 0.15 }}
+									className={`font-extrabold leading-[1.05] break-words [overflow-wrap:anywhere] transition-colors duration-700 ease-in-out ${
+										isDarkText ? "text-white" : "text-gray-900"
+									}`}
+									style={{
+										fontSize: "clamp(24px, min(3.4vw + 0.9rem, (100vh - 360px) / 3), 50px)",
+										marginBottom: "clamp(28px, 4vh, 48px)",
+										transform: `scale(${questionScale})`,
+										transformOrigin: "center top",
+									}}
+								>
+									{currentQuestion.question}
+								</motion.p>
+							</div>
+						</div>
+
+						{/* AnswerReveal - Dynamically positioned */}
+						{isPositionCalculated && (
+							<motion.div
+								className="absolute flex justify-center z-30"
+								style={{ transform: "translateX(-50%)", overflow: "visible", top: revealButtonPosition.top, left: revealButtonPosition.left }}
+								initial={{ opacity: 0 }}
+								animate={{
+									opacity: 1,
+								}}
+								transition={{
+									opacity: { duration: 0.25, ease: "easeOut" },
+								}}
+							>
 								<AnswerReveal
 									answerText={currentQuestion.answer}
 									revealed={showAnswer}
@@ -361,82 +452,123 @@ export default function QuizSafariPreview() {
 									accentColor={themeColor}
 									textColor={textColor}
 									isMarkedCorrect={isChecked}
+									isMarkedIncorrect={showAnswer && !isChecked}
 									onMarkCorrect={handleCheckboxClick}
 									onUnmarkCorrect={() => setIsChecked(false)}
+									className={isDarkText ? "outline outline-2 outline-white/80" : undefined}
 								/>
-							</div>
-						</div>
-					</div>
+							</motion.div>
+						)}
+					</main>
 
-					{/* HUD at bottom - mini progress rail - full width */}
-					<div className="py-6 relative" style={{ backgroundColor: backgroundColor || "transparent" }}>
-						{/* Fade overlay on left */}
-						<div 
-							className="absolute left-0 top-0 bottom-0 w-16 pointer-events-none z-10"
-							style={{ 
-								background: `linear-gradient(to right, ${backgroundColor || "transparent"}, transparent)`,
-								transition: "background 700ms ease-in-out"
-							}}
-						/>
-						{/* Fade overlay on right */}
-						<div 
-							className="absolute right-0 top-0 bottom-0 w-16 pointer-events-none z-10"
-							style={{ 
-								background: `linear-gradient(to left, ${backgroundColor || "transparent"}, transparent)`,
-								transition: "background 700ms ease-in-out"
-							}}
-						/>
-						{/* Chips - Scrollable with snap points */}
-						<div className="flex justify-center relative">
+					{/* Progress Bar - Absolute at bottom */}
+					<div 
+						role="progressbar"
+						aria-valuemin={1}
+						aria-valuemax={totalQuestions}
+						aria-valuenow={currentQuestionNumber}
+						aria-label="Quiz progress"
+						className={`absolute bottom-0 left-0 right-0 z-40 w-full pb-safe pt-2 pb-4 sm:pt-3 sm:pb-5 transition-all duration-500 ease-in-out ${isMouseMoving ? "opacity-100" : "opacity-35"}`}
+						style={{
+							backgroundColor: backgroundColor || "transparent",
+							transition: "background-color 300ms ease-in-out, opacity 500ms ease-in-out"
+						}}
+					>
+						{/* Fade overlays */}
+						{currentQuestionNumber > 1 && (
+							<div 
+								className="absolute left-0 top-0 bottom-0 w-20 pointer-events-none z-20"
+								style={{ 
+									background: `linear-gradient(to right, ${backgroundColor || (isDarkText ? "rgba(26, 26, 26, 0.95)" : "rgba(255, 255, 255, 0.95)")}, transparent)`,
+									transition: "background 700ms ease-in-out"
+								}}
+							/>
+						)}
+						{currentQuestionNumber < totalQuestions && (
+							<div 
+								className="absolute right-0 top-0 bottom-0 w-20 pointer-events-none z-20"
+								style={{ 
+									background: `linear-gradient(to left, ${backgroundColor || (isDarkText ? "rgba(26, 26, 26, 0.95)" : "rgba(255, 255, 255, 0.95)")}, transparent)`,
+									transition: "background 700ms ease-in-out"
+								}}
+							/>
+						)}
+
+						{/* Scrollable container */}
+						<div className="flex justify-center">
 							<div
-								className="flex snap-x gap-2 overflow-x-auto scrollbar-hide py-2 max-w-full"
-								style={{ paddingLeft: '24px', paddingRight: '24px' }}
+								className="flex gap-2 scrollbar-hide py-1 max-w-full overflow-x-auto overflow-y-visible"
+								style={{ 
+									paddingLeft: '24px', 
+									paddingRight: '24px',
+									scrollBehavior: 'smooth'
+								}}
 							>
-								{Array.from({ length: 25 }, (_, i) => i + 1).map((n) => {
-									const currentQuestionNumber = 4 + currentQuestionIndex; // Maps to 4-7 based on index
+								{Array.from({ length: totalQuestions }, (_, i) => i + 1).map((n) => {
 									const isCurrent = n === currentQuestionNumber;
 									const isCorrect = n === 1 || n === 2 || n === 3; // Fixed 3 correct answers for preview
-									const isAttempted = n === currentQuestionNumber && showAnswer;
-									// For preview, we don't have historical "viewed" questions beyond the current one
-									// so isViewed is always false - this matches the real behavior
-									const isViewed = false;
+									const isIncorrect = n === currentQuestionNumber && showAnswer && !isChecked;
+									const isViewed = false; // For preview, we don't track viewed questions
 									
 									const roundColor = getRoundColorForIndex(n - 1);
 									
-									const base =
-										"snap-start inline-flex h-14 w-14 items-center justify-center rounded-full text-base font-semibold tabular-nums transition-colors " +
-										"focus:outline-none";
-									
-									// Determine button style
+									// Determine button style and content
 									let buttonStyle: React.CSSProperties = {};
 									let displayContent: string | React.ReactNode = n;
 									
 									if (isCurrent) {
-										buttonStyle = { backgroundColor: "#0B0B0B", color: "white", boxShadow: "0 0 0 4px rgba(11, 11, 11, 0.3), 0 0 12px rgba(11, 11, 11, 0.5)" };
+										if (isViewed && !showAnswer) {
+											buttonStyle = { 
+												backgroundColor: "#0B0B0B", 
+												color: "white", 
+												border: "3px solid rgba(255, 255, 255, 0.85)" 
+											};
+											displayContent = n;
+										} else if (isCorrect) {
+											buttonStyle = { 
+												backgroundColor: "#10B981", 
+												color: "white", 
+												border: "3px solid rgba(255, 255, 255, 0.7)" 
+											};
+											displayContent = <Check className="w-5 h-5" strokeWidth={3} />;
+										} else if (isIncorrect) {
+											buttonStyle = { 
+												backgroundColor: "#EF4444", 
+												color: "white", 
+												border: "3px solid rgba(255, 255, 255, 0.7)" 
+											};
+											displayContent = <X className="w-5 h-5" strokeWidth={3} />;
+										} else {
+											buttonStyle = { 
+												backgroundColor: "#0B0B0B", 
+												color: "white", 
+												border: "3px solid rgba(255, 255, 255, 0.85)" 
+											};
+											displayContent = n;
+										}
 									} else if (isCorrect) {
-										// Correct answer - green with checkmark
-										buttonStyle = { backgroundColor: "#10B981", color: "white", boxShadow: "0 0 0 3px rgba(16, 185, 129, 0.3)" };
-										displayContent = "✓";
-									} else if (isAttempted) {
-										// Attempted but not correct - outlined with checkmark (darker border)
-										const darkerColor = darkenColor(roundColor, 0.4);
 										buttonStyle = { 
-											border: `2px solid ${darkerColor}`, 
-											color: textColor === "white" ? "rgba(255, 255, 255, 0.9)" : "rgba(0, 0, 0, 0.9)",
-											backgroundColor: "transparent"
+											backgroundColor: "#10B981", 
+											color: "white", 
+											border: "2px solid rgba(16, 185, 129, 0.45)" 
 										};
-										displayContent = "✓";
-									} else if (isViewed) {
-										// Viewed but not revealed - outlined with eye icon
+										displayContent = <Check className="w-5 h-5" strokeWidth={3} />;
+									} else if (isIncorrect) {
+										buttonStyle = { 
+											backgroundColor: "#EF4444", 
+											color: "white", 
+											border: "2px solid rgba(239, 68, 68, 0.45)" 
+										};
+										displayContent = <X className="w-5 h-5" strokeWidth={3} />;
+									} else if (isViewed && !isCurrent) {
 										const darkerColor = darkenColor(roundColor, 0.4);
 										buttonStyle = { 
-											border: `2px solid ${darkerColor}`, 
+											border: `2px solid ${darkerColor}`,
 											color: darkerColor,
 											backgroundColor: "transparent"
 										};
-										displayContent = <Eye className="w-5 h-5" />;
+										displayContent = <Eye className="w-6 h-6" />;
 									} else {
-										// Not answered yet - outlined with darker round color
 										const darkerColor = darkenColor(roundColor, 0.4);
 										const darkerNumberColor = darkenColor(roundColor, 0.2);
 										buttonStyle = { 
@@ -444,22 +576,48 @@ export default function QuizSafariPreview() {
 											color: darkerNumberColor,
 											backgroundColor: "transparent"
 										};
+										displayContent = n;
 									}
-									
+
 									return (
-										<SimpleAnimatedTooltip
+										<motion.div 
 											key={n}
-											content={`Go to question ${n}`}
-											position="top"
+											className="relative flex-shrink-0"
+											initial={false}
+											animate={{
+												scale: isCurrent ? 1.03 : 1,
+											}}
+											transition={{
+												type: "spring",
+												stiffness: 400,
+												damping: 25,
+											}}
 										>
 											<button
 												type="button"
-												className={base}
-												style={buttonStyle}
+												data-step={n}
+												aria-label={`Question ${n}${isCurrent ? ", current question" : isCorrect ? ", correct" : isIncorrect ? ", incorrect" : ""}`}
+												aria-current={isCurrent ? "step" : undefined}
+												className={`inline-flex h-14 w-14 items-center justify-center rounded-full text-xl font-semibold leading-none tabular-nums tracking-tight focus:outline-none focus:ring-0 transition-opacity duration-300 ${isCurrent ? "opacity-100" : "opacity-50 group-hover:opacity-80"}`}
+												style={{
+													...buttonStyle,
+													fontFamily: 'var(--app-font), system-ui, sans-serif',
+													letterSpacing: '-0.015em',
+													transition: 'transform 0.2s ease, opacity 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease',
+												}}
 											>
-												{displayContent}
+												<motion.span
+													key={`${n}-${isCorrect ? 'correct' : isIncorrect ? 'incorrect' : 'default'}`}
+													initial={{ scale: 0.8, opacity: 0 }}
+													animate={{ scale: 1, opacity: 1 }}
+													exit={{ scale: 0.8, opacity: 0 }}
+													transition={{ duration: 0.2, ease: "easeOut" }}
+													className="inline-flex items-center justify-center"
+												>
+													{displayContent}
+												</motion.span>
 											</button>
-										</SimpleAnimatedTooltip>
+										</motion.div>
 									);
 								})}
 							</div>
