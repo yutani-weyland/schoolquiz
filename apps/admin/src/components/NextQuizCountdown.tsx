@@ -14,6 +14,7 @@ export default function NextQuizCountdown() {
   const [isRetracted, setIsRetracted] = useState(false);
   const [scrollY, setScrollY] = useState(0);
   const [isNarrowViewport, setIsNarrowViewport] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   const messages = [
     {
@@ -29,6 +30,8 @@ export default function NextQuizCountdown() {
   ];
 
   useEffect(() => {
+    setIsMounted(true);
+    
     const calculateTimeLeft = () => {
       const now = new Date();
       const nextMonday = new Date();
@@ -117,6 +120,11 @@ export default function NextQuizCountdown() {
       setIsRetracted(!isRetracted);
     }
   };
+
+  // Don't render until mounted to avoid hydration mismatch
+  if (!isMounted) {
+    return null;
+  }
 
   return (
       <div className={`fixed top-0 left-0 right-0 z-40 transition-transform duration-500 ease-out ${isRetracted ? '-translate-y-full' : 'translate-y-0'}`}>

@@ -51,12 +51,14 @@ export function QuizCard({ quiz, isNewest = false }: QuizCardProps) {
 	const [copied, setCopied] = useState(false);
 	const [hasProgress, setHasProgress] = useState(false);
 	const [isHovered, setIsHovered] = useState(false);
+	const [quizUrl, setQuizUrl] = useState('');
 	
-	// Check if quiz has been started
+	// Check if quiz has been started and set quiz URL (client-side only)
 	React.useEffect(() => {
 		if (typeof window !== 'undefined') {
 			const timer = sessionStorage.getItem(`quiz-${quiz.slug}-timer`);
-			setHasProgress(timer && parseInt(timer, 10) > 0);
+			setHasProgress(!!(timer && parseInt(timer, 10) > 0));
+			setQuizUrl(`${window.location.origin}/quiz/${quiz.slug}/intro`);
 		}
 	}, [quiz.slug]);
 	
@@ -64,8 +66,6 @@ export function QuizCard({ quiz, isNewest = false }: QuizCardProps) {
 	const invert = text === "white" ? "text-white" : "text-gray-900";
 	const sub = text === "white" ? "text-white/90" : "text-gray-800/80";
 	const footerMuted = quiz.status === "coming_soon" ? "opacity-70" : "";
-	
-	const quizUrl = typeof window !== 'undefined' ? `${window.location.origin}/quiz/${quiz.slug}/intro` : '';
 
 	const handleShare = async () => {
 		if (navigator.share) {
@@ -310,7 +310,7 @@ export function QuizCard({ quiz, isNewest = false }: QuizCardProps) {
 													<span>{target.label}</span>
 												</a>
 											))}
-										{navigator.share && (
+										{typeof navigator !== 'undefined' && 'share' in navigator && (
 											<motion.button
 												onClick={(e) => {
 													e.preventDefault();
@@ -356,6 +356,7 @@ export function QuizCard({ quiz, isNewest = false }: QuizCardProps) {
 							</AnimatePresence>
 						</div>
 					</div>
+				</div>
 				</div>
 			</motion.a>
 		</motion.div>

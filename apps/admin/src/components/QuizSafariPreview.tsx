@@ -69,10 +69,12 @@ export default function QuizSafariPreview() {
 		"#85C1E2", // Light blue
 	];
 	
-	// Randomly pick initial theme color
-	const [themeColor, setThemeColor] = useState(() => colors[Math.floor(Math.random() * colors.length)]);
+	// Use deterministic initial color to avoid hydration mismatch
+	// Random color will be set after mount (client-side only)
+	const [themeColor, setThemeColor] = useState(() => colors[0]);
 	const [bucketRotate, setBucketRotate] = useState(0);
 	const [isMenuOpen, setIsMenuOpen] = useState(false);
+	const [isMounted, setIsMounted] = useState(false);
 	
 	const handleNextQuestion = () => {
 		setShowAnswer(false);
@@ -216,6 +218,13 @@ export default function QuizSafariPreview() {
 		};
 	}, [currentQuestion.question]);
 
+	// Set random color after mount (client-side only) to avoid hydration mismatch
+	useEffect(() => {
+		setIsMounted(true);
+		// Set random color only on client
+		setThemeColor(colors[Math.floor(Math.random() * colors.length)]);
+	}, []);
+
 	// Track mouse movement for navigation arrows
 	useEffect(() => {
 		let timeoutId: NodeJS.Timeout;
@@ -237,6 +246,27 @@ export default function QuizSafariPreview() {
 	const menuButtonClass = isDarkText
 		? "bg-white/15 text-white hover:bg-white/25"
 		: "bg-black/10 text-gray-900 hover:bg-black/15";
+
+	// Don't render until mounted to avoid hydration mismatch
+	if (!isMounted) {
+		return (
+			<div className="w-full max-w-5xl mx-auto">
+				<div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl overflow-hidden relative" style={{ height: '800px' }}>
+					<div className="bg-gray-100 dark:bg-gray-700 px-6 py-4 flex items-center gap-3">
+						<div className="flex gap-2">
+							<div className="w-3 h-3 bg-red-400 rounded-full"></div>
+							<div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
+							<div className="w-3 h-3 bg-green-400 rounded-full"></div>
+						</div>
+						<div className="flex-1 bg-white dark:bg-gray-600 rounded-xl px-4 py-2 text-sm text-gray-600 dark:text-gray-300">
+							theschoolquiz.com.au/quiz/42
+						</div>
+					</div>
+					<div className="relative overflow-hidden" style={{ backgroundColor: colors[0], height: 'calc(800px - 60px)' }}></div>
+				</div>
+			</div>
+		);
+	}
 
 	return (
 		<div className="w-full max-w-5xl mx-auto">

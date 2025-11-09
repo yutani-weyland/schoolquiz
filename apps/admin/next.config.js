@@ -1,7 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   transpilePackages: ["@schoolquiz/ui", "@schoolquiz/db"],
-  serverComponentsExternalPackages: ['next-auth'],
   webpack: (config) => {
     const webpack = require('webpack');
     

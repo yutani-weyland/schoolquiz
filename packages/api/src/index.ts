@@ -228,9 +228,9 @@ export async function getAnalytics(filters: {
   // Calculate analytics
   const totalRuns = runs.length;
   const totalQuestions = questionStats.length;
-  const avgAudienceSize = runs.reduce((sum, run) => sum + run.audienceSize, 0) / totalRuns || 0;
+  const avgAudienceSize = runs.reduce((sum: number, run) => sum + run.audienceSize, 0) / totalRuns || 0;
 
-  const questionAnalytics = questionStats.reduce((acc, stat) => {
+  const questionAnalytics = questionStats.reduce((acc: Record<string, any>, stat) => {
     const questionId = stat.questionId;
     if (!acc[questionId]) {
       acc[questionId] = {
