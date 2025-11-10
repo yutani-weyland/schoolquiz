@@ -235,6 +235,9 @@ model User {
   achievements     UserAchievement[]
   streaks          UserStreak[]
   quizCompletions  QuizCompletion[]
+  seasonStats      SeasonStats[]
+  profile          UserProfile?
+  unlockedFlair    UserFlair[]
 
   // Referral relations
   referrals        User[] @relation("UserReferrals") // Users referred by this user
@@ -462,19 +465,137 @@ model OrganisationActivity {
 // User Profile & Achievements Models
 // ============================================================================
 
+model Achievement {
+  id                    String   @id @default(cuid())
+  slug                  String   @unique // e.g., "hail-caesar", "ace", "addicted"
+  name                  String
+  shortDescription      String
+  longDescription       String?
+  category              String   // "performance" | "engagement" | "social" | "event" | "meta"
+  rarity                String   // "common" | "uncommon" | "rare" | "epic" | "legendary"
+  isPremiumOnly         Boolean  @default(false)
+  seasonTag             String?  // e.g., "olympics-2026", "halloween-2025"
+  iconKey               String?  // Maps to icon/asset
+  unlockConditionType   String   // e.g., "score_5_of_5", "play_n_quizzes", "streak", "referral"
+  unlockConditionConfig String?  @default("{}") // JSONB parameters for the condition
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  userAchievements UserAchievement[]
+
+  @@index([slug])
+  @@index([category])
+  @@index([rarity])
+  @@index([isPremiumOnly])
+  @@map("achievements")
+}
+
 model UserAchievement {
   id            String   @id @default(cuid())
   userId        String
-  achievementKey String   // e.g., "perfect_round", "speed_demon", "perfect_quiz"
+  achievementId String
   quizSlug      String?  // Optional: which quiz it was earned in
-  metadata      String?  // JSON string for additional context (e.g., round number)
+  progressValue Int?     // e.g., 3
+  progressMax   Int?     // e.g., 10
+  meta          String?  @default("{}") // JSONB for additional context
   unlockedAt    DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement Achievement  @relation(fields: [achievementId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, achievementKey, quizSlug]) // Prevent duplicates for same quiz
+  @@unique([userId, achievementId])
   @@index([userId, unlockedAt])
+  @@index([achievementId])
   @@map("user_achievements")
+}
+
+model Season {
+  id        String   @id @default(cuid())
+  slug      String   @unique // e.g., "2025", "2026"
+  name      String   // e.g., "2025 Season"
+  startDate DateTime
+  endDate   DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  seasonStats SeasonStats[]
+
+  @@index([startDate, endDate])
+  @@map("seasons")
+}
+
+model SeasonStats {
+  id                 String   @id @default(cuid())
+  userId             String
+  seasonId           String
+  quizzesPlayed      Int      @default(0)
+  perfectScores      Int      @default(0)
+  averageScore       Float?
+  longestStreakWeeks Int      @default(0)
+  currentStreakWeeks Int      @default(0)
+  achievementsUnlocked Int    @default(0)
+  lastPlayedAt       DateTime?
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  season Season @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, seasonId])
+  @@index([userId])
+  @@index([seasonId])
+  @@map("season_stats")
+}
+
+model UserProfile {
+  userId                  String   @id
+  displayName             String?
+  tagline                 String?  // e.g., "History nerd with a caffeine problem"
+  avatarUrl               String?
+  favouriteAchievementIds String[] // Array of achievement IDs (limit 6)
+  selectedFlairId         String?  // FK to flair
+  showSeasonOnProfile     Boolean  @default(true)
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  flair Flair? @relation(fields: [selectedFlairId], references: [id], onDelete: SetNull)
+
+  @@map("user_profiles")
+}
+
+model Flair {
+  id                    String   @id @default(cuid())
+  slug                  String   @unique // e.g., "quiz-master", "league-captain", "gold-frame"
+  name                  String
+  description           String
+  rarity                String   // "status" | "frame" | "badge"
+  isPremiumOnly         Boolean  @default(true)
+  unlockConditionType   String?  // e.g., "achievement_combo", "season_rank"
+  unlockConditionConfig String?  @default("{}") // JSONB
+  iconKey               String?  // Icon or style config
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  userProfiles UserProfile[]
+  userFlair    UserFlair[]
+
+  @@index([slug])
+  @@index([rarity])
+  @@map("flair")
+}
+
+model UserFlair {
+  id        String   @id @default(cuid())
+  userId    String
+  flairId   String
+  unlockedAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  flair Flair @relation(fields: [flairId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, flairId])
+  @@index([userId])
+  @@index([flairId])
+  @@map("user_flair")
 }
 
 model UserStreak {

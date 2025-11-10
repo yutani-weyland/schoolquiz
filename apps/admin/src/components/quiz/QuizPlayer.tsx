@@ -14,7 +14,8 @@ import { QuizStatusBar } from "./play/QuizStatusBar";
 import { QuestionProgressBar } from "./play/QuestionProgressBar";
 import { QuizQuestion, QuizRound, QuizThemeMode } from "./play/types";
 import { trackQuizPlayed, hasExceededFreeQuizzes, hasPlayedQuiz } from "@/lib/quizAttempts";
-import { useUserTier } from "@/hooks/useUserTier";
+import { MidQuizSignupPrompt } from "./MidQuizSignupPrompt";
+import { useUserAccess } from "@/contexts/UserAccessContext";
 
 const STANDARD_ROUND_COUNT = 4;
 const QUESTIONS_PER_STANDARD_ROUND = 6;
@@ -264,6 +265,9 @@ interface QuizPlayerProps {
 	rounds: QuizRound[];
 	weekISO?: string;
 	isNewest?: boolean;
+	isDemo?: boolean;
+	maxQuestions?: number;
+	onDemoComplete?: (score: number, totalQuestions: number) => void;
 }
 
 type ViewMode = "presenter" | "grid";
@@ -300,21 +304,49 @@ function getNotchTextColor(backgroundColor: string): string {
 	return luminance > 0.5 ? 'white' : 'black';
 }
 
-export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, weekISO, isNewest = false }: QuizPlayerProps) {
-	const { isPremium } = useUserTier();
+export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, weekISO, isNewest = false, isDemo = false, maxQuestions, onDemoComplete }: QuizPlayerProps) {
+	const { isPremium, isVisitor } = useUserAccess();
+	
+	// For restricted quiz mode: show all questions initially, but lock after 6 answers
+	// For visitors: limit to first round (6 questions) before prompting sign-up
+	const VISITOR_QUESTION_LIMIT = QUESTIONS_PER_STANDARD_ROUND; // 6 questions = 1 round
+	const RESTRICTED_ANSWER_LIMIT = 6; // Lock restricted quiz after 6 answers
+	
+	// In restricted quiz mode, show all questions initially (no slicing)
+	// In non-restricted mode, apply maxQuestions limit if specified
+	const displayQuestions = isDemo 
+		? questions // Show all questions in restricted quiz mode
+		: (maxQuestions ? questions.slice(0, maxQuestions) : questions);
+	const displayRounds = isDemo 
+		? rounds // Show all rounds in restricted quiz mode
+		: (maxQuestions ? rounds.slice(0, 2) : rounds);
+	
+	const shouldLimitQuestions = isVisitor && !isDemo;
+	const finalQuestions = shouldLimitQuestions 
+		? displayQuestions.slice(0, VISITOR_QUESTION_LIMIT)
+		: displayQuestions;
+	const finalRounds = shouldLimitQuestions && displayRounds.length > 0
+		? displayRounds.slice(0, 1) // First round for visitors
+		: displayRounds;
+	
+	const [showSignupPrompt, setShowSignupPrompt] = React.useState(false);
+	const [hasShownPrompt, setHasShownPrompt] = React.useState(false);
 	
 	// Debug logging
 	React.useEffect(() => {
-		console.log('QuizPlayer mounted', { quizTitle, quizColor, quizSlug, questionsCount: questions?.length, roundsCount: rounds?.length });
+		console.log('QuizPlayer mounted', { quizTitle, quizColor, quizSlug, questionsCount: finalQuestions?.length, roundsCount: finalRounds?.length, isDemo, isVisitor });
 	}, []);
 
-	// Safeguard: Check authentication and quiz limits
+	// Safeguard: Check authentication and quiz limits (skip for restricted quiz mode and visitors)
 	React.useEffect(() => {
+		if (isDemo) return; // Restricted quiz mode bypasses auth checks
+		if (isVisitor) return; // Visitors can start the quiz (will be prompted after 5 questions)
+		
 		if (typeof window === 'undefined') return;
 		
 		const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
 		
-		// Require sign-up
+		// Require sign-up for non-visitors
 		if (!loggedIn) {
 			window.location.href = `/quizzes/${quizSlug}/intro`;
 			return;
@@ -339,7 +371,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 				trackQuizPlayed(quizSlug);
 			}
 		}
-	}, [quizSlug, isNewest, isPremium]);
+	}, [quizSlug, isNewest, isPremium, isDemo, isVisitor]);
 
 	const [viewMode, setViewMode] = useState<ViewMode>(() => {
 		// Read mode from URL params
@@ -463,6 +495,108 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 			time: timer
 		}));
 	}, [correctAnswers.size, timer]);
+
+	// Save completion data when quiz is completed (all questions answered)
+	const [hasSubmittedCompletion, setHasSubmittedCompletion] = React.useState(false);
+	
+	useEffect(() => {
+		if (!isDemo && typeof window !== 'undefined' && finalQuestions.length > 0 && !hasSubmittedCompletion) {
+			// Check if all questions have been answered (either correct or incorrect)
+			const allAnswered = finalQuestions.every(q => 
+				correctAnswers.has(q.id) || incorrectAnswers.has(q.id)
+			);
+			
+			if (allAnswered && finalQuestions.length > 0) {
+				const score = correctAnswers.size;
+				const completionKey = `quiz-${quizSlug}-completion`;
+				const existingCompletion = localStorage.getItem(completionKey);
+				
+				// Calculate round scores for achievement evaluation
+				const roundScores = rounds.map((round) => {
+					const roundQuestions = finalQuestions.filter((q) => q.roundNumber === round.number);
+					const roundCorrect = roundQuestions.filter((q) => correctAnswers.has(q.id)).length;
+					return {
+						roundNumber: round.number,
+						category: round.title.toLowerCase(), // Use round title as category proxy
+						score: roundCorrect,
+						totalQuestions: roundQuestions.length,
+					};
+				});
+				
+				// Extract categories from rounds
+				const categories = rounds.map((r) => r.title.toLowerCase());
+				
+				// Save to localStorage (for backward compatibility)
+				if (!existingCompletion) {
+					const completionData = {
+						score,
+						totalQuestions: finalQuestions.length,
+						completedAt: new Date().toISOString(),
+					};
+					localStorage.setItem(completionKey, JSON.stringify(completionData));
+				} else {
+					try {
+						const existing = JSON.parse(existingCompletion);
+						// Update if current score is better
+						if (score > existing.score) {
+							const completionData = {
+								score,
+								totalQuestions: finalQuestions.length,
+								completedAt: new Date().toISOString(),
+							};
+							localStorage.setItem(completionKey, JSON.stringify(completionData));
+						}
+					} catch (err) {
+						// If parsing fails, save new data
+						const completionData = {
+							score,
+							totalQuestions: finalQuestions.length,
+							completedAt: new Date().toISOString(),
+						};
+						localStorage.setItem(completionKey, JSON.stringify(completionData));
+					}
+				}
+				
+				// Submit to API if user is logged in
+				const token = localStorage.getItem('authToken');
+				const userId = localStorage.getItem('userId');
+				
+				if (token && userId) {
+					setHasSubmittedCompletion(true);
+					
+					fetch('/api/quiz/completion', {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+							Authorization: `Bearer ${token}`,
+							'X-User-Id': userId,
+						},
+						body: JSON.stringify({
+							quizSlug,
+							score,
+							totalQuestions: finalQuestions.length,
+							completionTimeSeconds: timer,
+							roundScores,
+							categories,
+						}),
+					})
+						.then((res) => res.json())
+						.then((data) => {
+							// Handle newly unlocked achievements
+							if (data.newlyUnlockedAchievements && data.newlyUnlockedAchievements.length > 0) {
+								// You could show a notification here or update achievement state
+								console.log('New achievements unlocked:', data.newlyUnlockedAchievements);
+							}
+						})
+						.catch((error) => {
+							console.error('Error submitting quiz completion:', error);
+							// Don't reset hasSubmittedCompletion on error - allow retry on next completion
+							setHasSubmittedCompletion(false);
+						});
+				}
+			}
+		}
+	}, [correctAnswers, incorrectAnswers, finalQuestions.length, quizSlug, isDemo, timer, rounds, hasSubmittedCompletion]);
 	const [isTimerRunning, setIsTimerRunning] = useState(() => {
 		// Auto-start timer in grid mode
 		if (typeof window !== 'undefined') {
@@ -473,7 +607,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 		return false; // Don't start until first question in presenter mode
 	});
 	// Safety check
-	if (!questions || questions.length === 0) {
+	if (!finalQuestions || finalQuestions.length === 0) {
 		return (
 			<div className="fixed inset-0 flex items-center justify-center bg-red-500 text-white">
 				<div className="text-center">
@@ -769,13 +903,13 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 			if (currentScreen !== "question") return;
 			if (e.key === "ArrowLeft" && currentIndex > 0) {
 				goToPrevious();
-			} else if (e.key === "ArrowRight" && currentIndex < questions.length - 1) {
+			} else if (e.key === "ArrowRight" && currentIndex < finalQuestions.length - 1 && (!isVisitor || isDemo || currentIndex < VISITOR_QUESTION_LIMIT - 1)) {
 				goToNext();
 			}
 		};
 		window.addEventListener("keydown", handleKeyDown);
 		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, [currentIndex, currentScreen, questions.length]);
+	}, [currentIndex, currentScreen, finalQuestions.length, isVisitor, isDemo]);
 
 	const formatTime = (seconds: number) => {
 		const mins = Math.floor(seconds / 60);
@@ -896,14 +1030,53 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 		setIncorrectAnswers((prev) => new Set([...prev, id]));
 	};
 
-	const currentQuestion = questions[currentIndex];
+	const currentQuestion = finalQuestions[currentIndex];
 	const isAnswerRevealed = currentQuestion ? revealedAnswers.has(currentQuestion.id) : false;
 	const isMarkedCorrect = currentQuestion ? correctAnswers.has(currentQuestion.id) : false;
+	
+	// Track answered questions for visitor prompt
+	const answeredQuestionsCount = React.useMemo(() => {
+		return correctAnswers.size + incorrectAnswers.size;
+	}, [correctAnswers.size, incorrectAnswers.size]);
+	
+	// Show sign-up prompt after 6 questions answered in restricted quiz mode, or after first round for visitors
+	React.useEffect(() => {
+		if (isDemo && answeredQuestionsCount >= RESTRICTED_ANSWER_LIMIT && !hasShownPrompt) {
+			setShowSignupPrompt(true);
+			setHasShownPrompt(true);
+		} else if (isVisitor && !isDemo && answeredQuestionsCount >= VISITOR_QUESTION_LIMIT && !hasShownPrompt) {
+			setShowSignupPrompt(true);
+			setHasShownPrompt(true);
+		}
+	}, [isVisitor, isDemo, answeredQuestionsCount, hasShownPrompt, VISITOR_QUESTION_LIMIT, RESTRICTED_ANSWER_LIMIT]);
 
 	const goToNext = () => {
 		const nextIndex = currentIndex + 1;
-		if (nextIndex < questions.length) {
-			const nextQuestion = questions[nextIndex];
+		
+		// In restricted quiz mode, prevent navigation forward after 6 questions are answered
+		if (isDemo && answeredQuestionsCount >= RESTRICTED_ANSWER_LIMIT) {
+			// Don't allow navigation past limit if 6 questions have been answered
+			return;
+		}
+		
+		// In restricted quiz mode with maxQuestions, check if we've completed all allowed questions
+		if (isDemo && maxQuestions && nextIndex >= maxQuestions) {
+			// Quiz complete - calculate score and call callback
+			const score = correctAnswers.size;
+			if (onDemoComplete) {
+				onDemoComplete(score, maxQuestions);
+			}
+			return;
+		}
+		
+		// For visitors, limit to VISITOR_QUESTION_LIMIT questions
+		if (isVisitor && !isDemo && nextIndex >= VISITOR_QUESTION_LIMIT) {
+			// Don't allow navigation past limit, but don't block if they're already viewing
+			return;
+		}
+		
+		if (nextIndex < finalQuestions.length) {
+			const nextQuestion = finalQuestions[nextIndex];
 			// Check if we're moving to a new round
 			if (nextQuestion.roundNumber !== currentQuestion.roundNumber) {
 				setCurrentRound(nextQuestion.roundNumber);
@@ -918,13 +1091,29 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 			setCurrentIndex(nextIndex);
 			// Mark question as viewed
 			setViewedQuestions(prev => new Set([...prev, nextQuestion.id]));
+		} else if (isDemo && onDemoComplete) {
+			// Reached end of demo questions
+			const score = correctAnswers.size;
+			onDemoComplete(score, finalQuestions.length);
+		} else if (!isDemo && nextIndex >= finalQuestions.length) {
+			// Quiz completed - save completion data to localStorage
+			if (typeof window !== 'undefined') {
+				const score = correctAnswers.size;
+				const completionKey = `quiz-${quizSlug}-completion`;
+				const completionData = {
+					score,
+					totalQuestions: finalQuestions.length,
+					completedAt: new Date().toISOString(),
+				};
+				localStorage.setItem(completionKey, JSON.stringify(completionData));
+			}
 		}
 	};
 
 	const goToPrevious = () => {
 		if (currentIndex > 0) {
 			const prevIndex = currentIndex - 1;
-			const prevQuestion = questions[prevIndex];
+			const prevQuestion = finalQuestions[prevIndex];
 			// Check if we're moving to a different round
 			if (prevQuestion.roundNumber !== currentQuestion.roundNumber) {
 				setCurrentRound(prevQuestion.roundNumber);
@@ -976,7 +1165,14 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 
 	const exitQuiz = () => {
 		if (typeof window !== 'undefined') {
-			window.location.href = '/quizzes';
+			const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+			if (isLoggedIn) {
+				// Logged-in users: go to quizzes page
+				window.location.href = '/quizzes';
+			} else {
+				// Logged-out users: redirect to index page
+				window.location.href = '/';
+			}
 		}
 	};
 
@@ -1045,14 +1241,14 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 	const sections = React.useMemo(() => {
 		const breaks: number[] = [];
 		let lastRound = 0;
-		questions.forEach((q, idx) => {
+		finalQuestions.forEach((q, idx) => {
 			if (q.roundNumber !== lastRound) {
 				breaks.push(idx + 1); // 1-based index
 				lastRound = q.roundNumber;
 			}
 		});
 		return breaks;
-	}, [questions]);
+	}, [finalQuestions]);
 	
 	// Round colors array for the progress rail
 	const roundColorsArray = [
@@ -1064,7 +1260,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 	];
 
 	const headerTone = getTextColor(quizColor);
-	const currentRoundDetails = rounds.find(r => r.number === currentRoundNumber);
+	const currentRoundDetails = finalRounds.find(r => r.number === currentRoundNumber);
 	const containerClass =
 		viewMode === "presenter"
 			? "fixed inset-0 flex flex-col transition-colors duration-300 ease-in-out"
@@ -1079,9 +1275,9 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 			}}
 		>
 			{/* New Progress Header - Only show in presenter mode */}
-			{viewMode === "presenter" && questions && questions.length > 0 && (
+			{viewMode === "presenter" && finalQuestions && finalQuestions.length > 0 && (
 				<QuestionProgressBar
-					total={questions.length}
+					total={finalQuestions.length}
 					currentIndex={currentIndex}
 					sections={sections}
 					roundColors={roundColorsArray}
@@ -1091,9 +1287,17 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 					incorrectAnswers={incorrectAnswers}
 					attemptedAnswers={revealedAnswers}
 					viewedQuestions={viewedQuestions}
-					questions={questions}
+					questions={finalQuestions}
 					showPlusOne={showPlusOne}
 					onSelect={(n) => {
+						// For restricted quiz mode, prevent selecting questions after 6 answers
+						if (isDemo && answeredQuestionsCount >= RESTRICTED_ANSWER_LIMIT) {
+							return;
+						}
+						// For visitors, don't allow selecting questions beyond limit
+						if (isVisitor && !isDemo && n > VISITOR_QUESTION_LIMIT) {
+							return;
+						}
 						setCurrentIndex(n - 1);
 						setCurrentScreen("question");
 						// Start timer if not already running
@@ -1101,7 +1305,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 							setIsTimerRunning(true);
 						}
 						// Mark question as viewed
-						setViewedQuestions(prev => new Set([...prev, questions[n - 1].id]));
+						setViewedQuestions(prev => new Set([...prev, finalQuestions[n - 1].id]));
 					}}
 					isMouseActive={isMouseMoving}
 				/>
@@ -1113,7 +1317,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 					currentRound={currentRoundDetails}
 					textColor={textColor}
 					score={correctAnswers.size}
-					totalQuestions={questions.length}
+					totalQuestions={finalQuestions.length}
 					showPlusOne={showPlusOne}
 					plusOneKey={plusOneKey}
 					isTimerRunning={isTimerRunning}
@@ -1148,7 +1352,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 						round={currentRoundDetails}
 								question={currentQuestion}
 								currentIndex={currentIndex}
-								totalQuestions={questions.length}
+								totalQuestions={finalQuestions.length}
 						textColor={textColor}
 						quizColor={roundColor}
 						finaleRoundNumber={FINALE_ROUND_NUMBER}
@@ -1156,7 +1360,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 								isMarkedCorrect={isMarkedCorrect}
 								isQuestionAnswered={isMarkedCorrect || incorrectAnswers.has(currentQuestion.id)}
 						isMouseMoving={isMouseMoving}
-						canGoNext={currentIndex < questions.length - 1}
+						canGoNext={currentIndex < finalQuestions.length - 1 && (!isVisitor || isDemo || currentIndex < VISITOR_QUESTION_LIMIT - 1)}
 						canGoPrevious={currentIndex > 0}
 						onStartRound={startRound}
 								onRevealAnswer={() => handleRevealAnswer(currentQuestion.id)}
@@ -1169,8 +1373,8 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 					) : (
 					<MobileGridLayout
 						key="grid"
-						questions={questions}
-						rounds={rounds}
+						questions={finalQuestions}
+						rounds={finalRounds}
 						revealedAnswers={revealedAnswers}
 						correctAnswers={correctAnswers}
 						textColor={textColor}
@@ -1190,6 +1394,17 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 					/>
 					)}
 			</div>
+			
+			{/* Mid-quiz sign-up prompt for visitors */}
+			<MidQuizSignupPrompt
+				isOpen={showSignupPrompt}
+				onClose={() => setShowSignupPrompt(false)}
+				onSignUp={() => {
+					setShowSignupPrompt(false);
+					window.location.href = '/sign-up';
+				}}
+				questionsAnswered={answeredQuestionsCount}
+			/>
 		</div>
 	);
 }

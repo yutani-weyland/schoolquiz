@@ -1,78 +1,162 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import { SiteHeader } from "@/components/SiteHeader";
 import { QuizCard, Quiz } from "@/components/quiz/QuizCard";
 import { NextQuizTeaser } from "@/components/quiz/NextQuizTeaser";
 import Link from "next/link";
-
+import { usePathname } from "next/navigation";
+import { useUserAccess } from "@/contexts/UserAccessContext";
 import { getQuizColor } from '@/lib/colors';
 
 const quizzes: Quiz[] = [
   {
-    id: 279,
-    slug: "279",
+    id: 12,
+    slug: "12",
     title: "Shape Up, Pumpkins, Famous First Words, Crazes, and Next In Sequence.",
     blurb: "A weekly selection mixing patterns, pop culture and logic.",
     weekISO: "2024-01-15",
-    colorHex: getQuizColor(279),
+    colorHex: getQuizColor(12),
     status: "available",
     tags: ["Patterns", "Pop Culture", "Logic", "Famous Quotes", "Sequences"]
   },
   {
-    id: 278,
-    slug: "278",
+    id: 11,
+    slug: "11",
     title: "Opposite Day, Lights, Common Ground, Robots Etc, and First Ladies.",
     blurb: "Wordplay meets trivia.",
     weekISO: "2024-01-08",
-    colorHex: getQuizColor(278),
+    colorHex: getQuizColor(11),
     status: "available",
     tags: ["Wordplay", "History", "Technology", "Politics", "General Knowledge"]
   },
   {
-    id: 277,
-    slug: "277",
+    id: 10,
+    slug: "10",
     title: "Back to the Past, Name That Nation, Name the Other, Analog Games, and What Does It Stand For?",
     blurb: "History, geography and acronyms.",
     weekISO: "2024-01-01",
-    colorHex: getQuizColor(277),
+    colorHex: getQuizColor(10),
     status: "available",
     tags: ["History", "Geography", "Games", "Acronyms", "Trivia"]
   },
   {
-    id: 276,
-    slug: "276",
+    id: 9,
+    slug: "9",
     title: "Holiday Trivia, Winter Sports, Year End Review, and Festive Fun.",
     blurb: "Seasonal mixed bag.",
     weekISO: "2023-12-25",
-    colorHex: getQuizColor(276),
-    status: "coming_soon",
+    colorHex: getQuizColor(9),
+    status: "available",
     tags: ["Seasonal", "Sports", "Year Review", "Holidays", "Winter"]
   },
   {
-    id: 275,
-    slug: "275",
+    id: 8,
+    slug: "8",
     title: "Movie Magic, Tech Trends, Sports Moments, and Pop Culture.",
     blurb: "Headlines and highlights.",
     weekISO: "2023-12-18",
-    colorHex: getQuizColor(275),
+    colorHex: getQuizColor(8),
     status: "available",
     tags: ["Movies", "Technology", "Sports", "Pop Culture", "Entertainment"]
   },
   {
-    id: 274,
-    slug: "274",
+    id: 7,
+    slug: "7",
     title: "World Wonders, Historical Events, Science Facts, and Geography.",
     blurb: "Curiosities around the world.",
     weekISO: "2023-12-11",
-    colorHex: getQuizColor(274),
+    colorHex: getQuizColor(7),
     status: "available",
     tags: ["Science", "Geography", "History", "World Facts", "Nature"]
+  },
+  {
+    id: 6,
+    slug: "6",
+    title: "Literature Classics, Music Legends, Art Movements, and Cultural Icons.",
+    blurb: "Explore the arts and humanities.",
+    weekISO: "2023-12-04",
+    colorHex: getQuizColor(6),
+    status: "available",
+    tags: ["Literature", "Music", "Art", "Culture", "Humanities"]
+  },
+  {
+    id: 5,
+    slug: "5",
+    title: "Space Exploration, Ocean Depths, Animal Kingdom, and Natural Phenomena.",
+    blurb: "Discover the wonders of nature.",
+    weekISO: "2023-11-27",
+    colorHex: getQuizColor(5),
+    status: "available",
+    tags: ["Space", "Ocean", "Animals", "Nature", "Science"]
+  },
+  {
+    id: 4,
+    slug: "4",
+    title: "Food & Drink, Cooking Techniques, World Cuisines, and Culinary History.",
+    blurb: "A feast for the mind.",
+    weekISO: "2023-11-20",
+    colorHex: getQuizColor(4),
+    status: "available",
+    tags: ["Food", "Cooking", "Cuisine", "History", "Culture"]
+  },
+  {
+    id: 3,
+    slug: "3",
+    title: "Sports Legends, Olympic Moments, World Records, and Athletic Achievements.",
+    blurb: "Celebrate sporting excellence.",
+    weekISO: "2023-11-13",
+    colorHex: getQuizColor(3),
+    status: "available",
+    tags: ["Sports", "Olympics", "Records", "Athletics", "Achievement"]
+  },
+  {
+    id: 2,
+    slug: "2",
+    title: "Mathematics Puzzles, Logic Problems, Number Patterns, and Brain Teasers.",
+    blurb: "Exercise your logical mind.",
+    weekISO: "2023-11-06",
+    colorHex: getQuizColor(2),
+    status: "available",
+    tags: ["Math", "Logic", "Puzzles", "Patterns", "Brain Teasers"]
+  },
+  {
+    id: 1,
+    slug: "1",
+    title: "Famous Inventions, Scientific Discoveries, Medical Breakthroughs, and Innovation.",
+    blurb: "Celebrate human ingenuity.",
+    weekISO: "2023-10-30",
+    colorHex: getQuizColor(1),
+    status: "available",
+    tags: ["Inventions", "Science", "Medicine", "Innovation", "Discovery"]
   }
 ];
 
 export default function QuizzesPage() {
 	const [userName, setUserName] = useState<string | null>(null);
+	const { isPremium, isVisitor } = useUserAccess();
+	const [pageAnimationKey, setPageAnimationKey] = useState(0);
+	const pathname = usePathname();
+
+	// Redirect logged-out users to latest quiz intro page
+	useEffect(() => {
+		if (typeof window !== 'undefined') {
+			// Use a small delay to ensure localStorage is accessible and context has loaded
+			const checkAndRedirect = () => {
+				const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+				if (!isLoggedIn) {
+					// Redirect to latest quiz intro page (quiz #12)
+					window.location.href = '/quizzes/12/intro';
+				}
+			};
+			// Check immediately
+			checkAndRedirect();
+			// Also check after a brief delay in case of timing issues
+			const timeoutId = setTimeout(checkAndRedirect, 100);
+			return () => clearTimeout(timeoutId);
+		}
+	}, []);
 
 	useEffect(() => {
 		// Check if user is logged in and get their name
@@ -85,32 +169,86 @@ export default function QuizzesPage() {
 		}
 	}, []);
 
+	// Force re-animation whenever the page is navigated to (including via menu)
+	useEffect(() => {
+		// Increment animation key whenever pathname changes to /quizzes
+		if (pathname === '/quizzes') {
+			setPageAnimationKey(prev => prev + 1);
+		}
+	}, [pathname]);
+
 	return (
 		<>
 			<SiteHeader fadeLogo={true} showUpgrade={true} />
 			<main className="min-h-screen pt-24 pb-0">
 				<div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
 					{/* Page Title */}
-					<h1 id="page-title" className="text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 dark:text-white text-center mb-16">
+					<motion.h1 
+						id="page-title" 
+						className="text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 dark:text-white text-center mb-16"
+						initial={{ opacity: 0, y: -20 }}
+						animate={{ opacity: 1, y: 0 }}
+						transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+					>
 						{userName ? `G'day ${userName}!` : "Your Quizzes"}
-					</h1>
+					</motion.h1>
 					
-					{/* Quizzes Grid - Responsive and spacious */}
-					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-						{/* Next Quiz Teaser Card */}
-						<div className="hidden md:block h-full">
-							<NextQuizTeaser />
-						</div>
+					{/* Quizzes Grid - Responsive with overlapping cards on mobile */}
+					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 md:gap-6">
+					{/* Next Quiz Teaser Card */}
+					<motion.div 
+						className="hidden md:block h-full" 
+						key={`teaser-${pageAnimationKey}`}
+						initial={{ opacity: 0, y: 20, scale: 0.95 }}
+						animate={{ opacity: 1, y: 0, scale: 1 }}
+						transition={{ 
+							duration: 0.5, 
+							delay: 0.1,
+							ease: [0.22, 1, 0.36, 1],
+							type: 'spring',
+							stiffness: 200,
+							damping: 20
+						}}
+					>
+						<NextQuizTeaser latestQuizId={quizzes[quizzes.length - 1]?.id || 12} />
+					</motion.div>
 						
-						{quizzes.map((quiz, index) => (
-							<div key={quiz.id} className="h-full">
-								<QuizCard quiz={quiz} isNewest={index === 0} />
-							</div>
-						))}
+					{quizzes.map((quiz, index) => {
+						const isNewest = index === 0;
+						// Premium locked if not premium and not the newest quiz
+						const isPremiumLocked = !isPremium && !isNewest && quiz.status === "available";
+						return (
+							<motion.div 
+								key={`quiz-${quiz.id}-${pageAnimationKey}`}
+								className="h-full"
+								initial={{ opacity: 0, y: 20, scale: 0.95 }}
+								animate={{ opacity: 1, y: 0, scale: 1 }}
+								transition={{ 
+									duration: 0.5, 
+									delay: 0.1 + (index * 0.05), // Stagger by 50ms per card
+									ease: [0.22, 1, 0.36, 1],
+									type: 'spring',
+									stiffness: 200,
+									damping: 20
+								}}
+							>
+								<QuizCard quiz={quiz} isNewest={isNewest} />
+							</motion.div>
+						);
+					})}
 					</div>
 
 					{/* Subscribe CTA - Minimalist */}
-					<div className="mt-24 mb-32 text-center px-4">
+					<motion.div 
+						className="mt-24 mb-32 text-center px-4"
+						initial={{ opacity: 0, y: 20 }}
+						animate={{ opacity: 1, y: 0 }}
+						transition={{ 
+							duration: 0.5, 
+							delay: 0.1 + (quizzes.length * 0.05) + 0.2, // After all cards
+							ease: [0.22, 1, 0.36, 1]
+						}}
+					>
 						<h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
 							Don't miss the next quiz
 						</h2>
@@ -123,7 +261,7 @@ export default function QuizzesPage() {
 						>
 							3 Quizzes for Free
 						</Link>
-					</div>
+					</motion.div>
 				</div>
 			</main>
 

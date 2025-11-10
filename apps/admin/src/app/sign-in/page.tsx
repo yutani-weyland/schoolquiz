@@ -13,8 +13,8 @@ export default function SignInPage() {
 				<div className="flex items-center justify-center min-h-[calc(100vh-12rem)]">
 					<div className="w-full max-w-md">
 						<PageHeader
-							title="Sign in"
-							subtitle="Welcome back to The School Quiz"
+							title="Log in"
+							subtitle="Welcome back! Log in to access your weekly quizzes, track your progress, and see your achievements."
 							centered
 						/>
 						<SignInForm />

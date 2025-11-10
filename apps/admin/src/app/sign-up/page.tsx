@@ -13,8 +13,12 @@ export default function SignUpPage() {
 				<div className="flex items-center justify-center min-h-[calc(100vh-12rem)]">
 					<div className="w-full max-w-md">
 						<PageHeader
-							title="Create your account"
-							subtitle="Get 5 weeks of free access to the latest quizzes"
+							title="Join our Community"
+							subtitle={
+								<>
+									Sign up to get free access to the latest edition of <span className="font-bold text-blue-600 dark:text-blue-400">The School Quiz</span>, plus weekly email and SMS reminders!
+								</>
+							}
 							centered
 						/>
 						<SignUpForm />

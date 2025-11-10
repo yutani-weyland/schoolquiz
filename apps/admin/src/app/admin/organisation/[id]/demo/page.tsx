@@ -625,7 +625,7 @@ function CreateLeaderboardModal({
     const newLeaderboard: typeof mockLeaderboards[0] = {
       id: `lb-${Date.now()}`,
       name,
-      description: description || null,
+      description: description || '',
       visibility,
       organisationGroup: visibility === 'GROUP' && selectedGroup
         ? { id: selectedGroup.id, name: selectedGroup.name, type: selectedGroup.type }

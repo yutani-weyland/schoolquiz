@@ -11,12 +11,11 @@ import { OrganisationMemberRole, OrganisationMemberStatus, OrganisationActivityT
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string; memberId: string } }
+  { params }: { params: Promise<{ id: string; memberId: string }> }
 ) {
   try {
     const user = await requireAuth();
-    const organisationId = params.id;
-    const memberId = params.memberId;
+    const { id: organisationId, memberId } = await params;
     const body = await request.json();
     const { role, status } = body;
 
@@ -88,12 +87,11 @@ export async function PATCH(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string; memberId: string } }
+  { params }: { params: Promise<{ id: string; memberId: string }> }
 ) {
   try {
     const user = await requireAuth();
-    const organisationId = params.id;
-    const memberId = params.memberId;
+    const { id: organisationId, memberId } = await params;
 
     const context = await getOrganisationContext(organisationId, user.id);
     requirePermission(context, 'org:members:remove');

@@ -1,17 +1,26 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { Menu, X, User, Sun, Moon, LogOut } from 'lucide-react';
+import { useRouter, usePathname } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Menu, X, User, Settings, Wallet, Users, Pencil, Plus, LogOut, Sun, Moon, LayoutDashboard, Trophy, BarChart3, Crown, Info, Play, BookOpen } from 'lucide-react';
+import { useUserAccess } from '@/contexts/UserAccessContext';
 
 export function SiteHeader({ fadeLogo = false, showUpgrade = false }: { fadeLogo?: boolean; showUpgrade?: boolean }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const { isLoggedIn: userIsLoggedIn, userName, userEmail, tier, isVisitor, isFree, isPremium } = useUserAccess();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  
+  // Check if we're on the quizzes page
+  const isOnQuizzesPage = pathname === '/quizzes';
+  const isOnIndexPage = pathname === '/';
 
   // Get time-based theme preference
   const getTimeBasedTheme = (): boolean => {
@@ -58,7 +67,7 @@ export function SiteHeader({ fadeLogo = false, showUpgrade = false }: { fadeLogo
 
     // Check login status on client only
     const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
-    setIsLoggedIn(loggedIn);
+    setIsLoggedIn(loggedIn || userIsLoggedIn);
     
     // Get user ID if logged in
     if (loggedIn) {
@@ -110,22 +119,23 @@ export function SiteHeader({ fadeLogo = false, showUpgrade = false }: { fadeLogo
     localStorage.removeItem('isLoggedIn');
     localStorage.removeItem('userId');
     localStorage.removeItem('userEmail');
+    localStorage.removeItem('userName');
     
     // Close menu
     setIsMenuOpen(false);
+    setIsLoggedIn(false);
     
-    // Redirect to home
-    router.push('/');
-    window.location.reload(); // Reload to clear any cached state
+    // Redirect to home/index page
+    window.location.href = '/';
   };
 
   // Listen for login changes
   useEffect(() => {
     const handleStorageChange = () => {
       const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
-      setIsLoggedIn(loggedIn);
+      setIsLoggedIn(loggedIn || userIsLoggedIn);
       
-      if (loggedIn) {
+      if (loggedIn || userIsLoggedIn) {
         const storedUserId = localStorage.getItem('userId');
         if (storedUserId) {
           setUserId(storedUserId);
@@ -143,7 +153,7 @@ export function SiteHeader({ fadeLogo = false, showUpgrade = false }: { fadeLogo
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('focus', handleStorageChange);
     };
-  }, []);
+  }, [userIsLoggedIn]);
 
   // Handle scroll to hide/show logo
   useEffect(() => {
@@ -155,6 +165,20 @@ export function SiteHeader({ fadeLogo = false, showUpgrade = false }: { fadeLogo
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    if (isMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isMenuOpen]);
 
   return (
     <>
@@ -184,193 +208,262 @@ export function SiteHeader({ fadeLogo = false, showUpgrade = false }: { fadeLogo
                 <span>Upgrade</span>
               </a>
             )}
-            <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="w-12 h-12 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full font-medium transition-all duration-300 flex items-center justify-center relative"
-            >
-              {isMenuOpen ? (
-                <X className="w-5 h-5 absolute transition-all duration-300" />
-              ) : (
-                <Menu className="w-5 h-5 absolute transition-all duration-300" />
-              )}
-            </button>
+            {isOnQuizzesPage && isLoggedIn && isFree && (
+              <Link
+                href="/upgrade"
+                className="hidden md:inline-flex items-center gap-2 px-6 py-3 rounded-full text-base font-medium bg-[#3B82F6] text-white hover:bg-[#2563EB] transition-colors"
+              >
+                <Crown className="w-4 h-4" />
+                Upgrade
+              </Link>
+            )}
+            {isOnIndexPage && !isLoggedIn && (
+              <Link
+                href="/sign-up"
+                className="hidden md:inline-flex items-center gap-2 px-6 py-3 rounded-full text-base font-medium bg-[#3B82F6] text-white hover:bg-[#2563EB] transition-colors"
+              >
+                Sign Up Free
+              </Link>
+            )}
+            <div className="relative" ref={menuRef}>
+              <button
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className="w-12 h-12 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full font-medium transition-all duration-300 flex items-center justify-center relative"
+              >
+                {isMenuOpen ? (
+                  <X className="w-5 h-5 absolute transition-all duration-300" />
+                ) : (
+                  <Menu className="w-5 h-5 absolute transition-all duration-300" />
+                )}
+              </button>
+
+              {/* Dropdown Menu */}
+              <AnimatePresence>
+                {isMenuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.98 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.98 }}
+                    transition={{ duration: 0.15, ease: 'easeOut' }}
+                    className="absolute top-full right-0 mt-2 w-72 max-w-[calc(100vw-2rem)] bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden z-50"
+                    style={{
+                      maxHeight: 'calc(100vh - 5rem)',
+                      overflowY: 'auto'
+                    }}
+                  >
+                  {/* User Profile Section - Only for logged-in users */}
+                  {isLoggedIn && (
+                    <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-700/50">
+                      <div className="flex items-center gap-3">
+                        <div className="w-11 h-11 rounded-full bg-blue-600 dark:bg-blue-500 flex items-center justify-center text-white font-semibold text-base relative flex-shrink-0">
+                          {(userName || localStorage.getItem('userName')) ? (userName || localStorage.getItem('userName'))?.charAt(0).toUpperCase() : 'U'}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-gray-900 dark:text-white text-base truncate">
+                              {userName || localStorage.getItem('userName') || 'User'}
+                            </p>
+                            {isPremium && (
+                              <Crown className="w-4 h-4 text-amber-500 dark:text-amber-400 flex-shrink-0" />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Menu Items - Tier-specific */}
+                  <div className="py-2">
+                    {isVisitor ? (
+                      // Visitor menu - Play Quiz, Sign In, Sign Up, divider, About, Dark Mode
+                      <>
+                        <Link
+                          href="/quizzes/12/intro"
+                          onClick={handleLinkClick}
+                          className="flex items-center gap-3 px-5 py-2.5 text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                        >
+                          <Play className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                          Play This Week's Quiz
+                        </Link>
+                        <div className="border-t border-gray-200 dark:border-gray-700 my-1.5"></div>
+                        <Link
+                          href="/sign-in"
+                          onClick={handleLinkClick}
+                          className="flex items-center gap-3 px-4 py-1.5 text-base text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        >
+                          <User className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                          Log In
+                        </Link>
+                        <Link
+                          href="/sign-up"
+                          onClick={handleLinkClick}
+                          className="flex items-center gap-3 px-4 py-1.5 text-base font-medium text-white bg-[#3B82F6]/80 hover:bg-[#3B82F6] rounded-full transition-all duration-200 mx-1"
+                        >
+                          <User className="w-4 h-4 text-white" />
+                          Sign Up Free
+                        </Link>
+                        <div className="border-t border-gray-200 dark:border-gray-700 my-1.5"></div>
+                        <Link
+                          href="/about"
+                          onClick={handleLinkClick}
+                          className="flex items-center gap-3 px-4 py-1.5 text-base text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        >
+                          <Info className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                          About The School Quiz
+                        </Link>
+                      </>
+                    ) : isFree ? (
+                      // Free user menu - restructured
+                      <>
+                        <Link
+                          href="/quizzes"
+                          onClick={handleLinkClick}
+                          className="flex items-center gap-3 px-5 py-2.5 text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                        >
+                          <BookOpen className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                          Quizzes
+                        </Link>
+                        <Link
+                          href="/achievements"
+                          onClick={handleLinkClick}
+                          className="flex items-center gap-3 px-5 py-2.5 text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                        >
+                          <Trophy className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                          Achievements
+                        </Link>
+                        <Link
+                          href="/account"
+                          onClick={handleLinkClick}
+                          className="flex items-center gap-3 px-5 py-2.5 text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                        >
+                          <User className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                          Profile & Settings
+                        </Link>
+                      </>
+                    ) : (
+                      // Premium user menu
+                      <>
+                        <Link
+                          href="/dashboard"
+                          onClick={handleLinkClick}
+                          className="flex items-center gap-3 px-5 py-2.5 text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                        >
+                          <LayoutDashboard className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                          Dashboard
+                        </Link>
+                        <Link
+                          href="/quizzes/279/play"
+                          onClick={handleLinkClick}
+                          className="flex items-center gap-3 px-5 py-2.5 text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                        >
+                          <Play className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                          Play Quiz
+                        </Link>
+                        <Link
+                          href="/leagues"
+                          onClick={handleLinkClick}
+                          className="flex items-center gap-3 px-5 py-2.5 text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                        >
+                          <Users className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                          Private Leagues
+                        </Link>
+                        <Link
+                          href="/stats"
+                          onClick={handleLinkClick}
+                          className="flex items-center gap-3 px-5 py-2.5 text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                        >
+                          <BarChart3 className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                          Stats & Analytics
+                        </Link>
+                        <Link
+                          href="/achievements"
+                          onClick={handleLinkClick}
+                          className="flex items-center gap-3 px-5 py-2.5 text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                        >
+                          <Trophy className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                          Achievements
+                        </Link>
+                        <Link
+                          href="/account"
+                          onClick={handleLinkClick}
+                          className="flex items-center gap-3 px-5 py-2.5 text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                        >
+                          <Settings className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                          Account
+                        </Link>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Upgrade CTA for Free Users */}
+                  {isFree && (
+                    <>
+                      <div className="border-t border-gray-100 dark:border-gray-700/50 my-1"></div>
+                      <div className="px-5 py-2">
+                        <Link
+                          href="/upgrade"
+                          onClick={handleLinkClick}
+                          className="flex items-center justify-center gap-2 px-6 py-3 rounded-full text-base font-medium bg-[#3B82F6] text-white hover:bg-[#2563EB] transition-colors w-full"
+                        >
+                          <Crown className="w-4 h-4" />
+                          Upgrade to Premium
+                        </Link>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Dark Mode and Sign Out - Always at bottom (static across tiers) */}
+                  <div className="border-t border-gray-100 dark:border-gray-700/50 mt-1"></div>
+                  <div className="py-2">
+                    {isLoggedIn && (
+                      <button
+                        onClick={() => {
+                          setIsMenuOpen(false);
+                          handleLogout();
+                        }}
+                        className="flex items-center gap-3 px-5 py-2.5 text-base text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors w-full text-left"
+                      >
+                        <LogOut className="w-5 h-5 text-red-600 dark:text-red-400" />
+                        Sign Out
+                      </button>
+                    )}
+                    {/* Dark Mode Toggle */}
+                    <div className="flex items-center justify-between px-5 py-2.5">
+                      <div className="flex items-center gap-3">
+                        {isDark ? (
+                          <Sun className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                        ) : (
+                          <Moon className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                        )}
+                        <span className="text-base text-gray-700 dark:text-gray-200">Dark mode</span>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleTheme();
+                        }}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                          isDark ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
+                        }`}
+                        role="switch"
+                        aria-checked={isDark}
+                        aria-label="Toggle dark mode"
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                            isDark ? 'translate-x-6' : 'translate-x-1'
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </div>
       </header>
-
-      {/* Slide-out menu overlay */}
-      {isMenuOpen && (
-        <>
-          <div
-            className="fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity duration-300 backdrop-blur-sm"
-            onClick={() => setIsMenuOpen(false)}
-          />
-          <div className="fixed top-20 right-4 max-h-[calc(100vh-6rem)] w-96 bg-white dark:bg-gray-800 transform transition-transform duration-300 ease-out rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col z-50">
-            <div className="p-6 overflow-y-auto flex-1 scroll-smooth menu-scroll-mask">
-              {/* Premium CTA - Only if not logged in */}
-              {!isLoggedIn && (
-                <div className="mb-6">
-                  <a href="/premium" className="group block bg-blue-600 hover:bg-blue-700 p-6 rounded-2xl transition-all duration-300 shadow-lg hover:shadow-xl">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-xl">
-                        <svg className="w-6 h-6 text-white group-hover:rotate-12 transition-transform duration-300" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
-                        </svg>
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-white font-bold text-lg">Upgrade</span>
-                        </div>
-                        <p className="text-blue-50 text-sm leading-tight">Unlock premium features</p>
-                      </div>
-                    </div>
-                  </a>
-                </div>
-              )}
-
-              {/* Primary Navigation - Consistent Styling */}
-              <div className="space-y-1 mb-6">
-                <Link 
-                  href="/quizzes" 
-                  onClick={handleLinkClick} 
-                  className="group flex items-center gap-3 px-4 py-3.5 rounded-xl text-base font-semibold text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-all duration-200"
-                >
-                  <svg className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-                  </svg>
-                  Quizzes
-                </Link>
-                
-                {isLoggedIn && (
-                  <>
-                    {userId && (
-                      <Link 
-                        href={`/profile/${userId}`} 
-                        onClick={handleLinkClick} 
-                        className="group flex items-center gap-3 px-4 py-3.5 rounded-xl text-base font-semibold text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-all duration-200"
-                      >
-                        <User className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors" />
-                        Profile
-                      </Link>
-                    )}
-                    <Link 
-                      href="/account" 
-                      onClick={handleLinkClick} 
-                      className="group flex items-center gap-3 px-4 py-3.5 rounded-xl text-base font-semibold text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-all duration-200"
-                    >
-                      <svg className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
-                      </svg>
-                      Private Leagues
-                    </Link>
-                    <Link 
-                      href="/account?tab=account" 
-                      onClick={handleLinkClick} 
-                      className="group flex items-center gap-3 px-4 py-3.5 rounded-xl text-base font-semibold text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-all duration-200"
-                    >
-                      <svg className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                      </svg>
-                      Settings
-                    </Link>
-                    
-                    {/* Logout Button */}
-                    <button
-                      onClick={handleLogout}
-                      className="group flex items-center gap-3 px-4 py-3.5 rounded-xl text-base font-semibold text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-all duration-200 w-full text-left"
-                    >
-                      <LogOut className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors" />
-                      Logout
-                    </button>
-                  </>
-                )}
-                
-                {!isLoggedIn && (
-                  <Link 
-                    href="/sign-in" 
-                    onClick={handleLinkClick} 
-                    className="group flex items-center gap-3 px-4 py-3.5 rounded-xl text-base font-semibold text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-all duration-200"
-                  >
-                    <svg className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
-                    </svg>
-                    Sign In
-                  </Link>
-                )}
-              </div>
-
-              {/* Footer Links - Consistent Styling */}
-              <div className="mt-auto pt-6 border-t border-gray-200 dark:border-gray-700 space-y-1">
-                <Link 
-                  href="/about" 
-                  onClick={handleLinkClick} 
-                  className="group flex items-center gap-3 px-4 py-3.5 rounded-xl text-base font-semibold text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-all duration-200"
-                >
-                  <svg className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                  </svg>
-                  About
-                </Link>
-                <Link 
-                  href="/contact" 
-                  onClick={handleLinkClick} 
-                  className="group flex items-center gap-3 px-4 py-3.5 rounded-xl text-base font-semibold text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-all duration-200"
-                >
-                  <svg className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
-                  </svg>
-                  Contact
-                </Link>
-                <Link 
-                  href="/help" 
-                  onClick={handleLinkClick} 
-                  className="group flex items-center gap-3 px-4 py-3.5 rounded-xl text-base font-semibold text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-all duration-200"
-                >
-                  <svg className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                  </svg>
-                  Help
-                </Link>
-                <Link 
-                  href="/privacy" 
-                  onClick={handleLinkClick} 
-                  className="group flex items-center gap-3 px-4 py-3.5 rounded-xl text-base font-semibold text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-all duration-200"
-                >
-                  <svg className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
-                  </svg>
-                  Privacy
-                </Link>
-                <Link 
-                  href="/terms" 
-                  onClick={handleLinkClick} 
-                  className="group flex items-center gap-3 px-4 py-3.5 rounded-xl text-base font-semibold text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-all duration-200"
-                >
-                  <svg className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                  </svg>
-                  Terms
-                </Link>
-                
-                {/* Theme Toggle */}
-                <button
-                  onClick={toggleTheme}
-                  className="group flex items-center gap-3 px-4 py-3.5 rounded-xl text-base font-semibold text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-all duration-200 w-full text-left"
-                >
-                  {isDark ? (
-                    <Sun className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors" />
-                  ) : (
-                    <Moon className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors" />
-                  )}
-                  {isDark ? 'Light mode' : 'Dark mode'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
     </>
   );
 }
-

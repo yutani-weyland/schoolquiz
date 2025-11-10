@@ -8,6 +8,17 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { ContentCard } from "@/components/layout/ContentCard";
 
 export default function AboutPage() {
+	const handleExploreClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+		if (typeof window !== 'undefined') {
+			const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+			if (!isLoggedIn) {
+				e.preventDefault();
+				// Redirect logged-out users to latest quiz intro page
+				window.location.href = '/quizzes/12/intro';
+			}
+		}
+	};
+
 	return (
 		<PageLayout headerFadeLogo={true}>
 			<PageContainer maxWidth="2xl">
@@ -54,9 +65,25 @@ export default function AboutPage() {
 						<h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-6">
 							My Mission
 						</h2>
-						<p className="text-base md:text-lg text-gray-600 dark:text-gray-400 leading-relaxed">
-							I believe that learning should be engaging, authentic, and fun. My mission is simple: deliver a fun, engaging quiz that's consistently high quality, with no AI-generated content. I'm passionate about analytics, and this shows up in the quiz—question difficulty is data-driven, and you can see insights like how many people got each answer right in real-time.
-						</p>
+						<div className="space-y-4">
+							<p className="text-base md:text-lg text-gray-600 dark:text-gray-400 leading-relaxed">
+								I believe that learning should be engaging, authentic, and fun. My mission is simple:
+							</p>
+							<ul className="space-y-3 text-base md:text-lg text-gray-600 dark:text-gray-400 leading-relaxed">
+								<li className="flex items-start gap-3">
+									<span className="text-blue-600 dark:text-blue-400 font-bold mt-1">•</span>
+									<span><strong>Provide a fully playable quiz each week.</strong> I get it—I was a trainee teacher once upon a time. You need something ready to go, every single week, without fail.</span>
+								</li>
+								<li className="flex items-start gap-3">
+									<span className="text-blue-600 dark:text-blue-400 font-bold mt-1">•</span>
+									<span>Deliver consistently high-quality content with no AI-generated slop. Every question is handcrafted and thoughtfully chosen.</span>
+								</li>
+								<li className="flex items-start gap-3">
+									<span className="text-blue-600 dark:text-blue-400 font-bold mt-1">•</span>
+									<span>Make analytics accessible. Question difficulty is data-driven, and you can see insights like how many people got each answer right in real-time.</span>
+								</li>
+							</ul>
+						</div>
 					</ContentCard>
 				</div>
 
@@ -72,6 +99,7 @@ export default function AboutPage() {
 						<div className="pt-6">
 							<Link 
 								href="/quizzes"
+								onClick={handleExploreClick}
 								className="inline-flex items-center justify-center px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-semibold transition-all hover:scale-105 shadow-lg hover:shadow-xl"
 							>
 								Explore the Quizzes

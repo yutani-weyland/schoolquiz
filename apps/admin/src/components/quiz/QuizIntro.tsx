@@ -62,10 +62,9 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 			window.history.scrollRestoration = "manual";
 			window.scrollTo(0, 0);
 			
-			// Check if not logged in
-			if (!loggedIn) {
-				setShowSignupModal(true);
-			} else if (!isLoading && !isPremium) {
+			// Only show modals for logged-in users with restrictions
+			// Visitors can play (they'll be limited to 5 questions)
+			if (loggedIn && !isLoading && !isPremium) {
 				// Check if basic user has exceeded free quizzes
 				if (hasExceededFreeQuizzes()) {
 					setShowLimitModal(true);
@@ -79,26 +78,32 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 	}, [quiz.slug, loggedIn, isPremium, isLoading, isNewest]);
 	
 	const handlePlayClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-		// Require sign-up
-		if (!loggedIn) {
+		// Visitors can only play the latest quiz
+		if (!loggedIn && !isNewest) {
 			e.preventDefault();
-			setShowSignupModal(true);
+			// Redirect to latest quiz intro (quiz #12)
+			window.location.href = '/quizzes/12/intro';
 			return;
 		}
 		
-		// Check if basic user has exceeded free quizzes
-		if (!isPremium && hasExceededFreeQuizzes()) {
-			e.preventDefault();
-			setShowLimitModal(true);
-			return;
+		// Allow visitors to play latest quiz (they'll be limited to 5 questions in QuizPlayer)
+		// Only block if they're logged in but have restrictions
+		if (loggedIn) {
+			// Check if basic user has exceeded free quizzes
+			if (!isPremium && hasExceededFreeQuizzes()) {
+				e.preventDefault();
+				setShowLimitModal(true);
+				return;
+			}
+			
+			// Check if basic user is trying to access non-latest quiz
+			if (!isPremium && !isNewest) {
+				e.preventDefault();
+				setShowLimitModal(true);
+				return;
+			}
 		}
-		
-		// Check if basic user is trying to access non-latest quiz
-		if (!isPremium && !isNewest) {
-			e.preventDefault();
-			setShowLimitModal(true);
-			return;
-		}
+		// Visitors can proceed with latest quiz - they'll be limited to 5 questions
 	};
 
 	const tone = textOn(quiz.colorHex);
@@ -138,7 +143,16 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 	};
 
 	function onBack() {
-		window.history.back();
+		if (typeof window !== 'undefined') {
+			const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+			if (isLoggedIn) {
+				// Logged-in users: go back in history (usually to quizzes page)
+				window.history.back();
+			} else {
+				// Logged-out users: redirect to index page
+				window.location.href = '/';
+			}
+		}
 	}
 
 	return (
@@ -260,25 +274,6 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 							{formattedDate || formatWeek(quiz.weekISO)}
 						</motion.time>
 
-						{/* Warning - Show for basic users */}
-						{loggedIn && !isPremium && !isLoading && remainingQuizzes > 0 && remainingQuizzes < 3 && isNewest && (
-							<motion.div
-								initial={{ opacity: 0, y: 10 }}
-								animate={{ opacity: 1, y: 0 }}
-								className={`mb-6 px-4 py-3 rounded-xl border ${
-									tone === "white"
-										? "bg-white/10 border-white/20 text-white"
-										: "bg-black/10 border-black/20 text-gray-900"
-								}`}
-							>
-								<p className="text-sm font-medium text-center">
-									{remainingQuizzes === 1 
-										? "⚠️ Last free quiz! Upgrade to Premium for unlimited access."
-										: `${remainingQuizzes} free quiz${remainingQuizzes !== 1 ? 'es' : ''} remaining. Upgrade to Premium for unlimited access.`}
-								</p>
-							</motion.div>
-						)}
-
 						{/* Action Buttons */}
 						<motion.div
 							initial={{ opacity: 0, y: 10 }}
@@ -291,19 +286,46 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 							}}
 							className="flex flex-wrap items-center justify-center gap-3 mb-12"
 						>
-							{!loggedIn ? (
-								<motion.button
-									onClick={() => setShowSignupModal(true)}
-									autoFocus
-									className={`rounded-full px-10 py-5 text-xl font-semibold cursor-pointer ${
-										tone === "white" ? "bg-white/50 text-gray-900" : "bg-gray-400 text-white"
-									}`}
-									whileHover={{ scale: 1.02 }}
-									whileTap={{ scale: 0.98 }}
-								>
-									Sign Up to Play
-								</motion.button>
-							) : !isPremium && !isLoading && (hasExceededFreeQuizzes() || !isNewest) ? (
+						{!loggedIn ? (
+							<motion.a
+								href={`/quizzes/${quiz.slug}/play`}
+								onClick={handlePlayClick}
+								autoFocus
+								className={`rounded-full px-10 py-5 text-xl font-semibold cursor-pointer ${
+									tone === "white" ? "bg-white text-gray-900" : "bg-gray-900 text-white"
+								}`}
+								whileHover={{ 
+									scale: 1.05,
+									transition: { 
+										type: "spring",
+										stiffness: 500,
+										damping: 20,
+										mass: 0.5
+									}
+								}}
+								transition={{
+									type: "spring",
+									stiffness: 600,
+									damping: 25,
+									mass: 0.3
+								}}
+								whileTap={{ 
+									scale: 0.98,
+									transition: { 
+										type: "spring",
+										stiffness: 500,
+										damping: 30
+									}
+								}}
+								style={{
+									boxShadow: tone === "white" 
+										? "0 4px 14px 0 rgba(0, 0, 0, 0.15)" 
+										: "0 4px 14px 0 rgba(0, 0, 0, 0.3)"
+								}}
+							>
+								Try Quiz
+							</motion.a>
+						) : !isPremium && !isLoading && (hasExceededFreeQuizzes() || !isNewest) ? (
 								<motion.button
 									onClick={() => setShowLimitModal(true)}
 									autoFocus

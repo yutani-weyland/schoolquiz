@@ -1,349 +1,343 @@
-'use client';
+'use client'
 
-import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
-import { PageLayout } from '@/components/layout/PageLayout';
-import { PageContainer } from '@/components/layout/PageContainer';
-import { ContentCard } from '@/components/layout/ContentCard';
-import { Calendar, Lock, Users, Globe, Edit, TrendingUp, Trophy, Target, Award, Palette } from 'lucide-react';
-import { StreakCalendar } from '@/components/profile/StreakCalendar';
-import { AchievementsShowcase } from '@/components/profile/AchievementsShowcase';
-import { PerformanceChart, StrengthAreasChart } from '@/components/profile/AnalyticsCharts';
-import { PrivateLeaguesAnalytics } from '@/components/profile/PrivateLeaguesAnalytics';
-import { ProfileCustomizeTab } from '@/components/profile/ProfileCustomizeTab';
-import { motion } from 'framer-motion';
-import Link from 'next/link';
-import { getDistributedColors } from '@/lib/colors';
-import { textOn } from '@/lib/contrast';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useState, useEffect } from 'react'
+import { PageLayout } from '@/components/layout/PageLayout'
+import { PageContainer } from '@/components/layout/PageContainer'
+import { PageHeader } from '@/components/layout/PageHeader'
+import { ContentCard } from '@/components/layout/ContentCard'
+import { AchievementCard } from '@/components/achievements/AchievementCard'
+import { useRouter, useParams } from 'next/navigation'
+import { useUserTier } from '@/hooks/useUserTier'
+import type { UserTier } from '@/lib/feature-gating'
+import { Trophy, Crown, Edit2, Settings, Calendar, TrendingUp, Flame, Award } from 'lucide-react'
+import { motion } from 'framer-motion'
 
-// Generate random bright colors for stat cards
-const statCardColors = getDistributedColors(3);
-
-interface ProfileData {
-  id: string;
-  name: string | null;
-  teamName: string | null;
-  profileVisibility: string;
-  profileColorScheme?: string;
-  avatar?: string;
-  subscriptionStatus?: string;
-  createdAt: string;
-  achievements: Array<{
-    id: string;
-    achievementKey: string;
-    quizSlug: string | null;
-    metadata: string | null;
-    unlockedAt: string;
-  }>;
-  streak: {
-    currentStreak: number;
-    longestStreak: number;
-    lastQuizDate: string | null;
-    streakStartDate: string | null;
-  };
-  recentCompletions: Array<{
-    quizSlug: string;
-    score: number;
-    totalQuestions: number;
-    completedAt: string;
-    timeSeconds: number | null;
-  }>;
-  analytics?: {
-    strengthAreas: Array<{ category: string; score: number; total: number }>;
-    performanceOverTime: Array<{ date: string; score: number; quizSlug: string }>;
-    averageScore: number;
-    totalQuizzes: number;
-  };
-  isOwnProfile: boolean;
-}
-
-// Avatar display helper
-function getAvatarEmoji(avatarId?: string) {
-  // If avatar is already an emoji, return it
-  if (avatarId && /^[\p{Emoji}]$/u.test(avatarId)) {
-    return avatarId;
-  }
-  // Otherwise return default
-  return '👤';
-}
-
-export default function UserProfilePage() {
-  const params = useParams();
-  const userId = String(params?.userId || '');
-  const [profile, setProfile] = useState<ProfileData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('achievements');
-  const [isPremium, setIsPremium] = useState(false);
+export default function ProfilePage() {
+  const router = useRouter()
+  const params = useParams()
+  const userId = params?.userId as string
+  const { tier: hookTier, isPremium } = useUserTier()
+  const tier: UserTier = hookTier === 'basic' ? 'free' : (hookTier as UserTier)
+  
+  const [profile, setProfile] = useState<any>(null)
+  const [seasonStats, setSeasonStats] = useState<any>(null)
+  const [achievements, setAchievements] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [selectedSeason, setSelectedSeason] = useState('2025')
+  const [isEditingFavourites, setIsEditingFavourites] = useState(false)
 
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const token = localStorage.getItem('authToken');
-        const response = await fetch(`/api/profile/${userId}`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
-
-        if (!response.ok) {
-          const data = await response.json();
-          setError(data.error || 'Failed to load profile');
-          setIsLoading(false);
-          return;
-        }
-
-        const data = await response.json();
-        setProfile(data);
+        const token = localStorage.getItem('authToken')
+        const currentUserId = localStorage.getItem('userId')
         
-        // Check premium status
-        if (data.subscriptionStatus) {
-          const premiumStatuses = ['ACTIVE', 'TRIALING', 'FREE_TRIAL'];
-          setIsPremium(premiumStatuses.includes(data.subscriptionStatus));
+        if (!token || !currentUserId) {
+          router.push('/sign-in')
+          return
         }
-      } catch (err: any) {
-        setError(err.message || 'Failed to load profile');
+
+        const targetUserId = userId || currentUserId
+
+        // Fetch profile
+        const profileRes = await fetch(`/api/profile/${targetUserId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'X-User-Id': currentUserId,
+          },
+        })
+
+        if (!profileRes.ok) {
+          throw new Error('Failed to load profile')
+        }
+
+        const profileData = await profileRes.json()
+        setProfile(profileData)
+
+        // Fetch season stats
+        const statsRes = await fetch(`/api/seasons/stats?season=${selectedSeason}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'X-User-Id': currentUserId,
+          },
+        })
+
+        if (statsRes.ok) {
+          const statsData = await statsRes.json()
+          setSeasonStats(statsData)
+        }
+
+        // Fetch achievements
+        const achievementsRes = await fetch('/api/achievements/user', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'X-User-Id': currentUserId,
+          },
+        })
+
+        if (achievementsRes.ok) {
+          const achievementsData = await achievementsRes.json()
+          setAchievements(achievementsData.achievements || [])
+        }
+      } catch (error: any) {
+        console.error('Error fetching profile:', error)
       } finally {
-        setIsLoading(false);
+        setIsLoading(false)
       }
-    };
-
-    if (userId) {
-      fetchProfile();
     }
-  }, [userId]);
 
-  const handleProfileUpdate = async () => {
-    // Refetch profile after update
-    try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/profile/${userId}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setProfile(data);
-      }
-    } catch (err) {
-      console.error('Failed to refresh profile:', err);
-    }
-  };
+    fetchProfile()
+  }, [userId, selectedSeason, router])
 
   if (isLoading) {
     return (
       <PageLayout>
-        <div className="flex items-center justify-center min-h-screen pt-24">
-          <div className="text-center">
-            <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-gray-600 dark:text-gray-400">Loading profile...</p>
+        <PageContainer maxWidth="6xl">
+          <div className="flex items-center justify-center min-h-[calc(100vh-12rem)]">
+            <div className="text-center">
+              <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+              <p className="text-gray-600 dark:text-gray-400">Loading profile...</p>
+            </div>
           </div>
-        </div>
+        </PageContainer>
       </PageLayout>
-    );
+    )
   }
 
-  if (error || !profile) {
+  if (!profile) {
     return (
       <PageLayout>
-        <div className="flex items-center justify-center min-h-screen pt-24">
-          <div className="text-center">
-            <Lock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-              {error || 'Profile not found'}
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400">
-              {error === 'Profile is private' || error === 'Profile is only visible to league members'
-                ? 'This profile is not publicly visible.'
-                : 'Unable to load this profile.'}
-            </p>
+        <PageContainer maxWidth="6xl">
+          <div className="text-center py-12">
+            <p className="text-gray-600 dark:text-gray-400">Profile not found</p>
           </div>
-        </div>
+        </PageContainer>
       </PageLayout>
-    );
+    )
   }
 
-  const colorScheme = profile.profileColorScheme || 'blue';
-  const avatarEmoji = getAvatarEmoji(profile.avatar);
-  const colorClasses: Record<string, string> = {
-    blue: 'from-blue-500 to-blue-600',
-    purple: 'from-purple-500 to-purple-600',
-    green: 'from-green-500 to-green-600',
-    orange: 'from-orange-500 to-orange-600',
-    red: 'from-red-500 to-red-600',
-    pink: 'from-pink-500 to-pink-600',
-  };
-  const gradient = colorClasses[colorScheme] || colorClasses.blue;
+  const isOwnProfile = profile.isOwnProfile
+  const favouriteAchievementIds = profile.favouriteAchievementIds || []
+  const favouriteAchievements = achievements.filter((a) =>
+    favouriteAchievementIds.includes(a.achievementId)
+  )
 
   return (
     <PageLayout>
       <PageContainer maxWidth="6xl">
-        {/* Bold Header - Matching Quizzes Page Style */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ type: 'spring', stiffness: 200, damping: 20 }}
-          className="text-center mb-16"
-        >
-          <div className="flex flex-col items-center gap-6 mb-8">
+        {/* Header Section */}
+        <ContentCard padding="xl" rounded="3xl" hoverAnimation={false} className="mb-6">
+          <div className="flex items-start gap-6">
+            {/* Avatar */}
             <div className="relative">
-              <motion.div 
-                className={`w-24 h-24 md:w-32 md:h-32 bg-gradient-to-br ${gradient} rounded-full flex items-center justify-center text-5xl md:text-6xl shadow-2xl`}
-                whileHover={{ scale: 1.05, rotate: 5 }}
-                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-              >
-                {avatarEmoji}
-              </motion.div>
-              {profile.isOwnProfile && (
-                <motion.div
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <Link
-                    href="/account?tab=account"
-                    className="absolute -bottom-2 -right-2 w-10 h-10 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center shadow-xl hover:shadow-2xl transition-all border-2 border-gray-200 dark:border-gray-700"
-                    title="Edit profile"
-                  >
-                    <Edit className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                  </Link>
-                </motion.div>
+              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-3xl text-white font-bold">
+                {profile.avatar || profile.name?.[0]?.toUpperCase() || '👤'}
+              </div>
+              {profile.selectedFlair && (
+                <div className="absolute -bottom-2 -right-2">
+                  <Crown className="w-6 h-6 text-yellow-500" />
+                </div>
               )}
             </div>
-            <div>
-              <div className="flex items-center justify-center gap-3 mb-2 flex-wrap">
-                <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-900 dark:text-white">
-                  {profile.name || 'Anonymous User'}
-                </h1>
-                {profile.subscriptionStatus && ['ACTIVE', 'TRIALING', 'FREE_TRIAL'].includes(profile.subscriptionStatus) && (
-                  <motion.span 
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: 0.2, type: 'spring', stiffness: 300 }}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-sm font-bold rounded-full shadow-lg"
+
+            {/* Profile Info */}
+            <div className="flex-1">
+              <div className="flex items-start justify-between mb-2">
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">
+                    {profile.displayName || profile.name || 'Anonymous'}
+                  </h1>
+                  {profile.tagline && (
+                    <p className="text-gray-600 dark:text-gray-400 italic">
+                      {profile.tagline}
+                    </p>
+                  )}
+                </div>
+                {isOwnProfile && (
+                  <button
+                    onClick={() => router.push('/account')}
+                    className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                   >
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
-                    </svg>
-                    Premium
-                  </motion.span>
+                    <Edit2 className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                  </button>
                 )}
               </div>
-              {profile.teamName && (
-                <p className="text-xl md:text-2xl text-gray-600 dark:text-gray-400 font-medium">
-                  {profile.teamName}
-                </p>
-              )}
+
+              {/* Tier Badge */}
+              <div className="flex items-center gap-2 mb-4">
+                <span
+                  className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    isPremium
+                      ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
+                  }`}
+                >
+                  {isPremium ? (
+                    <>
+                      <Crown className="w-3 h-3 inline mr-1" />
+                      Premium
+                    </>
+                  ) : (
+                    'Free'
+                  )}
+                </span>
+              </div>
             </div>
           </div>
-        </motion.div>
+        </ContentCard>
 
-        {/* Tabs - Larger and More Prominent */}
-        <div className="flex justify-center mb-12">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <div className="flex justify-center">
-              <TabsList className="bg-gray-100 dark:bg-gray-800 inline-flex h-12 items-center justify-center rounded-full p-1.5 shadow-lg">
-              <TabsTrigger value="achievements" className="rounded-full px-5 py-2.5 text-sm md:text-base font-semibold">
-                <div className="flex items-center gap-2">
-                  <Trophy className="w-5 h-5" />
-                  <span>Achievements</span>
-                </div>
-              </TabsTrigger>
-              {profile.analytics && (
-                <TabsTrigger value="analytics" className="rounded-full px-5 py-2.5 text-sm md:text-base font-semibold">
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="w-5 h-5" />
-                    <span>Analytics</span>
-                  </div>
-                </TabsTrigger>
+        {/* Favourite Achievements */}
+        <ContentCard padding="xl" rounded="3xl" hoverAnimation={false} className="mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <Trophy className="w-5 h-5" />
+              Favourite Achievements
+            </h2>
+            {isOwnProfile && (
+              <button
+                onClick={() => setIsEditingFavourites(!isEditingFavourites)}
+                className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+              >
+                {isEditingFavourites ? 'Done' : 'Edit'}
+              </button>
+            )}
+          </div>
+
+          {favouriteAchievements.length === 0 ? (
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+              {isOwnProfile ? (
+                <p>Pin your favourite achievements here</p>
+              ) : (
+                <p>No favourite achievements yet</p>
               )}
-              <TabsTrigger value="activity" className="rounded-full px-5 py-2.5 text-sm md:text-base font-semibold">
-                <div className="flex items-center gap-2">
-                  <Target className="w-5 h-5" />
-                  <span>Activity</span>
-                </div>
-              </TabsTrigger>
-              <TabsTrigger value="leagues" className="rounded-full px-5 py-2.5 text-sm md:text-base font-semibold">
-                <div className="flex items-center gap-2">
-                  <Award className="w-5 h-5" />
-                  <span>Private Leagues</span>
-                </div>
-              </TabsTrigger>
-              {profile.isOwnProfile && isPremium && (
-                <TabsTrigger value="customize" className="rounded-full px-5 py-2.5 text-sm md:text-base font-semibold">
-                  <div className="flex items-center gap-2">
-                    <Palette className="w-5 h-5" />
-                    <span>Customize</span>
-                  </div>
-                </TabsTrigger>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {favouriteAchievements.map((achievement: any) => (
+                <AchievementCard
+                  key={achievement.id}
+                  achievement={{
+                    id: achievement.achievementId,
+                    slug: achievement.achievementSlug,
+                    name: achievement.achievementName,
+                    shortDescription: achievement.achievementDescription,
+                    category: achievement.achievementCategory,
+                    rarity: achievement.achievementRarity,
+                    isPremiumOnly: false, // Would need to fetch from achievement definition
+                    iconKey: achievement.achievementIconKey,
+                  }}
+                  status="unlocked"
+                  unlockedAt={achievement.unlockedAt}
+                  tier={tier}
+                />
+              ))}
+            </div>
+          )}
+        </ContentCard>
+
+        {/* Season Progress */}
+        {seasonStats && (
+          <ContentCard padding="xl" rounded="3xl" hoverAnimation={false} className="mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <Calendar className="w-5 h-5" />
+                {seasonStats.currentSeason?.name || '2025 Season'} Progress
+              </h2>
+              {seasonStats.availableSeasons && seasonStats.availableSeasons.length > 1 && (
+                <select
+                  value={selectedSeason}
+                  onChange={(e) => setSelectedSeason(e.target.value)}
+                  className="px-3 py-1.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm border-none outline-none"
+                >
+                  {seasonStats.availableSeasons.map((season: any) => (
+                    <option key={season.slug} value={season.slug}>
+                      {season.name}
+                    </option>
+                  ))}
+                </select>
               )}
-              </TabsList>
             </div>
 
-            <TabsContent value="achievements" className="mt-10">
-              <ContentCard padding="xl" rounded="3xl" hoverAnimation={false}>
-                <AchievementsShowcase
-                  achievements={profile.achievements}
-                  colorScheme={colorScheme}
-                  isOwnProfile={profile.isOwnProfile}
-                  isPremium={isPremium}
-                  onUpdate={handleProfileUpdate}
-                />
-              </ContentCard>
-            </TabsContent>
-
-            {profile.analytics && (
-              <TabsContent value="analytics" className="mt-10">
-                <div className="space-y-8">
-                  <ContentCard padding="xl" rounded="3xl" delay={0}>
-                    <h3 className="text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white mb-8">Performance Over Time</h3>
-                    <PerformanceChart data={profile.analytics.performanceOverTime} colorScheme={colorScheme} />
-                  </ContentCard>
-                  <ContentCard padding="xl" rounded="3xl" delay={0.1}>
-                    <h3 className="text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white mb-8">Strength Areas</h3>
-                    <StrengthAreasChart data={profile.analytics.strengthAreas} colorScheme={colorScheme} />
-                  </ContentCard>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div className="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {seasonStats.stats.quizzesPlayed}
                 </div>
-              </TabsContent>
-            )}
+                <div className="text-sm text-gray-600 dark:text-gray-400">Quizzes Played</div>
+              </div>
+              <div className="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {seasonStats.stats.averageScore?.toFixed(1) || '0'}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">Avg Score</div>
+              </div>
+              <div className="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                <div className="text-2xl font-bold text-gray-900 dark:text-white flex items-center justify-center gap-1">
+                  <Flame className="w-5 h-5 text-orange-500" />
+                  {seasonStats.stats.currentStreakWeeks}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">Week Streak</div>
+              </div>
+              <div className="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {seasonStats.stats.achievementsUnlocked}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">Achievements</div>
+              </div>
+            </div>
 
-            <TabsContent value="activity" className="mt-10">
-              <ContentCard padding="xl" rounded="3xl">
-                <StreakCalendar
-                  streak={profile.streak}
-                  recentCompletions={profile.recentCompletions}
-                  colorScheme={colorScheme}
+            {/* Progress Bar */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600 dark:text-gray-400">
+                  Weekly Progress
+                </span>
+                <span className="text-gray-900 dark:text-white font-medium">
+                  {seasonStats.stats.quizzesPlayed} / 40 weeks
+                </span>
+              </div>
+              <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{
+                    width: `${Math.min((seasonStats.stats.quizzesPlayed / 40) * 100, 100)}%`,
+                  }}
+                  transition={{ duration: 0.5 }}
+                  className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
                 />
-              </ContentCard>
-            </TabsContent>
+              </div>
+            </div>
+          </ContentCard>
+        )}
 
-            <TabsContent value="leagues" className="mt-10">
-              <ContentCard padding="xl" rounded="3xl">
-                <PrivateLeaguesAnalytics
-                  userId={profile.id}
-                  colorScheme={colorScheme}
-                />
-              </ContentCard>
-            </TabsContent>
-
-            {profile.isOwnProfile && isPremium && (
-              <TabsContent value="customize" className="mt-10">
-                <ContentCard padding="xl" rounded="3xl">
-                  <ProfileCustomizeTab
-                    profile={{
-                      id: profile.id,
-                      name: profile.name,
-                      teamName: profile.teamName,
-                      profileVisibility: profile.profileVisibility,
-                      profileColorScheme: profile.profileColorScheme,
-                      avatar: profile.avatar,
-                    }}
-                    onUpdate={handleProfileUpdate}
-                  />
-                </ContentCard>
-              </TabsContent>
+        {/* Flair Section (Premium only) */}
+        {isOwnProfile && (
+          <ContentCard padding="xl" rounded="3xl" hoverAnimation={false}>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
+              <Award className="w-5 h-5" />
+              Flair & Titles
+            </h2>
+            {isPremium ? (
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                <p>Flair selection coming soon</p>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Crown className="w-12 h-12 text-yellow-500 mx-auto mb-4 opacity-50" />
+                <p className="text-gray-600 dark:text-gray-400 mb-2">
+                  Premium players can unlock profile flair and titles
+                </p>
+                <button
+                  onClick={() => router.push('/account?tab=subscription')}
+                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-medium transition-colors"
+                >
+                  Upgrade to Premium
+                </button>
+              </div>
             )}
-          </Tabs>
-        </div>
+          </ContentCard>
+        )}
       </PageContainer>
     </PageLayout>
-  );
+  )
 }

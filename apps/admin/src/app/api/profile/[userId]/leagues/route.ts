@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { client } from '@schoolquiz/db';
+import { prisma } from '@schoolquiz/db';
 
 // Mock league performance data for Andrew
 const ANDREW_USER_ID = 'user-andrew-123';
@@ -77,7 +77,7 @@ export async function GET(
 
     // For other users, fetch from database
     // Get user's leaderboard memberships
-    const leaderboardMemberships = await client.leaderboardMember.findMany({
+    const leaderboardMemberships = await prisma.leaderboardMember.findMany({
       where: {
         userId: userId,
         leftAt: null,
@@ -109,7 +109,7 @@ export async function GET(
     });
 
     // Get user's quiz completions
-    const userCompletions = await client.quizCompletion.findMany({
+    const userCompletions = await prisma.quizCompletion.findMany({
       where: {
         userId: userId,
       },
@@ -125,7 +125,7 @@ export async function GET(
         
         // Get all members' completions for this leaderboard
         const memberUserIds = leaderboard.members.map(m => m.userId);
-        const allCompletions = await client.quizCompletion.findMany({
+        const allCompletions = await prisma.quizCompletion.findMany({
           where: {
             userId: { in: memberUserIds },
           },

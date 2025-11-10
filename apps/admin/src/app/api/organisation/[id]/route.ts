@@ -9,11 +9,11 @@ import { getOrganisationContext, requirePermission, getAvailableSeats } from '@s
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await requireAuth();
-    const organisationId = params.id;
+    const { id: organisationId } = await params;
 
     const context = await getOrganisationContext(organisationId, user.id);
     requirePermission(context, 'org:view');

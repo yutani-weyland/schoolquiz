@@ -14,7 +14,7 @@ interface CategoriesLeaderboardProps {
 }
 
 export function CategoriesLeaderboard({ data }: CategoriesLeaderboardProps) {
-  const [sortBy, setSortBy] = useState<'quizzes' | 'successRate' | 'engagement'>('successRate');
+  const [sortBy, setSortBy] = useState<'quizzes' | 'avgSuccessRate' | 'engagement'>('avgSuccessRate');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   const sortedData = [...data].sort((a, b) => {
@@ -28,7 +28,7 @@ export function CategoriesLeaderboard({ data }: CategoriesLeaderboardProps) {
     }
   });
 
-  const handleSort = (column: 'quizzes' | 'successRate' | 'engagement') => {
+  const handleSort = (column: 'quizzes' | 'avgSuccessRate' | 'engagement') => {
     if (sortBy === column) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
@@ -37,7 +37,7 @@ export function CategoriesLeaderboard({ data }: CategoriesLeaderboardProps) {
     }
   };
 
-  const getSortIcon = (column: 'quizzes' | 'successRate' | 'engagement') => {
+  const getSortIcon = (column: 'quizzes' | 'avgSuccessRate' | 'engagement') => {
     if (sortBy !== column) return null;
     return sortDirection === 'asc' ? '↑' : '↓';
   };
@@ -88,11 +88,11 @@ export function CategoriesLeaderboard({ data }: CategoriesLeaderboardProps) {
               </th>
               <th 
                 className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
-                onClick={() => handleSort('successRate')}
+                onClick={() => handleSort('avgSuccessRate')}
               >
                 <div className="flex items-center gap-1">
                   Avg Success Rate
-                  {getSortIcon('successRate')}
+                  {getSortIcon('avgSuccessRate')}
                 </div>
               </th>
               <th 

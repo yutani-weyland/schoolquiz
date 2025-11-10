@@ -2,7 +2,7 @@
  * Feature gating utilities for Basic vs Premium users
  */
 
-export type UserTier = 'basic' | 'premium';
+export type UserTier = 'visitor' | 'free' | 'premium';
 
 /**
  * Check if user has premium access
@@ -12,10 +12,44 @@ export function isPremium(tier: string | null | undefined): boolean {
 }
 
 /**
- * Check if user has basic (free) tier
+ * Check if user has free tier
  */
-export function isBasic(tier: string | null | undefined): boolean {
-  return !tier || tier === 'basic';
+export function isFree(tier: string | null | undefined): boolean {
+  return tier === 'free';
+}
+
+/**
+ * Check if user is a visitor (not logged in)
+ */
+export function isVisitor(tier: string | null | undefined): boolean {
+  return !tier || tier === 'visitor';
+}
+
+/**
+ * Check if a user can earn a specific achievement based on their tier
+ */
+export function canEarnAchievement(
+  tier: UserTier | string | null | undefined,
+  achievement: { isPremiumOnly?: boolean }
+): boolean {
+  const normalizedTier = normalizeTier(tier);
+  
+  if (!achievement.isPremiumOnly) {
+    return normalizedTier === 'free' || normalizedTier === 'premium';
+  }
+  return normalizedTier === 'premium';
+}
+
+/**
+ * Normalize tier string to UserTier type
+ */
+function normalizeTier(tier: string | null | undefined): UserTier {
+  if (!tier || tier === 'visitor') return 'visitor';
+  if (tier === 'premium' || tier === 'basic') {
+    // Map 'basic' to 'free' for consistency
+    return tier === 'premium' ? 'premium' : 'free';
+  }
+  return 'free';
 }
 
 /**
@@ -48,7 +82,7 @@ export function canAccessFeature(
     case 'analytics':
       return false; // Basic users cannot view analytics
     case 'achievements':
-      return false; // Basic users cannot unlock achievements (but can view them greyed out)
+      return true; // Free users can view achievements
     case 'all_leaderboards':
       return false; // Basic users can only see organisation leaderboards
     default:

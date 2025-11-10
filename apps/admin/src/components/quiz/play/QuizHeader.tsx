@@ -67,8 +67,8 @@ export function QuizHeader({
 
   const isLightText = textColor === "white";
   const isDarkMode = themeMode === "dark";
-  // Logo should be white in color mode when in presenter view
-  const logoColorClass = (themeMode === "colored" && isPresenterView) || isDarkMode ? "text-white" : "text-[#0f0f0f]";
+  // Logo color should match the card text color: white if card text is white, black if card text is black
+  const logoColorClass = textColor === "white" ? "text-white" : "text-gray-900";
   const labelClass = isLightText ? "text-white/70" : "text-gray-600";
   const menuButtonClass = isLightText
     ? "bg-white/15 text-white hover:bg-white/25"

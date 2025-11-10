@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { UserAccessProvider } from "@/contexts/UserAccessContext";
 
 export const metadata: Metadata = {
   title: "The School Quiz",
@@ -33,7 +34,9 @@ export default function RootLayout({
 				/>
 			</head>
 			<body className="bg-gray-50 dark:bg-[#1A1A1A] text-gray-900 dark:text-white" suppressHydrationWarning>
-				{children}
+				<UserAccessProvider>
+					{children}
+				</UserAccessProvider>
 			</body>
 		</html>
 	);

@@ -11,11 +11,11 @@ import { OrganisationActivityType } from '@prisma/client';
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string; groupId: string } }
+  { params }: { params: Promise<{ id: string; groupId: string }> }
 ) {
   try {
     const user = await requireAuth();
-    const { id: organisationId, groupId } = params;
+    const { id: organisationId, groupId } = await params;
     const body = await request.json();
     const { memberId } = body;
 
@@ -89,11 +89,11 @@ export async function POST(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string; groupId: string; memberId: string } }
+  { params }: { params: Promise<{ id: string; groupId: string; memberId: string }> }
 ) {
   try {
     const user = await requireAuth();
-    const { id: organisationId, groupId, memberId } = params;
+    const { id: organisationId, groupId, memberId } = await params;
 
     const context = await getOrganisationContext(organisationId, user.id);
     requirePermission(context, 'org:groups:manage');

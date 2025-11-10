@@ -99,6 +99,7 @@ export type RailProgressProps = {
 	viewedQuestions?: Set<number>;
 	questions?: any[];
 	showPlusOne?: boolean;
+	isMouseActive?: boolean;
 };
 
 export default function RailProgress({
@@ -354,18 +355,21 @@ export default function RailProgress({
 							displayContent = <X className="w-5 h-5" strokeWidth={3} />;
 						} else if (isViewed && !isCurrent) {
 							const darkerColor = darkenColor(roundColor, 0.4);
+							// Use high contrast text color based on background for readability (circles have transparent bg)
+							const textColor = isDark ? "white" : "#1a1a1a";
 							buttonStyle = { 
 								border: `2px solid ${darkerColor}`,
-								color: darkerColor,
+								color: textColor,
 								backgroundColor: "transparent"
 							};
 							displayContent = <Eye className="w-6 h-6" />;
 						} else {
 							const darkerColor = darkenColor(roundColor, 0.4);
-							const darkerNumberColor = darkenColor(roundColor, 0.2);
+							// Use high contrast text color based on background for readability (circles have transparent bg)
+							const textColor = isDark ? "white" : "#1a1a1a";
 							buttonStyle = { 
 								border: `2px solid ${darkerColor}`, 
-								color: darkerNumberColor,
+								color: textColor,
 								backgroundColor: "transparent"
 							};
 							displayContent = n;

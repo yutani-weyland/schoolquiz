@@ -291,6 +291,7 @@ interface TreemapData {
   name: string;
   size: number;
   children?: TreemapData[];
+  [key: string]: any;
 }
 
 interface QuestionBankTreemapProps {

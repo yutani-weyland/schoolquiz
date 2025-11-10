@@ -7,9 +7,13 @@ import { RotatingText } from "@/components/RotatingText";
 import HeroCTA from "@/components/HeroCTA";
 import WhySection from "@/components/marketing/WhySection";
 import QuizSafariPreview from "@/components/QuizSafariPreview";
+import { LockedFeature } from "@/components/access/LockedFeature";
+import { useUserAccess } from "@/contexts/UserAccessContext";
 import Link from "next/link";
 
 export default function HomePage() {
+	const { isVisitor, isFree, isPremium, userName } = useUserAccess();
+	
 	return (
 		<>
 			<SiteHeader fadeLogo={true} />
@@ -42,10 +46,10 @@ export default function HomePage() {
 							The School Quiz blends general knowledge, educational content, and entertainment - covering music, sport, movies, current affairs, pop culture, and topics relevant to high school students. No insanely hard questions, no AI slop. Just a solid quiz that drops every Monday morning.
 						</p>
 
-						<div id="buttons">
-							<HeroCTA />
-						</div>
+					<div id="buttons">
+						<HeroCTA />
 					</div>
+				</div>
 
 					{/* Safari Preview Peeking from Bottom */}
 					<div className="w-full px-4 mt-4 mb-8">
@@ -54,6 +58,45 @@ export default function HomePage() {
 						</div>
 					</div>
 				</section>
+
+				{/* Premium Preview Section for Free Users */}
+				{(isFree || isVisitor) && (
+					<section className="py-16 px-4 bg-gray-50 dark:bg-gray-900">
+						<div className="max-w-6xl mx-auto">
+							<h2 className="text-3xl font-bold text-center mb-8 text-gray-900 dark:text-white">
+								{isVisitor ? 'Unlock More Features' : 'Upgrade to Premium'}
+							</h2>
+							<div className="grid md:grid-cols-2 gap-6">
+								<LockedFeature
+									tierRequired="free"
+									tooltipText="Join your school, class or mates"
+									className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm"
+								>
+									<div className="text-center">
+										<div className="text-4xl mb-4">👥</div>
+										<h3 className="text-xl font-semibold mb-2">Private Leagues</h3>
+										<p className="text-gray-600 dark:text-gray-400">
+											Join your school, class or mates
+										</p>
+									</div>
+								</LockedFeature>
+								<LockedFeature
+									tierRequired="premium"
+									tooltipText="View advanced analytics and insights"
+									className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm"
+								>
+									<div className="text-center">
+										<div className="text-4xl mb-4">📈</div>
+										<h3 className="text-xl font-semibold mb-2">Advanced Analytics</h3>
+										<p className="text-gray-600 dark:text-gray-400">
+											Category accuracy, streaks, performance over time
+										</p>
+									</div>
+								</LockedFeature>
+							</div>
+						</div>
+					</section>
+				)}
 
 				{/* Why The School Quiz Section */}
 				<WhySection />

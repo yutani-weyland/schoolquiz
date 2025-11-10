@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { client } from '@schoolquiz/db';
+import { prisma } from '@schoolquiz/db';
 
 // Mock profile data for andrew@example.com
 const ANDREW_USER_ID = 'user-andrew-123';
@@ -105,10 +105,10 @@ const MOCK_ANDREW_PROFILE = {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
-    const userId = params.userId;
+    const { userId } = await params;
     const authHeader = request.headers.get('authorization');
     const token = authHeader?.replace('Bearer ', '');
     
@@ -159,10 +159,18 @@ export async function GET(
     
     // For other users, try to fetch from database
     // Fetch user profile
-    const user = await client.user.findUnique({
+    const user = await prisma.user.findUnique({
       where: { id: userId },
       include: {
+        profile: {
+          include: {
+            flair: true,
+          },
+        },
         achievements: {
+          include: {
+            achievement: true,
+          },
           orderBy: { unlockedAt: 'desc' },
         },
         streaks: true,
@@ -202,7 +210,7 @@ export async function GET(
         }
 
         // Check if users share any leaderboards
-        const sharedLeaderboards = await client.leaderboardMember.findFirst({
+        const sharedLeaderboards = await prisma.leaderboardMember.findFirst({
           where: {
             AND: [
               { userId: currentUserId },
@@ -232,17 +240,29 @@ export async function GET(
     return NextResponse.json({
       id: user.id,
       name: user.name,
+      displayName: user.profile?.displayName || user.name,
+      tagline: user.profile?.tagline,
+      avatar: user.profile?.avatarUrl || user.avatar,
+      avatarUrl: user.profile?.avatarUrl || user.avatar,
       teamName: user.teamName,
       profileVisibility: user.profileVisibility,
       profileColorScheme: user.profileColorScheme,
-      avatar: user.avatar,
       subscriptionStatus: user.subscriptionStatus,
       createdAt: user.createdAt,
+      favouriteAchievementIds: user.profile?.favouriteAchievementIds || [],
+      selectedFlair: user.profile?.flair ? {
+        id: user.profile.flair.id,
+        slug: user.profile.flair.slug,
+        name: user.profile.flair.name,
+      } : null,
+      selectedFlairId: user.profile?.selectedFlairId,
       achievements: user.achievements.map((a) => ({
         id: a.id,
-        achievementKey: a.achievementKey,
+        achievementId: a.achievementId,
+        achievementSlug: a.achievement.slug,
+        achievementKey: a.achievement.slug, // For backward compatibility
         quizSlug: a.quizSlug,
-        metadata: a.metadata,
+        metadata: a.meta,
         unlockedAt: a.unlockedAt,
       })),
       streak: user.streaks[0] ? {

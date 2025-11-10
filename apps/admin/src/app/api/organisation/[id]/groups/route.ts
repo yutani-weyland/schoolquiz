@@ -11,11 +11,11 @@ import { OrganisationGroupType, OrganisationActivityType } from '@prisma/client'
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await requireAuth();
-    const organisationId = params.id;
+    const { id: organisationId } = await params;
 
     const context = await getOrganisationContext(organisationId, user.id);
     requirePermission(context, 'org:view');
@@ -70,11 +70,11 @@ export async function GET(
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await requireAuth();
-    const organisationId = params.id;
+    const { id: organisationId } = await params;
     const body = await request.json();
     const { name, type = 'CUSTOM', description } = body;
 

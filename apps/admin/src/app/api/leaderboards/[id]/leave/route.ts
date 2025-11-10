@@ -9,11 +9,11 @@ import { LeaderboardVisibility } from '@prisma/client';
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await requireAuth();
-    const leaderboardId = params.id;
+    const { id: leaderboardId } = await params;
     const body = await request.json();
     const { mute = false } = body;
 
