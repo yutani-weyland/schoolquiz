@@ -44,19 +44,21 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 	const [formattedDate, setFormattedDate] = useState<string>("");
 	const [showSignupModal, setShowSignupModal] = useState(false);
 	const [showLimitModal, setShowLimitModal] = useState(false);
+	const [loggedIn, setLoggedIn] = useState(false); // Start with false to match server render
+	const [mounted, setMounted] = useState(false);
 	const { tier, isPremium, isLoading } = useUserTier();
-	
-	// Check authentication
-	const loggedIn = typeof window !== 'undefined' && localStorage.getItem('isLoggedIn') === 'true';
-	const remainingQuizzes = loggedIn && !isPremium ? getRemainingFreeQuizzes() : 3;
-	const quizzesPlayed = loggedIn && !isPremium ? (3 - remainingQuizzes) : 0;
 	
 	// Format date on client only to avoid hydration errors
 	useEffect(() => {
 		setFormattedDate(formatWeek(quiz.weekISO));
 	}, [quiz.weekISO]);
 	
+	// Check authentication on client only to avoid hydration errors
 	useEffect(() => {
+		setMounted(true);
+		const isLoggedIn = typeof window !== 'undefined' && localStorage.getItem('isLoggedIn') === 'true';
+		setLoggedIn(isLoggedIn);
+		
 		// Disable scroll restoration for the intro page
 		if (typeof window !== 'undefined') {
 			window.history.scrollRestoration = "manual";
@@ -64,7 +66,7 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 			
 			// Only show modals for logged-in users with restrictions
 			// Visitors can play (they'll be limited to 5 questions)
-			if (loggedIn && !isLoading && !isPremium) {
+			if (isLoggedIn && !isLoading && !isPremium) {
 				// Check if basic user has exceeded free quizzes
 				if (hasExceededFreeQuizzes()) {
 					setShowLimitModal(true);
@@ -75,9 +77,14 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 				}
 			}
 		}
-	}, [quiz.slug, loggedIn, isPremium, isLoading, isNewest]);
+	}, [quiz.slug, isPremium, isLoading, isNewest]);
+	
+	const remainingQuizzes = loggedIn && !isPremium ? getRemainingFreeQuizzes() : 3;
+	const quizzesPlayed = loggedIn && !isPremium ? (3 - remainingQuizzes) : 0;
 	
 	const handlePlayClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+		if (!mounted) return;
+		
 		// Visitors can only play the latest quiz
 		if (!loggedIn && !isNewest) {
 			e.preventDefault();
@@ -286,7 +293,7 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 							}}
 							className="flex flex-wrap items-center justify-center gap-3 mb-12"
 						>
-						{!loggedIn ? (
+						{!mounted || !loggedIn ? (
 							<motion.a
 								href={`/quizzes/${quiz.slug}/play`}
 								onClick={handlePlayClick}
