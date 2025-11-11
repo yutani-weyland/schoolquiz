@@ -308,8 +308,6 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 	const { isPremium, isVisitor } = useUserAccess();
 	
 	// For restricted quiz mode: show all questions initially, but lock after 6 answers
-	// For visitors: limit to first round (6 questions) before prompting sign-up
-	const VISITOR_QUESTION_LIMIT = QUESTIONS_PER_STANDARD_ROUND; // 6 questions = 1 round
 	const RESTRICTED_ANSWER_LIMIT = 6; // Lock restricted quiz after 6 answers
 	
 	// In restricted quiz mode, show all questions initially (no slicing)
@@ -321,13 +319,9 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 		? rounds // Show all rounds in restricted quiz mode
 		: (maxQuestions ? rounds.slice(0, 2) : rounds);
 	
-	const shouldLimitQuestions = isVisitor && !isDemo;
-	const finalQuestions = shouldLimitQuestions 
-		? displayQuestions.slice(0, VISITOR_QUESTION_LIMIT)
-		: displayQuestions;
-	const finalRounds = shouldLimitQuestions && displayRounds.length > 0
-		? displayRounds.slice(0, 1) // First round for visitors
-		: displayRounds;
+	// Always show all questions (no visitor limit)
+	const finalQuestions = displayQuestions;
+	const finalRounds = displayRounds;
 	
 	const [showSignupPrompt, setShowSignupPrompt] = React.useState(false);
 	const [hasShownPrompt, setHasShownPrompt] = React.useState(false);
@@ -335,6 +329,19 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 	// Debug logging
 	React.useEffect(() => {
 		console.log('QuizPlayer mounted', { quizTitle, quizColor, quizSlug, questionsCount: finalQuestions?.length, roundsCount: finalRounds?.length, isDemo, isVisitor });
+	}, [quizTitle, quizColor, quizSlug, finalQuestions?.length, finalRounds?.length, isDemo, isVisitor]);
+
+	// Initialize viewMode and currentScreen from URL params after mount to prevent hydration mismatch
+	useEffect(() => {
+		setMounted(true);
+		if (typeof window !== 'undefined') {
+			const params = new URLSearchParams(window.location.search);
+			const mode = params.get('mode');
+			if (mode === 'grid') {
+				setViewMode('grid');
+				setCurrentScreen('question');
+			}
+		}
 	}, []);
 
 	// Safeguard: Check authentication and quiz limits (skip for restricted quiz mode and visitors)
@@ -373,24 +380,8 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 		}
 	}, [quizSlug, isNewest, isPremium, isDemo, isVisitor]);
 
-	const [viewMode, setViewMode] = useState<ViewMode>(() => {
-		// Read mode from URL params
-		if (typeof window !== 'undefined') {
-			const params = new URLSearchParams(window.location.search);
-			const mode = params.get('mode');
-			if (mode === 'grid') return 'grid';
-		}
-		return 'presenter';
-	});
-	const [currentScreen, setCurrentScreen] = useState<ScreenType>(() => {
-		// Skip round intro if starting in grid mode
-		if (typeof window !== 'undefined') {
-			const params = new URLSearchParams(window.location.search);
-			const mode = params.get('mode');
-			if (mode === 'grid') return 'question';
-		}
-		return 'round-intro';
-	});
+	const [viewMode, setViewMode] = useState<ViewMode>('presenter');
+	const [currentScreen, setCurrentScreen] = useState<ScreenType>('round-intro');
 	const [currentRound, setCurrentRound] = useState(1);
 	const [currentIndex, setCurrentIndex] = useState(0);
 	const [viewedQuestions, setViewedQuestions] = useState<Set<number>>(new Set());
@@ -439,6 +430,8 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 	const [currentNotchMessage, setCurrentNotchMessage] = useState(0);
 	const [isNotchHovered, setIsNotchHovered] = useState(false);
 	const [isMouseMoving, setIsMouseMoving] = useState(false);
+	const isNavigatingRef = useRef(false);
+	const [mounted, setMounted] = useState(false);
 	
 	// Auto-dismiss achievements after a short delay
 	useEffect(() => {
@@ -478,6 +471,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 		}
 		return 0;
 	});
+	const pendingTimerValueRef = useRef<number>(timer);
 	const [averageScoreData, setAverageScoreData] = useState<{ quizAverage?: number; userScore?: number; percentile?: number; privateLeagueAverage?: number; leagueName?: string; time?: number }>({
 		quizAverage: 18.5, // Mock data - replace with API call
 		userScore: 0, // Will be updated when correctAnswers changes
@@ -498,6 +492,8 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 
 	// Save completion data when quiz is completed (all questions answered)
 	const [hasSubmittedCompletion, setHasSubmittedCompletion] = React.useState(false);
+	const [isSubmittingCompletion, setIsSubmittingCompletion] = React.useState(false);
+	const [completionError, setCompletionError] = React.useState<string | null>(null);
 	
 	useEffect(() => {
 		if (!isDemo && typeof window !== 'undefined' && finalQuestions.length > 0 && !hasSubmittedCompletion) {
@@ -563,6 +559,8 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 				
 				if (token && userId) {
 					setHasSubmittedCompletion(true);
+					setIsSubmittingCompletion(true);
+					setCompletionError(null);
 					
 					fetch('/api/quiz/completion', {
 						method: 'POST',
@@ -580,16 +578,25 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 							categories,
 						}),
 					})
-						.then((res) => res.json())
+						.then(async (res) => {
+							if (!res.ok) {
+								const errorData = await res.json().catch(() => ({}));
+								throw new Error(errorData.error || `Failed to save completion (${res.status})`);
+							}
+							return res.json();
+						})
 						.then((data) => {
 							// Handle newly unlocked achievements
 							if (data.newlyUnlockedAchievements && data.newlyUnlockedAchievements.length > 0) {
 								// You could show a notification here or update achievement state
 								console.log('New achievements unlocked:', data.newlyUnlockedAchievements);
 							}
+							setIsSubmittingCompletion(false);
 						})
 						.catch((error) => {
 							console.error('Error submitting quiz completion:', error);
+							setCompletionError(error.message || 'Failed to save quiz completion');
+							setIsSubmittingCompletion(false);
 							// Don't reset hasSubmittedCompletion on error - allow retry on next completion
 							setHasSubmittedCompletion(false);
 						});
@@ -625,17 +632,35 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 		}
 	}, [currentScreen, isTimerRunning]);
 
-	// Timer - save to sessionStorage
+	// Timer - save to sessionStorage with debouncing (save every 5 seconds instead of every second)
 	useEffect(() => {
 		if (!isTimerRunning) return;
+		
+		// Update timer every second for display
 		const interval = setInterval(() => {
 			setTimer((t) => {
 				const newTime = t + 1;
-				sessionStorage.setItem(`quiz-${quizSlug}-timer`, String(newTime));
+				pendingTimerValueRef.current = newTime;
 				return newTime;
 			});
 		}, 1000);
-		return () => clearInterval(interval);
+		
+		// Debounced save to sessionStorage (every 5 seconds)
+		const saveInterval = setInterval(() => {
+			if (pendingTimerValueRef.current !== null) {
+				sessionStorage.setItem(`quiz-${quizSlug}-timer`, String(pendingTimerValueRef.current));
+			}
+		}, 5000);
+		
+		// Save immediately on mount and cleanup
+		return () => {
+			clearInterval(interval);
+			clearInterval(saveInterval);
+			// Save final value on cleanup
+			if (pendingTimerValueRef.current !== null) {
+				sessionStorage.setItem(`quiz-${quizSlug}-timer`, String(pendingTimerValueRef.current));
+			}
+		};
 	}, [isTimerRunning, quizSlug]);
 
 	// Handle viewport width for notch
@@ -885,32 +910,6 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 		};
 	}, []);
 
-	// Keyboard navigation
-	useEffect(() => {
-		const handleKeyDown = (e: KeyboardEvent) => {
-			// Test achievement shortcut: Ctrl/Cmd + Shift + A (works anywhere)
-			if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "A") {
-				e.preventDefault();
-				const testAchievement: Achievement = {
-					id: `test_achievement_${Date.now()}`,
-					...ACHIEVEMENT_MAP.hail_caesar,
-					unlockedAt: new Date(),
-				};
-				setAchievements(prev => [...prev, testAchievement]);
-				return;
-			}
-			
-			if (currentScreen !== "question") return;
-			if (e.key === "ArrowLeft" && currentIndex > 0) {
-				goToPrevious();
-			} else if (e.key === "ArrowRight" && currentIndex < finalQuestions.length - 1 && (!isVisitor || isDemo || currentIndex < VISITOR_QUESTION_LIMIT - 1)) {
-				goToNext();
-			}
-		};
-		window.addEventListener("keydown", handleKeyDown);
-		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, [currentIndex, currentScreen, finalQuestions.length, isVisitor, isDemo]);
-
 	const formatTime = (seconds: number) => {
 		const mins = Math.floor(seconds / 60);
 		const secs = seconds % 60;
@@ -1039,25 +1038,16 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 		return correctAnswers.size + incorrectAnswers.size;
 	}, [correctAnswers.size, incorrectAnswers.size]);
 	
-	// Show sign-up prompt after 6 questions answered in restricted quiz mode, or after first round for visitors
+	// Show sign-up prompt after 6 questions answered in restricted quiz mode
 	React.useEffect(() => {
 		if (isDemo && answeredQuestionsCount >= RESTRICTED_ANSWER_LIMIT && !hasShownPrompt) {
 			setShowSignupPrompt(true);
 			setHasShownPrompt(true);
-		} else if (isVisitor && !isDemo && answeredQuestionsCount >= VISITOR_QUESTION_LIMIT && !hasShownPrompt) {
-			setShowSignupPrompt(true);
-			setHasShownPrompt(true);
 		}
-	}, [isVisitor, isDemo, answeredQuestionsCount, hasShownPrompt, VISITOR_QUESTION_LIMIT, RESTRICTED_ANSWER_LIMIT]);
+	}, [isDemo, answeredQuestionsCount, hasShownPrompt, RESTRICTED_ANSWER_LIMIT]);
 
 	const goToNext = () => {
 		const nextIndex = currentIndex + 1;
-		
-		// In restricted quiz mode, prevent navigation forward after 6 questions are answered
-		if (isDemo && answeredQuestionsCount >= RESTRICTED_ANSWER_LIMIT) {
-			// Don't allow navigation past limit if 6 questions have been answered
-			return;
-		}
 		
 		// In restricted quiz mode with maxQuestions, check if we've completed all allowed questions
 		if (isDemo && maxQuestions && nextIndex >= maxQuestions) {
@@ -1066,12 +1056,6 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 			if (onDemoComplete) {
 				onDemoComplete(score, maxQuestions);
 			}
-			return;
-		}
-		
-		// For visitors, limit to VISITOR_QUESTION_LIMIT questions
-		if (isVisitor && !isDemo && nextIndex >= VISITOR_QUESTION_LIMIT) {
-			// Don't allow navigation past limit, but don't block if they're already viewing
 			return;
 		}
 		
@@ -1130,6 +1114,90 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 			setViewedQuestions(prev => new Set([...prev, prevQuestion.id]));
 		}
 	};
+
+	// Enhanced keyboard navigation with shortcuts (placed after function definitions)
+	useEffect(() => {
+		const handleKeyDown = (e: KeyboardEvent) => {
+			// Don't trigger shortcuts when typing in inputs
+			if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+				return;
+			}
+
+			// Test achievement shortcut: Ctrl/Cmd + Shift + A (works anywhere)
+			if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "A") {
+				e.preventDefault();
+				const testAchievement: Achievement = {
+					id: `test_achievement_${Date.now()}`,
+					...ACHIEVEMENT_MAP.hail_caesar,
+					unlockedAt: new Date(),
+				};
+				setAchievements(prev => [...prev, testAchievement]);
+				return;
+			}
+
+			// Escape: Exit quiz
+			if (e.key === "Escape") {
+				e.preventDefault();
+				if (typeof window !== 'undefined') {
+					if (confirm('Are you sure you want to exit? Your progress will be saved.')) {
+						window.location.href = `/quizzes/${quizSlug}/intro`;
+					}
+				}
+				return;
+			}
+
+			// Space: Toggle timer (when on question screen)
+			if (e.key === " " && currentScreen === "question") {
+				e.preventDefault();
+				setIsTimerRunning(prev => !prev);
+				return;
+			}
+
+			// T: Toggle timer
+			if (e.key === "t" || e.key === "T") {
+				e.preventDefault();
+				setIsTimerRunning(prev => !prev);
+				return;
+			}
+
+			// G: Toggle grid/presenter view
+			if (e.key === "g" || e.key === "G") {
+				e.preventDefault();
+				if (viewMode === "grid") {
+					switchToPresenterView();
+				} else {
+					switchToGridView();
+				}
+				return;
+			}
+
+			// ?: Show keyboard shortcuts help
+			if (e.key === "?") {
+				e.preventDefault();
+				alert(`Keyboard Shortcuts:\n\n← → Arrow Keys: Navigate questions\nSpace/T: Toggle timer\nG: Toggle grid/presenter view\nEsc: Exit quiz\n?: Show this help`);
+				return;
+			}
+			
+			// Navigation - works on both question and round-intro screens
+			if (isNavigatingRef.current) return; // Prevent double navigation
+			
+			if (e.key === "ArrowLeft" && currentIndex > 0) {
+				e.preventDefault();
+				isNavigatingRef.current = true;
+				goToPrevious();
+				// Reset flag after navigation completes
+				setTimeout(() => { isNavigatingRef.current = false; }, 150);
+			} else if (e.key === "ArrowRight" && currentIndex < finalQuestions.length - 1) {
+				e.preventDefault();
+				isNavigatingRef.current = true;
+				goToNext();
+				// Reset flag after navigation completes
+				setTimeout(() => { isNavigatingRef.current = false; }, 150);
+			}
+		};
+		window.addEventListener("keydown", handleKeyDown);
+		return () => window.removeEventListener("keydown", handleKeyDown);
+	}, [currentIndex, currentScreen, finalQuestions.length, isVisitor, isDemo, viewMode, quizSlug, goToPrevious, goToNext, switchToGridView, switchToPresenterView]);
 
 	const startRound = () => {
 		setCurrentScreen("question");
@@ -1225,6 +1293,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 	const currentRoundNumber = currentQuestion?.roundNumber || 1;
 	const roundColor = getRoundColor(currentRoundNumber, quizColor);
 	
+	// Calculate backgroundColor immediately - default to quizColor to prevent white flash
 	const backgroundColor = themeMode === "colored" 
 		? quizColor
 		: themeMode === "light" 
@@ -1262,7 +1331,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 	const headerTone = getTextColor(quizColor);
 	const currentRoundDetails = finalRounds.find(r => r.number === currentRoundNumber);
 	const containerClass =
-		viewMode === "presenter"
+		mounted && viewMode === "presenter"
 			? "fixed inset-0 flex flex-col transition-colors duration-300 ease-in-out"
 			: "min-h-dvh flex flex-col overflow-y-auto transition-colors duration-300 ease-in-out";
 
@@ -1292,10 +1361,6 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 					onSelect={(n) => {
 						// For restricted quiz mode, prevent selecting questions after 6 answers
 						if (isDemo && answeredQuestionsCount >= RESTRICTED_ANSWER_LIMIT) {
-							return;
-						}
-						// For visitors, don't allow selecting questions beyond limit
-						if (isVisitor && !isDemo && n > VISITOR_QUESTION_LIMIT) {
 							return;
 						}
 						setCurrentIndex(n - 1);
@@ -1360,7 +1425,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 								isMarkedCorrect={isMarkedCorrect}
 								isQuestionAnswered={isMarkedCorrect || incorrectAnswers.has(currentQuestion.id)}
 						isMouseMoving={isMouseMoving}
-						canGoNext={currentIndex < finalQuestions.length - 1 && (!isVisitor || isDemo || currentIndex < VISITOR_QUESTION_LIMIT - 1)}
+						canGoNext={currentIndex < finalQuestions.length - 1}
 						canGoPrevious={currentIndex > 0}
 						onStartRound={startRound}
 								onRevealAnswer={() => handleRevealAnswer(currentQuestion.id)}

@@ -94,12 +94,9 @@ interface RoundIntroProps {
 }
 
 function RoundIntro({ round, textColor, onStart, finaleRoundNumber }: RoundIntroProps) {
-  const finale = round.number === finaleRoundNumber || round.type === "finale";
-  const heading = finale ? round.title || "People's Question" : round.title;
-  const description = finale
-    ? round.blurb || "One last community challenge chosen by the people. Give it everything!"
-    : round.blurb;
-  const ctaLabel = finale ? "Show the People's Question" : "Let's go!";
+  const heading = round.title;
+  const description = round.blurb;
+  const ctaLabel = "Let's go!";
 
   return (
     <motion.div
@@ -303,7 +300,12 @@ function PresenterMode({
       <main
         ref={mainContainerRef}
         className="relative overflow-y-auto px-4 sm:px-6 md:px-8 transition-colors duration-700 ease-in-out"
-        style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)", minHeight: "100vh" }}
+        style={{ 
+          paddingTop: "env(safe-area-inset-top)", 
+          paddingBottom: "env(safe-area-inset-bottom)", 
+          minHeight: "100vh",
+          backgroundColor: "transparent" // Ensure transparent background to inherit from parent
+        }}
         aria-live="polite"
       >
         <div
@@ -311,26 +313,11 @@ function PresenterMode({
           style={{ top: "46%", transform: "translateY(-50%)", padding: "0 1.5rem" }}
         >
           <div className="max-w-[92ch] md:max-w-[108ch] lg:max-w-[128ch] xl:max-w-[150ch] text-center [text-wrap:balance] w-full mx-16 sm:mx-20 md:mx-24 lg:mx-28 px-4 sm:px-6 pt-16 sm:pt-20">
-            {question.roundNumber === finaleRoundNumber && (
-              <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.1 }} className="mb-6">
-                <div
-                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold ${
-                    textColor === "white"
-                      ? "bg-white/20 text-white backdrop-blur-sm border border-white/30"
-                      : "bg-black/10 text-gray-900 backdrop-blur-sm border border-black/20"
-                  }`}
-                >
-                  <span>👥</span>
-                  <span>People's Round</span>
-                </div>
-              </motion.div>
-            )}
-
             <motion.p
               ref={questionTextRef}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ duration: 0.25, delay: 0.15 }}
+              transition={{ duration: 0.2, delay: 0 }}
               className={`font-extrabold leading-[1.05] break-words [overflow-wrap:anywhere] transition-colors duration-700 ease-in-out ${
                 textColor === "white" ? "text-white" : "text-gray-900"
               }`}
@@ -343,14 +330,6 @@ function PresenterMode({
             >
               {question.question}
             </motion.p>
-
-            {question.roundNumber === finaleRoundNumber && question.submittedBy && (
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.25 }} className="mt-6">
-                <div className={`${textColor === "white" ? "text-white/80" : "text-gray-700"} text-base font-medium`}>
-                  {formatSubmittedBy(question)}
-                </div>
-              </motion.div>
-            )}
           </div>
         </div>
 

@@ -226,34 +226,71 @@ export function SiteHeader({ fadeLogo = false, showUpgrade = false }: { fadeLogo
               </Link>
             )}
             <div className="relative" ref={menuRef}>
-              <button
+              <motion.button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="w-12 h-12 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full font-medium transition-all duration-300 flex items-center justify-center relative"
+                className="w-12 h-12 bg-white dark:bg-gray-900 rounded-full flex items-center justify-center border border-gray-200 dark:border-gray-800 backdrop-blur-sm text-gray-900 dark:text-white relative"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
+                aria-expanded={isMenuOpen}
+                aria-haspopup="menu"
               >
-                {isMenuOpen ? (
-                  <X className="w-5 h-5 absolute transition-all duration-300" />
-                ) : (
-                  <Menu className="w-5 h-5 absolute transition-all duration-300" />
+                <AnimatePresence mode="wait">
+                  {isMenuOpen ? (
+                    <motion.div
+                      key="close"
+                      initial={{ rotate: -90, opacity: 0 }}
+                      animate={{ rotate: 0, opacity: 1 }}
+                      exit={{ rotate: 90, opacity: 0 }}
+                      transition={{ duration: 0.15 }}
+                    >
+                      <X className="w-5 h-5" />
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="menu"
+                      initial={{ rotate: 90, opacity: 0 }}
+                      animate={{ rotate: 0, opacity: 1 }}
+                      exit={{ rotate: -90, opacity: 0 }}
+                      transition={{ duration: 0.15 }}
+                    >
+                      <Menu className="w-5 h-5" />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.button>
+
+              {/* Backdrop overlay */}
+              <AnimatePresence>
+                {isMenuOpen && (
+                  <>
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="fixed inset-0 bg-black/30 backdrop-blur-md z-40"
+                      onClick={() => setIsMenuOpen(false)}
+                      aria-hidden="true"
+                    />
+                  </>
                 )}
-              </button>
+              </AnimatePresence>
 
               {/* Dropdown Menu */}
               <AnimatePresence>
                 {isMenuOpen && (
                   <motion.div
-                    initial={{ opacity: 0, scale: 0.98 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.98 }}
-                    transition={{ duration: 0.15, ease: 'easeOut' }}
-                    className="absolute top-full right-0 mt-2 w-72 max-w-[calc(100vw-2rem)] bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden z-50"
-                    style={{
-                      maxHeight: 'calc(100vh - 5rem)',
-                      overflowY: 'auto'
-                    }}
+                    initial={{ x: "100%", opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    exit={{ x: "100%", opacity: 0 }}
+                    transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                    className="fixed top-20 right-4 w-80 max-w-[calc(100vw-2rem)] max-h-[calc(100vh-6rem)] bg-white dark:bg-gray-800 rounded-3xl border border-gray-200 dark:border-gray-700 flex flex-col z-50 overflow-hidden"
                   >
+                  <div className="p-6 overflow-y-auto flex-1">
                   {/* User Profile Section - Only for logged-in users */}
                   {isLoggedIn && (
-                    <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-700/50">
+                    <div className="px-0 py-0 mb-4 pb-4 border-b border-gray-100 dark:border-gray-700/50">
                       <div className="flex items-center gap-3">
                         <div className="w-11 h-11 rounded-full bg-blue-600 dark:bg-blue-500 flex items-center justify-center text-white font-semibold text-base relative flex-shrink-0">
                           {(userName || localStorage.getItem('userName')) ? (userName || localStorage.getItem('userName'))?.charAt(0).toUpperCase() : 'U'}
@@ -280,7 +317,7 @@ export function SiteHeader({ fadeLogo = false, showUpgrade = false }: { fadeLogo
                         <Link
                           href="/quizzes/12/intro"
                           onClick={handleLinkClick}
-                          className="flex items-center gap-3 px-5 py-2.5 text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                          className="flex items-center gap-3 px-4 py-3 rounded-xl text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                         >
                           <Play className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                           Play This Week's Quiz
@@ -289,26 +326,26 @@ export function SiteHeader({ fadeLogo = false, showUpgrade = false }: { fadeLogo
                         <Link
                           href="/sign-in"
                           onClick={handleLinkClick}
-                          className="flex items-center gap-3 px-4 py-1.5 text-base text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                          className="flex items-center gap-3 px-4 py-3 rounded-xl text-base text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                         >
-                          <User className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                          <User className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                           Log In
                         </Link>
                         <Link
                           href="/sign-up"
                           onClick={handleLinkClick}
-                          className="flex items-center gap-3 px-4 py-1.5 text-base font-medium text-white bg-[#3B82F6]/80 hover:bg-[#3B82F6] rounded-full transition-all duration-200 mx-1"
+                          className="flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium text-white bg-[#3B82F6]/80 hover:bg-[#3B82F6] transition-all duration-200"
                         >
-                          <User className="w-4 h-4 text-white" />
+                          <User className="w-5 h-5 text-white" />
                           Sign Up Free
                         </Link>
                         <div className="border-t border-gray-200 dark:border-gray-700 my-1.5"></div>
                         <Link
                           href="/about"
                           onClick={handleLinkClick}
-                          className="flex items-center gap-3 px-4 py-1.5 text-base text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                          className="flex items-center gap-3 px-4 py-3 rounded-xl text-base text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                         >
-                          <Info className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                          <Info className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                           About The School Quiz
                         </Link>
                       </>
@@ -318,7 +355,7 @@ export function SiteHeader({ fadeLogo = false, showUpgrade = false }: { fadeLogo
                         <Link
                           href="/quizzes"
                           onClick={handleLinkClick}
-                          className="flex items-center gap-3 px-5 py-2.5 text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                          className="flex items-center gap-3 px-4 py-3 rounded-xl text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                         >
                           <BookOpen className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                           Quizzes
@@ -326,7 +363,7 @@ export function SiteHeader({ fadeLogo = false, showUpgrade = false }: { fadeLogo
                         <Link
                           href="/achievements"
                           onClick={handleLinkClick}
-                          className="flex items-center gap-3 px-5 py-2.5 text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                          className="flex items-center gap-3 px-4 py-3 rounded-xl text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                         >
                           <Trophy className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                           Achievements
@@ -334,7 +371,7 @@ export function SiteHeader({ fadeLogo = false, showUpgrade = false }: { fadeLogo
                         <Link
                           href="/account"
                           onClick={handleLinkClick}
-                          className="flex items-center gap-3 px-5 py-2.5 text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                          className="flex items-center gap-3 px-4 py-3 rounded-xl text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                         >
                           <User className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                           Profile & Settings
@@ -346,7 +383,7 @@ export function SiteHeader({ fadeLogo = false, showUpgrade = false }: { fadeLogo
                         <Link
                           href="/dashboard"
                           onClick={handleLinkClick}
-                          className="flex items-center gap-3 px-5 py-2.5 text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                          className="flex items-center gap-3 px-4 py-3 rounded-xl text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                         >
                           <LayoutDashboard className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                           Dashboard
@@ -354,7 +391,7 @@ export function SiteHeader({ fadeLogo = false, showUpgrade = false }: { fadeLogo
                         <Link
                           href="/quizzes/279/play"
                           onClick={handleLinkClick}
-                          className="flex items-center gap-3 px-5 py-2.5 text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                          className="flex items-center gap-3 px-4 py-3 rounded-xl text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                         >
                           <Play className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                           Play Quiz
@@ -362,7 +399,7 @@ export function SiteHeader({ fadeLogo = false, showUpgrade = false }: { fadeLogo
                         <Link
                           href="/leagues"
                           onClick={handleLinkClick}
-                          className="flex items-center gap-3 px-5 py-2.5 text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                          className="flex items-center gap-3 px-4 py-3 rounded-xl text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                         >
                           <Users className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                           Private Leagues
@@ -370,7 +407,7 @@ export function SiteHeader({ fadeLogo = false, showUpgrade = false }: { fadeLogo
                         <Link
                           href="/stats"
                           onClick={handleLinkClick}
-                          className="flex items-center gap-3 px-5 py-2.5 text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                          className="flex items-center gap-3 px-4 py-3 rounded-xl text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                         >
                           <BarChart3 className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                           Stats & Analytics
@@ -378,7 +415,7 @@ export function SiteHeader({ fadeLogo = false, showUpgrade = false }: { fadeLogo
                         <Link
                           href="/achievements"
                           onClick={handleLinkClick}
-                          className="flex items-center gap-3 px-5 py-2.5 text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                          className="flex items-center gap-3 px-4 py-3 rounded-xl text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                         >
                           <Trophy className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                           Achievements
@@ -386,7 +423,7 @@ export function SiteHeader({ fadeLogo = false, showUpgrade = false }: { fadeLogo
                         <Link
                           href="/account"
                           onClick={handleLinkClick}
-                          className="flex items-center gap-3 px-5 py-2.5 text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                          className="flex items-center gap-3 px-4 py-3 rounded-xl text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                         >
                           <Settings className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                           Account
@@ -399,7 +436,7 @@ export function SiteHeader({ fadeLogo = false, showUpgrade = false }: { fadeLogo
                   {isFree && (
                     <>
                       <div className="border-t border-gray-100 dark:border-gray-700/50 my-1"></div>
-                      <div className="px-5 py-2">
+                      <div className="py-2">
                         <Link
                           href="/upgrade"
                           onClick={handleLinkClick}
@@ -456,6 +493,7 @@ export function SiteHeader({ fadeLogo = false, showUpgrade = false }: { fadeLogo
                         />
                       </button>
                     </div>
+                  </div>
                   </div>
                   </motion.div>
                 )}

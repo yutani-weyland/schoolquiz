@@ -355,9 +355,10 @@ export default function AnswerReveal({
 				>
 					{/* X Button - Left Side with Circle - Only show when revealed and not marked correct */}
 					{revealed && !isMarkedCorrect && (
-						<motion.button
+						<motion.div
 							key={xButtonKey}
-							type="button"
+							role="button"
+							tabIndex={0}
 							onClick={(e) => {
 								e.stopPropagation();
 								setXButtonKey(prev => prev + 1); // Trigger animation
@@ -387,7 +388,14 @@ export default function AnswerReveal({
 								}, 2500);
 								onUnmarkCorrect?.();
 							}}
-							className="absolute flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2"
+							onKeyDown={(e) => {
+								if (e.key === 'Enter' || e.key === ' ') {
+									e.preventDefault();
+									e.stopPropagation();
+									(e.target as HTMLElement).click();
+								}
+							}}
+							className="absolute flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 cursor-pointer"
 							style={{
 								left: `${CIRCLE_PADDING}px`,
 								top: `${(BUTTON_HEIGHT - CIRCLE_SIZE) / 2}px`,
@@ -460,7 +468,7 @@ export default function AnswerReveal({
 							>
 								<X className="w-6 h-6 text-white" strokeWidth={3} />
 							</motion.div>
-						</motion.button>
+						</motion.div>
 					)}
 
 					<AnimatePresence mode="wait">
@@ -566,8 +574,9 @@ export default function AnswerReveal({
 
 					{/* Checkmark Button - Right Side with Circle - Only show when revealed and not marked incorrect */}
 					{revealed && !isMarkedIncorrect && (
-						<motion.button
-							type="button"
+						<motion.div
+							role="button"
+							tabIndex={0}
 							onClick={(e) => {
 								e.stopPropagation();
 								// Trigger green flash animation
@@ -575,9 +584,16 @@ export default function AnswerReveal({
 								setTimeout(() => {
 									setShowGreenFlash(false);
 								}, 1000);
-								onMarkCorrect?.(e);
+								onMarkCorrect?.(e as any);
 							}}
-							className="absolute flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2"
+							onKeyDown={(e) => {
+								if (e.key === 'Enter' || e.key === ' ') {
+									e.preventDefault();
+									e.stopPropagation();
+									(e.target as HTMLElement).click();
+								}
+							}}
+							className="absolute flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 cursor-pointer"
 							style={{
 								right: `${CIRCLE_PADDING}px`,
 								top: `${(BUTTON_HEIGHT - CIRCLE_SIZE) / 2}px`,
@@ -651,7 +667,7 @@ export default function AnswerReveal({
 							>
 								<Check className="w-6 h-6 text-white" strokeWidth={3} style={{ opacity: isMarkedCorrect ? 1 : 0.9 }} />
 							</motion.div>
-						</motion.button>
+						</motion.div>
 					)}
 				</motion.button>
 	);

@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Menu, X, RotateCcw, Share2, LayoutList, MonitorPlay } from "lucide-react";
+import { Menu, X, RotateCcw, Share2, LayoutList, MonitorPlay, Sun, Moon, Crown } from "lucide-react";
 import { AchievementNotification, Achievement } from "../AchievementNotification";
 import { QuizThemeMode } from "./types";
+import { useUserAccess } from "@/contexts/UserAccessContext";
+import Link from "next/link";
 
 interface QuizHeaderProps {
   quizLabel?: string;
@@ -62,8 +64,17 @@ export function QuizHeader({
 }: QuizHeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isTopBarHovered, setIsTopBarHovered] = useState(false);
-  const [bucketRotate, setBucketRotate] = useState(0);
   const [shareFeedback, setShareFeedback] = useState<string | null>(null);
+  const { userName, isLoggedIn, isPremium, isFree } = useUserAccess();
+
+  // Sync document dark mode with themeMode
+  useEffect(() => {
+    if (themeMode === "dark") {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [themeMode]);
 
   const isLightText = textColor === "white";
   const isDarkMode = themeMode === "dark";
@@ -71,12 +82,10 @@ export function QuizHeader({
   const logoColorClass = textColor === "white" ? "text-white" : "text-gray-900";
   const labelClass = isLightText ? "text-white/70" : "text-gray-600";
   const menuButtonClass = isLightText
-    ? "bg-white/15 text-white hover:bg-white/25"
-    : "bg-black/10 text-gray-900 hover:bg-black/15";
+    ? "bg-white/15 text-white hover:bg-white/25 border border-white/20 backdrop-blur-sm"
+    : "bg-black/10 text-gray-900 hover:bg-black/15 border border-black/20 backdrop-blur-sm";
 
-  const menuPanelClass = isLightText
-    ? "bg-gray-900/95 border-gray-700"
-    : "bg-white/95 border-gray-200";
+  const menuPanelClass = "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700";
 
   const shareButtonClass = menuButtonClass;
 
@@ -132,7 +141,6 @@ export function QuizHeader({
     const currentIndex = THEME_MODES.indexOf(themeMode);
     const nextMode = THEME_MODES[(currentIndex + 1) % THEME_MODES.length];
     onThemeModeChange(nextMode);
-    setBucketRotate((prev) => prev + 1);
   };
 
   const handleRestart = () => {
@@ -286,7 +294,7 @@ export function QuizHeader({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
-              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
+              className="fixed inset-0 bg-black/30 backdrop-blur-md z-40"
               onClick={() => setIsMenuOpen(false)}
             />
             <motion.div
@@ -294,48 +302,162 @@ export function QuizHeader({
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className={`fixed top-20 right-4 w-80 max-h-[calc(100vh-6rem)] rounded-3xl shadow-2xl border flex flex-col z-50 overflow-hidden ${menuPanelClass}`}
+              className={`fixed top-20 right-4 w-80 max-w-[calc(100vw-2rem)] max-h-[calc(100vh-6rem)] rounded-3xl border flex flex-col z-50 overflow-hidden ${menuPanelClass}`}
             >
               <div className="p-6 overflow-y-auto flex-1">
-                <div className="space-y-1">
-                  <motion.button
-                    onClick={handleThemeToggle}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition-all duration-200 ${
-                      isLightText ? "text-gray-300 hover:bg-gray-800/40 hover:text-white" : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-                    }`}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <motion.div key={bucketRotate} initial={false} animate={bucketRotate > 0 ? { rotate: [0, 360] } : { rotate: 0 }} transition={{ duration: 0.5 }}>
-                      <PaintBucketIcon className="h-5 w-5" />
-                    </motion.div>
-                    <span>Change Theme</span>
-                  </motion.button>
+                {/* User Profile Section - Only for logged-in users */}
+                {isLoggedIn && (
+                  <div className="px-0 py-0 mb-4 pb-4 border-b border-gray-100 dark:border-gray-700/50">
+                    <div className="flex items-center gap-3">
+                      <div className="w-11 h-11 rounded-full bg-blue-600 dark:bg-blue-500 flex items-center justify-center text-white font-semibold text-base relative flex-shrink-0">
+                        {(userName || localStorage.getItem('userName')) ? (userName || localStorage.getItem('userName'))?.charAt(0).toUpperCase() : 'U'}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-gray-900 dark:text-white text-base truncate">
+                            {userName || localStorage.getItem('userName') || 'User'}
+                          </p>
+                          {isPremium && (
+                            <Crown className="w-4 h-4 text-amber-500 dark:text-amber-400 flex-shrink-0" />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
-                  <motion.button
+                {/* Menu Items */}
+                <div className="py-2">
+                  {/* View Mode Toggle */}
+                  {onOpenGridView && onOpenPresenterView && (
+                    <>
+                      {isPresenterView ? (
+                        <button
+                          onClick={() => {
+                            onOpenGridView();
+                            setIsMenuOpen(false);
+                          }}
+                          className="flex items-center gap-3 px-4 py-3 rounded-xl text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors w-full text-left"
+                        >
+                          <LayoutList className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                          Switch to Grid View
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            onOpenPresenterView();
+                            setIsMenuOpen(false);
+                          }}
+                          className="flex items-center gap-3 px-4 py-3 rounded-xl text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors w-full text-left"
+                        >
+                          <MonitorPlay className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                          Switch to Presenter View
+                        </button>
+                      )}
+                    </>
+                  )}
+
+                  {/* Theme Mode 3-Way Switch */}
+                  <div className="border-t border-gray-100 dark:border-gray-700/50 my-1"></div>
+                  <div className="py-2 px-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-base text-gray-700 dark:text-gray-200">Theme</span>
+                      <button
+                        onClick={() => {
+                          handleThemeToggle();
+                        }}
+                        className="relative inline-flex h-8 w-24 items-center rounded-full bg-gray-200 dark:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                        aria-label={`Current theme: ${themeMode}. Click to cycle theme.`}
+                      >
+                        <motion.div
+                          className="absolute left-1 flex h-6 w-6 items-center justify-center rounded-full bg-white shadow-sm"
+                          initial={false}
+                          animate={{
+                            x: themeMode === "colored" ? 2 : themeMode === "light" ? 40 : 78,
+                          }}
+                          transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                        >
+                          <AnimatePresence mode="wait">
+                            {themeMode === "colored" && (
+                              <motion.div
+                                key="colored"
+                                initial={{ scale: 0, rotate: -180 }}
+                                animate={{ scale: 1, rotate: 0 }}
+                                exit={{ scale: 0, rotate: 180 }}
+                                transition={{ duration: 0.2 }}
+                              >
+                                <PaintBucketIcon className="h-4 w-4 text-blue-600" />
+                              </motion.div>
+                            )}
+                            {themeMode === "light" && (
+                              <motion.div
+                                key="light"
+                                initial={{ scale: 0, rotate: -180 }}
+                                animate={{ scale: 1, rotate: 0 }}
+                                exit={{ scale: 0, rotate: 180 }}
+                                transition={{ duration: 0.2 }}
+                              >
+                                <Sun className="h-4 w-4 text-yellow-600" />
+                              </motion.div>
+                            )}
+                            {themeMode === "dark" && (
+                              <motion.div
+                                key="dark"
+                                initial={{ scale: 0, rotate: -180 }}
+                                animate={{ scale: 1, rotate: 0 }}
+                                exit={{ scale: 0, rotate: 180 }}
+                                transition={{ duration: 0.2 }}
+                              >
+                                <Moon className="h-4 w-4 text-gray-700" />
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </motion.div>
+                        <div className="flex w-full items-center justify-around px-1">
+                          <PaintBucketIcon className={`h-4 w-4 transition-opacity ${themeMode === "colored" ? "opacity-100" : "opacity-40"}`} />
+                          <Sun className={`h-4 w-4 transition-opacity ${themeMode === "light" ? "opacity-100" : "opacity-40"}`} />
+                          <Moon className={`h-4 w-4 transition-opacity ${themeMode === "dark" ? "opacity-100" : "opacity-40"}`} />
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Restart Quiz */}
+                  <button
                     onClick={handleRestart}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition-all duration-200 ${
-                      isLightText ? "text-gray-300 hover:bg-gray-800/40 hover:text-white" : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-                    }`}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors w-full text-left"
                   >
-                    <RotateCcw className="h-5 w-5" />
-                    <span>Restart Quiz</span>
-                  </motion.button>
+                    <RotateCcw className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                    Restart Quiz
+                  </button>
 
-                  <motion.button
+                  {/* Exit Quiz */}
+                  <button
                     onClick={handleExit}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition-all duration-200 ${
-                      isLightText ? "text-red-300 hover:bg-red-900/30 hover:text-red-200" : "text-red-600 hover:bg-red-50 hover:text-red-700"
-                    }`}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-base text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors w-full text-left"
                   >
-                    <X className="h-5 w-5" />
-                    <span>Exit Quiz</span>
-                  </motion.button>
+                    <X className="w-5 h-5 text-red-600 dark:text-red-400" />
+                    Exit Quiz
+                  </button>
                 </div>
+
+                {/* Upgrade CTA for Free Users */}
+                {isFree && (
+                  <>
+                    <div className="border-t border-gray-100 dark:border-gray-700/50 my-1"></div>
+                    <div className="py-2">
+                      <Link
+                        href="/upgrade"
+                        onClick={() => setIsMenuOpen(false)}
+                        className="flex items-center justify-center gap-2 px-6 py-3 rounded-full text-base font-medium bg-[#3B82F6] text-white hover:bg-[#2563EB] transition-colors w-full"
+                      >
+                        <Crown className="w-4 h-4" />
+                        Upgrade to Premium
+                      </Link>
+                    </div>
+                  </>
+                )}
+
               </div>
             </motion.div>
           </>

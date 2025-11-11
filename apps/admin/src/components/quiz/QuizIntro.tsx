@@ -44,7 +44,7 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 	const [formattedDate, setFormattedDate] = useState<string>("");
 	const [showSignupModal, setShowSignupModal] = useState(false);
 	const [showLimitModal, setShowLimitModal] = useState(false);
-	const [loggedIn, setLoggedIn] = useState(false); // Start with false to match server render
+	const [loggedIn, setLoggedIn] = useState(false); // Always start with false to match server render
 	const [mounted, setMounted] = useState(false);
 	const { tier, isPremium, isLoading } = useUserTier();
 	
@@ -166,13 +166,13 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 		<LayoutGroup>
 			<motion.section
 				layoutId={`quiz-bg-${quiz.id}`}
-				className="quiz-safe min-h-dvh grid fixed inset-0"
+				className="quiz-safe h-dvh grid fixed inset-0 md:overflow-hidden"
 				style={{
 					backgroundColor: quiz.colorHex,
 					viewTransitionName: `quiz-${quiz.id}`,
 					gridTemplateRows: "auto 1fr",
 					transition: "background-color 0.25s ease-out",
-					minHeight: "100dvh"
+					height: "100dvh"
 				}}
 				initial={{ opacity: 0 }}
 				animate={{ opacity: 1 }}
@@ -180,7 +180,7 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 				transition={{ duration: 0.2 }}
 			>
 				{/* Top bar - consistent with site header (py-3 px-6) */}
-				<header className="flex items-center justify-between py-3 px-6">
+				<header className="flex items-center justify-between py-3 px-4 sm:px-6">
 					<motion.a
 						href="#"
 						onClick={(e) => {
@@ -193,19 +193,19 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 						initial={{ opacity: 0, x: -10 }}
 						animate={{ opacity: 1, x: 0 }}
 						transition={{ duration: 0.4 }}
-						className={`text-2xl font-bold tracking-tight cursor-pointer hover:opacity-80 transition-opacity ${text}`}
+						className={`text-xl sm:text-2xl font-bold tracking-tight cursor-pointer hover:opacity-80 transition-opacity truncate ${text}`}
 					>
 						The School Quiz
 					</motion.a>
 					
-					<div className="flex items-center gap-4">
+					<div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
 						<motion.button
 							initial={{ opacity: 0, scale: 0.8 }}
 							animate={{ opacity: 1, scale: 1 }}
 							transition={{ delay: 0.2 }}
 							onClick={onBack}
 							aria-label="Close"
-							className={`p-4 rounded-full transition ${
+							className={`p-2 sm:p-3 md:p-4 rounded-full transition flex-shrink-0 ${
 								tone === "white" 
 									? "bg-white/15 hover:bg-white/25 text-white" 
 									: "bg-black/10 hover:bg-black/15 text-gray-900"
@@ -213,18 +213,18 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 							whileHover={{ scale: 1.05 }}
 							whileTap={{ scale: 0.95 }}
 						>
-							<X className="h-6 w-6" />
+							<X className="h-5 w-5 sm:h-6 sm:w-6" />
 						</motion.button>
 					</div>
 				</header>
 
 				{/* Main stack */}
-				<main className="flex flex-col items-center justify-center px-6 sm:px-0 flex-1 py-12">
+				<main className="flex flex-col items-center justify-center px-4 sm:px-6 md:px-0 flex-1 py-4 sm:py-8 md:py-12 overflow-x-hidden md:overflow-y-hidden overflow-y-auto min-h-0">
 					<motion.div
 						initial={{ opacity: 0, y: 8 }}
 						animate={{ opacity: 1, y: 0 }}
 						transition={{ duration: 0.3, staggerChildren: 0.04 }}
-						className="w-full flex flex-col items-center text-center mx-auto"
+						className="w-full flex flex-col items-center text-center mx-auto max-w-full"
 						style={{ maxWidth: 'var(--maxw-reading)' }}
 					>
 						{/* Edition Badge */}
@@ -232,7 +232,7 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 							initial={{ opacity: 0, scale: 0.9 }}
 							animate={{ opacity: 1, scale: 1 }}
 							transition={{ duration: 0.4, delay: 0.05 }}
-							className="mb-6"
+							className="mb-4 sm:mb-6"
 						>
 							<span className={`inline-flex items-center rounded-full px-5 py-2 text-lg font-bold ${
 								tone === "white" 
@@ -247,9 +247,9 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 							initial={{ opacity: 0, y: 6 }}
 							animate={{ opacity: 1, y: 0 }}
 							transition={{ duration: 0.4, delay: 0.1 }}
-							className={`font-extrabold text-balance tracking-tight mb-6 ${text}`}
+							className={`font-extrabold text-balance tracking-tight mb-4 sm:mb-6 px-2 ${text}`}
 							style={{ 
-								fontSize: 'clamp(2.5rem, 5vw, 4rem)',
+								fontSize: 'clamp(1.75rem, 5vw, 4rem)',
 								lineHeight: '1.1'
 							}}
 						>
@@ -261,7 +261,7 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 								initial={{ opacity: 0, y: 6 }}
 								animate={{ opacity: 1, y: 0 }}
 								transition={{ duration: 0.4, delay: 0.15 }}
-								className={`text-title mb-8 ${tone === "white" ? "opacity-80" : "opacity-70"} ${text}`}
+								className={`text-base sm:text-lg md:text-xl mb-6 sm:mb-8 px-2 ${tone === "white" ? "opacity-80" : "opacity-70"} ${text}`}
 							>
 								{quiz.blurb}
 							</motion.p>
@@ -275,7 +275,7 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 								duration: 0.4, 
 								delay: quiz.blurb ? 0.2 : 0.15
 							}}
-							className={`flex items-center justify-center gap-1.5 text-sm mb-12 ${tone === "white" ? "opacity-70" : "opacity-60"} ${text}`}
+							className={`flex items-center justify-center gap-1.5 text-sm mb-6 sm:mb-8 md:mb-12 ${tone === "white" ? "opacity-70" : "opacity-60"} ${text}`}
 						>
 							<Calendar className="h-4 w-4" aria-hidden />
 							{formattedDate || formatWeek(quiz.weekISO)}
@@ -291,52 +291,59 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 								damping: 25,
 								delay: 0.2
 							}}
-							className="flex flex-wrap items-center justify-center gap-3 mb-12"
+							className="flex flex-wrap items-center justify-center gap-3 mb-6 sm:mb-8 md:mb-12 w-full px-4"
 						>
-						{!mounted || !loggedIn ? (
-							<motion.a
-								href={`/quizzes/${quiz.slug}/play`}
-								onClick={handlePlayClick}
-								autoFocus
-								className={`rounded-full px-10 py-5 text-xl font-semibold cursor-pointer ${
+							{!mounted ? (
+								// Show placeholder button during SSR/hydration - always "Try Quiz" to match server render
+								<div className={`rounded-full px-6 py-3 sm:px-8 sm:py-4 md:px-10 md:py-5 text-base sm:text-lg md:text-xl font-semibold whitespace-nowrap ${
 									tone === "white" ? "bg-white text-gray-900" : "bg-gray-900 text-white"
-								}`}
-								whileHover={{ 
-									scale: 1.05,
-									transition: { 
+								}`}>
+									Try Quiz
+								</div>
+							) : !loggedIn ? (
+								<motion.a
+									href={`/quizzes/${quiz.slug}/play`}
+									onClick={handlePlayClick}
+									autoFocus
+									className={`rounded-full px-6 py-3 sm:px-8 sm:py-4 md:px-10 md:py-5 text-base sm:text-lg md:text-xl font-semibold cursor-pointer whitespace-nowrap ${
+										tone === "white" ? "bg-white text-gray-900" : "bg-gray-900 text-white"
+									}`}
+									whileHover={{ 
+										scale: 1.05,
+										transition: { 
+											type: "spring",
+											stiffness: 500,
+											damping: 20,
+											mass: 0.5
+										}
+									}}
+									transition={{
 										type: "spring",
-										stiffness: 500,
-										damping: 20,
-										mass: 0.5
-									}
-								}}
-								transition={{
-									type: "spring",
-									stiffness: 600,
-									damping: 25,
-									mass: 0.3
-								}}
-								whileTap={{ 
-									scale: 0.98,
-									transition: { 
-										type: "spring",
-										stiffness: 500,
-										damping: 30
-									}
-								}}
-								style={{
-									boxShadow: tone === "white" 
-										? "0 4px 14px 0 rgba(0, 0, 0, 0.15)" 
-										: "0 4px 14px 0 rgba(0, 0, 0, 0.3)"
-								}}
-							>
-								Try Quiz
-							</motion.a>
+										stiffness: 600,
+										damping: 25,
+										mass: 0.3
+									}}
+									whileTap={{ 
+										scale: 0.98,
+										transition: { 
+											type: "spring",
+											stiffness: 500,
+											damping: 30
+										}
+									}}
+									style={{
+										boxShadow: tone === "white" 
+											? "0 4px 14px 0 rgba(0, 0, 0, 0.15)" 
+											: "0 4px 14px 0 rgba(0, 0, 0, 0.3)"
+									}}
+								>
+									Try Quiz
+								</motion.a>
 						) : !isPremium && !isLoading && (hasExceededFreeQuizzes() || !isNewest) ? (
 								<motion.button
 									onClick={() => setShowLimitModal(true)}
 									autoFocus
-									className={`rounded-full px-10 py-5 text-xl font-semibold cursor-pointer ${
+									className={`rounded-full px-6 py-3 sm:px-8 sm:py-4 md:px-10 md:py-5 text-base sm:text-lg md:text-xl font-semibold cursor-pointer whitespace-nowrap ${
 										tone === "white" ? "bg-white/50 text-gray-900" : "bg-gray-400 text-white"
 									}`}
 									whileHover={{ scale: 1.02 }}
@@ -349,7 +356,7 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 									href={`/quizzes/${quiz.slug}/play`}
 									onClick={handlePlayClick}
 									autoFocus
-									className={`rounded-full px-10 py-5 text-xl font-semibold cursor-pointer ${
+									className={`rounded-full px-6 py-3 sm:px-8 sm:py-4 md:px-10 md:py-5 text-base sm:text-lg md:text-xl font-semibold cursor-pointer whitespace-nowrap ${
 										tone === "white" ? "bg-white text-gray-900" : "bg-gray-900 text-white"
 									}`}
 									whileHover={{ 
@@ -388,7 +395,7 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 							<div className="relative">
 								<motion.button
 									onClick={() => setShowShareMenu(!showShareMenu)}
-									className={`inline-flex items-center gap-1.5 rounded-full px-10 py-5 text-xl font-semibold cursor-pointer ${
+									className={`inline-flex items-center gap-1.5 sm:gap-2 rounded-full px-6 py-3 sm:px-8 sm:py-4 md:px-10 md:py-5 text-base sm:text-lg md:text-xl font-semibold cursor-pointer whitespace-nowrap ${
 										tone === "white" ? "bg-white/10 text-white" : "bg-black/10 text-gray-900"
 									}`}
 									whileHover={{ 
@@ -425,9 +432,9 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 											}
 										}}
 									>
-										<Share2 className="h-5 w-5" />
+										<Share2 className="h-4 w-4 sm:h-5 sm:w-5" />
 									</motion.div>
-									Share
+									<span className="hidden sm:inline">Share</span>
 								</motion.button>
 
 								<AnimatePresence>

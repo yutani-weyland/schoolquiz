@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { QuizPlayer } from "@/components/quiz/QuizPlayer";
 import { Quiz } from "@/components/quiz/QuizCard";
 import { getQuizColor } from '@/lib/colors';
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const DATA: Quiz[] = [
 	{ id: 12, slug: "12", title: "Shape Up, Pumpkins, Famous First Words, Crazes, and Next In Sequence.", blurb: "A weekly selection mixing patterns, pop culture and logic.", weekISO: "2024-01-15", colorHex: getQuizColor(12), status: "available" },
@@ -547,14 +548,16 @@ export default function QuizPlayPage() {
 	const isNewest = DATA[0].slug === quiz.slug;
 
 	return (
-		<QuizPlayer
-			quizTitle={quiz.title}
-			quizColor={quiz.colorHex}
-			quizSlug={quiz.slug}
-			questions={quizData.questions}
-			rounds={quizData.rounds}
-			weekISO={quiz.weekISO}
-			isNewest={isNewest}
-		/>
+		<ErrorBoundary>
+			<QuizPlayer
+				quizTitle={quiz.title}
+				quizColor={quiz.colorHex}
+				quizSlug={quiz.slug}
+				questions={quizData.questions}
+				rounds={quizData.rounds}
+				weekISO={quiz.weekISO}
+				isNewest={isNewest}
+			/>
+		</ErrorBoundary>
 	);
 }

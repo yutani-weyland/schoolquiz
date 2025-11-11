@@ -329,14 +329,7 @@ export function MobileGridLayout({
           className="pointer-events-none fixed bottom-6 right-6 z-40 sm:bottom-8 sm:right-8"
         >
           <div
-            className="pointer-events-auto rounded-full px-5 py-3 text-[clamp(1rem,0.95rem+0.35vw,1.25rem)] font-semibold tracking-[0.08em] sm:px-6 sm:py-3.5"
-            style={{
-              background: textIsLight ? "rgba(0,0,0,0.72)" : "rgba(17,17,17,0.9)",
-              color: "white",
-              border: "1px solid rgba(255,255,255,0.18)",
-              backdropFilter: "blur(10px)",
-              WebkitBackdropFilter: "blur(10px)",
-            }}
+            className={`pointer-events-auto rounded-full px-5 py-3 text-[clamp(1rem,0.95rem+0.35vw,1.25rem)] font-semibold tracking-[0.08em] sm:px-6 sm:py-3.5 backdrop-blur-sm transition-colors duration-200 ${pillBackgroundClass} ${pillTextClass}`}
           >
             Score {totalCorrect}/{questions.length}
           </div>

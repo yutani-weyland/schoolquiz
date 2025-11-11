@@ -2,7 +2,7 @@
 
 import React, { useMemo, useRef, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Eye, Check, X } from "lucide-react";
+import { Check, X } from "lucide-react";
 
 // Tooltip component that adjusts position to stay on screen
 function TooltipPositioner({ cursorX, cursorY, content }: { cursorX: number; cursorY: number; content: string }) {
@@ -14,7 +14,7 @@ function TooltipPositioner({ cursorX, cursorY, content }: { cursorX: number; cur
 		const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1920;
 		const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 1080;
 		const padding = 16;
-		const verticalGap = 40; // Gap between cursor and tooltip - "up a bit"
+		const verticalGap = 70; // Gap between cursor and tooltip - positioned higher above cursor
 		
 		// Position directly above cursor (due north), centered horizontally
 		// The tooltip's bottom edge should be `verticalGap` pixels above the cursor
@@ -125,12 +125,12 @@ export default function RailProgress({
 	const [hoveredIndex, setHoveredIndex] = React.useState<number | null>(null);
 	const [tooltipPosition, setTooltipPosition] = React.useState<{ x: number; y: number } | null>(null);
 	const scrollContainerRef = useRef<HTMLDivElement>(null);
-	const currentQuestionRef = useRef<HTMLDivElement>(null);
+	const questionRefs = useRef<Map<number, HTMLButtonElement>>(new Map());
 	const isUserScrollingRef = useRef(false);
 	const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 	const lastCurrentRef = useRef(current);
 
-	// Track user-initiated scrolling to prevent scrollIntoView from interfering
+	// Track user-initiated scrolling to prevent auto-scroll from interfering
 	useEffect(() => {
 		const container = scrollContainerRef.current;
 		if (!container) return;
@@ -140,10 +140,10 @@ export default function RailProgress({
 			if (scrollTimeoutRef.current) {
 				clearTimeout(scrollTimeoutRef.current);
 			}
-			// Reset flag after scroll ends (with some delay to catch rapid scrolling)
+			// Reset flag after scroll ends
 			scrollTimeoutRef.current = setTimeout(() => {
 				isUserScrollingRef.current = false;
-			}, 200);
+			}, 150);
 		};
 
 		container.addEventListener('scroll', handleUserScroll, { passive: true });
@@ -160,16 +160,21 @@ export default function RailProgress({
 		};
 	}, []);
 
-	// Auto-scroll to current question when it changes (only if user isn't manually scrolling)
+	// Auto-scroll active question into view when current changes
 	useEffect(() => {
-		// Only auto-scroll if current actually changed (not just on mount)
+		// Skip if current hasn't actually changed
 		if (lastCurrentRef.current === current) return;
 		lastCurrentRef.current = current;
 
-		// Wait a bit to ensure user scrolling state is updated
+		// Skip if user is manually scrolling
+		if (isUserScrollingRef.current) return;
+
+		// Use a small delay to ensure DOM has updated
 		const timeoutId = setTimeout(() => {
-			if (!isUserScrollingRef.current && currentQuestionRef.current) {
-				currentQuestionRef.current.scrollIntoView({
+			const questionButton = questionRefs.current.get(current);
+			if (questionButton && !isUserScrollingRef.current) {
+				// Use native scrollIntoView - browser handles all the complexity
+				questionButton.scrollIntoView({
 					behavior: "smooth",
 					block: "nearest",
 					inline: "center"
@@ -257,6 +262,9 @@ export default function RailProgress({
 		});
 	}, [steps, current, questions, viewedQuestions, attemptedAnswers, correctAnswers, incorrectAnswers, getRoundColorForIndex]);
 
+	// Show all questions - don't filter any out
+	const visibleQuestions = questionStatuses;
+
 	return (
 		<div 
 			role="progressbar"
@@ -302,7 +310,7 @@ export default function RailProgress({
 						scrollBehavior: 'smooth'
 					}}
 				>
-					{questionStatuses.map((status) => {
+					{visibleQuestions.map((status) => {
 						const { n, isCurrent, isViewed, isAttempted, isCorrect, isIncorrect, roundColor } = status;
 
 						// Determine button style and content
@@ -310,14 +318,7 @@ export default function RailProgress({
 						let displayContent: string | React.ReactNode = n;
 						
 						if (isCurrent) {
-							if (isViewed && !isAttempted) {
-								buttonStyle = { 
-									backgroundColor: "#0B0B0B", 
-									color: "white", 
-									border: "3px solid rgba(255, 255, 255, 0.85)" 
-								};
-								displayContent = n;
-							} else if (isCorrect) {
+							if (isCorrect) {
 								buttonStyle = { 
 									backgroundColor: "#10B981", 
 									color: "white", 
@@ -353,16 +354,6 @@ export default function RailProgress({
 								border: "2px solid rgba(239, 68, 68, 0.45)" 
 							};
 							displayContent = <X className="w-5 h-5" strokeWidth={3} />;
-						} else if (isViewed && !isCurrent) {
-							const darkerColor = darkenColor(roundColor, 0.4);
-							// Use high contrast text color based on background for readability (circles have transparent bg)
-							const textColor = isDark ? "white" : "#1a1a1a";
-							buttonStyle = { 
-								border: `2px solid ${darkerColor}`,
-								color: textColor,
-								backgroundColor: "transparent"
-							};
-							displayContent = <Eye className="w-6 h-6" />;
 						} else {
 							const darkerColor = darkenColor(roundColor, 0.4);
 							// Use high contrast text color based on background for readability (circles have transparent bg)
@@ -397,7 +388,7 @@ export default function RailProgress({
 							ariaLabel = `Question ${n}, correct`;
 						} else if (isIncorrect) {
 							ariaLabel = `Question ${n}, incorrect`;
-						} else if (isViewed) {
+						} else {
 							ariaLabel = `Question ${n}, visited`;
 						}
 
@@ -420,9 +411,8 @@ export default function RailProgress({
 						};
 
 						return (
-							<motion.div 
-								key={n}
-								ref={isCurrent ? currentQuestionRef : null}
+							<div 
+								key={`question-${n}`}
 								className="relative flex-shrink-0"
 								style={{ 
 									zIndex: isHovered ? 9999 : 1
@@ -430,40 +420,43 @@ export default function RailProgress({
 								onMouseEnter={handleMouseEnter}
 								onMouseLeave={handleMouseLeave}
 								onMouseMove={handleMouseMove}
-								initial={false}
-								animate={{
-									scale: isCurrent ? 1.03 : 1,
-								}}
-								transition={{
-									type: "spring",
-									stiffness: 400,
-									damping: 25,
-								}}
 							>
 								<button
+									ref={(el) => {
+										if (el) {
+											questionRefs.current.set(n, el);
+										} else {
+											questionRefs.current.delete(n);
+										}
+									}}
 									type="button"
 									data-step={n}
 									aria-label={ariaLabel}
 									aria-current={isCurrent ? "step" : undefined}
-									className={`inline-flex h-14 w-14 items-center justify-center rounded-full text-xl font-semibold leading-none tabular-nums tracking-tight focus:outline-none focus:ring-0 transition-opacity duration-300 ${isCurrent ? "opacity-100" : "opacity-50 group-hover:opacity-80"}`}
+									className={`inline-flex h-14 w-14 items-center justify-center rounded-full text-xl font-semibold leading-none tabular-nums tracking-tight focus:outline-none focus:ring-0 transition-all duration-200 ${isCurrent ? "opacity-100 scale-105" : "opacity-50 hover:opacity-80 scale-100"}`}
 									style={{
 										...buttonStyle,
 										fontFamily: 'var(--app-font), system-ui, sans-serif',
 										letterSpacing: '-0.015em',
-										transition: 'transform 0.2s ease, opacity 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease',
 									}}
-									onClick={() => onSelect?.(n)}
+									onClick={() => {
+										onSelect?.(n);
+										// Immediately scroll the clicked question into view
+										setTimeout(() => {
+											const questionButton = questionRefs.current.get(n);
+											if (questionButton) {
+												questionButton.scrollIntoView({
+													behavior: "smooth",
+													block: "nearest",
+													inline: "center"
+												});
+											}
+										}, 10);
+									}}
 								>
-									<motion.span
-										key={`${n}-${isCorrect ? 'correct' : isIncorrect ? 'incorrect' : 'default'}`}
-										initial={{ scale: 0.8, opacity: 0 }}
-										animate={{ scale: 1, opacity: 1 }}
-										exit={{ scale: 0.8, opacity: 0 }}
-										transition={{ duration: 0.2, ease: "easeOut" }}
-										className="inline-flex items-center justify-center"
-									>
+									<span className="inline-flex items-center justify-center">
 										{displayContent}
-									</motion.span>
+									</span>
 								</button>
 								
 								{/* Custom cursor-following tooltip */}
@@ -511,7 +504,7 @@ export default function RailProgress({
 										</motion.div>
 									)}
 								</AnimatePresence>
-							</motion.div>
+							</div>
 						);
 					})}
 				</div>

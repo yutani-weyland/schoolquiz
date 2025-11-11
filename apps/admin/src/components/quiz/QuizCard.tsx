@@ -28,7 +28,8 @@ interface QuizCardProps {
 export function QuizCard({ quiz, isNewest = false }: QuizCardProps) {
 	const [showShareMenu, setShowShareMenu] = useState(false);
 	const [copied, setCopied] = useState(false);
-	const [hasProgress, setHasProgress] = useState(false);
+	const [hasProgress, setHasProgress] = useState(false); // Always start with false to match server render
+	const [mounted, setMounted] = useState(false);
 	const [isHovered, setIsHovered] = useState(false);
 	const [formattedDate, setFormattedDate] = useState<string>("");
 	const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -40,6 +41,15 @@ export function QuizCard({ quiz, isNewest = false }: QuizCardProps) {
 	React.useEffect(() => {
 		setFormattedDate(formatWeek(quiz.weekISO));
 	}, [quiz.weekISO]);
+	
+	// Set mounted flag and check progress after hydration
+	React.useEffect(() => {
+		setMounted(true);
+		if (typeof window !== 'undefined') {
+			const timer = sessionStorage.getItem(`quiz-${quiz.slug}-timer`);
+			setHasProgress(!!(timer && parseInt(timer, 10) > 0));
+		}
+	}, [quiz.slug]);
 	
 	// Listen for theme changes to re-animate cards
 	React.useEffect(() => {
@@ -63,14 +73,6 @@ export function QuizCard({ quiz, isNewest = false }: QuizCardProps) {
 			window.removeEventListener('storage', handleStorageChange);
 		};
 	}, []);
-	
-	// Check if quiz has been started
-	React.useEffect(() => {
-		if (typeof window !== 'undefined') {
-			const timer = sessionStorage.getItem(`quiz-${quiz.slug}-timer`);
-			setHasProgress(!!(timer && parseInt(timer, 10) > 0));
-		}
-	}, [quiz.slug]);
 
 	// Check for quiz completion data
 	React.useEffect(() => {
@@ -374,7 +376,13 @@ export function QuizCard({ quiz, isNewest = false }: QuizCardProps) {
 								}
 							}}
 						>
-							{quiz.status === "coming_soon" ? "Coming soon" : isPremiumLocked ? "Play quiz" : hasProgress ? "Continue quiz" : "Play quiz"}
+							{quiz.status === "coming_soon" 
+								? "Coming soon" 
+								: isPremiumLocked 
+								? "Play quiz" 
+								: mounted && hasProgress 
+								? "Continue quiz" 
+								: "Play quiz"}
 						</motion.button>
 						<div className="relative">
 							<motion.button

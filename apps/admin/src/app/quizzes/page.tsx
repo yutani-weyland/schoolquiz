@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { SiteHeader } from "@/components/SiteHeader";
 import { QuizCard, Quiz } from "@/components/quiz/QuizCard";
 import { NextQuizTeaser } from "@/components/quiz/NextQuizTeaser";
@@ -135,36 +135,27 @@ const quizzes: Quiz[] = [
 
 export default function QuizzesPage() {
 	const [userName, setUserName] = useState<string | null>(null);
+	const [mounted, setMounted] = useState(false);
 	const { isPremium, isVisitor } = useUserAccess();
 	const [pageAnimationKey, setPageAnimationKey] = useState(0);
 	const pathname = usePathname();
 
-	// Redirect logged-out users to latest quiz intro page
+	// Check authentication and get user name on client only to avoid hydration errors
 	useEffect(() => {
+		setMounted(true);
+		
 		if (typeof window !== 'undefined') {
-			// Use a small delay to ensure localStorage is accessible and context has loaded
-			const checkAndRedirect = () => {
-				const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-				if (!isLoggedIn) {
-					// Redirect to latest quiz intro page (quiz #12)
-					window.location.href = '/quizzes/12/intro';
-				}
-			};
-			// Check immediately
-			checkAndRedirect();
-			// Also check after a brief delay in case of timing issues
-			const timeoutId = setTimeout(checkAndRedirect, 100);
-			return () => clearTimeout(timeoutId);
-		}
-	}, []);
-
-	useEffect(() => {
-		// Check if user is logged in and get their name
-		if (typeof window !== 'undefined') {
+			// Check if user is logged in and get their name
 			const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
 			const name = localStorage.getItem('userName');
 			if (isLoggedIn && name) {
 				setUserName(name);
+			}
+			
+			// Redirect logged-out users to latest quiz intro page
+			if (!isLoggedIn) {
+				// Redirect to latest quiz intro page (quiz #12)
+				window.location.href = '/quizzes/12/intro';
 			}
 		}
 	}, []);
@@ -183,15 +174,20 @@ export default function QuizzesPage() {
 			<main className="min-h-screen pt-24 pb-0">
 				<div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
 					{/* Page Title */}
-					<motion.h1 
-						id="page-title" 
-						className="text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 dark:text-white text-center mb-16"
-						initial={{ opacity: 0, y: -20 }}
-						animate={{ opacity: 1, y: 0 }}
-						transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-					>
-						{userName ? `G'day ${userName}!` : "Your Quizzes"}
-					</motion.h1>
+					<div className="text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 dark:text-white text-center mb-16 min-h-[1.2em] flex items-center justify-center">
+						<AnimatePresence mode="wait">
+							<motion.h1
+								key={mounted && userName ? `greeting-${userName}` : 'default-title'}
+								initial={{ opacity: 0, y: -10 }}
+								animate={{ opacity: 1, y: 0 }}
+								exit={{ opacity: 0, y: 10 }}
+								transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+								className="w-full"
+							>
+								{mounted && userName ? `G'day ${userName}!` : "Your Quizzes"}
+							</motion.h1>
+						</AnimatePresence>
+					</div>
 					
 					{/* Quizzes Grid - Responsive with overlapping cards on mobile */}
 					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 md:gap-6">
@@ -210,7 +206,7 @@ export default function QuizzesPage() {
 							damping: 20
 						}}
 					>
-						<NextQuizTeaser latestQuizId={quizzes[quizzes.length - 1]?.id || 12} />
+						<NextQuizTeaser latestQuizId={quizzes[0]?.id || 12} />
 					</motion.div>
 						
 					{quizzes.map((quiz, index) => {
@@ -237,31 +233,6 @@ export default function QuizzesPage() {
 						);
 					})}
 					</div>
-
-					{/* Subscribe CTA - Minimalist */}
-					<motion.div 
-						className="mt-24 mb-32 text-center px-4"
-						initial={{ opacity: 0, y: 20 }}
-						animate={{ opacity: 1, y: 0 }}
-						transition={{ 
-							duration: 0.5, 
-							delay: 0.1 + (quizzes.length * 0.05) + 0.2, // After all cards
-							ease: [0.22, 1, 0.36, 1]
-						}}
-					>
-						<h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-							Don't miss the next quiz
-						</h2>
-						<p className="text-lg text-gray-600 dark:text-gray-400 mb-8 max-w-2xl mx-auto leading-relaxed">
-							Subscribe to get this week's quiz delivered straight to your inbox every Monday morning.
-						</p>
-						<Link 
-							href="/subscribe"
-							className="inline-flex items-center justify-center px-8 py-4 text-base bg-blue-600 text-white rounded-full font-semibold hover:bg-blue-700 dark:hover:bg-blue-500 transition-all hover:scale-105 shadow-lg hover:shadow-xl"
-						>
-							3 Quizzes for Free
-						</Link>
-					</motion.div>
 				</div>
 			</main>
 

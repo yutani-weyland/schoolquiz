@@ -1,6 +1,5 @@
-import React, { useRef, useState } from "react";
-import { Clock, EyeOff, Info } from "lucide-react";
-import { HoverCardAlert } from "@/components/ui/hover-card-alert";
+import React, { useState } from "react";
+import { Clock, EyeOff } from "lucide-react";
 import { QuizRound } from "./types";
 
 interface QuizStatusBarProps {
@@ -81,12 +80,8 @@ export function QuizStatusBar({
   isTimerRunning,
   timer,
   formatTime,
-  averageScoreData,
+  averageScoreData: _averageScoreData,
 }: QuizStatusBarProps) {
-  const scoreRef = useRef<HTMLDivElement>(null);
-  const [isScoreHovered, setIsScoreHovered] = useState(false);
-  const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
-  const [isRoundTitleHovered, setIsRoundTitleHovered] = useState(false);
   const [isTimerHidden, setIsTimerHidden] = useState(false);
 
   return (
@@ -100,27 +95,12 @@ export function QuizStatusBar({
                   ? "bg-white/20 text-white hover:bg-white/28"
                   : "bg-black/10 text-gray-900 hover:bg-black/15"
               } px-6 py-3.5 backdrop-blur-sm`}
-              onMouseEnter={() => setIsRoundTitleHovered(true)}
-              onMouseLeave={() => setIsRoundTitleHovered(false)}
             >
-              <Info className="w-5 h-5 flex-shrink-0" />
               <span className="whitespace-nowrap">{currentRound.title}</span>
-              {isRoundTitleHovered && currentRound.blurb && (
-                <div
-                  className="absolute top-full left-full ml-2 mt-2 px-4 py-2.5 rounded-lg w-80 pointer-events-none z-50 whitespace-normal bg-black/95 backdrop-blur-sm shadow-xl border border-white/10"
-                  style={{ fontFamily: "var(--app-font), system-ui, sans-serif" }}
-                >
-                  <div className="font-medium text-white relative text-base">{currentRound.blurb}</div>
-                </div>
-              )}
             </div>
           )}
 
           <div
-            ref={scoreRef}
-            onMouseEnter={() => setIsScoreHovered(true)}
-            onMouseLeave={() => setIsScoreHovered(false)}
-            onMouseMove={(event) => setCursorPosition({ x: event.clientX, y: event.clientY })}
             className={`relative rounded-full font-semibold flex items-center gap-4 transition-colors duration-200 whitespace-nowrap ${
               textColor === "white"
                 ? "bg-white/20 text-white hover:bg-white/28"
@@ -145,15 +125,6 @@ export function QuizStatusBar({
           )}
         </div>
       </div>
-
-      <HoverCardAlert
-        averageScoreData={averageScoreData}
-        isOpen={isScoreHovered}
-        onMouseEnter={() => setIsScoreHovered(true)}
-        onMouseLeave={() => setIsScoreHovered(false)}
-        triggerRef={scoreRef}
-        cursorPosition={cursorPosition}
-      />
     </>
   );
 }
