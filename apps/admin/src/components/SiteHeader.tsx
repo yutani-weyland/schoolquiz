@@ -1,83 +1,67 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, User, Settings, Wallet, Users, Pencil, Plus, LogOut, Sun, Moon, LayoutDashboard, Trophy, BarChart3, Crown, Info, Play, BookOpen } from 'lucide-react';
 import { useUserAccess } from '@/contexts/UserAccessContext';
+import { useTheme } from '@/contexts/ThemeContext';
+import { applyTheme, Theme } from '@/lib/theme';
+import { storage, getUserId, getUserName } from '@/lib/storage';
+import { logger } from '@/lib/logger';
 
-export function SiteHeader({ fadeLogo = false, showUpgrade = false }: { fadeLogo?: boolean; showUpgrade?: boolean }) {
+export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
   const { isLoggedIn: userIsLoggedIn, userName, userEmail, tier, isVisitor, isFree, isPremium } = useUserAccess();
+  const { isDark, toggleTheme } = useTheme();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isDark, setIsDark] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  
+  // Capture safe-area-inset-top once on mount to prevent header jumping on scroll
+  useEffect(() => {
+    try {
+      // Create a temporary element to measure safe-area-inset-top
+      const testEl = document.createElement('div');
+      testEl.style.position = 'fixed';
+      testEl.style.top = '0';
+      testEl.style.left = '0';
+      testEl.style.width = '1px';
+      testEl.style.height = '1px';
+      testEl.style.paddingTop = 'env(safe-area-inset-top)';
+      testEl.style.visibility = 'hidden';
+      testEl.style.pointerEvents = 'none';
+      document.body.appendChild(testEl);
+      const computedStyle = window.getComputedStyle(testEl);
+      const safeAreaTop = computedStyle.paddingTop || '0px';
+      document.body.removeChild(testEl);
+      document.documentElement.style.setProperty('--safe-area-top-fixed', safeAreaTop);
+    } catch (e) {
+      // Fallback to 0px if measurement fails
+      document.documentElement.style.setProperty('--safe-area-top-fixed', '0px');
+    }
+  }, []);
+  
+  // Use userIsLoggedIn directly to avoid hydration issues
+  const isLoggedIn = userIsLoggedIn;
   
   // Check if we're on the quizzes page
   const isOnQuizzesPage = pathname === '/quizzes';
   const isOnIndexPage = pathname === '/';
 
-  // Get time-based theme preference
-  const getTimeBasedTheme = (): boolean => {
-    const hour = new Date().getHours();
-    // Dark mode from 6 PM (18:00) to 6 AM (06:00)
-    return hour >= 18 || hour < 6;
-  };
-
-  // Apply theme
-  const applyTheme = (dark: boolean) => {
-    setIsDark(dark);
-    if (dark) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  };
-
   useEffect(() => {
-    // Check if user has manually set a theme preference
-    const manualOverride = localStorage.getItem('themeOverride');
-    const savedTheme = localStorage.getItem('theme');
-    
-    if (manualOverride === 'true' && savedTheme) {
-      // User has manually set a preference, respect it
-      const dark = savedTheme === 'dark';
-      applyTheme(dark);
-    } else {
-      // No manual override, use time-based theme
-      const timeBasedDark = getTimeBasedTheme();
-      applyTheme(timeBasedDark);
-      localStorage.setItem('theme', timeBasedDark ? 'dark' : 'light');
-    }
-
-    // Check theme periodically (every minute) if no manual override
-    const checkThemeInterval = setInterval(() => {
-      const override = localStorage.getItem('themeOverride');
-      if (override !== 'true') {
-        const timeBasedDark = getTimeBasedTheme();
-        applyTheme(timeBasedDark);
-        localStorage.setItem('theme', timeBasedDark ? 'dark' : 'light');
-      }
-    }, 60000); // Check every minute
-
-    // Check login status on client only
-    const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
-    setIsLoggedIn(loggedIn || userIsLoggedIn);
-    
     // Get user ID if logged in
-    if (loggedIn) {
+    if (userIsLoggedIn) {
       // Try to get userId from localStorage or fetch from API
-      const storedUserId = localStorage.getItem('userId');
+      const storedUserId = getUserId();
       if (storedUserId) {
         setUserId(storedUserId);
       } else {
         // Try to fetch userId from profile API
-        const token = localStorage.getItem('authToken');
+        const token = storage.get<string | null>('authToken', null);
         if (token) {
           fetch('/api/user/profile', {
             headers: { Authorization: `Bearer ${token}` },
@@ -86,65 +70,51 @@ export function SiteHeader({ fadeLogo = false, showUpgrade = false }: { fadeLogo
             .then((data) => {
               if (data.id) {
                 setUserId(data.id);
-                localStorage.setItem('userId', data.id);
+                storage.set('userId', data.id);
               }
             })
             .catch(() => {
               // Fallback: use mock userId for now
+              logger.warn('Failed to fetch user profile, using fallback');
               setUserId('user-andrew-123');
             });
         }
       }
     }
+  }, [userIsLoggedIn]);
 
-    return () => clearInterval(checkThemeInterval);
+  const handleLinkClick = useCallback(() => {
+    setIsMenuOpen(false);
   }, []);
 
-  const toggleTheme = () => {
-    const newDark = !isDark;
-    applyTheme(newDark);
-    // Mark as manual override
-    localStorage.setItem('theme', newDark ? 'dark' : 'light');
-    localStorage.setItem('themeOverride', 'true');
-    window.dispatchEvent(new CustomEvent('themechange', { detail: { isDark: newDark } }));
-  };
-
-  const handleLinkClick = () => {
-    setIsMenuOpen(false);
-  };
-
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     // Clear auth session
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('isLoggedIn');
-    localStorage.removeItem('userId');
-    localStorage.removeItem('userEmail');
-    localStorage.removeItem('userName');
+    storage.remove('authToken');
+    storage.remove('isLoggedIn');
+    storage.remove('userId');
+    storage.remove('userEmail');
+    storage.remove('userName');
     
     // Close menu
     setIsMenuOpen(false);
-    setIsLoggedIn(false);
     
     // Redirect to home/index page
     window.location.href = '/';
-  };
+  }, []);
+
+  const handleStorageChange = useCallback(() => {
+    if (userIsLoggedIn) {
+      const storedUserId = getUserId();
+      if (storedUserId) {
+        setUserId(storedUserId);
+      }
+    } else {
+      setUserId(null);
+    }
+  }, [userIsLoggedIn]);
 
   // Listen for login changes
   useEffect(() => {
-    const handleStorageChange = () => {
-      const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
-      setIsLoggedIn(loggedIn || userIsLoggedIn);
-      
-      if (loggedIn || userIsLoggedIn) {
-        const storedUserId = localStorage.getItem('userId');
-        if (storedUserId) {
-          setUserId(storedUserId);
-        }
-      } else {
-        setUserId(null);
-      }
-    };
-
     // Check on focus (when user switches tabs/windows)
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('focus', handleStorageChange);
@@ -153,7 +123,7 @@ export function SiteHeader({ fadeLogo = false, showUpgrade = false }: { fadeLogo
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('focus', handleStorageChange);
     };
-  }, [userIsLoggedIn]);
+  }, [handleStorageChange]);
 
   // Handle scroll to hide/show logo
   useEffect(() => {
@@ -166,24 +136,36 @@ export function SiteHeader({ fadeLogo = false, showUpgrade = false }: { fadeLogo
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Close menu when clicking outside
+  // Close menu when clicking outside (but not on the button itself)
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        // Don't close if clicking on the button
+        const target = event.target as HTMLElement;
+        if (target.closest('button[aria-label*="menu"]')) {
+          return;
+        }
         setIsMenuOpen(false);
       }
     };
 
     if (isMenuOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
+      // Use a small delay to prevent immediate closure
+      const timeoutId = setTimeout(() => {
+        document.addEventListener('mousedown', handleClickOutside);
+      }, 100);
+      
+      return () => {
+        clearTimeout(timeoutId);
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
     }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isMenuOpen]);
 
   return (
     <>
-      <header className="site-header fixed top-0 left-0 right-0 z-50">
-        <div className="flex items-center justify-between">
+      <header className="site-header fixed top-0 left-0 right-0 z-[100]">
+        <div className="flex items-center justify-between w-full" style={{ height: '100%' }}>
           <Link
             id="site-logo"
             data-fade={fadeLogo ? 'true' : 'false'}
@@ -196,18 +178,7 @@ export function SiteHeader({ fadeLogo = false, showUpgrade = false }: { fadeLogo
           >
             The School Quiz
           </Link>
-          <div className="flex items-center gap-3">
-            {showUpgrade && !isLoggedIn && (
-              <a
-                href="/premium"
-                className="hidden md:inline-flex group items-center gap-2 whitespace-nowrap h-10 px-3 text-xs md:h-12 md:px-4 md:text-sm bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-full transition-all duration-300 shadow-md hover:shadow-lg hover:scale-105"
-              >
-                <svg className="w-4 h-4 group-hover:rotate-12 transition-transform duration-300" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
-                </svg>
-                <span>Upgrade</span>
-              </a>
-            )}
+          <div className="flex items-center gap-3 flex-shrink-0">
             {isOnQuizzesPage && isLoggedIn && isFree && (
               <Link
                 href="/upgrade"
@@ -222,20 +193,23 @@ export function SiteHeader({ fadeLogo = false, showUpgrade = false }: { fadeLogo
                 href="/sign-up"
                 className="hidden md:inline-flex items-center gap-2 px-6 py-3 rounded-full text-base font-medium bg-[#3B82F6] text-white hover:bg-[#2563EB] transition-colors"
               >
-                Sign Up Free
+                Join for free
               </Link>
             )}
-            <div className="relative" ref={menuRef}>
+            <div className="relative flex-shrink-0" ref={menuRef}>
               <motion.button
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="w-12 h-12 bg-white dark:bg-gray-900 rounded-full flex items-center justify-center border border-gray-200 dark:border-gray-800 backdrop-blur-sm text-gray-900 dark:text-white relative"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsMenuOpen(!isMenuOpen);
+                }}
+                className="w-12 h-12 bg-white dark:bg-gray-900 rounded-full flex items-center justify-center border border-gray-200 dark:border-gray-800 backdrop-blur-sm text-gray-900 dark:text-white relative z-[100] shadow-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex-shrink-0"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
                 aria-expanded={isMenuOpen}
                 aria-haspopup="menu"
               >
-                <AnimatePresence mode="wait">
+                <AnimatePresence mode="wait" initial={false}>
                   {isMenuOpen ? (
                     <motion.div
                       key="close"
@@ -269,8 +243,11 @@ export function SiteHeader({ fadeLogo = false, showUpgrade = false }: { fadeLogo
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
                       transition={{ duration: 0.2 }}
-                      className="fixed inset-0 bg-black/30 backdrop-blur-md z-40"
-                      onClick={() => setIsMenuOpen(false)}
+                      className="fixed inset-0 bg-black/30 backdrop-blur-md z-[90]"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsMenuOpen(false);
+                      }}
                       aria-hidden="true"
                     />
                   </>
@@ -285,20 +262,20 @@ export function SiteHeader({ fadeLogo = false, showUpgrade = false }: { fadeLogo
                     animate={{ x: 0, opacity: 1 }}
                     exit={{ x: "100%", opacity: 0 }}
                     transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                    className="fixed top-20 right-4 w-80 max-w-[calc(100vw-2rem)] max-h-[calc(100vh-6rem)] bg-white dark:bg-gray-800 rounded-3xl border border-gray-200 dark:border-gray-700 flex flex-col z-50 overflow-hidden"
+                    className="fixed top-20 right-4 w-80 max-w-[calc(100vw-2rem)] max-h-[calc(100vh-6rem)] bg-white dark:bg-gray-800 rounded-3xl border border-gray-200 dark:border-gray-700 flex flex-col z-[100] overflow-hidden"
                   >
-                  <div className="p-6 overflow-y-auto flex-1">
+                  <div className="p-4 overflow-y-auto flex-1">
                   {/* User Profile Section - Only for logged-in users */}
                   {isLoggedIn && (
                     <div className="px-0 py-0 mb-4 pb-4 border-b border-gray-100 dark:border-gray-700/50">
                       <div className="flex items-center gap-3">
                         <div className="w-11 h-11 rounded-full bg-blue-600 dark:bg-blue-500 flex items-center justify-center text-white font-semibold text-base relative flex-shrink-0">
-                          {(userName || localStorage.getItem('userName')) ? (userName || localStorage.getItem('userName'))?.charAt(0).toUpperCase() : 'U'}
+                          {(userName || getUserName()) ? (userName || getUserName())?.charAt(0).toUpperCase() : 'U'}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <p className="font-medium text-gray-900 dark:text-white text-base truncate">
-                              {userName || localStorage.getItem('userName') || 'User'}
+                              {userName || getUserName() || 'User'}
                             </p>
                             {isPremium && (
                               <Crown className="w-4 h-4 text-amber-500 dark:text-amber-400 flex-shrink-0" />
@@ -317,16 +294,16 @@ export function SiteHeader({ fadeLogo = false, showUpgrade = false }: { fadeLogo
                         <Link
                           href="/quizzes/12/intro"
                           onClick={handleLinkClick}
-                          className="flex items-center gap-3 px-4 py-3 rounded-xl text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                          className="flex items-center gap-3 px-4 py-2.5 rounded-full text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                         >
                           <Play className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-                          Play This Week's Quiz
+                          Play the quiz
                         </Link>
                         <div className="border-t border-gray-200 dark:border-gray-700 my-1.5"></div>
                         <Link
                           href="/sign-in"
                           onClick={handleLinkClick}
-                          className="flex items-center gap-3 px-4 py-3 rounded-xl text-base text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                          className="flex items-center gap-3 px-4 py-2.5 rounded-full text-base text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                         >
                           <User className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                           Log In
@@ -334,16 +311,16 @@ export function SiteHeader({ fadeLogo = false, showUpgrade = false }: { fadeLogo
                         <Link
                           href="/sign-up"
                           onClick={handleLinkClick}
-                          className="flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium text-white bg-[#3B82F6]/80 hover:bg-[#3B82F6] transition-all duration-200"
+                          className="flex items-center gap-3 px-4 py-2.5 rounded-full text-base font-medium text-white bg-[#3B82F6] hover:bg-[#2563EB] transition-all duration-200"
                         >
                           <User className="w-5 h-5 text-white" />
-                          Sign Up Free
+                          Join for free
                         </Link>
                         <div className="border-t border-gray-200 dark:border-gray-700 my-1.5"></div>
                         <Link
                           href="/about"
                           onClick={handleLinkClick}
-                          className="flex items-center gap-3 px-4 py-3 rounded-xl text-base text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                          className="flex items-center gap-3 px-4 py-2.5 rounded-full text-base text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                         >
                           <Info className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                           About The School Quiz
@@ -355,7 +332,7 @@ export function SiteHeader({ fadeLogo = false, showUpgrade = false }: { fadeLogo
                         <Link
                           href="/quizzes"
                           onClick={handleLinkClick}
-                          className="flex items-center gap-3 px-4 py-3 rounded-xl text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                          className="flex items-center gap-3 px-4 py-2.5 rounded-full text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                         >
                           <BookOpen className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                           Quizzes
@@ -363,7 +340,7 @@ export function SiteHeader({ fadeLogo = false, showUpgrade = false }: { fadeLogo
                         <Link
                           href="/achievements"
                           onClick={handleLinkClick}
-                          className="flex items-center gap-3 px-4 py-3 rounded-xl text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                          className="flex items-center gap-3 px-4 py-2.5 rounded-full text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                         >
                           <Trophy className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                           Achievements
@@ -371,7 +348,7 @@ export function SiteHeader({ fadeLogo = false, showUpgrade = false }: { fadeLogo
                         <Link
                           href="/account"
                           onClick={handleLinkClick}
-                          className="flex items-center gap-3 px-4 py-3 rounded-xl text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                          className="flex items-center gap-3 px-4 py-2.5 rounded-full text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                         >
                           <User className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                           Profile & Settings
@@ -383,7 +360,7 @@ export function SiteHeader({ fadeLogo = false, showUpgrade = false }: { fadeLogo
                         <Link
                           href="/dashboard"
                           onClick={handleLinkClick}
-                          className="flex items-center gap-3 px-4 py-3 rounded-xl text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                          className="flex items-center gap-3 px-4 py-2.5 rounded-full text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                         >
                           <LayoutDashboard className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                           Dashboard
@@ -391,7 +368,7 @@ export function SiteHeader({ fadeLogo = false, showUpgrade = false }: { fadeLogo
                         <Link
                           href="/quizzes/279/play"
                           onClick={handleLinkClick}
-                          className="flex items-center gap-3 px-4 py-3 rounded-xl text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                          className="flex items-center gap-3 px-4 py-2.5 rounded-full text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                         >
                           <Play className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                           Play Quiz
@@ -399,7 +376,7 @@ export function SiteHeader({ fadeLogo = false, showUpgrade = false }: { fadeLogo
                         <Link
                           href="/leagues"
                           onClick={handleLinkClick}
-                          className="flex items-center gap-3 px-4 py-3 rounded-xl text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                          className="flex items-center gap-3 px-4 py-2.5 rounded-full text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                         >
                           <Users className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                           Private Leagues
@@ -407,7 +384,7 @@ export function SiteHeader({ fadeLogo = false, showUpgrade = false }: { fadeLogo
                         <Link
                           href="/stats"
                           onClick={handleLinkClick}
-                          className="flex items-center gap-3 px-4 py-3 rounded-xl text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                          className="flex items-center gap-3 px-4 py-2.5 rounded-full text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                         >
                           <BarChart3 className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                           Stats & Analytics
@@ -415,7 +392,7 @@ export function SiteHeader({ fadeLogo = false, showUpgrade = false }: { fadeLogo
                         <Link
                           href="/achievements"
                           onClick={handleLinkClick}
-                          className="flex items-center gap-3 px-4 py-3 rounded-xl text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                          className="flex items-center gap-3 px-4 py-2.5 rounded-full text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                         >
                           <Trophy className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                           Achievements
@@ -423,7 +400,7 @@ export function SiteHeader({ fadeLogo = false, showUpgrade = false }: { fadeLogo
                         <Link
                           href="/account"
                           onClick={handleLinkClick}
-                          className="flex items-center gap-3 px-4 py-3 rounded-xl text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                          className="flex items-center gap-3 px-4 py-2.5 rounded-full text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                         >
                           <Settings className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                           Account
@@ -477,7 +454,10 @@ export function SiteHeader({ fadeLogo = false, showUpgrade = false }: { fadeLogo
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          toggleTheme();
+                          // Use unified applyTheme function to ensure cookie is written properly
+                          const nextTheme: Theme = isDark ? "light" : "dark";
+                          applyTheme(nextTheme);
+                          toggleTheme(); // Also update context state for UI
                         }}
                         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
                           isDark ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'

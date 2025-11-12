@@ -16,7 +16,11 @@ export default function SignInPage() {
 							title="Log in"
 							subtitle="Welcome back! Log in to access your weekly quizzes, track your progress, and see your achievements."
 							centered
+							className="hidden md:block"
 						/>
+						<div className="md:hidden mb-8 text-center">
+							<h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Log in</h1>
+						</div>
 						<SignInForm />
 					</div>
 				</div>

@@ -3,6 +3,9 @@
  * Tracks signed-in basic users' quiz access (max 3 quizzes total, latest week only)
  */
 
+import { storage } from './storage';
+import { logger } from './logger';
+
 const STORAGE_KEY = 'user-quiz-access';
 const MAX_FREE_QUIZZES = 3;
 
@@ -16,28 +19,21 @@ interface QuizAccess {
  * Get quiz access data from localStorage
  */
 function getQuizAccess(): QuizAccess {
-  if (typeof window === 'undefined') {
-    return { quizzesPlayed: [], firstQuizDate: '', lastQuizDate: '' };
-  }
-  
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : { quizzesPlayed: [], firstQuizDate: '', lastQuizDate: '' };
-  } catch {
-    return { quizzesPlayed: [], firstQuizDate: '', lastQuizDate: '' };
-  }
+  return storage.get<QuizAccess>(STORAGE_KEY, {
+    quizzesPlayed: [],
+    firstQuizDate: '',
+    lastQuizDate: '',
+  });
 }
 
 /**
  * Save quiz access data to localStorage
  */
 function saveQuizAccess(access: QuizAccess): void {
-  if (typeof window === 'undefined') return;
-  
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(access));
+    storage.set(STORAGE_KEY, access);
   } catch (error) {
-    console.error('Failed to save quiz access:', error);
+    logger.error('Failed to save quiz access:', error);
   }
 }
 
@@ -102,7 +98,6 @@ export function hasPlayedQuiz(quizSlug: string): boolean {
  * Clear quiz access data (useful for testing)
  */
 export function clearQuizAccess(): void {
-  if (typeof window === 'undefined') return;
-  localStorage.removeItem(STORAGE_KEY);
+  storage.remove(STORAGE_KEY);
 }
 

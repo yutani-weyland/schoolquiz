@@ -20,7 +20,11 @@ export default function SignUpPage() {
 								</>
 							}
 							centered
+							className="hidden md:block"
 						/>
+						<div className="md:hidden mb-8 text-center">
+							<h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Sign up</h1>
+						</div>
 						<SignUpForm />
 					</div>
 				</div>

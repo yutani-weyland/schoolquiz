@@ -100,7 +100,7 @@ export function QuizSignupModal({ isOpen, onClose }: QuizSignupModalProps) {
                   onClick={onClose}
                   className="w-full inline-flex items-center justify-center gap-2 py-3.5 px-6 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl font-semibold hover:bg-gray-800 dark:hover:bg-gray-100 transition-all shadow-lg hover:shadow-xl"
                 >
-                  Sign Up for Free
+                  Get Started
                   <ArrowRight className="w-4 h-4" />
                 </Link>
 

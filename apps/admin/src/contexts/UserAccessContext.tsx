@@ -1,6 +1,8 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
+import { storage, getAuthToken, getUserId, getUserName, getUserEmail } from '@/lib/storage';
+import { logger } from '@/lib/logger';
 
 export type AccessTier = 'visitor' | 'free' | 'premium';
 
@@ -33,10 +35,10 @@ export function UserAccessProvider({ children }: UserAccessProviderProps) {
     const determineTier = async () => {
       try {
         // Check if user is logged in
-        const token = localStorage.getItem('authToken');
-        const storedUserId = localStorage.getItem('userId');
-        const storedUserName = localStorage.getItem('userName');
-        const storedUserEmail = localStorage.getItem('userEmail');
+        const token = getAuthToken();
+        const storedUserId = getUserId();
+        const storedUserName = getUserName();
+        const storedUserEmail = getUserEmail();
 
         if (!token || !storedUserId) {
           // Visitor (not logged in)
@@ -79,12 +81,12 @@ export function UserAccessProvider({ children }: UserAccessProviderProps) {
             setTier('free');
           }
         } catch (error) {
-          console.error('Failed to fetch subscription:', error);
+          logger.error('Failed to fetch subscription:', error);
           // Logged in but API failed - default to free
           setTier('free');
         }
       } catch (error) {
-        console.error('Failed to determine tier:', error);
+        logger.error('Failed to determine tier:', error);
         setTier('visitor');
       } finally {
         setIsLoading(false);
@@ -104,7 +106,8 @@ export function UserAccessProvider({ children }: UserAccessProviderProps) {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  const value: UserAccessContextType = {
+  // Memoize context value to prevent unnecessary re-renders
+  const value = useMemo<UserAccessContextType>(() => ({
     tier,
     isVisitor: tier === 'visitor',
     isFree: tier === 'free',
@@ -114,7 +117,7 @@ export function UserAccessProvider({ children }: UserAccessProviderProps) {
     userId,
     userName,
     userEmail,
-  };
+  }), [tier, isLoading, userId, userName, userEmail]);
 
   return (
     <UserAccessContext.Provider value={value}>

@@ -40,7 +40,7 @@ export function PageHeader({
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className={`mb-12 md:mb-16 ${containerClass} ${className}`}
+      className={`mb-8 sm:mb-12 md:mb-16 ${containerClass} ${className}`}
     >
       <div className={`${centered ? 'mx-auto' : ''} ${widthClass}`}>
         <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 dark:text-white mb-4 md:mb-6">

@@ -16,8 +16,8 @@ interface ContentCardProps {
 const paddingClasses = {
   sm: 'p-4',
   md: 'p-6',
-  lg: 'p-8',
-  xl: 'p-10 md:p-12',
+  lg: 'p-6 sm:p-8',
+  xl: 'p-8 sm:p-10 md:p-12',
 };
 
 const roundedClasses = {

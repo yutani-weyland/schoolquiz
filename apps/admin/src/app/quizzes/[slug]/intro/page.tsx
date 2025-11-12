@@ -37,5 +37,28 @@ export default function QuizIntroPage() {
 
 	const isNewest = DATA[0].slug === quiz.slug;
 
-	return <QuizIntro quiz={quiz} isNewest={isNewest} />;
+	return (
+		<>
+			{/* Set background color immediately to prevent flash - inline script runs before React */}
+			<script
+				dangerouslySetInnerHTML={{
+					__html: `
+						(function() {
+							const quizColor = ${JSON.stringify(quiz.colorHex)};
+							// Set background immediately, using setProperty with important to override CSS
+							if (document.body) {
+								document.body.style.setProperty('background-color', quizColor, 'important');
+							}
+							if (document.documentElement) {
+								document.documentElement.style.setProperty('background-color', quizColor, 'important');
+								// Remove dark class to prevent black background flash
+								document.documentElement.classList.remove('dark');
+							}
+						})();
+					`,
+				}}
+			/>
+			<QuizIntro quiz={quiz} isNewest={isNewest} />
+		</>
+	);
 }

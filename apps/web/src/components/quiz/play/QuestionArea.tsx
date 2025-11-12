@@ -236,12 +236,12 @@ function PresenterMode({
       }
 
       const scorePillEl = document.querySelector('[aria-label*="Score:"]') as HTMLElement | null;
-      let spacing = 80;
+      let spacing = 40;
 
       if (scorePillEl) {
         const scorePillRect = scorePillEl.getBoundingClientRect();
         const topSpacing = questionRect.top - scorePillRect.bottom;
-        spacing = Math.max(60, topSpacing);
+        spacing = Math.max(30, topSpacing);
       }
 
       const approximateButtonHeight = window.innerWidth < 768 ? 72 : 88;

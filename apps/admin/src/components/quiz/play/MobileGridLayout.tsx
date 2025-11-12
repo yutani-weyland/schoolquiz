@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo } from "react";
-import { motion } from "framer-motion";
+import React, { useEffect, useMemo, useState, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { CalendarDays } from "lucide-react";
 import AnswerReveal from "../AnswerReveal";
 import { QuizQuestion, QuizRound, QuizThemeMode } from "./types";
+import { textOn } from "@/lib/contrast";
 
 interface MobileGridLayoutProps {
   questions: QuizQuestion[];
@@ -47,6 +48,10 @@ export function MobileGridLayout({
   quizSlug,
   weekISO,
 }: MobileGridLayoutProps) {
+  const [visibleRoundTitle, setVisibleRoundTitle] = useState<number | null>(null);
+  const roundTitleRefs = useRef<Map<number, HTMLElement>>(new Map());
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
   const roundLookup = useMemo(() => {
     return rounds.reduce<Record<number, QuizRound>>((map, round) => {
       map[round.number] = round;
@@ -54,17 +59,69 @@ export function MobileGridLayout({
     }, {});
   }, [rounds]);
 
+  // Track which round title is currently visible on screen
+  useEffect(() => {
+    const checkVisibleRoundTitles = () => {
+      const visibleRounds: number[] = [];
+      
+      roundTitleRefs.current.forEach((element, roundNumber) => {
+        if (!element) return;
+        
+        const rect = element.getBoundingClientRect();
+        const isVisible = rect.top >= 0 && rect.top <= window.innerHeight * 0.3; // Top 30% of viewport
+        
+        if (isVisible) {
+          visibleRounds.push(roundNumber);
+        }
+      });
+      
+      // If a round title is visible, hide the floating pill
+      // Otherwise, show the pill for the current round (based on first question in viewport)
+      if (visibleRounds.length > 0) {
+        setVisibleRoundTitle(null);
+      } else {
+        // Find the current round based on questions in viewport
+        const questionElements = document.querySelectorAll('[id^="mobile-question-"]');
+        let currentRound: number | null = null;
+        
+        questionElements.forEach((el) => {
+          const rect = el.getBoundingClientRect();
+          if (rect.top >= 0 && rect.top <= window.innerHeight * 0.5) {
+            const questionId = parseInt(el.id.replace('mobile-question-', ''));
+            const question = questions.find(q => q.id === questionId);
+            if (question) {
+              currentRound = question.roundNumber;
+            }
+          }
+        });
+        
+        setVisibleRoundTitle(currentRound);
+      }
+    };
+
+    const handleScroll = () => {
+      requestAnimationFrame(checkVisibleRoundTitles);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    checkVisibleRoundTitles(); // Initial check
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [questions]);
+
   const getRoundAccent = (roundNumber: number) => {
     const palette = [
-      baseColor,
-      "#2DD4BF",
-      "#F97316",
-      "#FACC15",
-      "#C084FC",
+      "#2DD4BF", // Round 1 - teal (different from quiz color)
+      "#F97316", // Round 2 - orange
+      "#FACC15", // Round 3 - yellow
+      "#8B5CF6", // Round 4 - purple
+      "#C084FC", // Finale - lavender
     ];
     return roundNumber === finaleRoundNumber
       ? palette[palette.length - 1]
-      : palette[(roundNumber - 1) % palette.length] || baseColor;
+      : palette[(roundNumber - 1) % palette.length] || "#2DD4BF";
   };
 
   const getQuestionStatus = (question: QuizQuestion): "idle" | "revealed" | "correct" | "incorrect" => {
@@ -111,47 +168,61 @@ export function MobileGridLayout({
       return;
     }
     requestAnimationFrame(() => {
-      el.scrollIntoView({ behavior: "smooth", block: "start", inline: "nearest" });
+      // Find the question index to determine if it's the first question
+      const questionIndex = questions.findIndex(q => q.id === activeQuestionId);
+      const isFirstQuestion = questionIndex === 0;
+      
+      // If first question, scroll to top; otherwise center it
+      if (isFirstQuestion) {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } else {
+        el.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+      }
       onActiveQuestionSync?.();
     });
-  }, [activeQuestionId, onActiveQuestionSync]);
+  }, [activeQuestionId, onActiveQuestionSync, questions]);
 
   return (
     <div
-      className="relative min-h-dvh overflow-hidden"
+      ref={scrollContainerRef}
+      className="relative min-h-dvh overflow-hidden transition-colors duration-300 ease-in-out"
       style={{
         background: pageBackground,
         color: textIsLight ? "#fffef5" : "var(--color-text)",
         paddingBottom: "env(safe-area-inset-bottom)",
+        transition: "background-color 300ms ease-in-out, color 300ms ease-in-out",
       }}
     >
       <div
-        className="absolute inset-0"
-        style={{ background: pageBackground }}
+        className="absolute inset-0 transition-colors duration-300 ease-in-out"
+        style={{ 
+          background: pageBackground,
+          transition: "background-color 300ms ease-in-out",
+        }}
         aria-hidden="true"
       />
 
       <div className="relative z-10 flex min-h-dvh flex-col">
         <header
-          className="sticky top-0 z-30 px-5 pb-6 pt-8 transition-[padding,backdrop-filter] duration-500 ease-out sm:px-8 md:px-12"
+          className="sticky top-0 z-30 px-6 pb-6 pt-8 transition-[padding,backdrop-filter] duration-500 ease-out sm:px-8 md:px-12"
           style={{
             background: "transparent",
             color: textIsLight ? "#fffef5" : "var(--color-text)",
           }}
         >
-          <div className="mx-auto flex w-full max-w-5xl flex-col gap-4">
+          <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
             <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
               <div className="flex flex-wrap items-center gap-3">
                 {quizNumberLabel && (
                   <span
-                    className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-wider transition-colors duration-200 ${pillBackgroundClass} ${pillTextClass}`}
+                    className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-wider transition-colors duration-300 ease-in-out ${pillBackgroundClass} ${pillTextClass}`}
                   >
                     {quizNumberLabel}
                   </span>
                 )}
                 {formattedWeek && (
                   <span
-                    className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors duration-200 ${pillBackgroundClass} ${pillTextClass}`}
+                    className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors duration-300 ease-in-out ${pillBackgroundClass} ${pillTextClass}`}
                   >
                     <CalendarDays className="h-4 w-4" />
                     {formattedWeek}
@@ -160,17 +231,17 @@ export function MobileGridLayout({
               </div>
             </div>
             <h1
-              className="font-extrabold leading-tight"
+              className="font-extrabold leading-tight px-1"
               style={{ fontSize: "clamp(2.4rem, 2rem + 1.4vw, 3.2rem)" }}
             >
               {quizTitle}
             </h1>
             {quizTags.length ? (
-              <div className="flex flex-wrap items-center gap-2 text-sm">
+              <div className="flex flex-wrap items-center gap-2 text-sm px-1">
                 {quizTags.map((tag) => (
                   <span
                     key={tag}
-                    className={`inline-flex items-center rounded-full px-3.5 py-1.5 font-medium transition-colors duration-200 ${pillBackgroundClass} ${pillTextClass}`}
+                    className={`inline-flex items-center rounded-full px-3.5 py-1.5 font-medium transition-colors duration-300 ease-in-out ${pillBackgroundClass} ${pillTextClass}`}
                   >
                     {tag}
                   </span>
@@ -181,14 +252,24 @@ export function MobileGridLayout({
         </header>
 
         <main
-          className="relative flex-1 px-5 pb-36 pt-8 sm:px-8 sm:pb-40 md:px-12 md:pb-44 lg:px-16"
+          className="relative flex-1 px-6 pb-36 pt-10 sm:px-8 sm:pb-40 sm:pt-12 md:px-12 md:pb-44"
           style={{
             paddingBottom: "max(18vh, 190px)",
             transition: "padding 0.4s ease",
             background: "transparent",
           }}
         >
-          <section className="quiz-grid-layout">
+          {/* Fade-out overlay at top - mobile only */}
+          <div
+            className="fixed top-0 left-0 right-0 z-10 pointer-events-none md:hidden"
+            style={{
+              height: '60px',
+              background: `linear-gradient(to bottom, ${pageBackground} 0%, ${pageBackground} 75%, rgba(0,0,0,0) 100%)`,
+              transition: "background 300ms ease-in-out",
+            }}
+            aria-hidden="true"
+          />
+          <section className="quiz-grid-layout quiz-grid-single-column mx-auto max-w-5xl w-full">
             {questions.map((question, index) => {
               const status = getQuestionStatus(question);
               const round = roundLookup[question.roundNumber];
@@ -213,11 +294,15 @@ export function MobileGridLayout({
 
               const baseCardStyle: React.CSSProperties = {
                 background: baseSurface,
-                borderColor: "rgba(255,255,255,0.4)",
+                borderColor: `color-mix(in srgb, ${accentColor} 15%, rgba(255,255,255,0.4))`,
+                borderWidth: '2px',
                 color: textIsLight ? "rgba(17,17,17,0.9)" : "var(--color-text)",
-                boxShadow: "none",
+                boxShadow: accentColor 
+                  ? `0 18px 40px rgba(15, 23, 42, 0.08), 0 0 0 1px ${accentColor}20`
+                  : "0 18px 40px rgba(15, 23, 42, 0.08)",
                 backdropFilter: "blur(10px)",
                 WebkitBackdropFilter: "blur(10px)",
+                transition: "background-color 300ms ease-in-out, color 300ms ease-in-out, border-color 300ms ease-in-out",
               };
 
               const statusStyle: React.CSSProperties = {};
@@ -226,32 +311,45 @@ export function MobileGridLayout({
                 <React.Fragment key={question.id}>
                   {showRoundIntro && round && (
                     <motion.section
+                      ref={(el) => {
+                        if (el) {
+                          roundTitleRefs.current.set(round.number, el);
+                        } else {
+                          roundTitleRefs.current.delete(round.number);
+                        }
+                      }}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-                      className="mb-6 w-full rounded-[26px] border px-7 py-7 sm:px-9 sm:py-8"
+                      className="mb-4 sm:mb-10 w-full rounded-[26px] border px-7 py-7 sm:px-9 sm:py-8 transition-colors duration-300 ease-in-out"
                       style={{
-                        background: `color-mix(in srgb, ${accentColor} 18%, rgba(255,255,255,0.95) 82%)`,
-                        borderColor: `color-mix(in srgb, ${accentColor} 20%, rgba(255,255,255,0.7))`,
-                        boxShadow: `0 12px 28px ${accentColor?.concat("2b") ?? "rgba(17,17,17,0.08)"}`,
+                        gridColumn: '1 / -1',
+                        background: `color-mix(in srgb, ${accentColor} 25%, rgba(255,255,255,0.95) 75%)`,
+                        borderColor: `color-mix(in srgb, ${accentColor} 35%, rgba(255,255,255,0.7))`,
+                        borderWidth: '2px',
+                        boxShadow: `0 12px 28px ${accentColor?.concat("2b") ?? "rgba(17,17,17,0.08)"}, 0 0 0 1px ${accentColor?.concat("40") ?? "rgba(17,17,17,0.1)"}`,
+                        transition: "background-color 300ms ease-in-out, border-color 300ms ease-in-out",
                       }}
                       aria-label={`Round ${round.number} overview`}
                     >
-                      <div className="flex flex-col gap-4">
-                        <span
-                          className="inline-flex w-fit items-center gap-3 rounded-full px-7 py-3 text-[clamp(1.15rem,1.05rem+0.45vw,1.55rem)] font-semibold tracking-tight text-left sm:px-8 sm:py-3.5 sm:text-[clamp(1.3rem,1.15rem+0.4vw,1.7rem)]"
+                      <div className="flex flex-col gap-6">
+                        <h2
+                          className="font-extrabold tracking-tight"
                           style={{
-                            background: accentColor,
-                            color: "#0f0f0f",
-                            boxShadow: accentColor ? `0 12px 24px ${accentColor}29` : "0 12px 24px rgba(17,17,17,0.08)",
+                            color: accentColor,
+                            fontSize: 'clamp(2.75rem, 7vw, 4.5rem)',
+                            lineHeight: '0.9',
                           }}
                         >
-                          <span className="opacity-90">
-                            Round {round.number}: <span className="font-bold">{round.title || `Round ${round.number}`}</span>
-                          </span>
-                        </span>
+                          Round {round.number}: {round.title || `Round ${round.number}`}
+                        </h2>
                         {round.blurb && (
-                          <p className="text-left text-[clamp(1rem,0.9rem+0.5vw,1.2rem)] leading-relaxed text-black/68">
+                          <p 
+                            className="text-left text-[clamp(1rem,0.9rem+0.5vw,1.2rem)] leading-relaxed"
+                            style={{
+                              color: textOn(accentColor) === "black" ? "rgba(15, 15, 15, 0.68)" : "rgba(255, 255, 255, 0.85)"
+                            }}
+                          >
                             {round.blurb}
                           </p>
                         )}
@@ -268,15 +366,15 @@ export function MobileGridLayout({
                       delay: Math.min(index * 0.03, 0.24),
                       ease: [0.22, 1, 0.36, 1],
                     }}
-                    className="group relative flex flex-col gap-7 overflow-hidden rounded-[26px] border px-7 sm:px-9 py-8 sm:py-10 transition-[transform,box-shadow] duration-200 will-change-transform"
+                    className="group relative flex flex-col gap-8 overflow-hidden rounded-[26px] border px-7 sm:px-9 py-8 sm:py-10 transition-[transform,box-shadow] duration-200 transition-colors duration-300 ease-in-out will-change-transform"
                     style={{ ...baseCardStyle, ...statusStyle, scrollMarginTop: "120px", boxShadow: "0 18px 40px rgba(15, 23, 42, 0.08)" }}
                     aria-label={`${roundLabel} question`}
                   >
-                    <div className="flex flex-col gap-6 w-full">
+                    <div className="flex flex-col gap-8 w-full">
                       <h2
                         className="text-left font-extrabold tracking-tight text-balance w-full"
                         style={{
-                          fontSize: "clamp(2rem, 1.4rem + 2.2vw, 3rem)",
+                          fontSize: "clamp(1.5rem, 1.2rem + 2vw, 2.5rem)",
                           lineHeight: 1.12,
                           textAlign: "left",
                         }}
@@ -322,6 +420,50 @@ export function MobileGridLayout({
           </section>
         </main>
 
+        {/* Floating Round Indicator Pill - Mobile Only */}
+        <AnimatePresence>
+          {visibleRoundTitle !== null && typeof window !== 'undefined' && window.innerWidth < 768 && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+              className="fixed left-5 z-50 pointer-events-none md:hidden flex items-center"
+              style={{
+                top: '12px', // Match QuizHeader py-3 top padding - buttons are centered in flex container with items-center
+                height: '48px', // Match button height (h-12 = 48px)
+              }}
+            >
+              {(() => {
+                const currentRound = rounds.find(r => r.number === visibleRoundTitle);
+                const roundAccent = getRoundAccent(visibleRoundTitle || 1);
+                const roundLabel = currentRound 
+                  ? `Round ${currentRound.number}: ${currentRound.title || `Round ${currentRound.number}`}`
+                  : `Round ${visibleRoundTitle}`;
+                
+                return (
+                  <div
+                    className="pointer-events-auto rounded-full px-4 py-2.5 text-sm font-semibold tracking-tight backdrop-blur-sm border transition-colors duration-300 ease-in-out"
+                    style={{
+                      background: `color-mix(in srgb, ${roundAccent} 85%, rgba(255,255,255,0.95) 15%)`,
+                      borderColor: `color-mix(in srgb, ${roundAccent} 40%, rgba(255,255,255,0.6))`,
+                      color: textOn(roundAccent) === "black" ? "#0f0f0f" : "#ffffff",
+                      boxShadow: `0 8px 16px ${roundAccent}29, 0 0 0 1px ${roundAccent}30`,
+                      height: '48px', // Match header button height
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {roundLabel}
+                  </div>
+                );
+              })()}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -329,9 +471,17 @@ export function MobileGridLayout({
           className="pointer-events-none fixed bottom-6 right-6 z-40 sm:bottom-8 sm:right-8"
         >
           <div
-            className={`pointer-events-auto rounded-full px-5 py-3 text-[clamp(1rem,0.95rem+0.35vw,1.25rem)] font-semibold tracking-[0.08em] sm:px-6 sm:py-3.5 backdrop-blur-sm transition-colors duration-200 ${pillBackgroundClass} ${pillTextClass}`}
+            className={`pointer-events-auto rounded-full font-semibold flex items-center gap-2 sm:gap-3 md:gap-4 transition-colors duration-300 ease-in-out whitespace-nowrap backdrop-blur-sm ${
+              textIsLight
+                ? "bg-white/20 text-white hover:bg-white/28"
+                : "bg-black/10 text-gray-900 hover:bg-black/15"
+            } px-5 py-2.5 sm:px-8 sm:py-4 md:px-12 md:py-6`}
+            aria-label={`Score: ${totalCorrect} out of ${questions.length}`}
           >
-            Score {totalCorrect}/{questions.length}
+            <span className="text-sm sm:text-lg md:text-2xl font-medium opacity-90 leading-normal">Score:</span>
+            <span className="text-xl sm:text-3xl md:text-5xl font-bold tabular-nums leading-none" style={{ letterSpacing: "-0.045em" }}>
+              {totalCorrect} / {questions.length}
+            </span>
           </div>
         </motion.div>
       </div>

@@ -37,8 +37,6 @@ function TimerPill({
   textColor: string;
 }) {
   const [isHovered, setIsHovered] = useState(false);
-  const hiddenSizing = "w-14 h-14 min-w-[56px] min-h-[56px] px-0";
-  const visibleSizing = "px-6 py-3.5 gap-3";
   const baseColors =
     textColor === "white"
       ? "bg-white/20 text-white hover:bg-white/28 backdrop-blur-sm"
@@ -46,9 +44,20 @@ function TimerPill({
 
   return (
     <button
-      className={`text-lg font-semibold tabular-nums flex items-center cursor-pointer rounded-full transition-colors duration-150 ${
-        isTimerHidden ? `justify-center ${hiddenSizing}` : `justify-start ${visibleSizing}`
+      className={`font-semibold tabular-nums flex items-center cursor-pointer rounded-full transition-colors duration-300 ease-in-out ${
+        isTimerHidden ? `justify-center` : `justify-start`
       } ${baseColors}`}
+      style={{
+        fontSize: "clamp(0.875rem, 1.5vw, 1.125rem)",
+        padding: isTimerHidden 
+          ? "clamp(0.75rem, 1.2vw, 0.875rem)"
+          : "clamp(0.5rem, 1.2vw, 0.875rem) clamp(1rem, 2vw, 1.5rem)",
+        gap: isTimerHidden ? 0 : "clamp(0.5rem, 1vw, 0.75rem)",
+        width: isTimerHidden ? "clamp(3rem, 5vw, 3.5rem)" : "auto",
+        height: isTimerHidden ? "clamp(3rem, 5vw, 3.5rem)" : "auto",
+        minWidth: isTimerHidden ? "clamp(3rem, 5vw, 3.5rem)" : "auto",
+        minHeight: isTimerHidden ? "clamp(3rem, 5vw, 3.5rem)" : "auto",
+      }}
       onClick={() => onToggleHidden(!isTimerHidden)}
       onMouseEnter={() => {
         if (!isTimerHidden) {
@@ -57,11 +66,17 @@ function TimerPill({
       }}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="relative flex-shrink-0 w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center">
+      <div 
+        className="relative flex-shrink-0 flex items-center justify-center"
+        style={{
+          width: "clamp(1.25rem, 2vw, 1.75rem)",
+          height: "clamp(1.25rem, 2vw, 1.75rem)",
+        }}
+      >
         {isTimerHidden || (isHovered && !isTimerHidden) ? (
-          <EyeOff className="w-5 h-5 sm:w-6 sm:h-6" />
+          <EyeOff style={{ width: "clamp(1rem, 1.5vw, 1.5rem)", height: "clamp(1rem, 1.5vw, 1.5rem)" }} />
         ) : (
-          <Clock className="w-5 h-5 sm:w-6 sm:h-6" />
+          <Clock style={{ width: "clamp(1rem, 1.5vw, 1.5rem)", height: "clamp(1rem, 1.5vw, 1.5rem)" }} />
         )}
       </div>
       {!isTimerHidden && <span className="flex-shrink-0 whitespace-nowrap">{formatTime(timer)}</span>}
@@ -84,32 +99,41 @@ export function QuizStatusBar({
 }: QuizStatusBarProps) {
   const [isTimerHidden, setIsTimerHidden] = useState(false);
 
+  // Score pill styling - matches other pills for consistency
+  const scorePillClass = textColor === "white"
+    ? "bg-white/20 text-white hover:bg-white/28 backdrop-blur-sm"
+    : "bg-black/10 text-gray-900 hover:bg-black/15 backdrop-blur-sm";
+
   return (
     <>
       <div className="fixed top-0 left-1/2 -translate-x-1/2 z-40 pt-24 pb-3 px-4 sm:px-6">
         <div className="flex flex-row gap-3 sm:gap-4 items-center justify-center flex-nowrap">
           {currentScreen === "question" && currentRound && (
             <div
-              className={`relative rounded-full text-lg font-semibold flex items-center gap-3 transition-colors duration-200 ${
+              className={`relative rounded-full font-semibold flex items-center gap-3 transition-colors duration-300 ease-in-out ${
                 textColor === "white"
                   ? "bg-white/20 text-white hover:bg-white/28"
                   : "bg-black/10 text-gray-900 hover:bg-black/15"
-              } px-6 py-3.5 backdrop-blur-sm`}
+              } backdrop-blur-sm`}
+              style={{
+                fontSize: "clamp(0.875rem, 1.5vw, 1.125rem)",
+                padding: "clamp(0.5rem, 1.2vw, 0.875rem) clamp(1rem, 2vw, 1.5rem)",
+              }}
             >
               <span className="whitespace-nowrap">{currentRound.title}</span>
             </div>
           )}
 
           <div
-            className={`relative rounded-full font-semibold flex items-center gap-4 transition-colors duration-200 whitespace-nowrap ${
-              textColor === "white"
-                ? "bg-white/20 text-white hover:bg-white/28"
-                : "bg-black/10 text-gray-900 hover:bg-black/15"
-            } px-12 py-6 backdrop-blur-sm`}
+            className={`relative rounded-full font-semibold flex items-center transition-colors duration-300 ease-in-out whitespace-nowrap ${scorePillClass} backdrop-blur-sm`}
+            style={{
+              gap: "clamp(0.75rem, 1.5vw, 1rem)",
+              padding: "clamp(0.75rem, 1.5vw, 1.5rem) clamp(1.5rem, 3vw, 3rem)",
+            }}
             aria-label={`Score: ${score} out of ${totalQuestions}`}
           >
-            <span className="text-2xl font-medium opacity-90">Score:</span>
-            <span className="text-5xl font-bold tabular-nums leading-none" style={{ letterSpacing: "-0.045em" }}>
+            <span className="font-medium opacity-90" style={{ fontSize: "clamp(1rem, 2vw, 1.5rem)" }}>Score:</span>
+            <span className="font-bold tabular-nums leading-none" style={{ fontSize: "clamp(1.75rem, 4vw, 3rem)", letterSpacing: "-0.045em" }}>
               {score} / {totalQuestions}
             </span>
           </div>

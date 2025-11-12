@@ -217,7 +217,7 @@ export default function AchievementsPage() {
         <PageContainer maxWidth="6xl">
           <PageHeader
             title="Achievement Collection"
-            subtitle="Sign up free to start earning achievements"
+            subtitle="Create a free account to start earning achievements"
             centered
           />
 
@@ -234,7 +234,7 @@ export default function AchievementsPage() {
                 onClick={() => router.push('/sign-up')}
                 className="px-6 py-3 bg-[#3B82F6] hover:bg-[#2563EB] text-white rounded-full font-medium transition-all"
               >
-                Sign Up Free
+                Get Started
               </button>
             </div>
 

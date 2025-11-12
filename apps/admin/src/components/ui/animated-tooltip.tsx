@@ -109,12 +109,16 @@ export const SimpleAnimatedTooltip = ({
   position = "top",
   offsetX = 0,
   offsetY = 0,
+  preventFlip = false,
+  align = "center",
 }: {
   content: string;
   children: React.ReactNode;
   position?: "top" | "bottom" | "left" | "right";
   offsetX?: number;
   offsetY?: number;
+  preventFlip?: boolean;
+  align?: "left" | "center" | "right";
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [tooltipStyle, setTooltipStyle] = useState<React.CSSProperties>({});
@@ -140,15 +144,37 @@ export const SimpleAnimatedTooltip = ({
     
     const tooltip = tooltipRef.current;
     const container = containerRef.current;
+    
+    // Get dimensions - tooltip should already be rendered
     const tooltipRect = tooltip.getBoundingClientRect();
     const containerRect = container.getBoundingClientRect();
     
+    // If tooltip has no width/height yet, wait for next frame
+    if (tooltipRect.width === 0 || tooltipRect.height === 0) {
+      requestAnimationFrame(() => calculatePosition());
+      return;
+    }
+    
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
-    const padding = 10; // Padding from edges
+    const padding = 12; // Padding from edges
     const gap = 12; // Gap between tooltip and trigger
     
-    let finalLeft = containerRect.left + containerRect.width / 2 - tooltipRect.width / 2;
+    // Detect mobile viewport
+    const isMobile = viewportWidth < 768;
+    
+    // Calculate initial horizontal position based on alignment
+    let finalLeft = 0;
+    if (align === "right") {
+      // Align tooltip right edge to container right edge
+      finalLeft = containerRect.right - tooltipRect.width;
+    } else if (align === "left") {
+      // Align tooltip left edge to container left edge
+      finalLeft = containerRect.left;
+    } else {
+      // Center alignment (default)
+      finalLeft = containerRect.left + containerRect.width / 2 - tooltipRect.width / 2;
+    }
     let finalTop = 0;
     
     // Calculate vertical position based on preferred position
@@ -156,14 +182,15 @@ export const SimpleAnimatedTooltip = ({
       if (position === "top") {
         finalTop = containerRect.top - tooltipRect.height - gap + offsetY;
         // Check if tooltip would clip top
-        if (finalTop < padding) {
+        if (!preventFlip && finalTop < padding) {
           // Flip to bottom
           finalTop = containerRect.bottom + gap + offsetY;
         }
       } else {
+        // For bottom position, use the bottom of the container (lowest point) + gap + offset
         finalTop = containerRect.bottom + gap + offsetY;
         // Check if tooltip would clip bottom
-        if (finalTop + tooltipRect.height > viewportHeight - padding) {
+        if (!preventFlip && finalTop + tooltipRect.height > viewportHeight - padding) {
           // Flip to top
           finalTop = containerRect.top - tooltipRect.height - gap + offsetY;
         }
@@ -172,11 +199,26 @@ export const SimpleAnimatedTooltip = ({
       // Apply horizontal offset
       finalLeft += offsetX;
       
-      // Adjust horizontal position to prevent clipping
+      // Adjust horizontal position to prevent clipping (especially important for mobile)
+      // First, ensure tooltip doesn't clip left edge
       if (finalLeft < padding) {
         finalLeft = padding;
-      } else if (finalLeft + tooltipRect.width > viewportWidth - padding) {
+      }
+      
+      // Then, ensure tooltip doesn't clip right edge - this is critical for mobile
+      const rightEdge = finalLeft + tooltipRect.width;
+      if (rightEdge > viewportWidth - padding) {
+        // Tooltip would clip right edge - align to right edge with padding
         finalLeft = viewportWidth - tooltipRect.width - padding;
+        // Double-check we didn't go negative
+        if (finalLeft < padding) {
+          finalLeft = padding;
+        }
+      }
+      
+      // On mobile, if tooltip is wider than viewport, ensure it's left-aligned with padding
+      if (isMobile && tooltipRect.width > viewportWidth - padding * 2) {
+        finalLeft = padding;
       }
     } else if (position === "left" || position === "right") {
       // Handle left/right positioning
@@ -206,15 +248,28 @@ export const SimpleAnimatedTooltip = ({
       }
     }
     
+    // Ensure finalLeft is never less than padding
+    finalLeft = Math.max(padding, finalLeft);
+    
     setTooltipStyle({
       left: `${finalLeft}px`,
       top: `${finalTop}px`,
     });
-  }, [isHovered, position, offsetX, offsetY]);
+  }, [isHovered, position, offsetX, offsetY, preventFlip, align]);
 
   React.useEffect(() => {
-    calculatePosition();
-  }, [calculatePosition]);
+    if (!isHovered) return;
+    
+    // Use multiple animation frames to ensure tooltip is fully rendered and measured
+    // This is especially important for mobile where dimensions need to be accurate
+    let frameId1 = requestAnimationFrame(() => {
+      let frameId2 = requestAnimationFrame(() => {
+        calculatePosition();
+      });
+      return () => cancelAnimationFrame(frameId2);
+    });
+    return () => cancelAnimationFrame(frameId1);
+  }, [isHovered, calculatePosition]);
 
   // Recalculate position on scroll to fix glitchiness with scrollable container
   React.useEffect(() => {
@@ -269,9 +324,11 @@ export const SimpleAnimatedTooltip = ({
               position: "fixed",
               ...tooltipStyle,
             }}
-            className="flex flex-col items-center justify-center rounded-lg bg-black/95 backdrop-blur-sm z-[99999] shadow-xl px-4 py-2.5 pointer-events-none border border-white/10"
+            className={`flex flex-col rounded-lg bg-black/95 backdrop-blur-sm z-[99999] shadow-xl px-4 py-2.5 pointer-events-none border border-white/10 ${
+              align === "right" ? "items-end" : align === "left" ? "items-start" : "items-center justify-center"
+            }`}
           >
-            <div className="font-medium text-white relative text-base">
+            <div className={`font-medium text-white relative text-base ${align === "right" ? "text-right" : align === "left" ? "text-left" : "text-center"}`}>
               {content}
             </div>
           </motion.div>

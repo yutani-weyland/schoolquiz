@@ -16,6 +16,8 @@ import { QuizQuestion, QuizRound, QuizThemeMode } from "./play/types";
 import { trackQuizPlayed, hasExceededFreeQuizzes, hasPlayedQuiz } from "@/lib/quizAttempts";
 import { MidQuizSignupPrompt } from "./MidQuizSignupPrompt";
 import { useUserAccess } from "@/contexts/UserAccessContext";
+import { applyTheme, Theme } from "@/lib/theme";
+import { getAuthToken, getUserId } from "@/lib/storage";
 
 const STANDARD_ROUND_COUNT = 4;
 const QUESTIONS_PER_STANDARD_ROUND = 6;
@@ -118,14 +120,14 @@ function CircularProgress({
 			</svg>
 			{/* Score Display - Centered number */}
 			<div 
-				className="absolute inset-0 pointer-events-none flex items-center justify-center transition-colors duration-700 ease-in-out tracking-tight"
+				className="absolute inset-0 pointer-events-none flex items-center justify-center transition-colors duration-300 ease-in-out tracking-tight"
 				style={{
 					fontFamily: 'var(--app-font), system-ui, sans-serif',
 					color: isDark ? "#fff" : "#000"
 				}}
 			>
 				<span 
-					className="font-bold tracking-tight transition-colors duration-700 ease-in-out"
+					className="font-bold tracking-tight transition-colors duration-300 ease-in-out"
 					style={{
 						fontSize: size * 0.34,
 						fontWeight: 700,
@@ -305,7 +307,7 @@ function getNotchTextColor(backgroundColor: string): string {
 }
 
 export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, weekISO, isNewest = false, isDemo = false, maxQuestions, onDemoComplete }: QuizPlayerProps) {
-	const { isPremium, isVisitor } = useUserAccess();
+	const { isPremium, isVisitor, isLoggedIn } = useUserAccess();
 	
 	// For restricted quiz mode: show all questions initially, but lock after 6 answers
 	const RESTRICTED_ANSWER_LIMIT = 6; // Lock restricted quiz after 6 answers
@@ -397,7 +399,42 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 			url.searchParams.set("mode", "grid");
 			window.history.replaceState({}, "", url.toString());
 		}
-	}, []);
+		
+		// Scroll logic: wait for view mode to change and grid to render
+		setTimeout(() => {
+			// If on first question or round splash screen, scroll to top
+			if (currentIndex === 0 || currentScreen === "round-intro") {
+				window.scrollTo({ top: 0, behavior: "smooth" });
+			} else {
+				// Otherwise, scroll to center the current question
+				const questionId = finalQuestions[currentIndex]?.id;
+				if (questionId) {
+					// Try to find the question element
+					const questionEl = document.getElementById(`mobile-question-${questionId}`);
+					if (questionEl) {
+						// Center the question in the viewport
+						questionEl.scrollIntoView({ 
+							behavior: "smooth", 
+							block: "center",
+							inline: "nearest" 
+						});
+					} else {
+						// If question not found yet, try again after a short delay
+						setTimeout(() => {
+							const retryEl = document.getElementById(`mobile-question-${questionId}`);
+							if (retryEl) {
+								retryEl.scrollIntoView({ 
+									behavior: "smooth", 
+									block: "center",
+									inline: "nearest" 
+								});
+							}
+						}, 100);
+					}
+				}
+			}
+		}, 150); // Delay to ensure grid has rendered
+	}, [currentIndex, currentScreen, finalQuestions]);
 
 	const switchToPresenterView = useCallback(() => {
 		setViewMode("presenter");
@@ -409,7 +446,46 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 		}
 	}, []);
 	const [plusOneKey, setPlusOneKey] = useState(0);
-	const [themeMode, setThemeMode] = useState<ThemeMode>("colored");
+	// Initialize themeMode from DOM (set by pre-paint script) to match server render
+	// IMPORTANT: For quiz pages, default to "colored" if no cookie exists
+	const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
+		if (typeof window === 'undefined') return "colored"; // SSR fallback to colored for quiz pages
+		
+		// Read from data-theme attribute (set by pre-paint script) to match server render
+		try {
+			const dataTheme = document.documentElement.getAttribute('data-theme');
+			if (dataTheme === 'color') return 'colored';
+			if (dataTheme === 'dark' || dataTheme === 'light') return dataTheme as ThemeMode;
+		} catch (e) {
+			// Ignore errors
+		}
+		
+		// Fallback to cookie if data-theme not set
+		try {
+			const cookieMatch = document.cookie.match(/(?:^|; )sq_theme=([^;]*)/);
+			if (cookieMatch) {
+				const cookieTheme = decodeURIComponent(cookieMatch[1]);
+				// Map "color" to "colored" for quiz theme mode
+				if (cookieTheme === 'color') return 'colored';
+				if (cookieTheme === 'dark' || cookieTheme === 'light') return cookieTheme as ThemeMode;
+			}
+		} catch (e) {
+			// Ignore errors
+		}
+		
+		// Only use localStorage if cookie is not set (backward compatibility)
+		try {
+			const saved = localStorage.getItem('quizThemeMode');
+			if (saved === 'colored' || saved === 'dark' || saved === 'light') {
+				return saved as ThemeMode;
+			}
+		} catch (e) {
+			// Ignore errors
+		}
+		
+		// Default to "colored" for quiz pages (quiz-specific default)
+		return "colored";
+	});
 	const [showTimer, setShowTimer] = useState(true);
 	const [isNarrowViewport, setIsNarrowViewport] = useState(false);
 	const [isMobileLayout, setIsMobileLayout] = useState(false);
@@ -1098,17 +1174,13 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 		if (currentIndex > 0) {
 			const prevIndex = currentIndex - 1;
 			const prevQuestion = finalQuestions[prevIndex];
-			// Check if we're moving to a different round
-			if (prevQuestion.roundNumber !== currentQuestion.roundNumber) {
-				setCurrentRound(prevQuestion.roundNumber);
-				setCurrentScreen("round-intro");
-			} else {
-				// If staying on question screen, ensure timer starts
-				if (!isTimerRunning) {
-					setIsTimerRunning(true);
-				}
-				setCurrentScreen("question");
+			// When going left, skip round-intro screens - always go directly to question
+			setCurrentRound(prevQuestion.roundNumber);
+			// If staying on question screen, ensure timer starts
+			if (!isTimerRunning) {
+				setIsTimerRunning(true);
 			}
+			setCurrentScreen("question");
 			setCurrentIndex(prevIndex);
 			// Mark question as viewed
 			setViewedQuestions(prev => new Set([...prev, prevQuestion.id]));
@@ -1181,18 +1253,40 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 			// Navigation - works on both question and round-intro screens
 			if (isNavigatingRef.current) return; // Prevent double navigation
 			
-			if (e.key === "ArrowLeft" && currentIndex > 0) {
-				e.preventDefault();
-				isNavigatingRef.current = true;
-				goToPrevious();
-				// Reset flag after navigation completes
-				setTimeout(() => { isNavigatingRef.current = false; }, 150);
-			} else if (e.key === "ArrowRight" && currentIndex < finalQuestions.length - 1) {
-				e.preventDefault();
-				isNavigatingRef.current = true;
-				goToNext();
-				// Reset flag after navigation completes
-				setTimeout(() => { isNavigatingRef.current = false; }, 150);
+			// Handle navigation when on round-intro screen
+			if (currentScreen === "round-intro") {
+				if (e.key === "ArrowRight") {
+					e.preventDefault();
+					isNavigatingRef.current = true;
+					// On round-intro, right arrow should go to first question of this round
+					// currentIndex already points to the first question, just switch to question screen
+					setCurrentScreen("question");
+					if (!isTimerRunning) {
+						setIsTimerRunning(true);
+					}
+					setTimeout(() => { isNavigatingRef.current = false; }, 150);
+				} else if (e.key === "ArrowLeft" && currentIndex > 0) {
+					e.preventDefault();
+					isNavigatingRef.current = true;
+					// On round-intro, left arrow should skip round-intro and go to previous question
+					goToPrevious();
+					setTimeout(() => { isNavigatingRef.current = false; }, 150);
+				}
+			} else {
+				// Normal navigation on question screen
+				if (e.key === "ArrowLeft" && currentIndex > 0) {
+					e.preventDefault();
+					isNavigatingRef.current = true;
+					goToPrevious();
+					// Reset flag after navigation completes
+					setTimeout(() => { isNavigatingRef.current = false; }, 150);
+				} else if (e.key === "ArrowRight" && currentIndex < finalQuestions.length - 1) {
+					e.preventDefault();
+					isNavigatingRef.current = true;
+					goToNext();
+					// Reset flag after navigation completes
+					setTimeout(() => { isNavigatingRef.current = false; }, 150);
+				}
 			}
 		};
 		window.addEventListener("keydown", handleKeyDown);
@@ -1232,14 +1326,48 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 	};
 
 	const exitQuiz = () => {
+		// Restore global theme before exiting quiz to prevent flash
 		if (typeof window !== 'undefined') {
-			const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-			if (isLoggedIn) {
+			// Check login status synchronously from localStorage (same way UserAccessContext does)
+			// This ensures we immediately know where to redirect without any async delays
+			// that could cause flashing of intermediate pages
+			const token = getAuthToken();
+			const userId = getUserId();
+			const loggedInStatus = !!(token && userId);
+			
+			try {
+				const themeOverride = localStorage.getItem('themeOverride');
+				const savedTheme = localStorage.getItem('theme');
+				
+				if (themeOverride === 'true' && savedTheme) {
+					if (savedTheme === 'dark') {
+						document.documentElement.classList.add('dark');
+					} else {
+						document.documentElement.classList.remove('dark');
+					}
+				} else {
+					// Use time-based theme
+					const hour = new Date().getHours();
+					const isDark = hour >= 18 || hour < 6;
+					if (isDark) {
+						document.documentElement.classList.add('dark');
+					} else {
+						document.documentElement.classList.remove('dark');
+					}
+				}
+			} catch (e) {
+				// Fallback to light mode
+				document.documentElement.classList.remove('dark');
+			}
+			
+			// Navigate immediately based on login status - no delays, no intermediate pages
+			if (loggedInStatus) {
 				// Logged-in users: go to quizzes page
 				window.location.href = '/quizzes';
 			} else {
-				// Logged-out users: redirect to index page
-				window.location.href = '/';
+				// Logged-out users: redirect directly to index page
+				// Use replace to avoid adding to history and prevent back button issues
+				window.location.replace('/');
 			}
 		}
 	};
@@ -1335,12 +1463,115 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 			? "fixed inset-0 flex flex-col transition-colors duration-300 ease-in-out"
 			: "min-h-dvh flex flex-col overflow-y-auto transition-colors duration-300 ease-in-out";
 
+	// Apply theme immediately on mount to prevent flash
+	React.useEffect(() => {
+		if (typeof window === 'undefined') return;
+		
+		// Apply theme immediately on mount
+		if (themeMode === "dark") {
+			document.documentElement.classList.add('dark');
+		} else if (themeMode === "light" || themeMode === "colored") {
+			document.documentElement.classList.remove('dark');
+		}
+	}, []); // Run once on mount
+	
+	// Persist themeMode to cookie (unified theme system) and localStorage (backward compatibility)
+	// IMPORTANT: Always write to cookie when themeMode changes (user action in presenter view)
+	// On initial mount: if no cookie exists and themeMode is "colored", write cookie immediately
+	// This ensures quiz pages start in colored mode and persist correctly
+	const hasSyncedFromCookie = React.useRef(false);
+	const previousThemeModeRef = React.useRef<ThemeMode | null>(null);
+	
+	React.useEffect(() => {
+		if (typeof window === 'undefined') return;
+		
+		// On initial mount, check if cookie exists and sync themeMode to it ONCE
+		if (!hasSyncedFromCookie.current) {
+			hasSyncedFromCookie.current = true;
+			const cookieMatch = document.cookie.match(/(?:^|; )sq_theme=([^;]*)/);
+			if (cookieMatch) {
+				const cookieTheme = decodeURIComponent(cookieMatch[1]);
+				// Map cookie theme to quiz theme mode and sync if different
+				if (cookieTheme === 'color' && themeMode !== 'colored') {
+					// Cookie says "color" but themeMode is not "colored" - sync it
+					setThemeMode('colored');
+					previousThemeModeRef.current = 'colored';
+					return; // Don't write cookie, just sync state
+				} else if ((cookieTheme === 'dark' || cookieTheme === 'light') && themeMode !== cookieTheme) {
+					// Cookie says "dark" or "light" but themeMode doesn't match - sync it
+					setThemeMode(cookieTheme as ThemeMode);
+					previousThemeModeRef.current = cookieTheme as ThemeMode;
+					return; // Don't write cookie, just sync state
+				}
+			} else {
+				// No cookie exists - if themeMode is "colored" (quiz default), write cookie immediately
+				// This ensures quiz pages start in colored mode and persist
+				if (themeMode === 'colored') {
+					const unifiedTheme: Theme = 'color';
+					applyTheme(unifiedTheme);
+					previousThemeModeRef.current = 'colored';
+					try {
+						localStorage.setItem('quizThemeMode', 'colored');
+					} catch (e) {
+						// Ignore localStorage errors
+					}
+					return;
+				}
+			}
+			previousThemeModeRef.current = themeMode;
+		}
+		
+		// If themeMode changed (user action), ALWAYS write to cookie
+		// This handles theme changes from presenter view menu
+		if (previousThemeModeRef.current !== themeMode) {
+			previousThemeModeRef.current = themeMode;
+			
+			// Map "colored" to "color" for unified theme system
+			const unifiedTheme: Theme = themeMode === 'colored' ? 'color' : themeMode;
+			
+			// Use unified applyTheme function to ensure cookie is written properly
+			applyTheme(unifiedTheme);
+			
+			// Also update localStorage for backward compatibility
+			try {
+				localStorage.setItem('quizThemeMode', themeMode);
+			} catch (e) {
+				// Ignore localStorage errors
+			}
+		} else if (!previousThemeModeRef.current) {
+			// Initialize ref on first run if no previous value
+			previousThemeModeRef.current = themeMode;
+		}
+	}, [themeMode]);
+
+	// Use neutral background during SSR to prevent hydration mismatch
+	// After mount, use the actual backgroundColor
+	const containerBackgroundColor = mounted ? backgroundColor : "transparent";
+
+	// Don't render content until mounted to prevent hydration mismatch
+	// This ensures all theme-dependent styles are only applied client-side
+	if (!mounted) {
+		return (
+			<div
+				className="min-h-dvh flex flex-col"
+				suppressHydrationWarning
+				style={{
+					backgroundColor: "transparent",
+				}}
+			/>
+		);
+	}
+
 	return (
 		<div
 			className={containerClass}
+			suppressHydrationWarning
 			style={{
-				backgroundColor,
+				backgroundColor: containerBackgroundColor,
 				transition: "background-color 300ms ease-in-out, color 300ms ease-in-out",
+				transitionProperty: "background-color, color",
+				transitionDuration: "300ms",
+				transitionTimingFunction: "ease-in-out",
 			}}
 		>
 			{/* New Progress Header - Only show in presenter mode */}

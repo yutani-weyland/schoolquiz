@@ -1,10 +1,15 @@
 import React, { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Menu, X, RotateCcw, Share2, LayoutList, MonitorPlay, Sun, Moon, Crown } from "lucide-react";
+import { Menu, X, RotateCcw, Share2, LayoutList, MonitorPlay, Sun, Moon, Crown, User } from "lucide-react";
 import { AchievementNotification, Achievement } from "../AchievementNotification";
 import { QuizThemeMode } from "./types";
 import { useUserAccess } from "@/contexts/UserAccessContext";
+import { useTheme } from "@/contexts/ThemeContext";
 import Link from "next/link";
+import { logger } from "@/lib/logger";
+import { storage, getUserName } from "@/lib/storage";
+import { SimpleAnimatedTooltip } from "@/components/ui/animated-tooltip";
+import { applyTheme, Theme } from "@/lib/theme";
 
 interface QuizHeaderProps {
   quizLabel?: string;
@@ -65,14 +70,30 @@ export function QuizHeader({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isTopBarHovered, setIsTopBarHovered] = useState(false);
   const [shareFeedback, setShareFeedback] = useState<string | null>(null);
-  const { userName, isLoggedIn, isPremium, isFree } = useUserAccess();
+  const [mounted, setMounted] = useState(false);
+  const { userName, isLoggedIn, isPremium, isFree, isVisitor } = useUserAccess();
+  const { setTheme } = useTheme();
 
-  // Sync document dark mode with themeMode
+  // Set mounted flag after hydration to prevent SSR/client mismatch
   useEffect(() => {
-    if (themeMode === "dark") {
-      document.documentElement.classList.add('dark');
+    setMounted(true);
+  }, []);
+
+  // Apply theme to DOM when themeMode changes (for visual updates)
+  // Cookie persistence is handled by QuizPlayer's useEffect
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    // Map quiz theme mode to unified theme
+    const unifiedTheme: Theme = themeMode === 'colored' ? 'color' : themeMode;
+    
+    // Apply to DOM only (don't write cookie here - QuizPlayer handles that)
+    const html = document.documentElement;
+    html.setAttribute("data-theme", unifiedTheme);
+    if (unifiedTheme === "dark") {
+      html.classList.add("dark");
     } else {
-      document.documentElement.classList.remove('dark');
+      html.classList.remove("dark");
     }
   }, [themeMode]);
 
@@ -115,7 +136,7 @@ export function QuizHeader({
       }
     } catch (error) {
       // fall back to clipboard when share is cancelled or fails
-      console.warn("Native share failed, falling back to clipboard", error);
+      logger.debug("Native share failed, falling back to clipboard", { error });
     }
 
     try {
@@ -126,7 +147,7 @@ export function QuizHeader({
         throw new Error("Clipboard API unavailable");
       }
     } catch (error) {
-      console.warn("Clipboard copy failed", error);
+      logger.warn("Clipboard copy failed", { error });
       setShareFeedback(`Copy link manually: ${url}`);
     }
   };
@@ -141,6 +162,12 @@ export function QuizHeader({
     const currentIndex = THEME_MODES.indexOf(themeMode);
     const nextMode = THEME_MODES[(currentIndex + 1) % THEME_MODES.length];
     onThemeModeChange(nextMode);
+  };
+
+  const handleThemeSelect = (selectedMode: QuizThemeMode) => {
+    if (selectedMode !== themeMode) {
+      onThemeModeChange(selectedMode);
+    }
   };
 
   const handleRestart = () => {
@@ -174,7 +201,11 @@ export function QuizHeader({
   }, []);
 
   const showBranding = !(isMobile && isScrolled) && !(isGridView && isScrolled);
-  const headerBackground = showBranding ? backgroundColor : "transparent";
+  // Use neutral background during SSR to prevent hydration mismatch
+  // After mount, use the actual backgroundColor
+  const headerBackground = showBranding 
+    ? (mounted ? backgroundColor : "transparent")
+    : "transparent";
 
   return (
     <div
@@ -194,7 +225,6 @@ export function QuizHeader({
                 onClick={(event) => {
                   event.preventDefault();
                   if (typeof window !== "undefined") {
-                    const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
                     window.location.href = isLoggedIn ? "/quizzes" : "/";
                   }
                 }}
@@ -229,39 +259,59 @@ export function QuizHeader({
         )}
 
         <div className="flex items-center gap-3">
+          {/* Join for free button - show in presenter view for logged-out users */}
+          {isVisitor && isPresenterView && (
+            <Link href="/sign-up">
+              <motion.button
+                className="hidden md:inline-flex items-center gap-2 px-6 py-3 rounded-full text-base font-medium bg-[#3B82F6] text-white hover:bg-[#2563EB] transition-colors"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                aria-label="Join for free"
+              >
+                Join for free
+              </motion.button>
+            </Link>
+          )}
           {onOpenPresenterView && (
-            <motion.button
-              onClick={onOpenPresenterView}
-              className={`hidden sm:flex h-12 w-12 items-center justify-center rounded-full transition-colors duration-300 ease-out ${menuButtonClass}`}
-              whileHover={{ scale: 1.07 }}
-              whileTap={{ scale: 0.95 }}
-              title="Switch to presenter view"
-              aria-label="Switch to presenter view"
-            >
-              <MonitorPlay className="h-5 w-5" />
-            </motion.button>
+            <SimpleAnimatedTooltip content="Switch to presenter view" position="bottom" offsetY={12} preventFlip>
+              <motion.button
+                onClick={onOpenPresenterView}
+                className={`hidden sm:flex h-12 w-12 items-center justify-center rounded-full transition-colors duration-300 ease-out ${menuButtonClass}`}
+                whileHover={{ scale: 1.07 }}
+                whileTap={{ scale: 0.95 }}
+                aria-label="Switch to presenter view"
+              >
+                <MonitorPlay className="h-5 w-5" />
+              </motion.button>
+            </SimpleAnimatedTooltip>
           )}
           {onOpenGridView && (
-            <motion.button
-              onClick={onOpenGridView}
-              className={`hidden sm:flex h-12 w-12 items-center justify-center rounded-full transition-colors duration-300 ease-out ${menuButtonClass}`}
-              whileHover={{ scale: 1.07 }}
-              whileTap={{ scale: 0.95 }}
-              title="Switch to grid view"
-              aria-label="Switch to grid view"
-            >
-              <LayoutList className="h-5 w-5" />
-            </motion.button>
+            <SimpleAnimatedTooltip content="Switch to card view" position="bottom" offsetY={12} offsetX={0} preventFlip align="right">
+              <motion.button
+                onClick={onOpenGridView}
+                className={`hidden sm:flex h-12 w-12 items-center justify-center rounded-full transition-colors duration-300 ease-out ${menuButtonClass}`}
+                whileHover={{ scale: 1.07 }}
+                whileTap={{ scale: 0.95 }}
+                aria-label="Switch to card view"
+              >
+                <LayoutList className="h-5 w-5" />
+              </motion.button>
+            </SimpleAnimatedTooltip>
           )}
-          <motion.button
-            onClick={handleShareQuiz}
-            className={`w-12 h-12 rounded-full transition-colors duration-300 ease-out flex items-center justify-center ${shareButtonClass}`}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            aria-label="Share quiz"
-          >
-            <Share2 className="h-5 w-5" />
-          </motion.button>
+          {/* Show share button (hidden in presenter view and grid view) */}
+          {isPresenterView || isGridView ? null : (
+            <SimpleAnimatedTooltip content="Share quiz" position="bottom" offsetY={12} preventFlip>
+              <motion.button
+                onClick={handleShareQuiz}
+                className={`w-12 h-12 rounded-full transition-colors duration-300 ease-out flex items-center justify-center ${shareButtonClass}`}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                aria-label="Share quiz"
+              >
+                <Share2 className="h-5 w-5" />
+              </motion.button>
+            </SimpleAnimatedTooltip>
+          )}
           <motion.button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             className={`w-12 h-12 rounded-full transition-colors duration-300 ease-out flex items-center justify-center relative ${menuButtonClass}`}
@@ -310,12 +360,12 @@ export function QuizHeader({
                   <div className="px-0 py-0 mb-4 pb-4 border-b border-gray-100 dark:border-gray-700/50">
                     <div className="flex items-center gap-3">
                       <div className="w-11 h-11 rounded-full bg-blue-600 dark:bg-blue-500 flex items-center justify-center text-white font-semibold text-base relative flex-shrink-0">
-                        {(userName || localStorage.getItem('userName')) ? (userName || localStorage.getItem('userName'))?.charAt(0).toUpperCase() : 'U'}
+                        {(userName || getUserName()) ? (userName || getUserName())?.charAt(0).toUpperCase() : 'U'}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <p className="font-medium text-gray-900 dark:text-white text-base truncate">
-                            {userName || localStorage.getItem('userName') || 'User'}
+                            {userName || getUserName() || 'User'}
                           </p>
                           {isPremium && (
                             <Crown className="w-4 h-4 text-amber-500 dark:text-amber-400 flex-shrink-0" />
@@ -337,7 +387,7 @@ export function QuizHeader({
                             onOpenGridView();
                             setIsMenuOpen(false);
                           }}
-                          className="flex items-center gap-3 px-4 py-3 rounded-xl text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors w-full text-left"
+                          className="flex items-center gap-3 px-4 py-2.5 rounded-full text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors w-full text-left"
                         >
                           <LayoutList className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                           Switch to Grid View
@@ -348,7 +398,7 @@ export function QuizHeader({
                             onOpenPresenterView();
                             setIsMenuOpen(false);
                           }}
-                          className="flex items-center gap-3 px-4 py-3 rounded-xl text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors w-full text-left"
+                          className="flex items-center gap-3 px-4 py-2.5 rounded-full text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors w-full text-left"
                         >
                           <MonitorPlay className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                           Switch to Presenter View
@@ -357,102 +407,134 @@ export function QuizHeader({
                     </>
                   )}
 
-                  {/* Theme Mode 3-Way Switch */}
-                  <div className="border-t border-gray-100 dark:border-gray-700/50 my-1"></div>
-                  <div className="py-2 px-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-base text-gray-700 dark:text-gray-200">Theme</span>
-                      <button
-                        onClick={() => {
-                          handleThemeToggle();
-                        }}
-                        className="relative inline-flex h-8 w-24 items-center rounded-full bg-gray-200 dark:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                        aria-label={`Current theme: ${themeMode}. Click to cycle theme.`}
+                  {/* Login/Join buttons for visitors */}
+                  {isVisitor && (
+                    <>
+                      <div className="border-t border-gray-100 dark:border-gray-700/50 my-1"></div>
+                      <Link
+                        href="/sign-in"
+                        onClick={() => setIsMenuOpen(false)}
+                        className="flex items-center gap-3 px-4 py-2.5 rounded-full text-base text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors w-full text-left"
                       >
+                        <User className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                        Log In
+                      </Link>
+                      <Link
+                        href="/sign-up"
+                        onClick={() => setIsMenuOpen(false)}
+                        className="flex items-center gap-3 px-4 py-2.5 rounded-full text-base font-medium text-white bg-[#3B82F6] hover:bg-[#2563EB] transition-colors w-full text-left"
+                      >
+                        <User className="w-5 h-5 text-white" />
+                        Join for free
+                      </Link>
+                    </>
+                  )}
+
+                  {/* Theme Mode Selection */}
+                  <div className="border-t border-gray-100 dark:border-gray-700/50 my-1"></div>
+                  <div className="py-2 space-y-1">
+                    <button
+                      onClick={() => handleThemeSelect("colored")}
+                      className={`flex items-center gap-3 px-4 py-2.5 rounded-full text-base transition-colors w-full text-left ${
+                        themeMode === "colored"
+                          ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300"
+                          : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                      }`}
+                    >
+                      <PaintBucketIcon className={`w-5 h-5 flex-shrink-0 ${
+                        themeMode === "colored" 
+                          ? "text-blue-600 dark:text-blue-400" 
+                          : "text-gray-500 dark:text-gray-400"
+                      }`} />
+                      <span>Colored</span>
+                      {themeMode === "colored" && (
                         <motion.div
-                          className="absolute left-1 flex h-6 w-6 items-center justify-center rounded-full bg-white shadow-sm"
-                          initial={false}
-                          animate={{
-                            x: themeMode === "colored" ? 2 : themeMode === "light" ? 40 : 78,
-                          }}
+                          className="ml-auto h-2 w-2 rounded-full bg-blue-600 dark:bg-blue-400"
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
                           transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                        >
-                          <AnimatePresence mode="wait">
-                            {themeMode === "colored" && (
-                              <motion.div
-                                key="colored"
-                                initial={{ scale: 0, rotate: -180 }}
-                                animate={{ scale: 1, rotate: 0 }}
-                                exit={{ scale: 0, rotate: 180 }}
-                                transition={{ duration: 0.2 }}
-                              >
-                                <PaintBucketIcon className="h-4 w-4 text-blue-600" />
-                              </motion.div>
-                            )}
-                            {themeMode === "light" && (
-                              <motion.div
-                                key="light"
-                                initial={{ scale: 0, rotate: -180 }}
-                                animate={{ scale: 1, rotate: 0 }}
-                                exit={{ scale: 0, rotate: 180 }}
-                                transition={{ duration: 0.2 }}
-                              >
-                                <Sun className="h-4 w-4 text-yellow-600" />
-                              </motion.div>
-                            )}
-                            {themeMode === "dark" && (
-                              <motion.div
-                                key="dark"
-                                initial={{ scale: 0, rotate: -180 }}
-                                animate={{ scale: 1, rotate: 0 }}
-                                exit={{ scale: 0, rotate: 180 }}
-                                transition={{ duration: 0.2 }}
-                              >
-                                <Moon className="h-4 w-4 text-gray-700" />
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-                        </motion.div>
-                        <div className="flex w-full items-center justify-around px-1">
-                          <PaintBucketIcon className={`h-4 w-4 transition-opacity ${themeMode === "colored" ? "opacity-100" : "opacity-40"}`} />
-                          <Sun className={`h-4 w-4 transition-opacity ${themeMode === "light" ? "opacity-100" : "opacity-40"}`} />
-                          <Moon className={`h-4 w-4 transition-opacity ${themeMode === "dark" ? "opacity-100" : "opacity-40"}`} />
-                        </div>
-                      </button>
-                    </div>
+                        />
+                      )}
+                    </button>
+                    <button
+                      onClick={() => handleThemeSelect("light")}
+                      className={`flex items-center gap-3 px-4 py-2.5 rounded-full text-base transition-colors w-full text-left ${
+                        themeMode === "light"
+                          ? "bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300"
+                          : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                      }`}
+                    >
+                      <Sun className={`w-5 h-5 flex-shrink-0 ${
+                        themeMode === "light" 
+                          ? "text-yellow-600 dark:text-yellow-400" 
+                          : "text-gray-500 dark:text-gray-400"
+                      }`} />
+                      <span>Light</span>
+                      {themeMode === "light" && (
+                        <motion.div
+                          className="ml-auto h-2 w-2 rounded-full bg-yellow-600 dark:bg-yellow-400"
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                        />
+                      )}
+                    </button>
+                    <button
+                      onClick={() => handleThemeSelect("dark")}
+                      className={`flex items-center gap-3 px-4 py-2.5 rounded-full text-base transition-colors w-full text-left ${
+                        themeMode === "dark"
+                          ? "bg-gray-800 dark:bg-gray-700 text-gray-100"
+                          : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                      }`}
+                    >
+                      <Moon className={`w-5 h-5 flex-shrink-0 ${
+                        themeMode === "dark" 
+                          ? "text-gray-200" 
+                          : "text-gray-500 dark:text-gray-400"
+                      }`} />
+                      <span>Dark</span>
+                      {themeMode === "dark" && (
+                        <motion.div
+                          className="ml-auto h-2 w-2 rounded-full bg-gray-200"
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                        />
+                      )}
+                    </button>
                   </div>
 
                   {/* Restart Quiz */}
                   <button
                     onClick={handleRestart}
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors w-full text-left"
+                    className="flex items-center gap-3 px-4 py-2.5 rounded-full text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors w-full text-left"
                   >
-                    <RotateCcw className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                    <RotateCcw className="h-5 w-5 sm:h-6 sm:w-6 text-gray-500 dark:text-gray-400" />
                     Restart Quiz
                   </button>
 
                   {/* Exit Quiz */}
                   <button
                     onClick={handleExit}
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-base text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors w-full text-left"
+                    className="flex items-center gap-3 px-4 py-2.5 rounded-full text-base text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors w-full text-left"
                   >
-                    <X className="w-5 h-5 text-red-600 dark:text-red-400" />
+                    <X className="h-5 w-5 sm:h-6 sm:w-6 text-red-600 dark:text-red-400" />
                     Exit Quiz
                   </button>
                 </div>
 
-                {/* Upgrade CTA for Free Users */}
+                {/* Join for free CTA for Free Users */}
                 {isFree && (
                   <>
                     <div className="border-t border-gray-100 dark:border-gray-700/50 my-1"></div>
                     <div className="py-2">
                       <Link
-                        href="/upgrade"
+                        href="/sign-up"
                         onClick={() => setIsMenuOpen(false)}
                         className="flex items-center justify-center gap-2 px-6 py-3 rounded-full text-base font-medium bg-[#3B82F6] text-white hover:bg-[#2563EB] transition-colors w-full"
                       >
-                        <Crown className="w-4 h-4" />
-                        Upgrade to Premium
+                        <User className="w-4 h-4" />
+                        Join for free
                       </Link>
                     </div>
                   </>

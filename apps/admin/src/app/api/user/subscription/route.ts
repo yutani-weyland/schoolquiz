@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@schoolquiz/db";
+import { handleApiError, UnauthorizedError, InternalServerError } from "@/lib/api-error";
+import { logger } from "@/lib/logger";
 
 /**
  * Get user from token-based auth (localStorage token system)
@@ -35,7 +37,7 @@ async function getUserFromToken(request: NextRequest) {
         }
       } catch (err) {
         // NextAuth not available, continue
-        console.debug('NextAuth not available:', err);
+        logger.debug('NextAuth not available:', err);
       }
     }
 
@@ -49,19 +51,19 @@ async function getUserFromToken(request: NextRequest) {
         where: { id: userId },
       });
       return user;
-    } catch (dbError: any) {
-      console.error('Database error in getUserFromToken:', dbError);
+    } catch (dbError: unknown) {
+      logger.error('Database error in getUserFromToken:', dbError);
       // If it's a connection error, throw it up to be handled
-      if (dbError.code === 'P1001' || dbError.message?.includes('connect')) {
+      if (dbError instanceof Error && (dbError.message?.includes('connect') || dbError.message?.includes('P1001'))) {
         throw dbError;
       }
       // For other DB errors (like user not found), return null
       return null;
     }
-  } catch (error: any) {
-    console.error('Error in getUserFromToken:', error);
+  } catch (error: unknown) {
+    logger.error('Error in getUserFromToken:', error);
     // Re-throw connection errors, but return null for other errors
-    if (error.code === 'P1001' || error.message?.includes('connect')) {
+    if (error instanceof Error && (error.message?.includes('connect') || error.message?.includes('P1001'))) {
       throw error;
     }
     return null;
@@ -73,10 +75,7 @@ export async function GET(request: NextRequest) {
     const user = await getUserFromToken(request);
     
     if (!user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      throw new UnauthorizedError();
     }
 
     // Determine tier: premium if tier is "premium" OR subscription is active
@@ -94,32 +93,8 @@ export async function GET(request: NextRequest) {
       freeTrialStartedAt: user.freeTrialStartedAt?.toISOString() || null,
       freeTrialEndsAt: user.freeTrialEndsAt?.toISOString() || null,
     });
-  } catch (error: any) {
-    console.error('Subscription API error:', error);
-    console.error('Error stack:', error.stack);
-    
-    // If it's a database connection error or Prisma error, return a more specific error
-    if (error.code === 'P1001' || error.message?.includes('connect') || error.message?.includes('Prisma')) {
-      console.error('Database connection error:', error);
-      return NextResponse.json(
-        { error: "Database connection error. Please try again later." },
-        { status: 503 }
-      );
-    }
-    
-    // If it's an unauthorized error, return 401
-    if (error.message?.includes('Unauthorized') || error.status === 401) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-    
-    // Default to 500 for other errors
-    return NextResponse.json(
-      { error: error.message || "Failed to fetch subscription" },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    return handleApiError(error);
   }
 }
 

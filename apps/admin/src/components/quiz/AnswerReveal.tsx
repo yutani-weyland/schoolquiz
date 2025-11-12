@@ -139,7 +139,7 @@ export default function AnswerReveal({
 		const maxAllowedWidth = viewportWidth * 0.9;
 		
 		// Estimate width based on "Reveal answer" text and control size
-		const estimatedWidth = isCompact ? 360 : 450;
+		const estimatedWidth = isCompact ? 420 : 450;
 		
 		return Math.min(estimatedWidth, maxAllowedWidth);
 	}
@@ -170,7 +170,7 @@ export default function AnswerReveal({
 					if (measuredWidth > 0 && Math.abs(measuredWidth - initialWidth) > 20) {
 						// Only update if there's a significant difference (more than 20px)
 						// Use the measured width, but make it wider (add 150px) and cap at viewport
-						const extra = isCompact ? 100 : 150;
+						const extra = isCompact ? 140 : 150;
 						fixedButtonWidthRef.current = Math.min(measuredWidth + extra, maxAllowedWidth);
 						setTargetWidth(prev => {
 							if (typeof window === "undefined") return fixedButtonWidthRef.current ?? measuredWidth;
@@ -224,61 +224,65 @@ export default function AnswerReveal({
 
 		// Function to check and set scroll state
 		const checkOverflow = () => {
-			// Use requestAnimationFrame to ensure DOM is fully laid out
-			requestAnimationFrame(() => {
-				if (answerTextRef.current && answerSpanRef.current) {
-					const container = answerTextRef.current;
-					const textElement = answerSpanRef.current;
-					
-					// Get actual dimensions - use getBoundingClientRect for more accurate measurements
-					const containerRect = container.getBoundingClientRect();
-					const textRect = textElement.getBoundingClientRect();
-					
-					const containerWidth = containerRect.width || container.offsetWidth || container.clientWidth;
-					const textWidth = textElement.scrollWidth || textRect.width || textElement.offsetWidth;
-					
-					// Check if text overflows (with a small threshold for rounding)
-					const isOverflowing = textWidth > containerWidth + 5;
-					
-					if (isOverflowing && textWidth > 0 && containerWidth > 0) {
-						// Calculate scroll distance: difference between text width and container width
-						// Add a bit extra to ensure the end of the text is fully visible
-						const extraPadding = 40; // Extra pixels to show end of text clearly
-						const scrollDist = textWidth - containerWidth + extraPadding;
-						setScrollDistance(scrollDist);
-						setNeedsScroll(true);
-					} else {
-						setNeedsScroll(false);
-						setScrollDistance(0);
-					}
+			if (answerTextRef.current && answerSpanRef.current) {
+				const container = answerTextRef.current;
+				const textElement = answerSpanRef.current;
+				
+				// Get actual dimensions
+				const containerWidth = container.offsetWidth || container.clientWidth;
+				const textWidth = textElement.scrollWidth || textElement.offsetWidth;
+				
+				// Check if text overflows (with a small threshold for rounding)
+				const isOverflowing = textWidth > containerWidth + 5;
+				
+				if (isOverflowing && textWidth > 0 && containerWidth > 0) {
+					// Calculate scroll distance: difference between text width and container width
+					// Add a bit extra to ensure the end of the text is fully visible
+					const extraPadding = 40; // Extra pixels to show end of text clearly
+					const scrollDist = textWidth - containerWidth + extraPadding;
+					setScrollDistance(scrollDist);
+					setNeedsScroll(true);
+				} else {
+					setNeedsScroll(false);
+					setScrollDistance(0);
 				}
-			});
+			}
 		};
 
-		// Check multiple times to ensure DOM is ready and text is rendered
-		const timer1 = setTimeout(checkOverflow, 150);
-		const timer2 = setTimeout(checkOverflow, 300);
-		const timer3 = setTimeout(checkOverflow, 600);
-		const timer4 = setTimeout(checkOverflow, 1000);
+		// Debounce function for resize events
+		let resizeTimeout: ReturnType<typeof setTimeout> | null = null;
+		const debouncedCheckOverflow = () => {
+			if (resizeTimeout) clearTimeout(resizeTimeout);
+			resizeTimeout = setTimeout(() => {
+				requestAnimationFrame(checkOverflow);
+			}, 150);
+		};
 
-		// Also check on resize
-		window.addEventListener('resize', checkOverflow);
+		// Initial check after a short delay to ensure DOM is ready
+		const timer = setTimeout(() => {
+			requestAnimationFrame(checkOverflow);
+		}, 100);
 
-		// Use ResizeObserver to detect when layout changes
+		// Check on resize with debouncing
+		window.addEventListener('resize', debouncedCheckOverflow, { passive: true });
+
+		// Use ResizeObserver with debouncing for layout changes
 		let resizeObserver: ResizeObserver | null = null;
 		if (answerTextRef.current && typeof ResizeObserver !== 'undefined') {
+			let observerTimeout: ReturnType<typeof setTimeout> | null = null;
 			resizeObserver = new ResizeObserver(() => {
-				checkOverflow();
+				if (observerTimeout) clearTimeout(observerTimeout);
+				observerTimeout = setTimeout(() => {
+					requestAnimationFrame(checkOverflow);
+				}, 150);
 			});
 			resizeObserver.observe(answerTextRef.current);
 		}
 
 		return () => {
-			clearTimeout(timer1);
-			clearTimeout(timer2);
-			clearTimeout(timer3);
-			clearTimeout(timer4);
-			window.removeEventListener('resize', checkOverflow);
+			clearTimeout(timer);
+			if (resizeTimeout) clearTimeout(resizeTimeout);
+			window.removeEventListener('resize', debouncedCheckOverflow);
 			if (resizeObserver) {
 				resizeObserver.disconnect();
 			}
@@ -309,8 +313,8 @@ export default function AnswerReveal({
 						borderRadius: isMobileViewport ? "32px" : `${BUTTON_RADIUS}px`,
 						height: BUTTON_HEIGHT,
 						width: resolvedWidth,
-						minWidth: resolvedWidth,
-						maxWidth: resolvedWidth,
+						minWidth: isMobileViewport ? "auto" : resolvedWidth,
+						maxWidth: "100%", // Allow button to shrink to fit container
 						paddingLeft: minHorizontalPadding,
 						paddingRight: minHorizontalPadding,
 						paddingTop: 16,
@@ -322,8 +326,8 @@ export default function AnswerReveal({
 						overflow: 'visible', // Allow buttons to be visible
 						lineHeight: 1.1,
 						textAlign: 'center',
-						// Smooth transition if width needs to adjust (shouldn't happen often)
-						transition: 'width 0.2s ease-out, transform 0.35s cubic-bezier(0.22,1,0.36,1), box-shadow 0.35s ease',
+						// Smooth transition if width needs to adjust
+						transition: 'width 0.2s ease-out, max-width 0.2s ease-out, transform 0.35s cubic-bezier(0.22,1,0.36,1), box-shadow 0.35s ease',
 						willChange: 'transform',
 					}}
 					animate={{

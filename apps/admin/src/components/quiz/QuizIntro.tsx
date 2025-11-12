@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { motion, LayoutGroup, AnimatePresence } from "framer-motion";
 import { Calendar, Share2, Copy, Check, X } from "lucide-react";
 import { formatWeek } from "@/lib/format";
@@ -8,6 +8,9 @@ import { useUserTier } from "@/hooks/useUserTier";
 import { hasExceededFreeQuizzes, getRemainingFreeQuizzes } from "@/lib/quizAttempts";
 import { QuizSignupModal } from "@/components/premium/QuizSignupModal";
 import { QuizLimitModal } from "@/components/premium/QuizLimitModal";
+import { storage, isLoggedIn } from "@/lib/storage";
+import { logger } from "@/lib/logger";
+import { getQuizIntroStartLabel } from "@/lib/quizStartLabel";
 
 interface Quiz {
 	id: number;
@@ -44,9 +47,35 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 	const [formattedDate, setFormattedDate] = useState<string>("");
 	const [showSignupModal, setShowSignupModal] = useState(false);
 	const [showLimitModal, setShowLimitModal] = useState(false);
-	const [loggedIn, setLoggedIn] = useState(false); // Always start with false to match server render
+	// Compute initial state synchronously to avoid label flicker
+	const [loggedIn, setLoggedIn] = useState(() => {
+		if (typeof window === 'undefined') return false;
+		return isLoggedIn();
+	});
 	const [mounted, setMounted] = useState(false);
 	const { tier, isPremium, isLoading } = useUserTier();
+	
+	// Compute start label synchronously (no flicker)
+	const startLabel = React.useMemo(() => {
+		if (typeof window === 'undefined') return "Play Quiz"; // SSR fallback
+		
+		const loggedInSync = isLoggedIn();
+		if (!loggedInSync) return "Try Quiz";
+		
+		// For logged-in users, check restrictions synchronously
+		try {
+			const hasExceeded = hasExceededFreeQuizzes();
+			// If we can't determine premium status yet, default to "Play Quiz" (will be corrected on mount)
+			return getQuizIntroStartLabel({
+				isLoggedIn: loggedInSync,
+				isPremium: isPremium || false,
+				hasExceededFreeQuizzes: hasExceeded,
+				isNewest: isNewest || false,
+			});
+		} catch (e) {
+			return "Play Quiz"; // Safe fallback
+		}
+	}, [isPremium, isNewest, loggedIn]);
 	
 	// Format date on client only to avoid hydration errors
 	useEffect(() => {
@@ -56,8 +85,8 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 	// Check authentication on client only to avoid hydration errors
 	useEffect(() => {
 		setMounted(true);
-		const isLoggedIn = typeof window !== 'undefined' && localStorage.getItem('isLoggedIn') === 'true';
-		setLoggedIn(isLoggedIn);
+		const loggedIn = isLoggedIn();
+		setLoggedIn(loggedIn);
 		
 		// Disable scroll restoration for the intro page
 		if (typeof window !== 'undefined') {
@@ -66,7 +95,7 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 			
 			// Only show modals for logged-in users with restrictions
 			// Visitors can play (they'll be limited to 5 questions)
-			if (isLoggedIn && !isLoading && !isPremium) {
+			if (loggedIn && !isLoading && !isPremium) {
 				// Check if basic user has exceeded free quizzes
 				if (hasExceededFreeQuizzes()) {
 					setShowLimitModal(true);
@@ -162,6 +191,24 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 		}
 	}
 
+	// Set background color immediately to prevent flash - runs synchronously on mount
+	React.useLayoutEffect(() => {
+		if (typeof document !== 'undefined') {
+			// Set body background to match quiz color immediately - use !important to override CSS
+			document.body.style.setProperty('background-color', quiz.colorHex, 'important');
+			// Also set html background
+			document.documentElement.style.setProperty('background-color', quiz.colorHex, 'important');
+			// Remove dark mode class that might cause black background
+			document.documentElement.classList.remove('dark');
+			
+			return () => {
+				// Cleanup: restore default background when component unmounts
+				document.body.style.removeProperty('background-color');
+				document.documentElement.style.removeProperty('background-color');
+			};
+		}
+	}, [quiz.colorHex]);
+
 	return (
 		<LayoutGroup>
 			<motion.section
@@ -180,7 +227,7 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 				transition={{ duration: 0.2 }}
 			>
 				{/* Top bar - consistent with site header (py-3 px-6) */}
-				<header className="flex items-center justify-between py-3 px-4 sm:px-6">
+				<header className="flex items-center justify-between py-3 px-6">
 					<motion.a
 						href="#"
 						onClick={(e) => {
@@ -193,7 +240,7 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 						initial={{ opacity: 0, x: -10 }}
 						animate={{ opacity: 1, x: 0 }}
 						transition={{ duration: 0.4 }}
-						className={`text-xl sm:text-2xl font-bold tracking-tight cursor-pointer hover:opacity-80 transition-opacity truncate ${text}`}
+						className={`text-2xl font-bold tracking-tight cursor-pointer hover:opacity-80 transition-opacity truncate ${text}`}
 					>
 						The School Quiz
 					</motion.a>
@@ -205,7 +252,7 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 							transition={{ delay: 0.2 }}
 							onClick={onBack}
 							aria-label="Close"
-							className={`p-2 sm:p-3 md:p-4 rounded-full transition flex-shrink-0 ${
+							className={`p-4 rounded-full transition flex-shrink-0 ${
 								tone === "white" 
 									? "bg-white/15 hover:bg-white/25 text-white" 
 									: "bg-black/10 hover:bg-black/15 text-gray-900"
@@ -213,13 +260,19 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 							whileHover={{ scale: 1.05 }}
 							whileTap={{ scale: 0.95 }}
 						>
-							<X className="h-5 w-5 sm:h-6 sm:w-6" />
+							<X className="h-6 w-6" />
 						</motion.button>
 					</div>
 				</header>
 
 				{/* Main stack */}
-				<main className="flex flex-col items-center justify-center px-4 sm:px-6 md:px-0 flex-1 py-4 sm:py-8 md:py-12 overflow-x-hidden md:overflow-y-hidden overflow-y-auto min-h-0">
+				<main 
+					className="flex flex-col items-center justify-center px-8 sm:px-6 md:px-0 flex-1 overflow-x-hidden md:overflow-y-hidden overflow-y-auto min-h-0"
+					style={{
+						paddingTop: 'clamp(1rem, 3vh, 3rem)',
+						paddingBottom: 'clamp(1rem, 3vh, 3rem)'
+					}}
+				>
 					<motion.div
 						initial={{ opacity: 0, y: 8 }}
 						animate={{ opacity: 1, y: 0 }}
@@ -232,13 +285,19 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 							initial={{ opacity: 0, scale: 0.9 }}
 							animate={{ opacity: 1, scale: 1 }}
 							transition={{ duration: 0.4, delay: 0.05 }}
-							className="mb-4 sm:mb-6"
+							style={{ marginBottom: 'clamp(1rem, 2.5vh, 2.5rem)' }}
 						>
-							<span className={`inline-flex items-center rounded-full px-5 py-2 text-lg font-bold ${
-								tone === "white" 
-									? "bg-white/10 text-white" 
-									: "bg-black/10 text-gray-900"
-							}`}>
+							<span 
+								className={`inline-flex items-center rounded-full font-bold ${
+									tone === "white" 
+										? "bg-white/10 text-white" 
+										: "bg-black/10 text-gray-900"
+								}`}
+								style={{
+									padding: 'clamp(0.375rem, 1vh, 0.5rem) clamp(1rem, 2vw, 1.25rem)',
+									fontSize: 'clamp(0.875rem, min(1.125rem, 2vh), 1.125rem)'
+								}}
+							>
 								#{quiz.id}
 							</span>
 						</motion.div>
@@ -247,10 +306,11 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 							initial={{ opacity: 0, y: 6 }}
 							animate={{ opacity: 1, y: 0 }}
 							transition={{ duration: 0.4, delay: 0.1 }}
-							className={`font-extrabold text-balance tracking-tight mb-4 sm:mb-6 px-2 ${text}`}
+							className={`font-extrabold text-balance tracking-tight px-2 ${text}`}
 							style={{ 
-								fontSize: 'clamp(1.75rem, 5vw, 4rem)',
-								lineHeight: '1.1'
+								fontSize: 'clamp(2rem, min(6vw, 8vh), 4rem)',
+								lineHeight: '1.1',
+								marginBottom: 'clamp(1.5rem, 3vh, 2.5rem)'
 							}}
 						>
 							{quiz.title}
@@ -261,7 +321,11 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 								initial={{ opacity: 0, y: 6 }}
 								animate={{ opacity: 1, y: 0 }}
 								transition={{ duration: 0.4, delay: 0.15 }}
-								className={`text-base sm:text-lg md:text-xl mb-6 sm:mb-8 px-2 ${tone === "white" ? "opacity-80" : "opacity-70"} ${text}`}
+								className={`px-2 ${tone === "white" ? "opacity-80" : "opacity-70"} ${text}`}
+								style={{
+									fontSize: 'clamp(0.875rem, min(1.125rem, 2.5vh), 1.25rem)',
+									marginBottom: 'clamp(1.5rem, 3vh, 3rem)'
+								}}
 							>
 								{quiz.blurb}
 							</motion.p>
@@ -275,7 +339,11 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 								duration: 0.4, 
 								delay: quiz.blurb ? 0.2 : 0.15
 							}}
-							className={`flex items-center justify-center gap-1.5 text-sm mb-6 sm:mb-8 md:mb-12 ${tone === "white" ? "opacity-70" : "opacity-60"} ${text}`}
+							className={`flex items-center justify-center gap-1.5 ${tone === "white" ? "opacity-70" : "opacity-60"} ${text}`}
+							style={{
+								fontSize: 'clamp(0.75rem, 1.5vh, 0.875rem)',
+								marginBottom: 'clamp(2rem, 4vh, 4rem)'
+							}}
 						>
 							<Calendar className="h-4 w-4" aria-hidden />
 							{formattedDate || formatWeek(quiz.weekISO)}
@@ -291,23 +359,31 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 								damping: 25,
 								delay: 0.2
 							}}
-							className="flex flex-wrap items-center justify-center gap-3 mb-6 sm:mb-8 md:mb-12 w-full px-4"
+							className="flex flex-row items-center justify-center gap-3 w-full px-4"
+							style={{ 
+								flexWrap: 'wrap',
+								maxWidth: '100%',
+								marginBottom: 'clamp(0.75rem, 2vh, 3rem)'
+							}}
 						>
-							{!mounted ? (
-								// Show placeholder button during SSR/hydration - always "Try Quiz" to match server render
-								<div className={`rounded-full px-6 py-3 sm:px-8 sm:py-4 md:px-10 md:py-5 text-base sm:text-lg md:text-xl font-semibold whitespace-nowrap ${
-									tone === "white" ? "bg-white text-gray-900" : "bg-gray-900 text-white"
-								}`}>
-									Try Quiz
-								</div>
-							) : !loggedIn ? (
+							{!loggedIn ? (
 								<motion.a
 									href={`/quizzes/${quiz.slug}/play`}
 									onClick={handlePlayClick}
 									autoFocus
-									className={`rounded-full px-6 py-3 sm:px-8 sm:py-4 md:px-10 md:py-5 text-base sm:text-lg md:text-xl font-semibold cursor-pointer whitespace-nowrap ${
+									className={`rounded-full font-semibold cursor-pointer whitespace-nowrap ${
 										tone === "white" ? "bg-white text-gray-900" : "bg-gray-900 text-white"
 									}`}
+									style={{
+										paddingTop: 'clamp(0.75rem, min(1.25rem, 3vh), 1.5rem)',
+										paddingBottom: 'clamp(0.75rem, min(1.25rem, 3vh), 1.5rem)',
+										paddingLeft: 'clamp(1.5rem, min(2.5rem, 4vw), 2.5rem)',
+										paddingRight: 'clamp(1.5rem, min(2.5rem, 4vw), 2.5rem)',
+										fontSize: 'clamp(0.875rem, min(1.125rem, 2.5vh), 1.25rem)',
+										boxShadow: tone === "white" 
+											? "0 4px 14px 0 rgba(0, 0, 0, 0.15)" 
+											: "0 4px 14px 0 rgba(0, 0, 0, 0.3)"
+									}}
 									whileHover={{ 
 										scale: 1.05,
 										transition: { 
@@ -331,15 +407,10 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 											damping: 30
 										}
 									}}
-									style={{
-										boxShadow: tone === "white" 
-											? "0 4px 14px 0 rgba(0, 0, 0, 0.15)" 
-											: "0 4px 14px 0 rgba(0, 0, 0, 0.3)"
-									}}
 								>
-									Try Quiz
+									{startLabel}
 								</motion.a>
-						) : !isPremium && !isLoading && (hasExceededFreeQuizzes() || !isNewest) ? (
+							) : !isPremium && !isLoading && (hasExceededFreeQuizzes() || !isNewest) ? (
 								<motion.button
 									onClick={() => setShowLimitModal(true)}
 									autoFocus
@@ -356,9 +427,19 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 									href={`/quizzes/${quiz.slug}/play`}
 									onClick={handlePlayClick}
 									autoFocus
-									className={`rounded-full px-6 py-3 sm:px-8 sm:py-4 md:px-10 md:py-5 text-base sm:text-lg md:text-xl font-semibold cursor-pointer whitespace-nowrap ${
+									className={`rounded-full font-semibold cursor-pointer whitespace-nowrap ${
 										tone === "white" ? "bg-white text-gray-900" : "bg-gray-900 text-white"
 									}`}
+									style={{
+										paddingTop: 'clamp(0.75rem, min(1.25rem, 3vh), 1.5rem)',
+										paddingBottom: 'clamp(0.75rem, min(1.25rem, 3vh), 1.5rem)',
+										paddingLeft: 'clamp(1.5rem, min(2.5rem, 4vw), 2.5rem)',
+										paddingRight: 'clamp(1.5rem, min(2.5rem, 4vw), 2.5rem)',
+										fontSize: 'clamp(0.875rem, min(1.125rem, 2.5vh), 1.25rem)',
+										boxShadow: tone === "white" 
+											? "0 4px 14px 0 rgba(0, 0, 0, 0.15)" 
+											: "0 4px 14px 0 rgba(0, 0, 0, 0.3)"
+									}}
 									whileHover={{ 
 										scale: 1.05,
 										transition: { 
@@ -382,25 +463,29 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 											damping: 30
 										}
 									}}
-									style={{
-										boxShadow: tone === "white" 
-											? "0 4px 14px 0 rgba(0, 0, 0, 0.15)" 
-											: "0 4px 14px 0 rgba(0, 0, 0, 0.3)"
-									}}
 								>
-									Play Quiz
+									{startLabel}
 								</motion.a>
 							)}
 							
 							<div className="relative">
 								<motion.button
 									onClick={() => setShowShareMenu(!showShareMenu)}
-									className={`inline-flex items-center gap-1.5 sm:gap-2 rounded-full px-6 py-3 sm:px-8 sm:py-4 md:px-10 md:py-5 text-base sm:text-lg md:text-xl font-semibold cursor-pointer whitespace-nowrap ${
-										tone === "white" ? "bg-white/10 text-white" : "bg-black/10 text-gray-900"
+									className={`inline-flex items-center gap-1.5 sm:gap-2 rounded-full font-semibold cursor-pointer whitespace-nowrap ${
+										tone === "white" ? "bg-white/15 text-white hover:bg-white/25" : "bg-white/20 text-gray-900 hover:bg-white/30"
 									}`}
+									style={{
+										paddingTop: 'clamp(0.75rem, min(1.25rem, 3vh), 1.5rem)',
+										paddingBottom: 'clamp(0.75rem, min(1.25rem, 3vh), 1.5rem)',
+										paddingLeft: 'clamp(1.5rem, min(2.5rem, 4vw), 2.5rem)',
+										paddingRight: 'clamp(1.5rem, min(2.5rem, 4vw), 2.5rem)',
+										fontSize: 'clamp(0.875rem, min(1.125rem, 2.5vh), 1.25rem)',
+										boxShadow: tone === "white" 
+											? "0 4px 14px 0 rgba(0, 0, 0, 0.15)" 
+											: "0 4px 14px 0 rgba(0, 0, 0, 0.1)"
+									}}
 									whileHover={{ 
 										scale: 1.05,
-										backgroundColor: tone === "white" ? "rgba(255, 255, 255, 0.18)" : "rgba(0, 0, 0, 0.15)",
 										transition: { 
 											type: "spring",
 											stiffness: 500,
@@ -422,20 +507,20 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 											damping: 30
 										}
 									}}
-								>
-									<motion.div
-										whileHover={{ 
-											rotate: [0, -8, 8, 0],
-											transition: { 
-												duration: 0.4,
-												ease: "easeInOut"
-											}
-										}}
 									>
-										<Share2 className="h-4 w-4 sm:h-5 sm:w-5" />
-									</motion.div>
-									<span className="hidden sm:inline">Share</span>
-								</motion.button>
+										<motion.div
+											whileHover={{ 
+												rotate: [0, -8, 8, 0],
+												transition: { 
+													duration: 0.4,
+													ease: "easeInOut"
+												}
+											}}
+										>
+											<Share2 className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
+										</motion.div>
+										<span>Share</span>
+									</motion.button>
 
 								<AnimatePresence>
 									{showShareMenu && (

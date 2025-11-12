@@ -34,10 +34,10 @@ export default function AboutPage() {
 				/>
 
 				{/* Two Column Layout with Photo */}
-				<div className="grid md:grid-cols-2 gap-12 lg:gap-16 mb-20">
+				<div className="grid md:grid-cols-2 gap-6 sm:gap-8 md:gap-12 lg:gap-16 mb-12 sm:mb-16 md:mb-20">
 					{/* My Story */}
 					<ContentCard padding="lg" rounded="3xl" delay={0.1} hoverAnimation={false}>
-						<h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-6">
+						<h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6">
 							My Story
 						</h2>
 						<p className="text-base md:text-lg text-gray-600 dark:text-gray-400 leading-relaxed">
@@ -62,7 +62,7 @@ export default function AboutPage() {
 
 					{/* My Mission */}
 					<ContentCard padding="lg" rounded="3xl" delay={0.2} hoverAnimation={false}>
-						<h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-6">
+						<h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6">
 							My Mission
 						</h2>
 						<div className="space-y-4">
@@ -89,8 +89,8 @@ export default function AboutPage() {
 
 				{/* Additional Sections */}
 				<ContentCard padding="xl" rounded="3xl" delay={0.3} hoverAnimation={false}>
-					<div className="text-center space-y-6">
-						<h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
+					<div className="text-center space-y-4 sm:space-y-6">
+						<h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
 							Join Me on This Journey
 						</h2>
 						<p className="text-base md:text-lg text-gray-700 dark:text-gray-300 max-w-2xl mx-auto leading-relaxed">

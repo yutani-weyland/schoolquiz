@@ -1,14 +1,16 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { SiteHeader } from "@/components/SiteHeader";
 import { QuizCard, Quiz } from "@/components/quiz/QuizCard";
 import { NextQuizTeaser } from "@/components/quiz/NextQuizTeaser";
-import Link from "next/link";
+import { Skeleton, SkeletonCard } from "@/components/ui/Skeleton";
+import { Footer } from "@/components/Footer";
 import { usePathname } from "next/navigation";
-import { useUserAccess } from "@/contexts/UserAccessContext";
 import { getQuizColor } from '@/lib/colors';
+import { storage, getUserName } from '@/lib/storage';
+import { logger } from '@/lib/logger';
 
 const quizzes: Quiz[] = [
   {
@@ -136,8 +138,8 @@ const quizzes: Quiz[] = [
 export default function QuizzesPage() {
 	const [userName, setUserName] = useState<string | null>(null);
 	const [mounted, setMounted] = useState(false);
-	const { isPremium, isVisitor } = useUserAccess();
 	const [pageAnimationKey, setPageAnimationKey] = useState(0);
+	const [isLoading, setIsLoading] = useState(true);
 	const pathname = usePathname();
 
 	// Check authentication and get user name on client only to avoid hydration errors
@@ -145,18 +147,25 @@ export default function QuizzesPage() {
 		setMounted(true);
 		
 		if (typeof window !== 'undefined') {
-			// Check if user is logged in and get their name
-			const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-			const name = localStorage.getItem('userName');
-			if (isLoggedIn && name) {
-				setUserName(name);
-			}
+			// Simulate loading delay for skeleton effect
+			const loadingTimer = setTimeout(() => {
+				// Check if user is logged in and get their name
+				const isLoggedIn = storage.get('isLoggedIn', false);
+				const name = getUserName();
+				if (isLoggedIn && name) {
+					setUserName(name);
+				}
+				
+				setIsLoading(false);
+				
+				// Redirect logged-out users to latest quiz intro page
+				if (!isLoggedIn) {
+					// Redirect to latest quiz intro page (quiz #12)
+					window.location.href = '/quizzes/12/intro';
+				}
+			}, 300); // Small delay to show skeleton
 			
-			// Redirect logged-out users to latest quiz intro page
-			if (!isLoggedIn) {
-				// Redirect to latest quiz intro page (quiz #12)
-				window.location.href = '/quizzes/12/intro';
-			}
+			return () => clearTimeout(loadingTimer);
 		}
 	}, []);
 
@@ -170,113 +179,108 @@ export default function QuizzesPage() {
 
 	return (
 		<>
-			<SiteHeader fadeLogo={true} showUpgrade={true} />
+			<SiteHeader fadeLogo={true} />
 			<main className="min-h-screen pt-24 pb-0">
-				<div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
+				<div className="max-w-[1600px] mx-auto px-6 sm:px-6 lg:px-8 xl:px-12">
 					{/* Page Title */}
 					<div className="text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 dark:text-white text-center mb-16 min-h-[1.2em] flex items-center justify-center">
 						<AnimatePresence mode="wait">
-							<motion.h1
-								key={mounted && userName ? `greeting-${userName}` : 'default-title'}
-								initial={{ opacity: 0, y: -10 }}
-								animate={{ opacity: 1, y: 0 }}
-								exit={{ opacity: 0, y: 10 }}
-								transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-								className="w-full"
-							>
-								{mounted && userName ? `G'day ${userName}!` : "Your Quizzes"}
-							</motion.h1>
+							{isLoading || !mounted ? (
+								<motion.div
+									key="skeleton-title"
+									initial={{ opacity: 0 }}
+									animate={{ opacity: 1 }}
+									exit={{ opacity: 0 }}
+									className="w-full max-w-md mx-auto"
+								>
+									<Skeleton variant="text" height={80} className="w-full" />
+								</motion.div>
+							) : (
+								<motion.h1
+									key={userName ? `greeting-${userName}` : 'default-title'}
+									initial={{ opacity: 0, y: -10 }}
+									animate={{ opacity: 1, y: 0 }}
+									exit={{ opacity: 0, y: 10 }}
+									transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+									className="w-full"
+								>
+									{userName ? `G'day ${userName}!` : "Your Quizzes"}
+								</motion.h1>
+							)}
 						</AnimatePresence>
 					</div>
 					
 					{/* Quizzes Grid - Responsive with overlapping cards on mobile */}
-					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 md:gap-6">
-					{/* Next Quiz Teaser Card */}
-					<motion.div 
-						className="hidden md:block h-full" 
-						key={`teaser-${pageAnimationKey}`}
-						initial={{ opacity: 0, y: 20, scale: 0.95 }}
-						animate={{ opacity: 1, y: 0, scale: 1 }}
-						transition={{ 
-							duration: 0.5, 
-							delay: 0.1,
-							ease: [0.22, 1, 0.36, 1],
-							type: 'spring',
-							stiffness: 200,
-							damping: 20
-						}}
-					>
-						<NextQuizTeaser latestQuizId={quizzes[0]?.id || 12} />
-					</motion.div>
-						
-					{quizzes.map((quiz, index) => {
-						const isNewest = index === 0;
-						// Premium locked if not premium and not the newest quiz
-						const isPremiumLocked = !isPremium && !isNewest && quiz.status === "available";
-						return (
-							<motion.div 
-								key={`quiz-${quiz.id}-${pageAnimationKey}`}
-								className="h-full"
-								initial={{ opacity: 0, y: 20, scale: 0.95 }}
-								animate={{ opacity: 1, y: 0, scale: 1 }}
-								transition={{ 
-									duration: 0.5, 
-									delay: 0.1 + (index * 0.05), // Stagger by 50ms per card
-									ease: [0.22, 1, 0.36, 1],
-									type: 'spring',
-									stiffness: 200,
-									damping: 20
-								}}
-							>
-								<QuizCard quiz={quiz} isNewest={isNewest} />
-							</motion.div>
-						);
-					})}
+					<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8 md:gap-6">
+						{isLoading ? (
+							// Skeleton loading state
+							<>
+								<div className="hidden md:block">
+									<SkeletonCard className="h-full" />
+								</div>
+								{Array.from({ length: 6 }).map((_, index) => (
+									<motion.div
+										key={`skeleton-${index}`}
+										initial={{ opacity: 0, y: 20 }}
+										animate={{ opacity: 1, y: 0 }}
+										transition={{ 
+											duration: 0.3, 
+											delay: index * 0.05,
+											ease: [0.22, 1, 0.36, 1]
+										}}
+									>
+										<SkeletonCard className="h-full" />
+									</motion.div>
+								))}
+							</>
+						) : (
+							<>
+								{/* Next Quiz Teaser Card */}
+								<motion.div 
+									className="hidden md:block h-full" 
+									key={`teaser-${pageAnimationKey}`}
+									initial={{ opacity: 0, y: 20, scale: 0.95 }}
+									animate={{ opacity: 1, y: 0, scale: 1 }}
+									transition={{ 
+										duration: 0.5, 
+										delay: 0.1,
+										ease: [0.22, 1, 0.36, 1],
+										type: 'spring',
+										stiffness: 200,
+										damping: 20
+									}}
+								>
+									<NextQuizTeaser latestQuizId={quizzes[0]?.id || 12} />
+								</motion.div>
+								
+								{quizzes.map((quiz, index) => {
+									const isNewest = index === 0;
+									return (
+										<motion.div 
+											key={`quiz-${quiz.id}-${pageAnimationKey}`}
+											className="h-auto sm:h-full"
+											initial={{ opacity: 0, y: 20, scale: 0.95 }}
+											animate={{ opacity: 1, y: 0, scale: 1 }}
+											transition={{ 
+												duration: 0.5, 
+												delay: 0.1 + (index * 0.05), // Stagger by 50ms per card
+												ease: [0.22, 1, 0.36, 1],
+												type: 'spring',
+												stiffness: 200,
+												damping: 20
+											}}
+										>
+											<QuizCard quiz={quiz} isNewest={isNewest} />
+										</motion.div>
+									);
+								})}
+							</>
+						)}
 					</div>
 				</div>
 			</main>
 
-			<footer className="bg-gray-50 dark:bg-[#1A1A1A] border-t border-gray-200 dark:border-gray-800 py-16 px-4">
-				<div className="max-w-7xl mx-auto">
-					<div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
-						{/* Logo */}
-						<div className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
-							The School Quiz
-						</div>
-						
-						{/* Navigation Links */}
-						<div className="flex flex-col md:flex-row gap-8 md:gap-12">
-							<div className="flex flex-col gap-3">
-								<Link href="/quizzes" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">
-									Quizzes
-								</Link>
-								<Link href="/about" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">
-									About
-								</Link>
-								<Link href="/contact" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">
-									Contact
-								</Link>
-							</div>
-							<div className="flex flex-col gap-3">
-								<Link href="/privacy" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">
-									Privacy
-								</Link>
-								<Link href="/terms" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">
-									Terms
-								</Link>
-								<Link href="/help" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">
-									Help
-								</Link>
-							</div>
-						</div>
-					</div>
-					
-					{/* Copyright */}
-					<div className="mt-12 pt-8 border-t border-gray-200 dark:border-gray-800 text-center text-sm text-gray-500 dark:text-gray-400">
-						<p>&copy; 2026 The School Quiz. All rights reserved.</p>
-					</div>
-				</div>
-			</footer>
+			<Footer />
 		</>
 	);
 }

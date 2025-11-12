@@ -104,14 +104,14 @@ function RoundIntro({ round, textColor, onStart, finaleRoundNumber }: RoundIntro
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 1.05 }}
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-      className="min-h-full flex flex-col items-center justify-center px-8 md:px-16 lg:px-24 py-12 transition-colors duration-700 ease-in-out"
+      className="min-h-full flex flex-col items-center justify-center px-8 md:px-16 lg:px-24 py-12 transition-colors duration-300 ease-in-out"
     >
       <div className="max-w-4xl w-full text-center space-y-8">
         <motion.h1
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.1, duration: 0.6 }}
-          className={`font-extrabold text-balance tracking-tight mb-6 transition-colors duration-700 ease-in-out ${
+          className={`font-extrabold text-balance tracking-tight mb-6 transition-colors duration-300 ease-in-out ${
             textColor === "white" ? "text-white" : "text-gray-900"
           }`}
           style={{ fontSize: "clamp(2.5rem, 5vw, 4rem)", lineHeight: "1.1" }}
@@ -122,7 +122,7 @@ function RoundIntro({ round, textColor, onStart, finaleRoundNumber }: RoundIntro
         {description && (
           <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2, duration: 0.6 }}>
             <p
-              className={`text-title mb-12 opacity-70 transition-colors duration-700 ease-in-out ${
+              className={`text-title mb-12 opacity-70 transition-colors duration-300 ease-in-out ${
                 textColor === "white" ? "text-white" : "text-gray-900"
               }`}
             >
@@ -133,9 +133,13 @@ function RoundIntro({ round, textColor, onStart, finaleRoundNumber }: RoundIntro
 
         <motion.button
           onClick={onStart}
-          className={`px-10 py-5 rounded-full text-2xl font-bold transition-colors duration-700 ease-in-out ${
+          className={`rounded-full font-bold transition-colors duration-300 ease-in-out ${
             textColor === "white" ? "bg-white text-gray-900 hover:bg-white/90" : "bg-gray-900 text-white hover:bg-gray-800"
           }`}
+          style={{
+            fontSize: "clamp(1rem, 2vw, 1.5rem)",
+            padding: "clamp(0.75rem, 1.5vw, 1.25rem) clamp(2rem, 4vw, 2.5rem)",
+          }}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
@@ -233,45 +237,89 @@ function PresenterMode({
       }
 
       const scorePillEl = document.querySelector('[aria-label*="Score:"]') as HTMLElement | null;
-      let spacing = 80;
+      let spacing = 60;
 
       if (scorePillEl) {
         const scorePillRect = scorePillEl.getBoundingClientRect();
         const topSpacing = questionRect.top - scorePillRect.bottom;
-        spacing = Math.max(60, topSpacing);
+        spacing = Math.max(40, topSpacing);
       }
 
-      const approximateButtonHeight = window.innerWidth < 768 ? 72 : 88;
-      const maxTop = window.innerHeight - approximateButtonHeight - 40;
+      // Get actual button element if it exists to measure real dimensions
+      const buttonEl = document.querySelector('[aria-pressed]') as HTMLElement | null;
+      let buttonHeight = window.innerWidth < 768 ? 72 : 88; // Default estimate
+      let buttonWidth = 0;
+      
+      if (buttonEl) {
+        const buttonRect = buttonEl.getBoundingClientRect();
+        buttonHeight = buttonRect.height || buttonHeight;
+        buttonWidth = buttonRect.width || 0;
+      }
+
+      // Account for button height plus padding
+      const buttonPadding = 40;
+      const minBottomPadding = 20;
+      const maxTop = window.innerHeight - buttonHeight - buttonPadding - minBottomPadding;
+      
+      // Calculate desired position
       const desiredTop = questionRect.bottom + spacing;
+      
+      // Ensure button doesn't clip at bottom
+      let finalTop = Math.min(desiredTop, maxTop);
+      
+      // Also ensure button doesn't clip at top (with some margin)
+      const minTop = 100; // Leave space for header/score pill
+      finalTop = Math.max(finalTop, minTop);
+      
+      // Ensure button doesn't clip horizontally
+      const viewportWidth = window.innerWidth;
+      const maxButtonWidth = viewportWidth - 40; // 20px padding on each side
+      const buttonLeft = window.innerWidth / 2;
+      
+      // If button is too wide, we'll need to scale it down (handled by AnswerReveal component)
+      // But we can adjust position to ensure it fits
+      const halfButtonWidth = buttonWidth > 0 ? buttonWidth / 2 : 200; // Estimate if not measured
+      const minLeft = halfButtonWidth + 20;
+      const maxLeft = viewportWidth - halfButtonWidth - 20;
+      const finalLeft = Math.max(minLeft, Math.min(maxLeft, buttonLeft));
 
       setRevealButtonPosition({
-        top: Math.min(desiredTop, maxTop),
-        left: window.innerWidth / 2,
+        top: finalTop,
+        left: finalLeft,
       });
 
       setIsPositionCalculated(true);
     };
 
+    // Debounce resize handler
+    let resizeTimeout: ReturnType<typeof setTimeout> | null = null;
+    const debouncedUpdatePosition = () => {
+      if (resizeTimeout) clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        requestAnimationFrame(updatePosition);
+      }, 150);
+    };
+
     const timer1 = setTimeout(updatePosition, 100);
     const timer2 = setTimeout(updatePosition, 300);
-    const timer3 = setTimeout(updatePosition, 600);
 
-    window.addEventListener("resize", updatePosition);
-    window.addEventListener("scroll", updatePosition, true);
+    window.addEventListener("resize", debouncedUpdatePosition, { passive: true });
+    window.addEventListener("scroll", debouncedUpdatePosition, { passive: true });
 
-    const observer = new ResizeObserver(updatePosition);
+    const observer = new ResizeObserver(() => {
+      requestAnimationFrame(updatePosition);
+    });
     if (questionTextRef.current) {
       observer.observe(questionTextRef.current);
     }
 
     return () => {
-      window.removeEventListener("resize", updatePosition);
-      window.removeEventListener("scroll", updatePosition, true);
-      observer.disconnect();
       clearTimeout(timer1);
       clearTimeout(timer2);
-      clearTimeout(timer3);
+      if (resizeTimeout) clearTimeout(resizeTimeout);
+      window.removeEventListener("resize", debouncedUpdatePosition);
+      window.removeEventListener("scroll", debouncedUpdatePosition);
+      observer.disconnect();
     };
   }, [question.question]);
 
@@ -299,7 +347,7 @@ function PresenterMode({
 
       <main
         ref={mainContainerRef}
-        className="relative overflow-y-auto px-4 sm:px-6 md:px-8 transition-colors duration-700 ease-in-out"
+        className="relative overflow-y-auto px-4 sm:px-6 md:px-8 transition-colors duration-300 ease-in-out"
         style={{ 
           paddingTop: "env(safe-area-inset-top)", 
           paddingBottom: "env(safe-area-inset-bottom)", 
@@ -318,12 +366,12 @@ function PresenterMode({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.2, delay: 0 }}
-              className={`font-extrabold leading-[1.05] break-words [overflow-wrap:anywhere] transition-colors duration-700 ease-in-out ${
+              className={`font-extrabold leading-[1.05] break-words [overflow-wrap:anywhere] transition-colors duration-300 ease-in-out ${
                 textColor === "white" ? "text-white" : "text-gray-900"
               }`}
               style={{
-                fontSize: "clamp(24px, min(3.4vw + 0.9rem, (100vh - 360px) / 3), 50px)",
-                marginBottom: "clamp(28px, 4vh, 48px)",
+                fontSize: "clamp(20px, min(3.4vw + 0.9rem, (100vh - 360px) / 3), 50px)",
+                marginBottom: "clamp(24px, 4vh, 48px)",
                 transform: `scale(${questionScale})`,
                 transformOrigin: "center top",
               }}
@@ -336,7 +384,12 @@ function PresenterMode({
         {isPositionCalculated && (
           <motion.div
             className="fixed flex justify-center z-30"
-            style={{ transform: "translateX(-50%)", overflow: "visible" }}
+            style={{ 
+              transform: "translateX(-50%)", 
+              overflow: "visible",
+              maxWidth: "calc(100vw - 40px)",
+              width: "auto"
+            }}
             initial={{ opacity: 0, top: revealButtonPosition.top, left: revealButtonPosition.left }}
             animate={{
               opacity: 1,
@@ -349,19 +402,21 @@ function PresenterMode({
               left: { type: "spring", stiffness: 260, damping: 28 },
             }}
           >
-            <AnswerReveal
-              answerText={question.answer}
-              revealed={isAnswerRevealed}
-              onReveal={onRevealAnswer}
-              onHide={onHideAnswer}
-              accentColor={quizColor}
-              textColor={textColor === "white" ? "white" : "black"}
-              className={textColor === "white" ? "outline outline-2 outline-white/80" : undefined}
-              isMarkedCorrect={isMarkedCorrect}
-              isMarkedIncorrect={isQuestionAnswered && !isMarkedCorrect}
-              onMarkCorrect={handleMarkCorrectWithFeedback}
-              onUnmarkCorrect={handleUnmarkCorrectWithFeedback}
-            />
+            <div style={{ maxWidth: "100%", width: "auto" }}>
+              <AnswerReveal
+                answerText={question.answer}
+                revealed={isAnswerRevealed}
+                onReveal={onRevealAnswer}
+                onHide={onHideAnswer}
+                accentColor={quizColor}
+                textColor={textColor === "white" ? "white" : "black"}
+                className={textColor === "white" ? "outline outline-2 outline-white/80" : undefined}
+                isMarkedCorrect={isMarkedCorrect}
+                isMarkedIncorrect={isQuestionAnswered && !isMarkedCorrect}
+                onMarkCorrect={handleMarkCorrectWithFeedback}
+                onUnmarkCorrect={handleUnmarkCorrectWithFeedback}
+              />
+            </div>
           </motion.div>
         )}
       </main>
@@ -403,7 +458,7 @@ function PresenterNavigation({
               exit={{ opacity: 0, x: -20 }}
               whileHover={{ opacity: 1, scale: 1.05 }}
               transition={{ duration: 0.3 }}
-              className={`p-3 sm:p-4 rounded-full transition-colors duration-700 ease-in-out ${
+              className={`p-3 sm:p-4 rounded-full transition-colors duration-300 ease-in-out ${
                 textColor === "white" ? "bg-white/15 hover:bg-white/25 text-white" : "bg-black/10 hover:bg-black/15 text-gray-900"
               }`}
               whileTap={{ scale: 0.95 }}

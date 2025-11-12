@@ -2,12 +2,14 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { Calendar, Share2, Copy, Check, Lock, Crown, Trophy } from "lucide-react";
-import React, { useState } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { textOn } from "@/lib/contrast";
 import { formatWeek } from "@/lib/format";
 import { useUserTier } from "@/hooks/useUserTier";
 import { UpgradeModal } from "@/components/premium/UpgradeModal";
 import { canAccessQuiz } from "@/lib/feature-gating";
+import { sessionStorage } from "@/lib/storage";
+import { logger } from "@/lib/logger";
 
 export type Quiz = {
 	id: number;
@@ -46,7 +48,7 @@ export function QuizCard({ quiz, isNewest = false }: QuizCardProps) {
 	React.useEffect(() => {
 		setMounted(true);
 		if (typeof window !== 'undefined') {
-			const timer = sessionStorage.getItem(`quiz-${quiz.slug}-timer`);
+			const timer = sessionStorage.get<string | null>(`quiz-${quiz.slug}-timer`, null);
 			setHasProgress(!!(timer && parseInt(timer, 10) > 0));
 		}
 	}, [quiz.slug]);
@@ -79,19 +81,19 @@ export function QuizCard({ quiz, isNewest = false }: QuizCardProps) {
 		if (typeof window !== 'undefined') {
 			// Check localStorage for completion data
 			const completionKey = `quiz-${quiz.slug}-completion`;
-			const completionStr = localStorage.getItem(completionKey);
+			const completionStr = sessionStorage.get<string | null>(completionKey, null);
 			
 			if (completionStr) {
 				try {
-					const completion = JSON.parse(completionStr);
-					if (completion.score !== undefined && completion.totalQuestions !== undefined) {
+					const completion = typeof completionStr === 'string' ? JSON.parse(completionStr) : completionStr;
+					if (completion && typeof completion === 'object' && 'score' in completion && 'totalQuestions' in completion) {
 						setCompletionData({
-							score: completion.score,
-							totalQuestions: completion.totalQuestions,
+							score: completion.score as number,
+							totalQuestions: completion.totalQuestions as number,
 						});
 					}
 				} catch (err) {
-					console.error('Failed to parse completion data:', err);
+					logger.error('Failed to parse completion data:', err);
 				}
 			} else {
 				setCompletionData(null);
@@ -145,15 +147,14 @@ export function QuizCard({ quiz, isNewest = false }: QuizCardProps) {
 	return (
 		<div
 			key={`quiz-card-${quiz.id}`}
-			className="h-full"
+			className="h-auto sm:h-full"
 		>
 			<motion.div
-				className="rounded-3xl p-7 sm:p-9 shadow-lg h-full min-h-[430px] flex flex-col relative overflow-hidden cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
+				className="rounded-3xl p-4 sm:p-7 md:p-9 shadow-lg h-auto sm:h-full min-h-[215px] sm:min-h-[380px] md:min-h-[430px] flex flex-col relative overflow-hidden cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
 				style={{ 
 					backgroundColor: quiz.colorHex,
 					viewTransitionName: `quiz-${quiz.id}`,
 					transformOrigin: 'center',
-					minHeight: '430px',
 					...(isPremiumLocked && {
 						boxShadow: '0 0 0 1px rgba(251, 191, 36, 0.3), 0 0 20px rgba(251, 191, 36, 0.1)',
 					}),
@@ -183,10 +184,12 @@ export function QuizCard({ quiz, isNewest = false }: QuizCardProps) {
 							return;
 						}
 						try {
-							sessionStorage.setItem("quizzes.scrollY", String(window.scrollY));
-							sessionStorage.setItem("quizzes.scrollParams", window.location.search);
-							sessionStorage.setItem("quiz.transition.id", String(quiz.id));
-						} catch {}
+							sessionStorage.set("quizzes.scrollY", String(window.scrollY));
+							sessionStorage.set("quizzes.scrollParams", window.location.search);
+							sessionStorage.set("quiz.transition.id", String(quiz.id));
+						} catch (err) {
+							logger.warn('Failed to save scroll state', { error: err });
+						}
 						window.location.href = `/quizzes/${quiz.slug}/intro`;
 					}
 				}}
@@ -202,10 +205,12 @@ export function QuizCard({ quiz, isNewest = false }: QuizCardProps) {
 								return;
 							}
 							try {
-								sessionStorage.setItem("quizzes.scrollY", String(window.scrollY));
-								sessionStorage.setItem("quizzes.scrollParams", window.location.search);
-								sessionStorage.setItem("quiz.transition.id", String(quiz.id));
-							} catch {}
+								sessionStorage.set('quizzes.scrollY', String(window.scrollY));
+								sessionStorage.set('quizzes.scrollParams', window.location.search);
+								sessionStorage.set('quiz.transition.id', String(quiz.id));
+							} catch (err) {
+								logger.warn('Failed to save scroll state', { error: err });
+							}
 							window.location.href = `/quizzes/${quiz.slug}/intro`;
 						}
 					}
@@ -220,7 +225,7 @@ export function QuizCard({ quiz, isNewest = false }: QuizCardProps) {
 					transition={{ duration: 0.3 }}
 				/>
 
-				<div className="flex items-center justify-between mb-4 relative z-10 gap-3">
+				<div className="flex items-center justify-between mb-2 sm:mb-4 relative z-10 gap-2 sm:gap-3">
 					<div className="flex items-center gap-2 flex-nowrap">
 						<motion.span
 							className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-bold ${invert} bg-black/10 bg-clip-padding whitespace-nowrap`}
@@ -310,26 +315,14 @@ export function QuizCard({ quiz, isNewest = false }: QuizCardProps) {
 					</span>
 				</div>
 				
-				{/* Premium subtitle */}
-				{isPremiumLocked && (
-					<motion.p
-						className={`text-sm ${sub} mb-3 relative z-10`}
-						initial={{ opacity: 0 }}
-						animate={{ opacity: 1 }}
-						transition={{ delay: 0.2 }}
-					>
-						Unlock this with Premium — along with achievements, past quizzes, and private leagues.
-					</motion.p>
-				)}
-				
-				<h3 className={`text-3xl sm:text-4xl font-extrabold leading-tight mb-5 ${invert} relative z-10 min-h-[4.5rem]`}>
+				<h3 className={`text-3xl sm:text-3xl md:text-4xl font-extrabold leading-tight mb-2 sm:mb-5 ${invert} relative z-10`}>
 					{quiz.title}
 				</h3>
 				
 				{/* Categories tags */}
 				{quiz.tags && quiz.tags.length > 0 && (
 					<motion.div
-						className="flex flex-wrap gap-2.5 mb-7 relative z-10"
+						className="flex flex-wrap gap-2 sm:gap-2.5 mb-3 sm:mb-7 relative z-10"
 						initial={{ opacity: 0 }}
 						animate={{ opacity: 1 }}
 						transition={{ delay: 0.2, duration: 0.4 }}
@@ -355,7 +348,7 @@ export function QuizCard({ quiz, isNewest = false }: QuizCardProps) {
 					<div className={`flex items-center justify-between ${footerMuted}`}>
 						<motion.button
 							disabled={quiz.status === "coming_soon" || isPremiumLocked}
-							className={`px-6 py-3 rounded-full text-base font-semibold transition whitespace-nowrap relative ${
+							className={`px-5 py-2 sm:px-6 sm:py-3 rounded-full text-base font-semibold transition whitespace-nowrap relative ${
 								quiz.status === "coming_soon"
 									? "bg-white/40 text-black/60 cursor-not-allowed"
 									: isPremiumLocked

@@ -1,18 +1,116 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import { SiteHeader } from "@/components/SiteHeader";
 import NextQuizCountdown from "@/components/NextQuizCountdown";
 import { RotatingText } from "@/components/RotatingText";
 import HeroCTA from "@/components/HeroCTA";
 import WhySection from "@/components/marketing/WhySection";
 import QuizSafariPreview from "@/components/QuizSafariPreview";
+import { QuizCardStack } from "@/components/marketing/QuizCardStack";
 import { LockedFeature } from "@/components/access/LockedFeature";
+import { Skeleton, SkeletonText } from "@/components/ui/Skeleton";
 import { useUserAccess } from "@/contexts/UserAccessContext";
-import Link from "next/link";
+import { Footer } from "@/components/Footer";
+import { getQuizColor } from "@/lib/colors";
+import type { Quiz } from "@/components/quiz/QuizCard";
+
+// Sample quiz data for the card stack
+const sampleQuizzes: Quiz[] = [
+	{
+		id: 12,
+		slug: "12",
+		title: "Shape Up, Pumpkins, Famous First Words, Crazes, and Next In Sequence.",
+		blurb: "A weekly selection mixing patterns, pop culture and logic.",
+		weekISO: "2024-01-15",
+		colorHex: getQuizColor(12),
+		status: "available",
+		tags: ["Patterns", "Pop Culture", "Logic", "Famous Quotes", "Sequences"]
+	},
+	{
+		id: 11,
+		slug: "11",
+		title: "Opposite Day, Lights, Common Ground, Robots Etc, and First Ladies.",
+		blurb: "Wordplay meets trivia.",
+		weekISO: "2024-01-08",
+		colorHex: getQuizColor(11),
+		status: "available",
+		tags: ["Wordplay", "History", "Technology", "Politics", "General"]
+	},
+	{
+		id: 10,
+		slug: "10",
+		title: "Back to the Past, Name That Nation, Name the Other, Analog Games, and What Does It Stand For?",
+		blurb: "History, geography and acronyms.",
+		weekISO: "2024-01-01",
+		colorHex: getQuizColor(10),
+		status: "available",
+		tags: ["History", "Geography", "Games", "Acronyms", "Trivia"]
+	},
+	{
+		id: 9,
+		slug: "9",
+		title: "Holiday Trivia, Winter Sports, Year End Review, and Festive Fun.",
+		blurb: "Seasonal mixed bag.",
+		weekISO: "2023-12-25",
+		colorHex: getQuizColor(9),
+		status: "available",
+		tags: ["Seasonal", "Sports", "Holidays", "Year Review", "Winter"]
+	},
+	{
+		id: 8,
+		slug: "8",
+		title: "Movie Magic, Tech Trends, Sports Moments, and Pop Culture.",
+		blurb: "Headlines and highlights.",
+		weekISO: "2023-12-18",
+		colorHex: getQuizColor(8),
+		status: "available",
+		tags: ["Movies", "Technology", "Sports", "Pop Culture", "Entertainment"]
+	},
+	{
+		id: 7,
+		slug: "7",
+		title: "World Wonders, Historical Events, Science Facts, and Geography.",
+		blurb: "Curiosities around the world.",
+		weekISO: "2023-12-11",
+		colorHex: getQuizColor(7),
+		status: "available",
+		tags: ["Science", "Geography", "History", "World Facts", "Nature"]
+	},
+	{
+		id: 6,
+		slug: "6",
+		title: "Literature Classics, Music Legends, Art Movements, and Cultural Icons.",
+		blurb: "Explore the arts and humanities.",
+		weekISO: "2023-12-04",
+		colorHex: getQuizColor(6),
+		status: "available",
+		tags: ["Literature", "Music", "Art", "Culture", "Humanities"]
+	},
+	{
+		id: 5,
+		slug: "5",
+		title: "Space Exploration, Ocean Depths, Animal Kingdom, and Natural Phenomena.",
+		blurb: "Discover the wonders of nature.",
+		weekISO: "2023-11-27",
+		colorHex: getQuizColor(5),
+		status: "available",
+		tags: ["Space", "Ocean", "Animals", "Nature", "Science"]
+	},
+];
 
 export default function HomePage() {
-	const { isVisitor, isFree, isPremium, userName } = useUserAccess();
+	const { isVisitor, isFree, isPremium, userName, isLoading } = useUserAccess();
+	const [mounted, setMounted] = useState(false);
+	const [contentLoaded, setContentLoaded] = useState(false);
+
+	useEffect(() => {
+		setMounted(true);
+		// Simulate progressive loading
+		const timer = setTimeout(() => setContentLoaded(true), 100);
+		return () => clearTimeout(timer);
+	}, []);
 	
 	return (
 		<>
@@ -22,42 +120,99 @@ export default function HomePage() {
 				<NextQuizCountdown />
 
 				{/* Hero Section */}
-				<section className="min-h-screen flex flex-col items-center justify-center px-4 pt-32 relative">
-					<div className="max-w-4xl mx-auto text-center mb-16">
-						<h1
-							className="text-6xl md:text-7xl lg:text-8xl font-bold text-gray-900 dark:text-white mb-10 pb-4"
-							id="headline"
-						>
-							A weekly quiz for<br />
-							high school{" "}
-							<span className="text-blue-600 dark:text-blue-400 inline-block min-h-[1.2em]">
-								<RotatingText
-									text={["students", "tutor groups", "homerooms"]}
-									duration={3000}
-									transition={{ duration: 0.5, ease: "easeInOut" }}
-								/>
-							</span>
-						</h1>
+				<section className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-8 md:px-4 pt-24 sm:pt-32 relative">
+					<div className="max-w-4xl mx-auto text-center mb-8 sm:mb-16 px-4 sm:px-6 md:px-0">
+						{contentLoaded ? (
+							<motion.h1
+								initial={{ opacity: 0, y: 20 }}
+								animate={{ opacity: 1, y: 0 }}
+								transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+								className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold text-gray-900 dark:text-white mb-6 sm:mb-8 md:mb-10 pb-2 sm:pb-4 px-2 sm:px-0 leading-[1.1] sm:leading-tight"
+								id="headline"
+							>
+								A weekly quiz for<br />
+								high school{" "}
+								<span className="text-blue-600 dark:text-blue-400 inline-block min-h-[1.2em]">
+									<RotatingText
+										text={["students", "tutor groups", "homerooms"]}
+										duration={3000}
+										transition={{ duration: 0.5, ease: "easeInOut" }}
+									/>
+								</span>
+							</motion.h1>
+						) : (
+							<div className="mb-6 sm:mb-8 md:mb-10 pb-2 sm:pb-4 px-2 sm:px-0">
+								<Skeleton variant="text" height={120} className="w-full mb-4" />
+								<Skeleton variant="text" height={80} className="w-3/4 mx-auto" />
+							</div>
+						)}
 
-						<p
-							className="text-lg md:text-xl text-gray-600 dark:text-[#DCDCDC] mb-12 max-w-4xl mx-auto"
-							id="description"
-						>
-							The School Quiz blends general knowledge, educational content, and entertainment - covering music, sport, movies, current affairs, pop culture, and topics relevant to high school students. No insanely hard questions, no AI slop. Just a solid quiz that drops every Monday morning.
-						</p>
+						{contentLoaded ? (
+							<motion.p
+								initial={{ opacity: 0, y: 10 }}
+								animate={{ opacity: 1, y: 0 }}
+								transition={{ duration: 0.4, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+								className="text-base sm:text-lg md:text-xl text-gray-600 dark:text-[#DCDCDC] mb-8 sm:mb-12 max-w-4xl mx-auto px-2 sm:px-4 md:px-0 leading-relaxed"
+								id="description"
+							>
+								The School Quiz blends general knowledge, educational content, and entertainment - covering music, sport, movies, current affairs, pop culture, and topics relevant to high school students. No insanely hard questions, no AI slop. Just a solid quiz that drops every Monday morning.
+							</motion.p>
+						) : (
+							<div className="mb-8 sm:mb-12 max-w-4xl mx-auto px-2 sm:px-4 md:px-0">
+								<SkeletonText lines={3} />
+							</div>
+						)}
 
-					<div id="buttons">
-						<HeroCTA />
-					</div>
+					{contentLoaded ? (
+						<motion.div 
+							id="buttons" 
+							className="px-2 sm:px-0"
+							initial={{ opacity: 0, y: 10 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ duration: 0.4, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+						>
+							<HeroCTA />
+						</motion.div>
+					) : (
+						<div className="px-2 sm:px-0 flex justify-center gap-4">
+							<Skeleton variant="rectangular" width={180} height={48} className="rounded-full" />
+							<Skeleton variant="rectangular" width={180} height={48} className="rounded-full" />
+						</div>
+					)}
 				</div>
 
 					{/* Safari Preview Peeking from Bottom */}
-					<div className="w-full px-4 mt-4 mb-8">
-						<div className="max-w-6xl mx-auto">
-							<QuizSafariPreview />
+					{contentLoaded ? (
+						<motion.div 
+							className="w-full px-4 mt-4 mb-8"
+							initial={{ opacity: 0, y: 30 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ duration: 0.5, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+						>
+							<div className="max-w-6xl mx-auto">
+								<QuizSafariPreview />
+							</div>
+						</motion.div>
+					) : (
+						<div className="w-full px-4 mt-4 mb-8">
+							<div className="max-w-6xl mx-auto">
+								<Skeleton variant="rectangular" height={400} className="w-full rounded-2xl" />
+							</div>
 						</div>
-					</div>
+					)}
 				</section>
+
+				{/* Quiz Card Stack - Back Catalogue Preview */}
+				{contentLoaded && (
+					<motion.div
+						initial={{ opacity: 0, y: 30 }}
+						whileInView={{ opacity: 1, y: 0 }}
+						viewport={{ once: true, margin: "-100px" }}
+						transition={{ duration: 0.5, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
+					>
+						<QuizCardStack quizzes={sampleQuizzes} />
+					</motion.div>
+				)}
 
 				{/* Premium Preview Section for Free Users */}
 				{(isFree || isVisitor) && (
@@ -101,50 +256,8 @@ export default function HomePage() {
 				{/* Why The School Quiz Section */}
 				<WhySection />
 
-				{/* Spacer between Sections and Footer */}
-				<div className="py-6"></div>
-
-				<footer className="bg-gray-50 dark:bg-[#1A1A1A] py-12 px-4">
-					<div className="max-w-6xl mx-auto">
-						<div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-							{/* Logo */}
-							<div className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
-								The School Quiz
-							</div>
-
-							{/* Navigation Links */}
-							<div className="flex flex-col md:flex-row gap-8 md:gap-12">
-								<div className="flex flex-col gap-3">
-									<Link href="/quizzes" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">
-										Quizzes
-									</Link>
-									<Link href="/about" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">
-										About
-									</Link>
-									<Link href="/contact" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">
-										Contact
-									</Link>
-								</div>
-								<div className="flex flex-col gap-3">
-									<Link href="/privacy" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">
-										Privacy
-									</Link>
-									<Link href="/terms" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">
-										Terms
-									</Link>
-									<Link href="/help" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">
-										Help
-									</Link>
-								</div>
-							</div>
-						</div>
-
-						{/* Copyright */}
-						<div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700 text-center text-gray-500 dark:text-gray-400">
-							<p>&copy; 2026 The School Quiz. All rights reserved.</p>
-						</div>
-					</div>
-				</footer>
+				{/* Footer */}
+				<Footer />
 			</main>
 
 			<style jsx>{`
