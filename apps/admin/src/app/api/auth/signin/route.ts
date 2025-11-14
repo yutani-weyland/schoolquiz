@@ -16,6 +16,13 @@ const MOCK_USERS = {
     password: "abc123", // In production, this would be hashed
     tier: "basic", // Basic user - will see upgrade prompts
   },
+  "premium": {
+    id: "user-premium-789",
+    email: "premium@example.com",
+    name: "Premium User",
+    password: "abc123", // In production, this would be hashed
+    tier: "premium", // Premium user
+  },
 };
 
 export async function POST(request: Request) {

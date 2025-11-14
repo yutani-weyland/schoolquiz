@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
-import { storage, getAuthToken, getUserId, getUserName, getUserEmail } from '@/lib/storage';
+import { storage, getAuthToken, getUserId, getUserName, getUserEmail, getUserTier } from '@/lib/storage';
 import { logger } from '@/lib/logger';
 
 export type AccessTier = 'visitor' | 'free' | 'premium';
@@ -54,7 +54,54 @@ export function UserAccessProvider({ children }: UserAccessProviderProps) {
         setUserName(storedUserName);
         setUserEmail(storedUserEmail);
 
-        // Fetch subscription/tier info
+        // Get stored tier from localStorage first (from sign-in response) - use immediately
+        const storedTier = getUserTier();
+        console.log('[UserAccessContext] Stored tier from localStorage:', storedTier);
+        console.log('[UserAccessContext] Token:', token ? 'exists' : 'missing');
+        console.log('[UserAccessContext] UserId:', storedUserId);
+        
+        if (storedTier === 'premium' || storedTier === 'basic') {
+          // Set tier immediately from localStorage for instant UI update
+          const tierToSet = storedTier === 'premium' ? 'premium' : 'free';
+          console.log('[UserAccessContext] Setting tier immediately to:', tierToSet);
+          setTier(tierToSet);
+          setIsLoading(false);
+          
+          // Then try to refresh from API in the background (non-blocking)
+          fetch('/api/user/subscription', {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              ...(storedUserId ? { 'X-User-Id': storedUserId } : {}),
+            },
+          })
+            .then((response) => {
+              if (response.ok) {
+                return response.json();
+              }
+              return null;
+            })
+            .then((data) => {
+              if (data) {
+                const premiumStatuses = ['ACTIVE', 'TRIALING', 'FREE_TRIAL'];
+                const isPremium = 
+                  data.tier === 'premium' ||
+                  premiumStatuses.includes(data.status) ||
+                  (data.freeTrialUntil && new Date(data.freeTrialUntil) > new Date());
+                
+                const determinedTier = isPremium ? 'premium' : 'free';
+                setTier(determinedTier);
+                storage.set('userTier', determinedTier === 'premium' ? 'premium' : 'basic');
+              }
+            })
+            .catch((error) => {
+              // Silently fail - we already have tier from localStorage
+              logger.debug('Failed to refresh subscription from API:', error);
+            });
+          
+          return; // Early return - we've set the tier from localStorage
+        }
+
+        // No stored tier - fetch from API
         try {
           const headers: HeadersInit = { Authorization: `Bearer ${token}` };
           if (storedUserId) {
@@ -75,15 +122,20 @@ export function UserAccessProvider({ children }: UserAccessProviderProps) {
               premiumStatuses.includes(data.status) ||
               (data.freeTrialUntil && new Date(data.freeTrialUntil) > new Date());
             
-            setTier(isPremium ? 'premium' : 'free');
+            const determinedTier = isPremium ? 'premium' : 'free';
+            setTier(determinedTier);
+            // Store tier in localStorage for future use
+            storage.set('userTier', determinedTier === 'premium' ? 'premium' : 'basic');
           } else {
-            // Logged in but no subscription info - default to free
+            // API returned error - default to free
             setTier('free');
+            storage.set('userTier', 'basic');
           }
         } catch (error) {
           logger.error('Failed to fetch subscription:', error);
-          // Logged in but API failed - default to free
+          // API failed - default to free
           setTier('free');
+          storage.set('userTier', 'basic');
         }
       } catch (error) {
         logger.error('Failed to determine tier:', error);
@@ -95,29 +147,43 @@ export function UserAccessProvider({ children }: UserAccessProviderProps) {
 
     determineTier();
 
-    // Listen for auth changes
+    // Listen for auth changes from other tabs/windows
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'authToken' || e.key === 'userId') {
         determineTier();
       }
     };
 
+    // Listen for custom auth events from same window (e.g., after login)
+    const handleAuthChange = () => {
+      determineTier();
+    };
+
     window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    window.addEventListener('authChange', handleAuthChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('authChange', handleAuthChange);
+    };
   }, []);
 
   // Memoize context value to prevent unnecessary re-renders
-  const value = useMemo<UserAccessContextType>(() => ({
-    tier,
-    isVisitor: tier === 'visitor',
-    isFree: tier === 'free',
-    isPremium: tier === 'premium',
-    isLoggedIn: tier !== 'visitor',
-    isLoading,
-    userId,
-    userName,
-    userEmail,
-  }), [tier, isLoading, userId, userName, userEmail]);
+  const value = useMemo<UserAccessContextType>(() => {
+    const computed = {
+      tier,
+      isVisitor: tier === 'visitor',
+      isFree: tier === 'free',
+      isPremium: tier === 'premium',
+      isLoggedIn: tier !== 'visitor',
+      isLoading,
+      userId,
+      userName,
+      userEmail,
+    };
+    console.log('[UserAccessContext] Computed value:', computed);
+    return computed;
+  }, [tier, isLoading, userId, userName, userEmail]);
 
   return (
     <UserAccessContext.Provider value={value}>

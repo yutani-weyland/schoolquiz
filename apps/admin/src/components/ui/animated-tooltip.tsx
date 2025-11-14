@@ -168,6 +168,15 @@ export const SimpleAnimatedTooltip = ({
     if (align === "right") {
       // Align tooltip right edge to container right edge
       finalLeft = containerRect.right - tooltipRect.width;
+      // Check if this would cause clipping on either edge
+      // If right edge would go off-screen, align to viewport right edge
+      if (finalLeft + tooltipRect.width > viewportWidth - padding) {
+        finalLeft = viewportWidth - tooltipRect.width - padding;
+      }
+      // If left edge would go off-screen, align to viewport left edge
+      if (finalLeft < padding) {
+        finalLeft = padding;
+      }
     } else if (align === "left") {
       // Align tooltip left edge to container left edge
       finalLeft = containerRect.left;

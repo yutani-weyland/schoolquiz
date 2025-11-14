@@ -29,9 +29,17 @@ class Storage {
     try {
       const item = localStorage.getItem(key);
       if (item === null) return defaultValue;
-      return JSON.parse(item) as T;
+      
+      // Try to parse as JSON first
+      try {
+        return JSON.parse(item) as T;
+      } catch {
+        // If JSON parsing fails, return as plain string (for backwards compatibility)
+        // This handles cases where values were stored directly without JSON.stringify
+        return item as T;
+      }
     } catch (error) {
-      console.warn(`Failed to parse localStorage item "${key}":`, error);
+      console.warn(`Failed to get localStorage item "${key}":`, error);
       return defaultValue;
     }
   }
@@ -80,8 +88,8 @@ class SessionStorage {
     if (typeof window === 'undefined') return false;
     try {
       const test = '__session_storage_test__';
-      sessionStorage.setItem(test, test);
-      sessionStorage.removeItem(test);
+      window.sessionStorage.setItem(test, test);
+      window.sessionStorage.removeItem(test);
       return true;
     } catch {
       return false;
@@ -92,7 +100,7 @@ class SessionStorage {
     if (!this.isAvailable()) return defaultValue;
     
     try {
-      const item = sessionStorage.getItem(key);
+      const item = window.sessionStorage.getItem(key);
       if (item === null) return defaultValue;
       return JSON.parse(item) as T;
     } catch (error) {
@@ -108,7 +116,7 @@ class SessionStorage {
     }
     
     try {
-      sessionStorage.setItem(key, JSON.stringify(value));
+      window.sessionStorage.setItem(key, JSON.stringify(value));
     } catch (error) {
       throw new StorageError(`Failed to set sessionStorage item "${key}"`, error);
     }
@@ -118,7 +126,7 @@ class SessionStorage {
     if (!this.isAvailable()) return;
     
     try {
-      sessionStorage.removeItem(key);
+      window.sessionStorage.removeItem(key);
     } catch (error) {
       throw new StorageError(`Failed to remove sessionStorage item "${key}"`, error);
     }
@@ -128,7 +136,7 @@ class SessionStorage {
     if (!this.isAvailable()) return;
     
     try {
-      sessionStorage.clear();
+      window.sessionStorage.clear();
     } catch (error) {
       throw new StorageError('Failed to clear sessionStorage', error);
     }
@@ -136,7 +144,7 @@ class SessionStorage {
 
   has(key: string): boolean {
     if (!this.isAvailable()) return false;
-    return sessionStorage.getItem(key) !== null;
+    return window.sessionStorage.getItem(key) !== null;
   }
 }
 
@@ -144,12 +152,28 @@ export const storage = new Storage();
 export const sessionStorage = new SessionStorage();
 
 // Convenience functions for common patterns
+// These handle both JSON-stringified and plain string values for backwards compatibility
 export function getAuthToken(): string | null {
-  return storage.get<string | null>('authToken', null);
+  if (typeof window === 'undefined') return null;
+  try {
+    const item = localStorage.getItem('authToken');
+    if (!item) return null;
+    // Try JSON parse, fallback to plain string
+    try {
+      return JSON.parse(item);
+    } catch {
+      return item;
+    }
+  } catch {
+    return null;
+  }
 }
 
 export function setAuthToken(token: string): void {
-  storage.set('authToken', token);
+  // Store as plain string for compatibility with sign-in form
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('authToken', token);
+  }
 }
 
 export function removeAuthToken(): void {
@@ -157,27 +181,72 @@ export function removeAuthToken(): void {
 }
 
 export function getUserId(): string | null {
-  return storage.get<string | null>('userId', null);
+  if (typeof window === 'undefined') return null;
+  try {
+    const item = localStorage.getItem('userId');
+    if (!item) return null;
+    // Try JSON parse, fallback to plain string
+    try {
+      return JSON.parse(item);
+    } catch {
+      return item;
+    }
+  } catch {
+    return null;
+  }
 }
 
 export function setUserId(userId: string): void {
-  storage.set('userId', userId);
+  // Store as plain string for compatibility with sign-in form
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('userId', userId);
+  }
 }
 
 export function getUserName(): string | null {
-  return storage.get<string | null>('userName', null);
+  if (typeof window === 'undefined') return null;
+  try {
+    const item = localStorage.getItem('userName');
+    if (!item) return null;
+    // Try JSON parse, fallback to plain string
+    try {
+      return JSON.parse(item);
+    } catch {
+      return item;
+    }
+  } catch {
+    return null;
+  }
 }
 
 export function setUserName(userName: string): void {
-  storage.set('userName', userName);
+  // Store as plain string for compatibility with sign-in form
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('userName', userName);
+  }
 }
 
 export function getUserEmail(): string | null {
-  return storage.get<string | null>('userEmail', null);
+  if (typeof window === 'undefined') return null;
+  try {
+    const item = localStorage.getItem('userEmail');
+    if (!item) return null;
+    // Try JSON parse, fallback to plain string
+    try {
+      return JSON.parse(item);
+    } catch {
+      return item;
+    }
+  } catch {
+    return null;
+  }
 }
 
 export function setUserEmail(userEmail: string): void {
-  storage.set('userEmail', userEmail);
+  // Store as plain string for compatibility with sign-in form
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('userEmail', userEmail);
+  }
 }
 
 export function isLoggedIn(): boolean {
@@ -186,5 +255,42 @@ export function isLoggedIn(): boolean {
 
 export function setLoggedIn(value: boolean): void {
   storage.set('isLoggedIn', value);
+}
+
+export function getUserTier(): string | null {
+  // Try to get from storage (JSON parsed)
+  const tier = storage.get<string | null>('userTier', null);
+  if (tier) return tier;
+  
+  // Fallback: try direct localStorage access (for backwards compatibility)
+  if (typeof window !== 'undefined') {
+    try {
+      const direct = localStorage.getItem('userTier');
+      if (direct) {
+        // Try to parse if it's JSON, otherwise return as-is
+        try {
+          return JSON.parse(direct);
+        } catch {
+          return direct;
+        }
+      }
+    } catch {
+      // Ignore errors
+    }
+  }
+  
+  return null;
+}
+
+export function setUserTier(tier: string): void {
+  storage.set('userTier', tier);
+  // Also set directly for backwards compatibility
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem('userTier', tier);
+    } catch {
+      // Ignore errors
+    }
+  }
 }
 

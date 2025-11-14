@@ -63,6 +63,42 @@
     --maxw-reading: 78ch;
   }
 
+  /* Card Variant Effects */
+  .foil-card {
+    position: relative;
+  }
+
+  .foil-gradient {
+    background-size: 200% 200%;
+    animation: foil-shift 4s ease-in-out infinite;
+  }
+
+  @keyframes foil-shift {
+    0%, 100% {
+      background-position: 0% 0%;
+    }
+    50% {
+      background-position: 100% 100%;
+    }
+  }
+
+  .foil-shimmer {
+    mix-blend-mode: overlay;
+    pointer-events: none;
+  }
+
+  /* Shiny card sparkle effect */
+  @keyframes sparkle {
+    0%, 100% {
+      opacity: 0;
+      transform: scale(0);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
   .dark {
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;

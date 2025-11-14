@@ -102,6 +102,9 @@ export async function POST(request: NextRequest) {
     // Update season stats
     await updateSeasonStats(user.id, playedAt, score, totalQuestions, newlyUnlocked.length)
     
+    // Update private league stats
+    await updatePrivateLeagueStats(user.id, quizSlug, score, totalQuestions, playedAt)
+    
     return NextResponse.json({
       completion: {
         id: completion.id,
@@ -238,5 +241,134 @@ function getWeekNumber(date: Date): number {
   d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7))
   const week1 = new Date(d.getFullYear(), 0, 4)
   return Math.ceil(((d.getTime() - week1.getTime()) / 86400000 + 1) / 7)
+}
+
+/**
+ * Update private league stats for a user's quiz completion
+ */
+async function updatePrivateLeagueStats(
+  userId: string,
+  quizSlug: string,
+  score: number,
+  totalQuestions: number,
+  completedAt: Date
+) {
+  // Find all leagues where user is an active member
+  const userLeagues = await prisma.privateLeagueMember.findMany({
+    where: {
+      userId,
+      leftAt: null,
+    },
+    select: {
+      leagueId: true,
+    },
+  })
+
+  if (userLeagues.length === 0) {
+    return // User is not in any leagues
+  }
+
+  const leagueIds = userLeagues.map(m => m.leagueId)
+
+  // Update stats for each league
+  for (const leagueId of leagueIds) {
+    // Update quiz-specific stats (only if this is a better score)
+    const existingQuizStats = await prisma.privateLeagueStats.findUnique({
+      where: {
+        leagueId_userId_quizSlug: {
+          leagueId,
+          userId,
+          quizSlug,
+        },
+      },
+    })
+
+    if (!existingQuizStats || (existingQuizStats.score || 0) < score) {
+      // New quiz stats or better score
+      await prisma.privateLeagueStats.upsert({
+        where: {
+          leagueId_userId_quizSlug: {
+            leagueId,
+            userId,
+            quizSlug,
+          },
+        },
+        create: {
+          leagueId,
+          userId,
+          quizSlug,
+          score,
+          totalQuestions,
+          completedAt,
+        },
+        update: {
+          score,
+          totalQuestions,
+          completedAt,
+        },
+      })
+    }
+
+    // Update overall stats
+    const overallStats = await prisma.privateLeagueStats.findUnique({
+      where: {
+        leagueId_userId_quizSlug: {
+          leagueId,
+          userId,
+          quizSlug: null,
+        },
+      },
+    })
+
+    if (!overallStats) {
+      // First time completing a quiz in this league
+      await prisma.privateLeagueStats.create({
+        data: {
+          leagueId,
+          userId,
+          quizSlug: null,
+          totalCorrectAnswers: score,
+          quizzesPlayed: 1,
+          bestStreak: score === totalQuestions ? 1 : 0,
+          currentStreak: score === totalQuestions ? 1 : 0,
+        },
+      })
+    } else {
+      // Update existing overall stats
+      const newTotalCorrect = overallStats.totalCorrectAnswers + score
+      const newQuizzesPlayed = overallStats.quizzesPlayed + 1
+      
+      // Calculate consecutive correct answers streak
+      // For now, we'll track this as consecutive perfect scores (score === totalQuestions)
+      // True consecutive answers would require question-by-question tracking
+      let newCurrentStreak = overallStats.currentStreak
+      let newBestStreak = overallStats.bestStreak
+      
+      if (score === totalQuestions) {
+        // Perfect score - increment streak
+        newCurrentStreak = overallStats.currentStreak + 1
+        newBestStreak = Math.max(overallStats.bestStreak, newCurrentStreak)
+      } else {
+        // Streak broken - reset to 0
+        newCurrentStreak = 0
+      }
+
+      await prisma.privateLeagueStats.update({
+        where: {
+          leagueId_userId_quizSlug: {
+            leagueId,
+            userId,
+            quizSlug: null,
+          },
+        },
+        data: {
+          totalCorrectAnswers: newTotalCorrect,
+          quizzesPlayed: newQuizzesPlayed,
+          currentStreak: newCurrentStreak,
+          bestStreak: newBestStreak,
+        },
+      })
+    }
+  }
 }
 

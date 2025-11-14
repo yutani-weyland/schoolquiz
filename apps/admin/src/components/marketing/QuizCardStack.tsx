@@ -63,13 +63,14 @@ export function QuizCardStack({ quizzes }: QuizCardStackProps) {
                   className={cn(
                     "rounded-3xl shadow-lg h-full w-full flex flex-col relative overflow-hidden",
                     // Fixed padding at breakpoints for predictable scaling
-                    "p-4",
-                    "sm:p-6",
-                    "md:p-7",
+                    "p-5",
+                    "sm:p-7",
+                    "md:p-8",
                     "lg:p-9",
-                    "xl:p-10",
+                    "xl:p-9",
+                    "2xl:p-9",
                     // Remove fixed min-height, let aspect ratio handle it
-                    "aspect-[5/7.5]"
+                    "aspect-[5/8]"
                   )}
                   style={{ 
                     backgroundColor: quiz.colorHex,
@@ -78,8 +79,8 @@ export function QuizCardStack({ quizzes }: QuizCardStackProps) {
                   {/* Subtle gradient overlay */}
                   <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-black/10 pointer-events-none rounded-3xl opacity-0" />
                   
-                  <div className="relative z-10 flex flex-col h-full">
-                    <div className="flex items-center justify-between gap-2 sm:gap-3 md:gap-4 mb-3 sm:mb-4 md:mb-5 lg:mb-6">
+                  <div className="relative z-10 flex flex-col h-full overflow-hidden">
+                    <div className="flex items-center justify-between gap-2 sm:gap-3 md:gap-4 mb-1.5 sm:mb-2 md:mb-3 lg:mb-3 xl:mb-2 2xl:mb-2">
                       <div className="flex items-center gap-2 sm:gap-3 flex-nowrap">
                         <span
                           className={cn(
@@ -106,8 +107,8 @@ export function QuizCardStack({ quizzes }: QuizCardStackProps) {
                     
                     <h3 className={cn(
                       "font-extrabold leading-tight",
-                      "text-2xl sm:text-2xl md:text-3xl lg:text-5xl xl:text-5xl 2xl:text-6xl",
-                      "mb-2 sm:mb-3 md:mb-4 lg:mb-5",
+                      "text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-4xl 2xl:text-4xl",
+                      "mb-1.5 sm:mb-2 md:mb-2.5 lg:mb-3 xl:mb-2 2xl:mb-2",
                       invert,
                       "relative z-10"
                     )}>
@@ -117,8 +118,8 @@ export function QuizCardStack({ quizzes }: QuizCardStackProps) {
                     {quiz.blurb && (
                       <p className={cn(
                         "line-clamp-2 sm:line-clamp-none",
-                        "text-base sm:text-base md:text-lg lg:text-xl xl:text-2xl",
-                        "mb-3 sm:mb-4 md:mb-5 lg:mb-6",
+                        "text-base sm:text-base md:text-lg lg:text-lg xl:text-lg 2xl:text-lg",
+                        "mb-1.5 sm:mb-2 md:mb-3 lg:mb-3 xl:mb-2 2xl:mb-2",
                         "leading-relaxed",
                         sub
                       )}>
@@ -128,15 +129,15 @@ export function QuizCardStack({ quizzes }: QuizCardStackProps) {
                     
                     {/* Categories tags - exactly 5 */}
                     {displayTags.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 sm:gap-2 md:gap-2.5 lg:gap-3 mb-3 sm:mb-4 md:mb-5 lg:mb-6">
+                      <div className="flex flex-wrap gap-1.5 sm:gap-2 md:gap-2.5 lg:gap-3 mb-1.5 sm:mb-2 md:mb-3 lg:mb-3 xl:mb-2 2xl:mb-2">
                         {displayTags.map((tag, index) => (
                         <span
                           key={`${tag}-${index}`}
                           className={cn(
                             "rounded-full font-medium",
-                            "px-2 sm:px-2.5 md:px-3 lg:px-4 xl:px-5",
+                            "px-2 sm:px-2.5 md:px-3 lg:px-4 xl:px-3 2xl:px-3",
                             "py-1 sm:py-1.5 md:py-2",
-                            "text-sm sm:text-sm md:text-base lg:text-lg xl:text-xl",
+                            "text-sm sm:text-sm md:text-base lg:text-lg xl:text-sm 2xl:text-sm",
                             text === "white" ? "bg-white/20 text-white" : "bg-black/10 text-gray-900"
                           )}
                         >
@@ -152,12 +153,11 @@ export function QuizCardStack({ quizzes }: QuizCardStackProps) {
                       className={cn(
                         "inline-flex items-center justify-center mt-auto rounded-full w-full",
                         "gap-1.5 sm:gap-2",
-                        "px-4 sm:px-5 md:px-6 lg:px-7 xl:px-8",
-                        "py-3 sm:py-3.5 md:py-4 lg:py-5 xl:py-7 2xl:py-8",
-                        "font-semibold text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl",
+                        "px-4 sm:px-5 md:px-6 lg:px-7 xl:px-6 2xl:px-6",
+                        "py-3 sm:py-3.5 md:py-4 lg:py-4 xl:py-3.5 2xl:py-3.5",
+                        "font-semibold text-xs sm:text-sm md:text-base lg:text-lg xl:text-base 2xl:text-base",
                         "transition-all duration-200",
-                        "hover:scale-105 active:scale-95",
-                        "overflow-hidden"
+                        "hover:scale-[1.02] active:scale-[0.98]"
                       )}
                       style={{
                         backgroundColor: text === "white" ? "rgba(255, 255, 255, 0.9)" : "rgb(17, 24, 39)",
@@ -197,7 +197,7 @@ export function QuizCardStack({ quizzes }: QuizCardStackProps) {
         >
           <Link
             href="/quizzes"
-            className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-blue-600 dark:bg-blue-500 text-white font-medium hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
+            className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-[#3B82F6] text-white font-medium hover:bg-[#2563EB] transition-colors"
           >
             Explore the quiz collection
           </Link>

@@ -114,7 +114,11 @@ function RoundIntro({ round, textColor, onStart, finaleRoundNumber }: RoundIntro
           className={`font-extrabold text-balance tracking-tight mb-6 transition-colors duration-300 ease-in-out ${
             textColor === "white" ? "text-white" : "text-gray-900"
           }`}
-          style={{ fontSize: "clamp(2.5rem, 5vw, 4rem)", lineHeight: "1.1" }}
+          style={{ 
+            fontSize: 'clamp(2rem, min(6vw, 8vh), 4rem)',
+            lineHeight: '1.1',
+            marginBottom: 'clamp(1.5rem, 3vh, 2.5rem)'
+          }}
         >
           {heading}
         </motion.h1>
@@ -122,9 +126,13 @@ function RoundIntro({ round, textColor, onStart, finaleRoundNumber }: RoundIntro
         {description && (
           <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2, duration: 0.6 }}>
             <p
-              className={`text-title mb-12 opacity-70 transition-colors duration-300 ease-in-out ${
+              className={`mb-12 opacity-70 transition-colors duration-300 ease-in-out ${
                 textColor === "white" ? "text-white" : "text-gray-900"
               }`}
+              style={{
+                fontSize: 'clamp(0.875rem, min(1.125rem, 2.5vh), 1.25rem)',
+                marginBottom: 'clamp(1.5rem, 3vh, 3rem)'
+              }}
             >
               {description}
             </p>

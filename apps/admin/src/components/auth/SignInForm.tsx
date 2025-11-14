@@ -4,11 +4,14 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mail, Phone, ArrowRight, Loader2, Lock } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ContentCard } from "@/components/layout/ContentCard";
+import { setUserTier } from "@/lib/storage";
 
 type SigninMethod = "email" | "phone";
 
 export default function SignInForm() {
+  const router = useRouter();
   const [method, setMethod] = useState<SigninMethod>("email");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -46,10 +49,23 @@ export default function SignInForm() {
         localStorage.setItem("userId", data.userId);
         if (data.email) localStorage.setItem("userEmail", data.email);
         if (data.name) localStorage.setItem("userName", data.name);
+        // Store tier info from sign-in response (fallback if API fails)
+        if (data.tier) {
+          console.log('[SignInForm] Storing tier:', data.tier);
+          setUserTier(data.tier); // Use storage utility for consistency
+          // Also set directly to ensure it's stored
+          localStorage.setItem('userTier', data.tier);
+          console.log('[SignInForm] Stored userTier:', data.tier);
+          console.log('[SignInForm] Verified:', localStorage.getItem('userTier'));
+        }
+        
+        // Dispatch custom event to notify UserAccessContext immediately
+        console.log('[SignInForm] Dispatching authChange event');
+        window.dispatchEvent(new Event("authChange"));
       }
 
-      // Redirect
-      window.location.href = "/quizzes";
+      // Redirect to quizzes page immediately - the page will check localStorage directly
+      router.push("/quizzes");
     } catch (err: any) {
       setError(err.message || "Something went wrong. Please try again.");
       setLoading(false);

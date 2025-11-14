@@ -15,6 +15,8 @@ import { useUserAccess } from "@/contexts/UserAccessContext";
 import { Footer } from "@/components/Footer";
 import { getQuizColor } from "@/lib/colors";
 import type { Quiz } from "@/components/quiz/QuizCard";
+import { AchievementCard } from "@/components/achievements/AchievementCard";
+import type { UserTier } from "@/lib/feature-gating";
 
 // Sample quiz data for the card stack
 const sampleQuizzes: Quiz[] = [
@@ -104,6 +106,7 @@ export default function HomePage() {
 	const { isVisitor, isFree, isPremium, userName, isLoading } = useUserAccess();
 	const [mounted, setMounted] = useState(false);
 	const [contentLoaded, setContentLoaded] = useState(false);
+	const [flippedCardIds, setFlippedCardIds] = useState<Set<string>>(new Set());
 
 	useEffect(() => {
 		setMounted(true);
@@ -111,6 +114,69 @@ export default function HomePage() {
 		const timer = setTimeout(() => setContentLoaded(true), 100);
 		return () => clearTimeout(timer);
 	}, []);
+
+	// Auto-flip cards in the preview to show the animation
+	useEffect(() => {
+		if (!contentLoaded) return;
+
+		let timeoutIds: NodeJS.Timeout[] = [];
+
+		const startCycle = () => {
+			// Clear any existing timeouts
+			timeoutIds.forEach(id => clearTimeout(id));
+			timeoutIds = [];
+
+			// Flip first card after 2 seconds
+			timeoutIds.push(setTimeout(() => {
+				setFlippedCardIds(new Set(['preview-1']));
+			}, 2000));
+
+			// Flip second card after 4 seconds
+			timeoutIds.push(setTimeout(() => {
+				setFlippedCardIds(new Set(['preview-1', 'preview-3']));
+			}, 4000));
+
+			// Flip third card after 6 seconds
+			timeoutIds.push(setTimeout(() => {
+				setFlippedCardIds(new Set(['preview-1', 'preview-3', 'preview-5']));
+			}, 6000));
+
+			// Reset all flips after 8 seconds
+			timeoutIds.push(setTimeout(() => {
+				setFlippedCardIds(new Set());
+			}, 8000));
+		};
+
+		// Start initial cycle
+		startCycle();
+
+		// Repeat the cycle every 10 seconds
+		const interval = setInterval(() => {
+			startCycle();
+		}, 10000);
+
+		return () => {
+			timeoutIds.forEach(id => clearTimeout(id));
+			clearInterval(interval);
+		};
+	}, [contentLoaded]);
+
+	// Redirect logged-in users to quizzes page (free users should go to quizzes, not home)
+	useEffect(() => {
+		if (!mounted) return;
+		
+		// Check localStorage as source of truth to avoid race conditions
+		if (typeof window === 'undefined') return;
+		
+		const authToken = localStorage.getItem('authToken');
+		const userId = localStorage.getItem('userId');
+		const isActuallyLoggedIn = !!(authToken && userId);
+		
+		// If user is logged in, redirect to quizzes (regardless of tier)
+		if (isActuallyLoggedIn && !isLoading) {
+			window.location.href = '/quizzes';
+		}
+	}, [isLoading, mounted]);
 	
 	return (
 		<>
@@ -250,6 +316,158 @@ export default function HomePage() {
 							</div>
 						</div>
 					)}
+
+					{/* Achievements Preview heading */}
+					{contentLoaded ? (
+						<motion.div 
+							className="w-full px-4 mt-16 mb-6"
+							initial={{ opacity: 0, y: 20 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ duration: 0.5, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
+						>
+							<div className="max-w-4xl mx-auto text-center">
+								<h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
+									Earn achievements as you play
+								</h2>
+								<p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+									Unlock collectible cards by completing quizzes, getting perfect scores, and reaching milestones
+								</p>
+							</div>
+						</motion.div>
+					) : null}
+
+					{/* Achievements Preview Cards */}
+					{contentLoaded ? (
+						<motion.div 
+							className="w-full px-4 mt-6 mb-12"
+							initial={{ opacity: 0, y: 30 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ duration: 0.5, delay: 0.55, ease: [0.22, 1, 0.36, 1] }}
+						>
+							<div className="max-w-7xl mx-auto flex flex-wrap justify-center" style={{ gap: 0 }}>
+								{[
+									{
+										id: "preview-1",
+										slug: "hail-caesar",
+										name: "Hail Caesar",
+										shortDescription: "Get 5/5 in a History round",
+										category: "performance",
+										rarity: "common",
+										isPremiumOnly: false,
+										series: "Roman History",
+										cardVariant: "foil" as const,
+										status: "unlocked" as const,
+										unlockedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+									},
+									{
+										id: "preview-2",
+										slug: "golden-champion",
+										name: "Golden Champion",
+										shortDescription: "Achieve legendary status",
+										category: "performance",
+										rarity: "legendary",
+										isPremiumOnly: false,
+										cardVariant: "foilGold" as const,
+										status: "locked_free" as const,
+									},
+									{
+										id: "preview-3",
+										slug: "silver-star",
+										name: "Silver Star",
+										shortDescription: "Consistent excellence",
+										category: "engagement",
+										rarity: "rare",
+										isPremiumOnly: false,
+										cardVariant: "foilSilver" as const,
+										status: "unlocked" as const,
+										unlockedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+									},
+									{
+										id: "preview-4",
+										slug: "perfect-quiz",
+										name: "Perfect Quiz",
+										shortDescription: "Get all questions correct",
+										category: "performance",
+										rarity: "epic",
+										isPremiumOnly: false,
+										cardVariant: "fullArt" as const,
+										status: "locked_free" as const,
+									},
+									{
+										id: "preview-5",
+										slug: "addicted",
+										name: "Addicted",
+										shortDescription: "Play 3 quizzes in a single day",
+										category: "engagement",
+										rarity: "uncommon",
+										isPremiumOnly: false,
+										cardVariant: "shiny" as const,
+										status: "unlocked" as const,
+										unlockedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+									},
+								].map((achievement, index) => {
+									const rotation = (index % 5 - 2) * 3; // Subtle angles: -6, -3, 0, 3, 6 degrees
+									const overlap = index > 0 ? '-10px' : '0'; // Less overlap, smaller on mobile
+									const isFlipped = achievement.status === 'unlocked' && flippedCardIds.has(achievement.id);
+									const isUnlocked = achievement.status === 'unlocked';
+									
+									return (
+										<motion.div
+											key={achievement.id}
+											initial={{ opacity: 0, y: 20, scale: 0.9 }}
+											animate={{ 
+												opacity: 1, 
+												y: 0, 
+												scale: 1,
+												rotate: isUnlocked ? 0 : rotation, // No rotation for unlocked cards
+											}}
+											transition={{ 
+												duration: 0.4, 
+												delay: 0.6 + (index * 0.05),
+												ease: [0.22, 1, 0.36, 1]
+											}}
+											className="relative"
+											style={{
+												width: 'clamp(120px, 25vw, 200px)',
+												maxWidth: '200px',
+												flexShrink: 0,
+												marginLeft: overlap,
+												zIndex: isFlipped ? 1000 : 5 - index,
+											}}
+											whileHover={{ 
+												zIndex: 1000,
+												scale: 1.1,
+												rotate: 0,
+												y: -8,
+												transition: { duration: 0.2 }
+											}}
+										>
+											<AchievementCard
+												achievement={achievement}
+												status={achievement.status}
+												unlockedAt={achievement.status === 'unlocked' ? achievement.unlockedAt : undefined}
+												tier={(isVisitor ? "visitor" : isFree ? "free" : "premium") as UserTier}
+												isFlipped={isFlipped}
+												onFlipChange={(flipped) => {
+													if (achievement.status === 'unlocked') {
+														if (flipped) {
+															setFlippedCardIds(prev => new Set([...prev, achievement.id]));
+														} else {
+															setFlippedCardIds(prev => {
+																const next = new Set(prev);
+																next.delete(achievement.id);
+																return next;
+															});
+														}
+													}
+												}}
+											/>
+										</motion.div>
+									);
+								})}
+							</div>
+						</motion.div>
+					) : null}
 				</section>
 
 				{/* Premium Preview Section for Free Users */}

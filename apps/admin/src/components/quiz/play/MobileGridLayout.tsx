@@ -278,6 +278,27 @@ export function MobileGridLayout({
               const isFinale = question.roundNumber === finaleRoundNumber;
               const showRoundIntro =
                 index === 0 || questions[index - 1].roundNumber !== question.roundNumber;
+              
+              // Generate subtle deterministic angle for questions (much smaller)
+              // Range: -0.5 to +0.5 degrees
+              const getQuestionAngle = (qIndex: number): number => {
+                // Use question index to create subtle variation
+                const baseAngle = ((qIndex % 3) - 1) * 0.25;
+                return Math.max(-0.5, Math.min(0.5, baseAngle));
+              };
+              
+              const questionAngle = getQuestionAngle(index);
+              
+              // Enhanced shadow for round titles - creates a "lifted" effect
+              const getRoundShadow = (roundNum: number, accentColor: string): string => {
+                // Create a more pronounced shadow with slight variation between rounds
+                const shadowOpacity = 0.18 + (roundNum % 3) * 0.04;
+                const shadowColor = accentColor ? `${accentColor}${Math.round(shadowOpacity * 255).toString(16).padStart(2, '0')}` : 'rgba(17,17,17,0.18)';
+                const shadowColorSecondary = accentColor ? `${accentColor}${Math.round(shadowOpacity * 0.6 * 255).toString(16).padStart(2, '0')}` : 'rgba(17,17,17,0.1)';
+                return `0 20px 40px ${shadowColor}, 0 8px 16px ${shadowColorSecondary}, 0 0 0 1px ${accentColor?.concat("40") ?? "rgba(17,17,17,0.1)"}`;
+              };
+              
+              const roundShadow = showRoundIntro && round ? getRoundShadow(round.number, accentColor) : `0 12px 28px ${accentColor?.concat("2b") ?? "rgba(17,17,17,0.08)"}, 0 0 0 1px ${accentColor?.concat("40") ?? "rgba(17,17,17,0.1)"}`;
 
               const surfaceAccent = accentColor || "#ffffff";
               const baseSurface = `color-mix(in srgb, #ffffff 92%, ${surfaceAccent} 8%)`;
@@ -318,17 +339,21 @@ export function MobileGridLayout({
                           roundTitleRefs.current.delete(round.number);
                         }
                       }}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-                      className="mb-4 sm:mb-10 w-full rounded-[26px] border px-7 py-7 sm:px-9 sm:py-8 transition-colors duration-300 ease-in-out"
+                      initial={{ opacity: 0, y: 20, scale: 0.96 }}
+                      animate={{ opacity: 1, y: -4, scale: 1 }}
+                      transition={{ 
+                        duration: 0.5, 
+                        ease: [0.22, 1, 0.36, 1],
+                        y: { duration: 0.4, ease: [0.22, 1, 0.36, 1] }
+                      }}
+                      className="mb-2 sm:mb-4 w-full rounded-[26px] border px-7 py-7 sm:px-9 sm:py-8 transition-all duration-300 ease-in-out relative"
                       style={{
                         gridColumn: '1 / -1',
                         background: `color-mix(in srgb, ${accentColor} 25%, rgba(255,255,255,0.95) 75%)`,
                         borderColor: `color-mix(in srgb, ${accentColor} 35%, rgba(255,255,255,0.7))`,
                         borderWidth: '2px',
-                        boxShadow: `0 12px 28px ${accentColor?.concat("2b") ?? "rgba(17,17,17,0.08)"}, 0 0 0 1px ${accentColor?.concat("40") ?? "rgba(17,17,17,0.1)"}`,
-                        transition: "background-color 300ms ease-in-out, border-color 300ms ease-in-out",
+                        boxShadow: roundShadow,
+                        transition: "background-color 300ms ease-in-out, border-color 300ms ease-in-out, box-shadow 300ms ease-in-out",
                       }}
                       aria-label={`Round ${round.number} overview`}
                     >
@@ -359,8 +384,8 @@ export function MobileGridLayout({
 
                   <motion.article
                     id={`mobile-question-${question.id}`}
-                    initial={{ opacity: 0, y: 16 }}
-                    animate={{ opacity: 1, y: 0 }}
+                    initial={{ opacity: 0, y: 16, rotate: questionAngle * 0.7 }}
+                    animate={{ opacity: 1, y: 0, rotate: questionAngle }}
                     transition={{
                       duration: 0.4,
                       delay: Math.min(index * 0.03, 0.24),

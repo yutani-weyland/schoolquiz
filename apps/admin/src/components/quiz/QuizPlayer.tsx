@@ -1212,7 +1212,18 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 				e.preventDefault();
 				if (typeof window !== 'undefined') {
 					if (confirm('Are you sure you want to exit? Your progress will be saved.')) {
-						window.location.href = `/quizzes/${quizSlug}/intro`;
+						// Check login status and redirect accordingly
+						const token = getAuthToken();
+						const userId = getUserId();
+						const loggedInStatus = !!(token && userId);
+						
+						if (loggedInStatus) {
+							// Logged-in users: go to quizzes page
+							window.location.href = '/quizzes';
+						} else {
+							// Logged-out users: go to quiz intro page
+							window.location.href = `/quizzes/${quizSlug}/intro`;
+						}
 					}
 				}
 				return;

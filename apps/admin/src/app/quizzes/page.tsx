@@ -9,8 +9,7 @@ import { Skeleton, SkeletonCard } from "@/components/ui/Skeleton";
 import { Footer } from "@/components/Footer";
 import { usePathname } from "next/navigation";
 import { getQuizColor } from '@/lib/colors';
-import { storage, getUserName } from '@/lib/storage';
-import { logger } from '@/lib/logger';
+import { useUserAccess } from '@/contexts/UserAccessContext';
 
 const quizzes: Quiz[] = [
   {
@@ -136,7 +135,7 @@ const quizzes: Quiz[] = [
 ];
 
 export default function QuizzesPage() {
-	const [userName, setUserName] = useState<string | null>(null);
+	const { isLoggedIn, userName, isLoading: userLoading, isVisitor } = useUserAccess();
 	const [mounted, setMounted] = useState(false);
 	const [pageAnimationKey, setPageAnimationKey] = useState(0);
 	const [isLoading, setIsLoading] = useState(true);
@@ -147,19 +146,33 @@ export default function QuizzesPage() {
 		setMounted(true);
 		
 		if (typeof window !== 'undefined') {
+			// Check localStorage immediately - this is the source of truth
+			const authToken = localStorage.getItem('authToken');
+			const userId = localStorage.getItem('userId');
+			const isActuallyLoggedIn = !!(authToken && userId);
+			
+			// If user is logged in according to localStorage, NEVER redirect
+			// This prevents race conditions where context hasn't updated yet
+			if (isActuallyLoggedIn) {
+				setIsLoading(false);
+				return; // Early return - user is logged in, show the page
+			}
+			
 			// Simulate loading delay for skeleton effect
 			const loadingTimer = setTimeout(() => {
-				// Check if user is logged in and get their name
-				const isLoggedIn = storage.get('isLoggedIn', false);
-				const name = getUserName();
-				if (isLoggedIn && name) {
-					setUserName(name);
-				}
-				
 				setIsLoading(false);
 				
-				// Redirect logged-out users to latest quiz intro page
-				if (!isLoggedIn) {
+				// Re-check localStorage in case it was set during the delay
+				const authTokenRecheck = localStorage.getItem('authToken');
+				const userIdRecheck = localStorage.getItem('userId');
+				const isActuallyLoggedInRecheck = !!(authTokenRecheck && userIdRecheck);
+				
+				// ONLY redirect if:
+				// 1. Context has finished loading
+				// 2. localStorage confirms user is NOT logged in (definitive check)
+				// 3. Context also says not logged in (double-check)
+				// If localStorage says logged in, NEVER redirect
+				if (!userLoading && !isActuallyLoggedInRecheck && !isLoggedIn) {
 					// Redirect to latest quiz intro page (quiz #12)
 					window.location.href = '/quizzes/12/intro';
 				}
@@ -167,7 +180,7 @@ export default function QuizzesPage() {
 			
 			return () => clearTimeout(loadingTimer);
 		}
-	}, []);
+	}, [userLoading, isLoggedIn]);
 
 	// Force re-animation whenever the page is navigated to (including via menu)
 	useEffect(() => {
@@ -185,7 +198,7 @@ export default function QuizzesPage() {
 					{/* Page Title */}
 					<div className="text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 dark:text-white text-center mb-16 min-h-[1.2em] flex items-center justify-center">
 						<AnimatePresence mode="wait">
-							{isLoading || !mounted ? (
+							{isLoading || !mounted || userLoading ? (
 								<motion.div
 									key="skeleton-title"
 									initial={{ opacity: 0 }}
@@ -197,14 +210,26 @@ export default function QuizzesPage() {
 								</motion.div>
 							) : (
 								<motion.h1
-									key={userName ? `greeting-${userName}` : 'default-title'}
+									key={isLoggedIn && userName ? `greeting-${userName}` : 'default-title'}
 									initial={{ opacity: 0, y: -10 }}
 									animate={{ opacity: 1, y: 0 }}
 									exit={{ opacity: 0, y: 10 }}
 									transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
 									className="w-full"
 								>
-									{userName ? `G'day ${userName}!` : "Your Quizzes"}
+									{(() => {
+										// Check localStorage directly for immediate display
+										if (typeof window !== 'undefined') {
+											const storedUserName = localStorage.getItem('userName');
+											const storedUserId = localStorage.getItem('userId');
+											const storedAuthToken = localStorage.getItem('authToken');
+											if (storedUserName && storedUserId && storedAuthToken) {
+												return `G'day ${storedUserName}!`;
+											}
+										}
+										// Fallback to context
+										return isLoggedIn && userName ? `G'day ${userName}!` : "Your Quizzes";
+									})()}
 								</motion.h1>
 							)}
 						</AnimatePresence>

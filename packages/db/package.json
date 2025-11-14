@@ -11,6 +11,7 @@
     "type-check": "tsc --noEmit",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx src/seed.ts",
+    "db:create-premium-user": "tsx src/create-premium-user.ts",
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
     "db:reset": "prisma migrate reset",

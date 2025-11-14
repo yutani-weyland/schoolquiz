@@ -272,6 +272,20 @@ export function QuizHeader({
               </motion.button>
             </Link>
           )}
+          {/* Upgrade button - show in presenter view for logged-in free users */}
+          {isFree && isPresenterView && (
+            <Link href="/upgrade">
+              <motion.button
+                className="hidden md:inline-flex items-center gap-2 px-6 py-3 rounded-full text-base font-medium bg-[#3B82F6] text-white hover:bg-[#2563EB] transition-colors"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                aria-label="Upgrade to Premium"
+              >
+                <Crown className="w-4 h-4" />
+                Get Premium
+              </motion.button>
+            </Link>
+          )}
           {onOpenPresenterView && (
             <SimpleAnimatedTooltip content="Switch to presenter view" position="bottom" offsetY={12} preventFlip>
               <motion.button
@@ -286,7 +300,7 @@ export function QuizHeader({
             </SimpleAnimatedTooltip>
           )}
           {onOpenGridView && (
-            <SimpleAnimatedTooltip content="Switch to card view" position="bottom" offsetY={12} offsetX={0} preventFlip align="right">
+            <SimpleAnimatedTooltip content="Switch to card view" position="bottom" offsetY={12} offsetX={0} align="right">
               <motion.button
                 onClick={onOpenGridView}
                 className={`hidden sm:flex h-12 w-12 items-center justify-center rounded-full transition-colors duration-300 ease-out ${menuButtonClass}`}
@@ -523,18 +537,18 @@ export function QuizHeader({
                   </button>
                 </div>
 
-                {/* Join for free CTA for Free Users */}
+                {/* Upgrade to Premium CTA for Free Users */}
                 {isFree && (
                   <>
                     <div className="border-t border-gray-100 dark:border-gray-700/50 my-1"></div>
                     <div className="py-2">
                       <Link
-                        href="/sign-up"
+                        href="/upgrade"
                         onClick={() => setIsMenuOpen(false)}
                         className="flex items-center justify-center gap-2 px-6 py-3 rounded-full text-base font-medium bg-[#3B82F6] text-white hover:bg-[#2563EB] transition-colors w-full"
                       >
-                        <User className="w-4 h-4" />
-                        Join for free
+                        <Crown className="w-4 h-4" />
+                        Upgrade to Premium
                       </Link>
                     </div>
                   </>

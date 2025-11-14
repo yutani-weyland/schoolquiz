@@ -14,7 +14,7 @@ import { logger } from '@/lib/logger';
 export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { isLoggedIn: userIsLoggedIn, userName, userEmail, tier, isVisitor, isFree, isPremium } = useUserAccess();
+  const { isLoggedIn: userIsLoggedIn, userName, userEmail, tier, isVisitor, isFree, isPremium, isLoading: userLoading } = useUserAccess();
   const { isDark, toggleTheme } = useTheme();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
@@ -47,6 +47,39 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
   
   // Use userIsLoggedIn directly to avoid hydration issues
   const isLoggedIn = userIsLoggedIn;
+  
+  // Safety check: if localStorage says logged in, override context
+  const [localStorageLoggedIn, setLocalStorageLoggedIn] = useState(false);
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const authToken = localStorage.getItem('authToken');
+      const userId = localStorage.getItem('userId');
+      const actuallyLoggedIn = !!(authToken && userId);
+      setLocalStorageLoggedIn(actuallyLoggedIn);
+    }
+  }, []);
+  
+  // Determine if user is free - use context's isFree which is more reliable
+  // isFreeUser is for header buttons, isFree is for menu items
+  // If localStorage says logged in but context hasn't updated, assume free tier
+  const effectiveIsFree = isFree || (localStorageLoggedIn && !isPremium && !isVisitor);
+  const effectiveIsVisitor = isVisitor && !localStorageLoggedIn; // Only visitor if NOT logged in per localStorage
+  const isFreeUser = effectiveIsFree; // Use effectiveIsFree for consistency
+  
+  // Debug logging
+  useEffect(() => {
+    console.log('[SiteHeader] Auth state:', {
+      isLoggedIn,
+      isVisitor,
+      isFree,
+      isPremium,
+      tier,
+      isFreeUser,
+      localStorageLoggedIn,
+      effectiveIsFree,
+      effectiveIsVisitor,
+    });
+  }, [isLoggedIn, isVisitor, isFree, isPremium, tier, isFreeUser, localStorageLoggedIn, effectiveIsFree, effectiveIsVisitor]);
   
   // Check if we're on the quizzes page
   const isOnQuizzesPage = pathname === '/quizzes';
@@ -94,6 +127,7 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
     storage.remove('userId');
     storage.remove('userEmail');
     storage.remove('userName');
+    storage.remove('userTier');
     
     // Close menu
     setIsMenuOpen(false);
@@ -179,13 +213,13 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
             The School Quiz
           </Link>
           <div className="flex items-center gap-3 flex-shrink-0">
-            {isOnQuizzesPage && isLoggedIn && isFree && (
+            {isOnQuizzesPage && isFreeUser && (
               <Link
                 href="/upgrade"
                 className="hidden md:inline-flex items-center gap-2 px-6 py-3 rounded-full text-base font-medium bg-[#3B82F6] text-white hover:bg-[#2563EB] transition-colors"
               >
                 <Crown className="w-4 h-4" />
-                Upgrade
+                Get Premium
               </Link>
             )}
             {isOnIndexPage && !isLoggedIn && (
@@ -193,7 +227,16 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
                 href="/sign-up"
                 className="hidden md:inline-flex items-center gap-2 px-6 py-3 rounded-full text-base font-medium bg-[#3B82F6] text-white hover:bg-[#2563EB] transition-colors"
               >
-                Join for free
+                Sign Up
+              </Link>
+            )}
+            {isOnIndexPage && isFreeUser && (
+              <Link
+                href="/upgrade"
+                className="hidden md:inline-flex items-center gap-2 px-6 py-3 rounded-full text-base font-medium bg-[#3B82F6] text-white hover:bg-[#2563EB] transition-colors"
+              >
+                <Crown className="w-4 h-4" />
+                Get Premium
               </Link>
             )}
             <div className="relative flex-shrink-0" ref={menuRef}>
@@ -266,7 +309,7 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
                   >
                   <div className="p-4 overflow-y-auto flex-1">
                   {/* User Profile Section - Only for logged-in users */}
-                  {isLoggedIn && (
+                  {(isLoggedIn || localStorageLoggedIn) && (
                     <div className="px-0 py-0 mb-4 pb-4 border-b border-gray-100 dark:border-gray-700/50">
                       <div className="flex items-center gap-3">
                         <div className="w-11 h-11 rounded-full bg-blue-600 dark:bg-blue-500 flex items-center justify-center text-white font-semibold text-base relative flex-shrink-0">
@@ -288,7 +331,21 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
 
                   {/* Menu Items - Tier-specific */}
                   <div className="py-2">
-                    {isVisitor ? (
+                    {(() => {
+                      console.log('[SiteHeader Menu] Rendering menu with:', {
+                        isVisitor,
+                        effectiveIsVisitor,
+                        isFree,
+                        effectiveIsFree,
+                        isPremium,
+                        tier,
+                        isLoading: userLoading,
+                        isLoggedIn,
+                        localStorageLoggedIn,
+                      });
+                      return null;
+                    })()}
+                    {effectiveIsVisitor ? (
                       // Visitor menu - Play Quiz, Sign In, Sign Up, divider, About, Dark Mode
                       <>
                         <Link
@@ -314,7 +371,7 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
                           className="flex items-center gap-3 px-4 py-2.5 rounded-full text-base font-medium text-white bg-[#3B82F6] hover:bg-[#2563EB] transition-all duration-200"
                         >
                           <User className="w-5 h-5 text-white" />
-                          Join for free
+                          Sign Up
                         </Link>
                         <div className="border-t border-gray-200 dark:border-gray-700 my-1.5"></div>
                         <Link
@@ -326,7 +383,7 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
                           About The School Quiz
                         </Link>
                       </>
-                    ) : isFree ? (
+                    ) : effectiveIsFree ? (
                       // Free user menu - restructured
                       <>
                         <Link
@@ -350,8 +407,8 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
                           onClick={handleLinkClick}
                           className="flex items-center gap-3 px-4 py-2.5 rounded-full text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                         >
-                          <User className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-                          Profile & Settings
+                          <Settings className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                          Settings
                         </Link>
                       </>
                     ) : (
@@ -410,7 +467,7 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
                   </div>
 
                   {/* Upgrade CTA for Free Users */}
-                  {isFree && (
+                  {isFreeUser && (
                     <>
                       <div className="border-t border-gray-100 dark:border-gray-700/50 my-1"></div>
                       <div className="py-2">
@@ -420,7 +477,7 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
                           className="flex items-center justify-center gap-2 px-6 py-3 rounded-full text-base font-medium bg-[#3B82F6] text-white hover:bg-[#2563EB] transition-colors w-full"
                         >
                           <Crown className="w-4 h-4" />
-                          Upgrade to Premium
+                          Get Premium
                         </Link>
                       </div>
                     </>
@@ -429,7 +486,7 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
                   {/* Dark Mode and Sign Out - Always at bottom (static across tiers) */}
                   <div className="border-t border-gray-100 dark:border-gray-700/50 mt-1"></div>
                   <div className="py-2">
-                    {isLoggedIn && (
+                    {(isLoggedIn || localStorageLoggedIn) && (
                       <button
                         onClick={() => {
                           setIsMenuOpen(false);

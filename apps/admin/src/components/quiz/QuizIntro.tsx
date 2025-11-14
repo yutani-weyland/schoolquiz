@@ -8,9 +8,10 @@ import { useUserTier } from "@/hooks/useUserTier";
 import { hasExceededFreeQuizzes, getRemainingFreeQuizzes } from "@/lib/quizAttempts";
 import { QuizSignupModal } from "@/components/premium/QuizSignupModal";
 import { QuizLimitModal } from "@/components/premium/QuizLimitModal";
-import { storage, isLoggedIn } from "@/lib/storage";
+import { storage } from "@/lib/storage";
 import { logger } from "@/lib/logger";
 import { getQuizIntroStartLabel } from "@/lib/quizStartLabel";
+import { useUserAccess } from "@/contexts/UserAccessContext";
 
 interface Quiz {
 	id: number;
@@ -47,33 +48,33 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 	const [formattedDate, setFormattedDate] = useState<string>("");
 	const [showSignupModal, setShowSignupModal] = useState(false);
 	const [showLimitModal, setShowLimitModal] = useState(false);
-	// Compute initial state synchronously to avoid label flicker
-	const [loggedIn, setLoggedIn] = useState(() => {
-		if (typeof window === 'undefined') return false;
-		return isLoggedIn();
-	});
 	const [mounted, setMounted] = useState(false);
+	const { isLoggedIn: userIsLoggedIn, isVisitor } = useUserAccess();
 	const { tier, isPremium, isLoading } = useUserTier();
+	const loggedIn = userIsLoggedIn;
 	
-	// Compute start label synchronously (no flicker)
-	const startLabel = React.useMemo(() => {
-		if (typeof window === 'undefined') return "Play Quiz"; // SSR fallback
+	// Compute start label - use state to avoid hydration mismatch
+	const [startLabel, setStartLabel] = React.useState("Play Quiz"); // Default to "Play Quiz" to match server render
+	
+	// Update label after mount to avoid hydration errors
+	React.useEffect(() => {
+		if (!loggedIn) {
+			setStartLabel("Play Quiz");
+			return;
+		}
 		
-		const loggedInSync = isLoggedIn();
-		if (!loggedInSync) return "Try Quiz";
-		
-		// For logged-in users, check restrictions synchronously
+		// For logged-in users, check restrictions
 		try {
 			const hasExceeded = hasExceededFreeQuizzes();
-			// If we can't determine premium status yet, default to "Play Quiz" (will be corrected on mount)
-			return getQuizIntroStartLabel({
-				isLoggedIn: loggedInSync,
+			const label = getQuizIntroStartLabel({
+				isLoggedIn: loggedIn,
 				isPremium: isPremium || false,
 				hasExceededFreeQuizzes: hasExceeded,
 				isNewest: isNewest || false,
 			});
+			setStartLabel(label);
 		} catch (e) {
-			return "Play Quiz"; // Safe fallback
+			setStartLabel("Play Quiz"); // Safe fallback
 		}
 	}, [isPremium, isNewest, loggedIn]);
 	
@@ -85,8 +86,6 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 	// Check authentication on client only to avoid hydration errors
 	useEffect(() => {
 		setMounted(true);
-		const loggedIn = isLoggedIn();
-		setLoggedIn(loggedIn);
 		
 		// Disable scroll restoration for the intro page
 		if (typeof window !== 'undefined') {
@@ -106,7 +105,7 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 				}
 			}
 		}
-	}, [quiz.slug, isPremium, isLoading, isNewest]);
+	}, [quiz.slug, isPremium, isLoading, isNewest, loggedIn]);
 	
 	const remainingQuizzes = loggedIn && !isPremium ? getRemainingFreeQuizzes() : 3;
 	const quizzesPlayed = loggedIn && !isPremium ? (3 - remainingQuizzes) : 0;
@@ -180,10 +179,10 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 
 	function onBack() {
 		if (typeof window !== 'undefined') {
-			const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-			if (isLoggedIn) {
-				// Logged-in users: go back in history (usually to quizzes page)
-				window.history.back();
+			// Use direct navigation instead of history.back() to ensure it always works
+			if (loggedIn) {
+				// Logged-in users: go to quizzes page
+				window.location.href = '/quizzes';
 			} else {
 				// Logged-out users: redirect to index page
 				window.location.href = '/';
@@ -229,12 +228,11 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 				{/* Top bar - consistent with site header (py-3 px-6) */}
 				<header className="flex items-center justify-between py-3 px-6">
 					<motion.a
-						href="#"
+						href={loggedIn ? '/quizzes' : '/'}
 						onClick={(e) => {
 							e.preventDefault();
 							if (typeof window !== 'undefined') {
-								const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-								window.location.href = isLoggedIn ? '/quizzes' : '/';
+								window.location.href = loggedIn ? '/quizzes' : '/';
 							}
 						}}
 						initial={{ opacity: 0, x: -10 }}
@@ -267,7 +265,7 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 
 				{/* Main stack */}
 				<main 
-					className="flex flex-col items-center justify-center px-8 sm:px-6 md:px-0 flex-1 overflow-x-hidden md:overflow-y-hidden overflow-y-auto min-h-0"
+					className="flex flex-col items-center justify-center px-8 sm:px-6 md:px-12 lg:px-16 flex-1 overflow-x-hidden md:overflow-y-hidden overflow-y-auto min-h-0"
 					style={{
 						paddingTop: 'clamp(1rem, 3vh, 3rem)',
 						paddingBottom: 'clamp(1rem, 3vh, 3rem)'

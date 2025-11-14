@@ -29,10 +29,10 @@ function CardItem({ children, index, totalCards, spreadProgress }: CardItemProps
   const defaultRotate = index * 1.5;
 
   // Use viewport-based card width that scales proportionally
-  // Base width: 520px max on xl screens, scales down proportionally
-  // This matches the CSS max-width of 520px
-  const baseCardWidth = 520;
-  const baseCardOverlap = 470; // ~90% overlap for smoother fan effect
+  // Base width: 380px max on xl/2xl screens, scales down proportionally
+  // This matches the CSS max-width of 380px
+  const baseCardWidth = 380;
+  const baseCardOverlap = 340; // ~90% overlap for smoother fan effect
   
   // Calculate proportional card width based on container
   // We'll use CSS clamp to scale between min and max widths
@@ -78,9 +78,10 @@ function CardItem({ children, index, totalCards, spreadProgress }: CardItemProps
         "w-[280px] -ml-[140px]",
         "sm:w-[320px] sm:-ml-[160px]",
         "md:w-[380px] md:-ml-[190px]",
-        "lg:w-[480px] lg:-ml-[240px]",
-        "xl:w-[520px] xl:-ml-[260px]",
-        "aspect-[5/7.5]"
+        "lg:w-[400px] lg:-ml-[200px]",
+        "xl:w-[380px] xl:-ml-[190px]",
+        "2xl:w-[380px] 2xl:-ml-[190px]",
+        "aspect-[5/8]"
       )}
     >
       {children}
@@ -121,10 +122,10 @@ export function CardStack({ children, className = "" }: CardStackProps) {
         "relative mx-auto",
         // Scale height proportionally with width using aspect ratio
         // Base aspect ratio maintains proportions as width changes
-        "w-full max-w-[95vw] md:max-w-[1100px] lg:max-w-[1200px] xl:max-w-[1400px]",
+        "w-full max-w-[95vw] md:max-w-[1000px] lg:max-w-[1050px] xl:max-w-[1100px] 2xl:max-w-[1100px]",
         "aspect-[2/1.5] min-h-[400px]",
-        "sm:min-h-[450px] md:min-h-[500px] lg:min-h-[550px]",
-        "max-h-[600px] lg:max-h-[700px]",
+        "sm:min-h-[450px] md:min-h-[500px] lg:min-h-[520px]",
+        "max-h-[600px] lg:max-h-[650px] xl:max-h-[600px]",
         "flex items-center justify-center",
         className
       )}

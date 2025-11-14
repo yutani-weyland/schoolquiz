@@ -20,6 +20,17 @@ export function useUserTier(): {
   useEffect(() => {
     const fetchTier = async () => {
       try {
+        // Check localStorage first for immediate premium status
+        const storedTier = localStorage.getItem('userTier');
+        if (storedTier === 'premium') {
+          setTier('premium');
+          setIsLoading(false);
+          // Still try to refresh from API in background, but don't block UI
+        } else if (storedTier === 'basic') {
+          setTier('basic');
+          setIsLoading(false);
+        }
+
         const token = localStorage.getItem('authToken');
         if (!token) {
           setTier('basic');
@@ -50,14 +61,25 @@ export function useUserTier(): {
             premiumStatuses.includes(data.status) ||
             (data.freeTrialUntil && new Date(data.freeTrialUntil) > new Date());
           
-          setTier(isPremium ? 'premium' : 'basic');
+          const determinedTier = isPremium ? 'premium' : 'basic';
+          setTier(determinedTier);
+          // Update localStorage to match API response
+          localStorage.setItem('userTier', determinedTier);
         } else {
-          // Default to basic if API call fails
-          setTier('basic');
+          // If API fails but we have localStorage, use that
+          // Otherwise default to basic
+          if (!storedTier) {
+            setTier('basic');
+          }
+          // Don't override localStorage if API fails - trust localStorage
         }
       } catch (error) {
         console.error('Failed to fetch user tier:', error);
-        setTier('basic');
+        // On error, trust localStorage if it exists
+        const storedTier = localStorage.getItem('userTier');
+        if (!storedTier) {
+          setTier('basic');
+        }
       } finally {
         setIsLoading(false);
       }

@@ -82,6 +82,13 @@ export default function QuizSafariPreview() {
 	
 	const [themeColor, setThemeColor] = useState(() => colors[0]);
 	const [bucketRotate, setBucketRotate] = useState(0);
+	const [hasAnswered] = useState(false);
+	const questionTextRef = useRef<HTMLParagraphElement>(null);
+	const mainContainerRef = useRef<HTMLElement>(null);
+	const [revealButtonPosition, setRevealButtonPosition] = useState({ top: 0, left: 0 });
+	const [questionScale, setQuestionScale] = useState(1);
+	const [isPositionCalculated, setIsPositionCalculated] = useState(false);
+	const [isMouseMoving, setIsMouseMoving] = useState(false);
 	
 	// Check if mobile and lock to grid view on mobile
 	useEffect(() => {
@@ -144,180 +151,207 @@ export default function QuizSafariPreview() {
 		? "bg-white/15 text-white hover:bg-white/25 border border-white/20 backdrop-blur-sm"
 		: "bg-black/10 text-gray-900 hover:bg-black/15 border border-black/20 backdrop-blur-sm";
 
-	const renderPresenterMode = () => (
-		<div 
-			className="relative overflow-hidden w-full h-full"
-			style={{ 
-				backgroundColor,
-				transition: "background-color 300ms ease-in-out",
-			}}
-		>
-			{/* QuizHeader */}
+	// Track mouse movement
+	useEffect(() => {
+		if (viewMode !== "presenter") return;
+		
+		let timeoutId: NodeJS.Timeout;
+		const handleMouseMove = () => {
+			setIsMouseMoving(true);
+			clearTimeout(timeoutId);
+			timeoutId = setTimeout(() => setIsMouseMoving(false), 2000);
+		};
+		window.addEventListener("mousemove", handleMouseMove);
+		return () => {
+			window.removeEventListener("mousemove", handleMouseMove);
+			clearTimeout(timeoutId);
+		};
+	}, [viewMode]);
+
+	// Calculate answer reveal position - simplified for preview container
+	useEffect(() => {
+		if (viewMode !== "presenter") {
+			setIsPositionCalculated(false);
+			return;
+		}
+
+		const updatePosition = () => {
+			const questionEl = questionTextRef.current;
+			const containerEl = mainContainerRef.current;
+			if (!questionEl || !containerEl) return;
+
+			// Get container dimensions
+			const containerRect = containerEl.getBoundingClientRect();
+			const containerHeight = containerRect.height;
+			const containerWidth = containerRect.width;
+			
+			// Get question position relative to container
+			const questionRect = questionEl.getBoundingClientRect();
+			const questionTopRelative = questionRect.top - containerRect.top;
+			const questionBottomRelative = questionRect.bottom - containerRect.top;
+			
+			// Simple scale calculation based on question height
+			const computedLineHeight = parseFloat(window.getComputedStyle(questionEl).lineHeight || "0");
+			const approxLines = computedLineHeight > 0 ? Math.round(questionRect.height / computedLineHeight) : 1;
+
+			if (approxLines > 6) {
+				setQuestionScale(0.78);
+			} else if (approxLines > 5) {
+				setQuestionScale(0.85);
+			} else if (approxLines > 4) {
+				setQuestionScale(0.9);
+			} else {
+				setQuestionScale(1);
+			}
+
+			// Position answer button below question with spacing
+			const spacing = 40;
+			const buttonTop = questionBottomRelative + spacing;
+			
+			// Ensure button fits in container (leave 20px padding at bottom)
+			const maxTop = containerHeight - 100;
+			const finalTop = Math.min(Math.max(buttonTop, 50), maxTop);
+			
+			// Center horizontally
+			const finalLeft = containerWidth / 2;
+
+			setRevealButtonPosition({
+				top: finalTop,
+				left: finalLeft,
+			});
+
+			setIsPositionCalculated(true);
+		};
+
+		// Wait for layout, then calculate
+		const timer = setTimeout(() => {
+			updatePosition();
+		}, 100);
+
+		return () => {
+			clearTimeout(timer);
+		};
+	}, [currentQuestion.question, currentQuestionIndex, viewMode]);
+
+	const renderPresenterMode = () => {
+		// Show round intro screen - matching the image
+		const currentRound = rounds[0]; // Show first round
+		
+		return (
 			<div
-				className="absolute top-0 left-0 right-0 z-50 py-3 px-6"
-				style={{
-					pointerEvents: "auto",
-					backgroundColor: backgroundColor,
+				className="relative w-full h-full overflow-hidden flex flex-col"
+				style={{ 
+					backgroundColor,
+					transition: "background-color 300ms ease-in-out",
 				}}
+				role="main"
+				aria-label="Quiz round intro"
 			>
-				<div className="flex items-center justify-between w-full gap-4">
-					<div className="flex flex-col items-start gap-4 relative">
-						<motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.4 }}>
-							<div className={`text-2xl font-bold tracking-tight ${isDarkText ? "text-white" : "text-[#0f0f0f]"}`}>
-								The School Quiz
-							</div>
-						</motion.div>
-					</div>
-
-					<div className="flex items-center gap-3">
-						<motion.button
-							onClick={handleThemeChange}
-							className={`h-12 w-12 items-center justify-center rounded-full flex ${menuButtonClass}`}
-							whileHover={{ scale: 1.05 }}
-							whileTap={{ scale: 0.95 }}
-							title="Change theme"
-						>
-							<motion.div
-								animate={{ rotate: bucketRotate }}
-								transition={{ type: "spring", stiffness: 260, damping: 20 }}
-							>
-								<PaintBucketIcon className="h-5 w-5" />
-							</motion.div>
-						</motion.button>
-						{!isMobile && (
-							<motion.button
-								onClick={() => setViewMode("grid")}
-								className={`h-12 w-12 items-center justify-center rounded-full flex ${menuButtonClass}`}
-								whileHover={{ scale: 1.05 }}
-								whileTap={{ scale: 0.95 }}
-								title="Switch to grid view"
-							>
-								<LayoutList className="h-5 w-5" />
-							</motion.button>
-						)}
-					</div>
-				</div>
-			</div>
-
-			{/* QuizStatusBar */}
-			<div className="absolute top-0 left-1/2 -translate-x-1/2 z-40 pt-24 pb-3 px-4 sm:px-6">
-				<div className="flex flex-row gap-3 sm:gap-4 items-center justify-center flex-nowrap">
+				{/* Score pill at top */}
+				<div className="absolute top-4 left-1/2 -translate-x-1/2 z-40">
 					<div
-						className={`rounded-full font-semibold flex items-center transition-colors duration-300 ease-in-out whitespace-nowrap backdrop-blur-sm ${
-							isDarkText
-								? "bg-white/20 text-white hover:bg-white/28"
-								: "bg-black/10 text-gray-900 hover:bg-black/15"
-						}`}
-						style={{
-							gap: "clamp(0.75rem, 1.5vw, 1rem)",
-							padding: "clamp(0.75rem, 1.5vw, 1.5rem) clamp(1.5rem, 3vw, 3rem)",
-						}}
+						className={`relative rounded-full font-semibold flex items-center gap-3 transition-colors duration-300 ease-in-out whitespace-nowrap ${
+							textColor === "white"
+								? "bg-white/20 text-white"
+								: "bg-black/10 text-gray-900"
+						} px-8 py-3 backdrop-blur-sm`}
+						aria-label={`Score: ${score} out of ${totalQuestions}`}
 					>
-						<span className="font-medium opacity-90" style={{ fontSize: "clamp(1rem, 2vw, 1.5rem)" }}>Score:</span>
-						<span className="font-bold tabular-nums leading-none" style={{ fontSize: "clamp(1.75rem, 4vw, 3rem)", letterSpacing: "-0.045em" }}>
+						<span className="text-lg font-medium opacity-90">Score:</span>
+						<span className="text-3xl font-bold tabular-nums leading-none" style={{ letterSpacing: "-0.045em" }}>
 							{score} / {totalQuestions}
 						</span>
 					</div>
 				</div>
-			</div>
 
-			{/* Question Area */}
-			<main
-				className="absolute inset-0 overflow-hidden px-4 sm:px-6 md:px-8"
-			>
-				<div
-					className="absolute left-0 right-0 flex justify-center z-30"
-					style={{ top: "46%", transform: "translateY(-50%)", padding: "0 1.5rem" }}
+				{/* Round intro content - centered */}
+				<main
+					ref={mainContainerRef}
+					className="relative w-full h-full flex flex-col items-center justify-center px-8 transition-colors duration-300 ease-in-out"
+					style={{ 
+						backgroundColor: "transparent"
+					}}
+					aria-live="polite"
 				>
-					<div className="max-w-[92ch] md:max-w-[108ch] lg:max-w-[128ch] xl:max-w-[150ch] text-center [text-wrap:balance] w-full px-4 sm:px-6">
-						<motion.p
-							key={currentQuestionIndex}
-							initial={{ opacity: 0 }}
-							animate={{ opacity: 1 }}
-							transition={{ duration: 0.2 }}
-							className={`font-extrabold leading-[1.05] break-words [overflow-wrap:anywhere] ${
+					<div className="max-w-2xl w-full text-center space-y-6">
+						{/* Round title */}
+						<motion.h1
+							initial={{ y: 20, opacity: 0 }}
+							animate={{ y: 0, opacity: 1 }}
+							transition={{ delay: 0.1, duration: 0.6 }}
+							className={`font-extrabold text-balance tracking-tight transition-colors duration-300 ease-in-out ${
 								textColor === "white" ? "text-white" : "text-gray-900"
 							}`}
-							style={{
-								fontSize: "clamp(20px, min(3.4vw + 0.9rem, (100vh - 360px) / 3), 50px)",
-								marginBottom: "clamp(24px, 4vh, 48px)",
+							style={{ 
+								fontSize: 'clamp(2rem, 5vw, 3.5rem)',
+								lineHeight: '1.1',
+								marginBottom: '1.5rem'
 							}}
 						>
-							{currentQuestion.question}
-						</motion.p>
+							{currentRound.title}
+						</motion.h1>
+
+						{/* Round description */}
+						{currentRound.blurb && (
+							<motion.p
+								initial={{ y: 20, opacity: 0 }}
+								animate={{ y: 0, opacity: 1 }}
+								transition={{ delay: 0.2, duration: 0.6 }}
+								className={`opacity-70 transition-colors duration-300 ease-in-out ${
+									textColor === "white" ? "text-white" : "text-gray-900"
+								}`}
+								style={{
+									fontSize: 'clamp(0.875rem, 1.5vw, 1.125rem)',
+									marginBottom: '2rem'
+								}}
+							>
+								{currentRound.blurb}
+							</motion.p>
+						)}
+
+						{/* Let's go button */}
+						<motion.button
+							initial={{ y: 20, opacity: 0 }}
+							animate={{ y: 0, opacity: 1 }}
+							transition={{ delay: 0.3, duration: 0.6 }}
+							onClick={() => {}}
+							className={`rounded-full font-bold transition-colors duration-300 ease-in-out ${
+								textColor === "white" ? "bg-white text-gray-900 hover:bg-white/90" : "bg-gray-900 text-white hover:bg-gray-800"
+							}`}
+							style={{
+								fontSize: "clamp(1rem, 2vw, 1.25rem)",
+								padding: "clamp(0.75rem, 1.5vw, 1rem) clamp(2rem, 4vw, 2.5rem)",
+							}}
+							whileHover={{ scale: 1.05 }}
+							whileTap={{ scale: 0.95 }}
+						>
+							Let's go!
+						</motion.button>
 					</div>
-				</div>
+				</main>
 
-				{/* AnswerReveal */}
-				<div
-					className="absolute left-1/2 -translate-x-1/2 z-30"
-					style={{ 
-						top: "60%",
-						maxWidth: "calc(100% - 40px)",
-					}}
-				>
-					<AnswerReveal
-						answerText={currentQuestion.answer}
-						revealed={showAnswer}
-						onReveal={handleAnswerReveal}
-						onHide={() => {
-							setShowAnswer(false);
-							setIsChecked(false);
-						}}
-						accentColor={themeColor}
-						textColor={textColor === "white" ? "white" : "black"}
-						className={textColor === "white" ? "outline outline-2 outline-white/80" : undefined}
-						isMarkedCorrect={isChecked}
-						isMarkedIncorrect={showAnswer && !isChecked}
-						onMarkCorrect={() => setIsChecked(true)}
-						onUnmarkCorrect={() => setIsChecked(false)}
-					/>
-				</div>
-			</main>
-
-			{/* Progress Bar */}
-			<div 
-				className="absolute bottom-0 left-0 right-0 z-40 w-full pt-2 pb-4 sm:pt-3 sm:pb-5"
-				style={{ backgroundColor: backgroundColor || "transparent" }}
-			>
-				<div className="flex justify-center">
-					<div className="flex gap-2 scrollbar-hide py-1 max-w-full overflow-x-auto overflow-y-visible" style={{ paddingLeft: '24px', paddingRight: '24px' }}>
-						{Array.from({ length: totalQuestions }, (_, idx) => {
-							const n = idx + 1;
-							const isCurrent = n === currentQuestionNumber;
-							const isCorrect = correctAnswers.has(n);
-							
-							let buttonStyle: React.CSSProperties = {};
-							let displayContent: string | React.ReactNode = n;
-							
-							if (isCurrent) {
-								buttonStyle = { backgroundColor: "#0B0B0B", color: "white", border: "3px solid rgba(255, 255, 255, 0.85)" };
-								displayContent = n;
-							} else if (isCorrect) {
-								buttonStyle = { backgroundColor: "#10B981", color: "white", border: "2px solid rgba(16, 185, 129, 0.45)" };
-								displayContent = <Check className="w-5 h-5" strokeWidth={3} />;
-							} else {
-								const darkerColor = darkenColor(themeColor, 0.4);
-								buttonStyle = { border: `2px solid ${darkerColor}`, color: darkenColor(themeColor, 0.2), backgroundColor: "transparent" };
-								displayContent = n;
-							}
-
-							return (
-								<motion.div key={n} className="relative flex-shrink-0" animate={{ scale: isCurrent ? 1.03 : 1 }}>
-									<button
-										className={`inline-flex h-14 w-14 items-center justify-center rounded-full text-xl font-semibold leading-none tabular-nums ${isCurrent ? "opacity-100" : "opacity-50"}`}
-										style={buttonStyle}
-									>
-										{displayContent}
-									</button>
-								</motion.div>
-							);
-						})}
-					</div>
+				{/* Footer navigation - question numbers */}
+				<div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2 px-4 overflow-x-auto">
+					{Array.from({ length: Math.min(23, totalQuestions) }, (_, i) => i + 1).map((num) => (
+						<div
+							key={num}
+							className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
+								num === 1
+									? textColor === "white"
+										? "bg-gray-900 text-white"
+										: "bg-gray-900 text-white"
+									: textColor === "white"
+									? "bg-white/20 text-white border border-white/30"
+									: "bg-white/60 text-gray-900 border border-gray-300"
+							}`}
+						>
+							{num}
+						</div>
+					))}
 				</div>
 			</div>
-		</div>
-	);
+		);
+	};
 
 	const renderGridView = () => {
 		const groupedQuestions = rounds.map(round => ({
@@ -591,19 +625,9 @@ export default function QuizSafariPreview() {
 					<div className="bg-black rounded-[3rem] p-2 shadow-2xl">
 						{/* Notch */}
 						<div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-black rounded-b-2xl z-50"></div>
-						{/* Screen */}
-						<div className="bg-white rounded-[2.5rem] overflow-hidden relative" style={{ height: '667px' }}>
-							<AnimatePresence mode="wait">
-								{viewMode === "presenter" ? (
-									<motion.div key="presenter" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
-										{renderPresenterMode()}
-									</motion.div>
-								) : (
-									<motion.div key="grid" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
-										{renderGridView()}
-									</motion.div>
-								)}
-							</AnimatePresence>
+						{/* Screen - grey background for video */}
+						<div className="bg-gray-300 rounded-[2.5rem] overflow-hidden relative" style={{ height: '667px' }}>
+							{/* Placeholder for video */}
 						</div>
 					</div>
 				</div>
@@ -621,19 +645,9 @@ export default function QuizSafariPreview() {
 						</div>
 					</div>
 
-					{/* Quiz content */}
-					<div className="relative" style={{ height: 'calc(800px - 60px)' }}>
-						<AnimatePresence mode="wait">
-							{viewMode === "presenter" ? (
-								<motion.div key="presenter" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
-									{renderPresenterMode()}
-								</motion.div>
-							) : (
-								<motion.div key="grid" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
-									{renderGridView()}
-								</motion.div>
-							)}
-						</AnimatePresence>
+					{/* Grey background for video */}
+					<div className="relative bg-gray-300" style={{ height: 'calc(800px - 60px)' }}>
+						{/* Placeholder for video */}
 					</div>
 				</div>
 			)}

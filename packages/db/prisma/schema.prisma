@@ -176,49 +176,49 @@ model RunQuestionStat {
 // ============================================================================
 
 model User {
-  id          String    @id @default(cuid())
-  email       String    @unique
-  phone       String?   @unique
-  name        String?
-  passwordHash String?   // For email/password auth
-  signupCode  String?   // Code used to sign up (if applicable)
-  signupMethod String   @default("email") // email, phone, code
-  
+  id           String  @id @default(cuid())
+  email        String  @unique
+  phone        String? @unique
+  name         String?
+  passwordHash String? // For email/password auth
+  signupCode   String? // Code used to sign up (if applicable)
+  signupMethod String  @default("email") // email, phone, code
+
   // Free trial tracking (5 weeks from signup)
   freeTrialStartedAt DateTime?
-  freeTrialEndsAt   DateTime?
-  
+  freeTrialEndsAt    DateTime?
+
   // Subscription status
-  subscriptionStatus String @default("FREE_TRIAL") // FREE_TRIAL, ACTIVE, EXPIRED, CANCELLED
+  subscriptionStatus String    @default("FREE_TRIAL") // FREE_TRIAL, ACTIVE, EXPIRED, CANCELLED
   subscriptionPlan   String? // PREMIUM_MONTHLY, PREMIUM_ANNUAL, etc.
   subscriptionEndsAt DateTime?
-  
+
   // User tier (basic = free, premium = paid)
   tier String @default("basic") // "basic" or "premium"
-  
+
   // Referral system
-  referralCode String? @unique // Unique code for this user to share
-  referredBy String? // User ID who referred this user
-  referralCount Int @default(0) // Number of successful referrals (verified users)
+  referralCode   String?   @unique // Unique code for this user to share
+  referredBy     String? // User ID who referred this user
+  referralCount  Int       @default(0) // Number of successful referrals (verified users)
   freeTrialUntil DateTime? // Date when free trial from referrals ends
-  
+
   // Email verification
-  emailVerified Boolean @default(false)
-  emailVerificationToken String?
+  emailVerified            Boolean   @default(false)
+  emailVerificationToken   String?
   emailVerificationExpires DateTime?
-  
+
   // Phone verification
-  phoneVerified Boolean @default(false)
-  phoneVerificationCode String?
+  phoneVerified            Boolean   @default(false)
+  phoneVerificationCode    String?
   phoneVerificationExpires DateTime?
-  
+
   // Profile settings
-  profileVisibility String @default("PUBLIC") // PUBLIC, LEAGUES_ONLY, PRIVATE
-  teamName String?
-  bio String?
+  profileVisibility  String  @default("PUBLIC") // PUBLIC, LEAGUES_ONLY, PRIVATE
+  teamName           String?
+  bio                String?
   profileColorScheme String? // e.g., "blue", "purple", "green", "orange", "red"
-  avatar String? // e.g., "avatar-1", "avatar-2", or URL to custom avatar
-  
+  avatar             String? // e.g., "avatar-1", "avatar-2", or URL to custom avatar
+
   lastLoginAt DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -232,16 +232,22 @@ model User {
   createdActivity      OrganisationActivity[]
 
   // Profile relations
-  achievements     UserAchievement[]
-  streaks          UserStreak[]
-  quizCompletions  QuizCompletion[]
-  seasonStats      SeasonStats[]
-  profile          UserProfile?
-  unlockedFlair    UserFlair[]
+  achievements    UserAchievement[]
+  streaks         UserStreak[]
+  quizCompletions QuizCompletion[]
+  seasonStats     SeasonStats[]
+  profile         UserProfile?
+  unlockedFlair   UserFlair[]
 
   // Referral relations
-  referrals        User[] @relation("UserReferrals") // Users referred by this user
-  referrer         User?  @relation("UserReferrals", fields: [referredBy], references: [id])
+  referrals User[] @relation("UserReferrals") // Users referred by this user
+  referrer  User?  @relation("UserReferrals", fields: [referredBy], references: [id])
+
+  // Private League relations
+  createdPrivateLeagues PrivateLeague[]       @relation("PrivateLeagueCreator")
+  privateLeagueMembers  PrivateLeagueMember[] @relation("PrivateLeagueMembers")
+  privateLeagueInvites  PrivateLeagueMember[] @relation("PrivateLeagueInviter")
+  privateLeagueStats    PrivateLeagueStats[]  @relation("PrivateLeagueStats")
 
   // Note: Question/Quiz/Run still reference Teacher for backward compatibility
   // These can be migrated to User in a future migration
@@ -471,12 +477,12 @@ model Achievement {
   name                  String
   shortDescription      String
   longDescription       String?
-  category              String   // "performance" | "engagement" | "social" | "event" | "meta"
-  rarity                String   // "common" | "uncommon" | "rare" | "epic" | "legendary"
+  category              String // "performance" | "engagement" | "social" | "event" | "meta"
+  rarity                String // "common" | "uncommon" | "rare" | "epic" | "legendary"
   isPremiumOnly         Boolean  @default(false)
-  seasonTag             String?  // e.g., "olympics-2026", "halloween-2025"
-  iconKey               String?  // Maps to icon/asset
-  unlockConditionType   String   // e.g., "score_5_of_5", "play_n_quizzes", "streak", "referral"
+  seasonTag             String? // e.g., "olympics-2026", "halloween-2025"
+  iconKey               String? // Maps to icon/asset
+  unlockConditionType   String // e.g., "score_5_of_5", "play_n_quizzes", "streak", "referral"
   unlockConditionConfig String?  @default("{}") // JSONB parameters for the condition
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
@@ -494,14 +500,14 @@ model UserAchievement {
   id            String   @id @default(cuid())
   userId        String
   achievementId String
-  quizSlug      String?  // Optional: which quiz it was earned in
-  progressValue Int?     // e.g., 3
-  progressMax   Int?     // e.g., 10
+  quizSlug      String? // Optional: which quiz it was earned in
+  progressValue Int? // e.g., 3
+  progressMax   Int? // e.g., 10
   meta          String?  @default("{}") // JSONB for additional context
   unlockedAt    DateTime @default(now())
 
   user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  achievement Achievement  @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
 
   @@unique([userId, achievementId])
   @@index([userId, unlockedAt])
@@ -512,7 +518,7 @@ model UserAchievement {
 model Season {
   id        String   @id @default(cuid())
   slug      String   @unique // e.g., "2025", "2026"
-  name      String   // e.g., "2025 Season"
+  name      String // e.g., "2025 Season"
   startDate DateTime
   endDate   DateTime
   createdAt DateTime @default(now())
@@ -525,16 +531,16 @@ model Season {
 }
 
 model SeasonStats {
-  id                 String   @id @default(cuid())
-  userId             String
-  seasonId           String
-  quizzesPlayed      Int      @default(0)
-  perfectScores      Int      @default(0)
-  averageScore       Float?
-  longestStreakWeeks Int      @default(0)
-  currentStreakWeeks Int      @default(0)
-  achievementsUnlocked Int    @default(0)
-  lastPlayedAt       DateTime?
+  id                   String    @id @default(cuid())
+  userId               String
+  seasonId             String
+  quizzesPlayed        Int       @default(0)
+  perfectScores        Int       @default(0)
+  averageScore         Float?
+  longestStreakWeeks   Int       @default(0)
+  currentStreakWeeks   Int       @default(0)
+  achievementsUnlocked Int       @default(0)
+  lastPlayedAt         DateTime?
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   season Season @relation(fields: [seasonId], references: [id], onDelete: Cascade)
@@ -548,15 +554,15 @@ model SeasonStats {
 model UserProfile {
   userId                  String   @id
   displayName             String?
-  tagline                 String?  // e.g., "History nerd with a caffeine problem"
+  tagline                 String? // e.g., "History nerd with a caffeine problem"
   avatarUrl               String?
   favouriteAchievementIds String[] // Array of achievement IDs (limit 6)
-  selectedFlairId         String?  // FK to flair
+  selectedFlairId         String? // FK to flair
   showSeasonOnProfile     Boolean  @default(true)
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
 
-  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   flair Flair? @relation(fields: [selectedFlairId], references: [id], onDelete: SetNull)
 
   @@map("user_profiles")
@@ -567,11 +573,11 @@ model Flair {
   slug                  String   @unique // e.g., "quiz-master", "league-captain", "gold-frame"
   name                  String
   description           String
-  rarity                String   // "status" | "frame" | "badge"
+  rarity                String // "status" | "frame" | "badge"
   isPremiumOnly         Boolean  @default(true)
-  unlockConditionType   String?  // e.g., "achievement_combo", "season_rank"
+  unlockConditionType   String? // e.g., "achievement_combo", "season_rank"
   unlockConditionConfig String?  @default("{}") // JSONB
-  iconKey               String?  // Icon or style config
+  iconKey               String? // Icon or style config
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 
@@ -584,9 +590,9 @@ model Flair {
 }
 
 model UserFlair {
-  id        String   @id @default(cuid())
-  userId    String
-  flairId   String
+  id         String   @id @default(cuid())
+  userId     String
+  flairId    String
   unlockedAt DateTime @default(now())
 
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -599,11 +605,11 @@ model UserFlair {
 }
 
 model UserStreak {
-  id            String   @id @default(cuid())
-  userId        String
-  currentStreak Int      @default(0) // Current consecutive weeks
-  longestStreak Int      @default(0) // All-time longest streak
-  lastQuizDate  DateTime? // Date of last quiz completion
+  id              String    @id @default(cuid())
+  userId          String
+  currentStreak   Int       @default(0) // Current consecutive weeks
+  longestStreak   Int       @default(0) // All-time longest streak
+  lastQuizDate    DateTime? // Date of last quiz completion
   streakStartDate DateTime? // When current streak started
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -614,13 +620,13 @@ model UserStreak {
 }
 
 model QuizCompletion {
-  id            String   @id @default(cuid())
-  userId        String
-  quizSlug      String
-  score         Int      // Number of correct answers
-  totalQuestions Int     // Total questions in quiz
-  completedAt   DateTime @default(now())
-  timeSeconds   Int?     // Time taken in seconds
+  id             String   @id @default(cuid())
+  userId         String
+  quizSlug       String
+  score          Int // Number of correct answers
+  totalQuestions Int // Total questions in quiz
+  completedAt    DateTime @default(now())
+  timeSeconds    Int? // Time taken in seconds
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -628,4 +634,82 @@ model QuizCompletion {
   @@index([userId, completedAt])
   @@index([quizSlug])
   @@map("quiz_completions")
+}
+
+// ============================================================================
+// Private Leagues (Premium Feature)
+// ============================================================================
+
+model PrivateLeague {
+  id              String  @id @default(cuid())
+  name            String
+  description     String?
+  createdByUserId String
+
+  inviteCode String @unique // Unique code for inviting members
+  maxMembers Int    @default(50) // Maximum members allowed
+
+  deletedAt DateTime? // Soft delete
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  creator User                  @relation("PrivateLeagueCreator", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  members PrivateLeagueMember[]
+  stats   PrivateLeagueStats[]
+
+  @@index([createdByUserId])
+  @@index([inviteCode])
+  @@index([deletedAt])
+  @@map("private_leagues")
+}
+
+model PrivateLeagueMember {
+  id              String  @id @default(cuid())
+  leagueId        String
+  userId          String
+  invitedByUserId String? // Who invited this member
+
+  joinedAt DateTime  @default(now())
+  leftAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  league    PrivateLeague @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  user      User          @relation("PrivateLeagueMembers", fields: [userId], references: [id], onDelete: Cascade)
+  invitedBy User?         @relation("PrivateLeagueInviter", fields: [invitedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([leagueId, userId])
+  @@index([userId])
+  @@index([leagueId, leftAt])
+  @@map("private_league_members")
+}
+
+model PrivateLeagueStats {
+  id       String  @id @default(cuid())
+  leagueId String
+  userId   String
+  quizSlug String? // Null for overall league stats
+
+  // Quiz-specific stats (when quizSlug is set)
+  score          Int? // Best score for this quiz
+  totalQuestions Int?
+  completedAt    DateTime?
+
+  // Overall stats (when quizSlug is null)
+  totalCorrectAnswers Int @default(0) // Total correct answers across all quizzes
+  bestStreak          Int @default(0) // Best consecutive correct answers
+  currentStreak       Int @default(0) // Current consecutive correct answers
+  quizzesPlayed       Int @default(0) // Number of quizzes completed
+
+  updatedAt DateTime @updatedAt
+
+  league PrivateLeague @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  user   User          @relation("PrivateLeagueStats", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([leagueId, userId, quizSlug]) // One stat record per user per league per quiz (or overall)
+  @@index([leagueId, quizSlug, score]) // For ranking queries
+  @@index([userId])
+  @@map("private_league_stats")
 }

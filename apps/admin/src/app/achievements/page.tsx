@@ -1,370 +1,707 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { PageLayout } from '@/components/layout/PageLayout'
-import { PageContainer } from '@/components/layout/PageContainer'
-import { PageHeader } from '@/components/layout/PageHeader'
-import { ContentCard } from '@/components/layout/ContentCard'
-import { AchievementCard } from '@/components/achievements/AchievementCard'
-import { useRouter } from 'next/navigation'
-import { useUserTier } from '@/hooks/useUserTier'
-import type { UserTier } from '@/lib/feature-gating'
-import { Trophy, Filter } from 'lucide-react'
-import { AnimatePresence } from 'framer-motion'
+import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { SiteHeader } from "@/components/SiteHeader";
+import { AchievementCard } from "@/components/achievements/AchievementCard";
+import { AchievementBrowserModal } from "@/components/achievements/AchievementBrowserModal";
+import { useUserTier } from "@/hooks/useUserTier";
+import { useUserAccess } from "@/contexts/UserAccessContext";
+import type { UserTier } from "@/lib/feature-gating";
+import { Trophy, Search } from "lucide-react";
+import { Footer } from "@/components/Footer";
 
-type AchievementStatus = 'unlocked' | 'locked_free' | 'locked_premium'
-type FilterType = 'all' | 'unlocked' | 'locked'
-type RarityFilter = 'all' | 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary'
+type AchievementStatus = "unlocked" | "locked_free" | "locked_premium";
 
 interface Achievement {
-  id: string
-  slug: string
-  name: string
-  shortDescription: string
-  longDescription?: string
-  category: string
-  rarity: string
-  isPremiumOnly: boolean
-  seasonTag?: string | null
-  iconKey?: string | null
-  status: AchievementStatus
-  unlockedAt?: string
+	id: string;
+	slug: string;
+	name: string;
+	shortDescription: string;
+	longDescription?: string;
+	category: string;
+	rarity: string;
+		isPremiumOnly: boolean;
+		seasonTag?: string | null;
+		iconKey?: string | null;
+		series?: string | null; // Series/collection name (e.g., "Roman History", "Perfect Scores")
+		cardVariant?: 'standard' | 'foil' | 'foilGold' | 'foilSilver' | 'shiny' | 'fullArt'; // Special card designs
+		status: AchievementStatus;
+	unlockedAt?: string;
+	quizSlug?: string | null; // Which quiz it was earned in
+	progressValue?: number;
+	progressMax?: number;
 }
 
 // Mock achievements data
 const MOCK_ACHIEVEMENTS: Achievement[] = [
-  {
-    id: '1',
-    slug: 'hail-caesar',
-    name: 'Hail Caesar',
-    shortDescription: 'Get 5/5 in a History round',
-    category: 'performance',
-    rarity: 'common',
-    isPremiumOnly: false,
-    status: 'unlocked',
-    unlockedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: '2',
-    slug: 'addicted',
-    name: 'Addicted',
-    shortDescription: 'Play 3 quizzes in a single day',
-    category: 'engagement',
-    rarity: 'common',
-    isPremiumOnly: false,
-    status: 'unlocked',
-    unlockedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: '3',
-    slug: 'time-traveller',
-    name: 'Time Traveller',
-    shortDescription: 'Complete a quiz from 3+ weeks ago',
-    category: 'engagement',
-    rarity: 'common',
-    isPremiumOnly: false,
-    status: 'locked_free',
-  },
-  {
-    id: '4',
-    slug: 'deja-vu',
-    name: 'Déjà Vu',
-    shortDescription: 'Complete the same quiz twice',
-    category: 'engagement',
-    rarity: 'common',
-    isPremiumOnly: false,
-    status: 'locked_free',
-  },
-  {
-    id: '5',
-    slug: 'blitzkrieg',
-    name: 'Blitzkrieg',
-    shortDescription: 'Finish a History round under 2 minutes',
-    category: 'performance',
-    rarity: 'uncommon',
-    isPremiumOnly: false,
-    status: 'unlocked',
-    unlockedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: '6',
-    slug: 'routine-genius',
-    name: 'Routine Genius',
-    shortDescription: 'Play for 4 consecutive weeks',
-    category: 'engagement',
-    rarity: 'uncommon',
-    isPremiumOnly: false,
-    status: 'locked_free',
-  },
-  {
-    id: '7',
-    slug: 'hat-trick',
-    name: 'Hat Trick',
-    shortDescription: 'Win 3 sports rounds',
-    category: 'performance',
-    rarity: 'uncommon',
-    isPremiumOnly: false,
-    status: 'locked_free',
-  },
-  {
-    id: '8',
-    slug: 'ace',
-    name: 'Ace',
-    shortDescription: 'Get 5/5 in a sports-themed round',
-    category: 'performance',
-    rarity: 'rare',
-    isPremiumOnly: true,
-    status: 'locked_premium',
-  },
-  {
-    id: '9',
-    slug: 'olympiad',
-    name: 'Olympiad',
-    shortDescription: 'Get 5/5 in an Olympics round',
-    category: 'event',
-    rarity: 'rare',
-    isPremiumOnly: true,
-    seasonTag: 'olympics-2026',
-    status: 'locked_premium',
-  },
-  {
-    id: '10',
-    slug: 'torchbearer',
-    name: 'Torchbearer',
-    shortDescription: 'Play in a special Olympic event week',
-    category: 'event',
-    rarity: 'rare',
-    isPremiumOnly: true,
-    seasonTag: 'olympics-2026',
-    status: 'locked_premium',
-  },
-  {
-    id: '11',
-    slug: 'term-1-champion',
-    name: 'Term 1 Champion',
-    shortDescription: 'Complete all quizzes in Term 1',
-    category: 'engagement',
-    rarity: 'epic',
-    isPremiumOnly: true,
-    seasonTag: '2025-term-1',
-    status: 'locked_premium',
-  },
-  {
-    id: '12',
-    slug: 'all-rounder-2025',
-    name: '2025 All-Rounder',
-    shortDescription: 'Play at least once every term in 2025',
-    category: 'engagement',
-    rarity: 'epic',
-    isPremiumOnly: true,
-    seasonTag: '2025',
-    status: 'locked_premium',
-  },
-  {
-    id: '13',
-    slug: 'iron-quizzer-2025',
-    name: '2025 Iron Quizzer',
-    shortDescription: 'Maintain a streak through Term 4',
-    category: 'engagement',
-    rarity: 'legendary',
-    isPremiumOnly: true,
-    seasonTag: '2025-term-4',
-    status: 'locked_premium',
-  },
-  {
-    id: '14',
-    slug: 'perfect-year',
-    name: 'Perfect Year',
-    shortDescription: 'Complete every quiz in a full school year',
-    category: 'engagement',
-    rarity: 'legendary',
-    isPremiumOnly: true,
-    status: 'locked_premium',
-  },
-]
+	{
+		id: "1",
+		slug: "hail-caesar",
+		name: "Hail Caesar",
+		shortDescription: "Get 5/5 in a History round",
+		category: "performance",
+		rarity: "common",
+		isPremiumOnly: false,
+		series: "Roman History",
+		cardVariant: "foil", // Special foil edition!
+		status: "unlocked",
+		unlockedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+		quizSlug: "10",
+	},
+	{
+		id: "1b",
+		slug: "addicted-shiny",
+		name: "Addicted",
+		shortDescription: "Play 3 quizzes in a single day",
+		category: "engagement",
+		rarity: "uncommon",
+		isPremiumOnly: false,
+		cardVariant: "shiny", // Shiny variant!
+		status: "unlocked",
+		unlockedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+		quizSlug: null,
+	},
+	{
+		id: "1c",
+		slug: "perfect-fullart",
+		name: "Perfect Quiz",
+		shortDescription: "Get all questions correct",
+		category: "performance",
+		rarity: "epic",
+		isPremiumOnly: false,
+		cardVariant: "fullArt", // Full art variant!
+		status: "unlocked",
+		unlockedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+		quizSlug: "15",
+	},
+	{
+		id: "2",
+		slug: "addicted",
+		name: "Addicted",
+		shortDescription: "Play 3 quizzes in a single day",
+		category: "engagement",
+		rarity: "common",
+		isPremiumOnly: false,
+		status: "unlocked",
+		unlockedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+		quizSlug: null, // Engagement achievements might not be tied to a specific quiz
+	},
+	{
+		id: "test-foil-gold-1",
+		slug: "golden-champion",
+		name: "Golden Champion",
+		shortDescription: "Achieve legendary status",
+		longDescription: "Reach the pinnacle of achievement with this golden card",
+		category: "performance",
+		rarity: "legendary",
+		isPremiumOnly: false,
+		cardVariant: "foilGold", // Gold foil variant!
+		status: "unlocked",
+		unlockedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+		quizSlug: null,
+	},
+	{
+		id: "test-foil-silver-1",
+		slug: "silver-star",
+		name: "Silver Star",
+		shortDescription: "Consistent excellence",
+		longDescription: "Show consistent excellence across multiple quizzes",
+		category: "engagement",
+		rarity: "rare",
+		isPremiumOnly: false,
+		cardVariant: "foilSilver", // Silver foil variant!
+		status: "unlocked",
+		unlockedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+		quizSlug: null,
+	},
+	{
+		id: "3",
+		slug: "time-traveller",
+		name: "Time Traveller",
+		shortDescription: "Complete a quiz from 3+ weeks ago",
+		category: "engagement",
+		rarity: "common",
+		isPremiumOnly: false,
+		status: "locked_free",
+	},
+	{
+		id: "4",
+		slug: "deja-vu",
+		name: "Déjà Vu",
+		shortDescription: "Complete the same quiz twice",
+		category: "engagement",
+		rarity: "common",
+		isPremiumOnly: false,
+		status: "locked_free",
+	},
+	{
+		id: "5",
+		slug: "blitzkrieg",
+		name: "Blitzkrieg",
+		shortDescription: "Finish a History round under 2 minutes",
+		category: "performance",
+		rarity: "uncommon",
+		isPremiumOnly: false,
+		status: "unlocked",
+		unlockedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+		quizSlug: "12",
+	},
+	{
+		id: "6",
+		slug: "routine-genius",
+		name: "Routine Genius",
+		shortDescription: "Play for 4 consecutive weeks",
+		category: "engagement",
+		rarity: "uncommon",
+		isPremiumOnly: false,
+		status: "locked_free",
+	},
+	{
+		id: "7",
+		slug: "hat-trick",
+		name: "Hat Trick",
+		shortDescription: "Win 3 sports rounds",
+		category: "performance",
+		rarity: "uncommon",
+		isPremiumOnly: false,
+		status: "locked_free",
+	},
+	{
+		id: "8",
+		slug: "ace",
+		name: "Ace",
+		shortDescription: "Get 5/5 in a sports-themed round",
+		category: "performance",
+		rarity: "rare",
+		isPremiumOnly: true,
+		status: "locked_premium",
+	},
+	{
+		id: "9",
+		slug: "olympiad",
+		name: "Olympiad",
+		shortDescription: "Get 5/5 in an Olympics round",
+		category: "event",
+		rarity: "rare",
+		isPremiumOnly: true,
+		seasonTag: "olympics-2026",
+		status: "locked_premium",
+	},
+	{
+		id: "10",
+		slug: "torchbearer",
+		name: "Torchbearer",
+		shortDescription: "Play in a special Olympic event week",
+		category: "event",
+		rarity: "rare",
+		isPremiumOnly: true,
+		seasonTag: "olympics-2026",
+		status: "locked_premium",
+	},
+	{
+		id: "11",
+		slug: "term-1-champion",
+		name: "Term 1 Champion",
+		shortDescription: "Complete all quizzes in Term 1",
+		category: "engagement",
+		rarity: "epic",
+		isPremiumOnly: true,
+		seasonTag: "2025-term-1",
+		status: "locked_premium",
+	},
+	{
+		id: "12",
+		slug: "all-rounder-2025",
+		name: "2025 All-Rounder",
+		shortDescription: "Play at least once every term in 2025",
+		category: "engagement",
+		rarity: "epic",
+		isPremiumOnly: true,
+		seasonTag: "2025",
+		status: "locked_premium",
+	},
+	{
+		id: "13",
+		slug: "iron-quizzer-2025",
+		name: "2025 Iron Quizzer",
+		shortDescription: "Maintain a streak through Term 4",
+		category: "engagement",
+		rarity: "legendary",
+		isPremiumOnly: true,
+		seasonTag: "2025-term-4",
+		status: "locked_premium",
+	},
+	{
+		id: "14",
+		slug: "perfect-year",
+		name: "Perfect Year",
+		shortDescription: "Complete every quiz in a full school year",
+		category: "engagement",
+		rarity: "legendary",
+		isPremiumOnly: true,
+		status: "locked_premium",
+	},
+];
 
 export default function AchievementsPage() {
-  const router = useRouter()
-  const { tier: hookTier, isPremium } = useUserTier()
-  const tier: UserTier = hookTier === 'basic' ? 'free' : (hookTier as UserTier)
-  
-  // Use mock data for now
-  const [achievements] = useState<Achievement[]>(MOCK_ACHIEVEMENTS)
-  const [filter, setFilter] = useState<FilterType>('all')
-  const [rarityFilter, setRarityFilter] = useState<RarityFilter>('all')
-  const [categoryFilter, setCategoryFilter] = useState<string>('all')
+	const { tier: hookTier, isPremium: hookIsPremium } = useUserTier();
+	const { isVisitor, isPremium: contextIsPremium, tier: contextTier } = useUserAccess();
 
-  // Filter achievements
-  const filteredAchievements = achievements.filter((achievement) => {
-    if (filter === 'unlocked' && achievement.status !== 'unlocked') return false
-    if (filter === 'locked' && achievement.status === 'unlocked') return false
-    if (rarityFilter !== 'all' && achievement.rarity !== rarityFilter) return false
-    if (categoryFilter !== 'all' && achievement.category !== categoryFilter) return false
-    return true
-  })
+	const [achievements, setAchievements] = useState<Achievement[]>([]);
+	const [isLoading, setIsLoading] = useState(true);
+	const [isBrowserOpen, setIsBrowserOpen] = useState(false);
+	const [localStoragePremium, setLocalStoragePremium] = useState(false);
+	const [flippedCardId, setFlippedCardId] = useState<string | null>(null);
 
-  const unlockedCount = achievements.filter((a) => a.status === 'unlocked').length
-  const totalCount = achievements.length
+	// Use localStorage first (most immediate), then context, then hook
+	// This ensures premium status is detected even if API calls fail
+	const isPremium = localStoragePremium || contextIsPremium || hookIsPremium || contextTier === 'premium';
+	const tier: UserTier = hookTier === "basic" ? "free" : (hookTier as UserTier);
 
-  const handleUpgradeClick = () => {
-    router.push('/account?tab=subscription')
-  }
+	// Check localStorage for premium status immediately
+	useEffect(() => {
+		if (typeof window !== 'undefined') {
+			const storedTier = localStorage.getItem('userTier');
+			const isPremiumFromStorage = storedTier === 'premium';
+			setLocalStoragePremium(isPremiumFromStorage);
+		}
+	}, []);
 
-  // Visitor state
-  if (tier === 'visitor') {
-    return (
-      <PageLayout>
-        <PageContainer maxWidth="6xl">
-          <PageHeader
-            title="Achievement Collection"
-            subtitle="Create a free account to start earning achievements"
-            centered
-          />
+	// Fetch achievements from API
+	useEffect(() => {
+		const fetchAchievements = async () => {
+			if (isVisitor) {
+				setIsLoading(false);
+				return;
+			}
 
-          <ContentCard padding="xl" rounded="3xl" hoverAnimation={false}>
-            <div className="text-center py-12">
-              <Trophy className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                Sign up to unlock achievements
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
-                Create a free account to start tracking your quiz progress and earning achievements.
-              </p>
-              <button
-                onClick={() => router.push('/sign-up')}
-                className="px-6 py-3 bg-[#3B82F6] hover:bg-[#2563EB] text-white rounded-full font-medium transition-all"
-              >
-                Get Started
-              </button>
-            </div>
+			try {
+				const token = localStorage.getItem('authToken');
+				const userId = localStorage.getItem('userId');
+				
+				const headers: HeadersInit = {};
+				if (token) {
+					headers['Authorization'] = `Bearer ${token}`;
+				}
+				if (userId) {
+					headers['X-User-Id'] = userId;
+				}
 
-            {/* Teaser grid - all locked */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-8 opacity-50">
-              {achievements.slice(0, 6).map((achievement) => (
-                <AchievementCard
-                  key={achievement.id}
-                  achievement={achievement}
-                  status="locked_free"
-                  tier="visitor"
-                />
-              ))}
-            </div>
-          </ContentCard>
-        </PageContainer>
-      </PageLayout>
-    )
-  }
+				const response = await fetch('/api/achievements', { headers });
+				let apiAchievements: Achievement[] = [];
+				if (response.ok) {
+					const data = await response.json();
+					apiAchievements = data.achievements || [];
+				}
+				
+				// Always include test achievements for prototyping (special variants)
+				// These are hardcoded test achievements that should always appear for logged-in users
+				const testAchievements: Achievement[] = [
+					{
+						id: "test-foil-gold-1",
+						slug: "golden-champion",
+						name: "Golden Champion",
+						shortDescription: "Achieve legendary status",
+						longDescription: "Reach the pinnacle of achievement with this golden card",
+						category: "performance",
+						rarity: "legendary",
+						isPremiumOnly: false,
+						cardVariant: "foilGold",
+						status: "unlocked",
+						unlockedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+						quizSlug: null,
+					},
+					{
+						id: "test-foil-silver-1",
+						slug: "silver-star",
+						name: "Silver Star",
+						shortDescription: "Consistent excellence",
+						longDescription: "Show consistent excellence across multiple quizzes",
+						category: "engagement",
+						rarity: "rare",
+						isPremiumOnly: false,
+						cardVariant: "foilSilver",
+						status: "unlocked",
+						unlockedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+						quizSlug: null,
+					},
+					{
+						id: "test-shiny-1",
+						slug: "shining-star",
+						name: "Shining Star",
+						shortDescription: "Complete 10 quizzes",
+						longDescription: "Show your dedication by completing 10 quizzes",
+						category: "engagement",
+						rarity: "uncommon",
+						isPremiumOnly: false,
+						cardVariant: "shiny",
+						status: "unlocked",
+						unlockedAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(),
+						quizSlug: null,
+					},
+					{
+						id: "test-fullart-1",
+						slug: "master-mind",
+						name: "Master Mind",
+						shortDescription: "Perfect score on 3 quizzes",
+						longDescription: "Achieve perfection across multiple quizzes",
+						category: "performance",
+						rarity: "epic",
+						isPremiumOnly: false,
+						cardVariant: "fullArt",
+						status: "unlocked",
+						unlockedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+						quizSlug: null,
+					},
+					{
+						id: "test-standard-1",
+						slug: "quick-thinker",
+						name: "Quick Thinker",
+						shortDescription: "Answer 5 questions in under 30 seconds",
+						longDescription: "Show your quick thinking skills",
+						category: "performance",
+						rarity: "common",
+						isPremiumOnly: false,
+						cardVariant: "standard",
+						status: "unlocked",
+						unlockedAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
+						quizSlug: null,
+					},
+					{
+						id: "test-standard-2",
+						slug: "night-owl",
+						name: "Night Owl",
+						shortDescription: "Complete a quiz after midnight",
+						longDescription: "Show your dedication by playing late at night",
+						category: "engagement",
+						rarity: "uncommon",
+						isPremiumOnly: false,
+						cardVariant: "standard",
+						status: "unlocked",
+						unlockedAt: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(),
+						quizSlug: null,
+					},
+				];
+				
+				// Remove duplicates by ID, keeping test achievements if they exist
+				const existingIds = new Set(apiAchievements.map(a => a.id));
+				const uniqueTestAchievements = testAchievements.filter(a => !existingIds.has(a.id));
+				
+				setAchievements([...apiAchievements, ...uniqueTestAchievements]);
+			} catch (error) {
+				console.error('Failed to fetch achievements:', error);
+				// Fallback to mock data
+				setAchievements(MOCK_ACHIEVEMENTS);
+			} finally {
+				setIsLoading(false);
+			}
+		};
 
-  // Free/Premium user state
-  return (
-    <PageLayout>
-      <PageContainer maxWidth="6xl">
-        <PageHeader
-          title="Achievement Collection"
-          subtitle={`${unlockedCount} of ${totalCount} achievements unlocked`}
-          centered
-        />
+		fetchAchievements();
+	}, [isVisitor]);
 
-        <ContentCard padding="xl" rounded="3xl" hoverAnimation={false}>
-          {/* Filters */}
-          <div className="mb-6 space-y-4">
-            {/* Status Filter */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <Filter className="w-4 h-4 text-gray-500" />
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Filter:</span>
-              {(['all', 'unlocked', 'locked'] as FilterType[]).map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setFilter(f)}
-                  className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
-                    filter === f
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  {f === 'all' ? 'All' : f === 'unlocked' ? 'Unlocked' : 'Locked'}
-                </button>
-              ))}
-            </div>
+	const unlockedCount = achievements.filter((a) => a.status === "unlocked").length;
+	const totalCount = achievements.length;
 
-            {/* Rarity Filter */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Rarity:</span>
-              {(['all', 'common', 'uncommon', 'rare', 'epic', 'legendary'] as RarityFilter[]).map(
-                (r) => (
-                  <button
-                    key={r}
-                    onClick={() => setRarityFilter(r)}
-                    className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all capitalize ${
-                      rarityFilter === r
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                    }`}
-                  >
-                    {r}
-                  </button>
-                )
-              )}
-            </div>
+	// Get earned achievements (unlocked, sorted by most recent)
+	const earnedAchievements = achievements
+		.filter((a) => a.status === "unlocked")
+		.sort((a, b) => {
+			const dateA = a.unlockedAt ? new Date(a.unlockedAt).getTime() : 0;
+			const dateB = b.unlockedAt ? new Date(b.unlockedAt).getTime() : 0;
+			return dateB - dateA; // Most recent first
+		});
 
-            {/* Category Filter */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Category:</span>
-              <button
-                onClick={() => setCategoryFilter('all')}
-                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
-                  categoryFilter === 'all'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                }`}
-              >
-                All
-              </button>
-              {Array.from(new Set(achievements.map((a) => a.category))).map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setCategoryFilter(cat)}
-                  className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all capitalize ${
-                    categoryFilter === cat
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-          </div>
+	// Get in-progress achievements (have progress but not unlocked)
+	const inProgressAchievements = achievements
+		.filter((a) => a.status !== "unlocked" && a.progressValue !== undefined && a.progressValue > 0)
+		.sort((a, b) => {
+			// Sort by progress percentage (highest first)
+			const percentA = a.progressMax ? (a.progressValue || 0) / a.progressMax : 0;
+			const percentB = b.progressMax ? (b.progressValue || 0) / b.progressMax : 0;
+			return percentB - percentA;
+		});
 
-          {/* Achievements Grid */}
-          {filteredAchievements.length === 0 ? (
-            <div className="text-center py-12">
-              <Trophy className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                No achievements found
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400">
-                Try adjusting your filters to see more achievements.
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <AnimatePresence>
-                {filteredAchievements.map((achievement) => (
-                  <AchievementCard
-                    key={achievement.id}
-                    achievement={achievement}
-                    status={achievement.status}
-                    unlockedAt={achievement.unlockedAt}
-                    tier={tier}
-                    onUpgradeClick={tier === 'free' ? handleUpgradeClick : undefined}
-                  />
-                ))}
-              </AnimatePresence>
-            </div>
-          )}
-        </ContentCard>
-      </PageContainer>
-    </PageLayout>
-  )
+	// Get locked achievements (not yet earned and no progress)
+	const lockedAchievements = achievements.filter(
+		(a) => a.status !== "unlocked" && (a.progressValue === undefined || a.progressValue === 0)
+	);
+
+	// Visitor state - redirect to sign in
+	if (isVisitor) {
+		return (
+			<>
+				<SiteHeader />
+				<main className="min-h-screen">
+					<section className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-8 md:px-4 pt-24 sm:pt-32">
+						<div className="max-w-4xl mx-auto text-center mb-12">
+							<motion.div
+								initial={{ opacity: 0, y: 20 }}
+								animate={{ opacity: 1, y: 0 }}
+								transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+							>
+								<Trophy className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-6" />
+								<h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-gray-900 dark:text-white mb-4">
+									Achievement Collection
+								</h1>
+								<p className="text-lg text-gray-600 dark:text-gray-400 mb-8 max-w-2xl mx-auto">
+									Create a free account to start tracking your quiz progress and earning achievements.
+								</p>
+							</motion.div>
+						</div>
+
+						{/* Teaser grid - all locked */}
+						<div className="max-w-7xl mx-auto w-full px-4">
+							<div className="flex flex-wrap justify-center gap-2 sm:gap-3 md:gap-4 opacity-50">
+								{(() => {
+									const teaserAchievements = (achievements.length > 0 ? achievements : MOCK_ACHIEVEMENTS).slice(0, 5);
+									// Add a foil card variant to the teaser
+									const foilTeaser: Achievement = {
+										...teaserAchievements[0],
+										id: 'teaser-foil',
+										cardVariant: 'foil',
+									};
+									return [...teaserAchievements, foilTeaser].map((achievement, index) => (
+										<div 
+											key={achievement.id} 
+											className="relative"
+											style={{
+												width: 'clamp(120px, 25vw, 200px)',
+												maxWidth: '200px',
+												flexShrink: 0,
+												marginLeft: index > 0 ? '-10px' : '0',
+												zIndex: 6 - index,
+												transform: `rotate(${(index % 3 - 1) * 1.5}deg)`,
+											}}
+										>
+											<AchievementCard
+												achievement={achievement}
+												status="locked_free"
+												tier="visitor"
+											/>
+										</div>
+									));
+								})()}
+							</div>
+						</div>
+					</section>
+					<Footer />
+				</main>
+			</>
+		);
+	}
+
+	return (
+		<>
+			<SiteHeader />
+			<main className="min-h-screen">
+				<section className="min-h-screen flex flex-col items-center px-6 sm:px-8 md:px-4 pt-24 sm:pt-32 pb-16">
+					{/* Header */}
+					<motion.div
+						initial={{ opacity: 0, y: 20 }}
+						animate={{ opacity: 1, y: 0 }}
+						transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+						className="max-w-4xl mx-auto text-center mb-12"
+					>
+						<h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 dark:text-white mb-4">
+							Achievements
+						</h1>
+						<p className="text-lg text-gray-600 dark:text-gray-400 mb-6">
+							{isLoading ? 'Loading...' : `${unlockedCount} of ${totalCount} unlocked`}
+						</p>
+						{isPremium && (
+							<motion.button
+								initial={{ opacity: 0, y: 10 }}
+								animate={{ opacity: 1, y: 0 }}
+								transition={{ delay: 0.2 }}
+								onClick={() => setIsBrowserOpen(true)}
+								className="inline-flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+							>
+								<Search className="w-4 h-4" />
+								Browse all
+							</motion.button>
+						)}
+					</motion.div>
+
+				{/* Unlocked Achievements */}
+				<motion.div
+					initial={{ opacity: 0, y: 20 }}
+					animate={{ opacity: 1, y: 0 }}
+					transition={{ duration: 0.5, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+					className="max-w-7xl mx-auto w-full px-4 mb-16"
+				>
+					{earnedAchievements.length > 0 ? (
+						<div className="flex flex-wrap justify-center" style={{ gap: 0 }}>
+							{earnedAchievements.map((achievement, index) => {
+								const isFlipped = flippedCardId === achievement.id
+								const rotation = (index % 5 - 2) * 3 // Subtle angles: -6, -3, 0, 3, 6 degrees
+								const overlap = index > 0 ? '-10px' : '0' // Less overlap, smaller on mobile
+								
+								return (
+									<motion.div
+										key={achievement.id}
+										initial={{ opacity: 0, y: 20, scale: 0.9 }}
+										animate={{ 
+											opacity: 1, 
+											y: 0, 
+											scale: 1,
+											rotate: isFlipped ? 0 : rotation,
+										}}
+										transition={{ 
+											duration: 0.4, 
+											delay: index * 0.05,
+											ease: [0.22, 1, 0.36, 1]
+										}}
+										className="relative"
+										style={{
+											width: 'clamp(120px, 25vw, 200px)',
+											maxWidth: '200px',
+											flexShrink: 0,
+											marginLeft: overlap,
+											zIndex: isFlipped ? 1000 : earnedAchievements.length - index,
+											transform: `rotate(${isFlipped ? 0 : rotation}deg)`,
+										}}
+										whileHover={{ 
+											zIndex: 1000,
+											scale: 1.1,
+											rotate: 0,
+											y: -8,
+											transition: { duration: 0.2 }
+										}}
+									>
+										<AchievementCard
+											achievement={achievement}
+											status={achievement.status}
+											unlockedAt={achievement.unlockedAt}
+											quizSlug={achievement.quizSlug}
+											progressValue={achievement.progressValue}
+											progressMax={achievement.progressMax}
+											tier={tier}
+											isFlipped={isFlipped}
+											onFlipChange={(flipped) => {
+												setFlippedCardId(flipped ? achievement.id : null)
+											}}
+										/>
+									</motion.div>
+								)
+							})}
+						</div>
+					) : (
+						<div className="text-center py-16">
+							<p className="text-gray-600 dark:text-gray-400">
+								Start playing quizzes to earn achievements
+							</p>
+						</div>
+					)}
+				</motion.div>
+
+				{/* In Progress Achievements */}
+					{inProgressAchievements.length > 0 && (
+						<motion.div
+							initial={{ opacity: 0, y: 20 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ duration: 0.5, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+							className="max-w-7xl mx-auto w-full px-4 mb-16"
+						>
+							<div className="mb-6">
+								<h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2">
+									In Progress
+								</h2>
+								<p className="text-sm text-gray-600 dark:text-gray-400">
+									Keep going! You're making progress on these achievements
+								</p>
+							</div>
+							<div className="flex flex-wrap justify-center" style={{ gap: 0 }}>
+							{inProgressAchievements.map((achievement, index) => {
+								const isFlipped = flippedCardId === achievement.id
+								const rotation = (index % 5 - 2) * 3 // Subtle angles: -6, -3, 0, 3, 6 degrees
+								const overlap = index > 0 ? '-10px' : '0' // Less overlap, smaller on mobile
+								
+								return (
+									<motion.div
+										key={achievement.id}
+										initial={{ opacity: 0, y: 20, scale: 0.9 }}
+										animate={{ 
+											opacity: 1, 
+											y: 0, 
+											scale: 1,
+											rotate: isFlipped ? 0 : rotation,
+										}}
+										transition={{ 
+											duration: 0.4, 
+											delay: index * 0.03,
+											ease: [0.22, 1, 0.36, 1]
+										}}
+										className="relative"
+										style={{
+											width: 'clamp(120px, 25vw, 200px)',
+											maxWidth: '200px',
+											flexShrink: 0,
+											marginLeft: overlap,
+											zIndex: isFlipped ? 1000 : inProgressAchievements.length - index,
+											transform: `rotate(${isFlipped ? 0 : rotation}deg)`,
+										}}
+										whileHover={{ 
+											zIndex: 1000,
+											scale: 1.1,
+											rotate: 0,
+											y: -8,
+											transition: { duration: 0.2 }
+										}}
+										>
+											<AchievementCard
+												achievement={achievement}
+												status={achievement.status}
+												unlockedAt={achievement.unlockedAt}
+												quizSlug={achievement.quizSlug}
+												progressValue={achievement.progressValue}
+												progressMax={achievement.progressMax}
+												tier={tier}
+												isFlipped={isFlipped}
+												onFlipChange={(flipped) => {
+													setFlippedCardId(flipped ? achievement.id : null)
+												}}
+											/>
+										</motion.div>
+									)
+								})}
+							</div>
+						</motion.div>
+					)}
+
+					{/* Achievement Browser Link - Only show if premium */}
+					{isPremium && lockedAchievements.length > 0 && (
+						<motion.div
+							initial={{ opacity: 0, y: 20 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ duration: 0.5, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+							className="max-w-6xl mx-auto w-full px-4"
+						>
+							<div className="text-center">
+								<button
+									onClick={() => setIsBrowserOpen(true)}
+									className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+								>
+									View all achievements
+								</button>
+							</div>
+						</motion.div>
+					)}
+
+				</section>
+				<Footer />
+			</main>
+
+			{/* Achievement Browser Modal */}
+			{isPremium && (
+				<AchievementBrowserModal
+					isOpen={isBrowserOpen}
+					onClose={() => setIsBrowserOpen(false)}
+					achievements={achievements}
+					tier={tier}
+				/>
+			)}
+		</>
+	);
 }
