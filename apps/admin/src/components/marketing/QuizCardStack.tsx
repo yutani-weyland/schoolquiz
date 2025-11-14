@@ -106,7 +106,7 @@ export function QuizCardStack({ quizzes }: QuizCardStackProps) {
                     
                     <h3 className={cn(
                       "font-extrabold leading-tight",
-                      "text-xl sm:text-2xl md:text-3xl lg:text-5xl xl:text-6xl",
+                      "text-2xl sm:text-2xl md:text-3xl lg:text-5xl xl:text-5xl 2xl:text-6xl",
                       "mb-2 sm:mb-3 md:mb-4 lg:mb-5",
                       invert,
                       "relative z-10"
@@ -153,7 +153,7 @@ export function QuizCardStack({ quizzes }: QuizCardStackProps) {
                         "inline-flex items-center justify-center mt-auto rounded-full w-full",
                         "gap-1.5 sm:gap-2",
                         "px-4 sm:px-5 md:px-6 lg:px-7 xl:px-8",
-                        "py-3 sm:py-3.5 md:py-4 lg:py-5 xl:py-6",
+                        "py-3 sm:py-3.5 md:py-4 lg:py-5 xl:py-7 2xl:py-8",
                         "font-semibold text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl",
                         "transition-all duration-200",
                         "hover:scale-105 active:scale-95",
