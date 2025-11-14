@@ -28,9 +28,16 @@ function CardItem({ children, index, totalCards, spreadProgress }: CardItemProps
   const defaultY = index * 2;
   const defaultRotate = index * 1.5;
 
-  // Calculate the total width of expanded cards and center offset
-  const cardWidth = 400;
-  const cardOverlap = 360;
+  // Use viewport-based card width that scales proportionally
+  // Base width: 520px max on xl screens, scales down proportionally
+  // This matches the CSS max-width of 520px
+  const baseCardWidth = 520;
+  const baseCardOverlap = 470; // ~90% overlap for smoother fan effect
+  
+  // Calculate proportional card width based on container
+  // We'll use CSS clamp to scale between min and max widths
+  const cardWidth = baseCardWidth;
+  const cardOverlap = baseCardOverlap;
   const totalExpandedWidth =
     cardWidth + (totalCards - 1) * (cardWidth - cardOverlap);
   const expandedCenterOffset = totalExpandedWidth / 2;
@@ -63,13 +70,17 @@ function CardItem({ children, index, totalCards, spreadProgress }: CardItemProps
         transformStyle: "preserve-3d",
         perspective: "2000px",
         left: "50%",
-        marginLeft: "-120px",
       }}
       className={cn(
-        "absolute inset-0 rounded-2xl w-full",
+        "absolute rounded-2xl",
         "transform-gpu overflow-hidden",
-        "max-w-[240px] sm:max-w-[320px] md:max-w-[400px]",
-        "sm:[margin-left:-160px] md:[margin-left:-200px]"
+        // Fixed sizes at breakpoints for predictable scaling
+        "w-[280px] -ml-[140px]",
+        "sm:w-[320px] sm:-ml-[160px]",
+        "md:w-[380px] md:-ml-[190px]",
+        "lg:w-[480px] lg:-ml-[240px]",
+        "xl:w-[520px] xl:-ml-[260px]",
+        "aspect-[5/7.5]"
       )}
     >
       {children}
@@ -108,8 +119,12 @@ export function CardStack({ children, className = "" }: CardStackProps) {
       ref={containerRef}
       className={cn(
         "relative mx-auto",
-        "min-h-[500px] sm:min-h-[600px] w-full max-w-[90vw]",
-        "md:max-w-[1200px]",
+        // Scale height proportionally with width using aspect ratio
+        // Base aspect ratio maintains proportions as width changes
+        "w-full max-w-[95vw] md:max-w-[1100px] lg:max-w-[1200px] xl:max-w-[1400px]",
+        "aspect-[2/1.5] min-h-[400px]",
+        "sm:min-h-[450px] md:min-h-[500px] lg:min-h-[550px]",
+        "max-h-[600px] lg:max-h-[700px]",
         "flex items-center justify-center",
         className
       )}

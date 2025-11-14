@@ -127,7 +127,7 @@ export default function HomePage() {
 								initial={{ opacity: 0, y: 20 }}
 								animate={{ opacity: 1, y: 0 }}
 								transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-								className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold text-gray-900 dark:text-white mb-6 sm:mb-8 md:mb-10 pb-2 sm:pb-4 px-2 sm:px-0 leading-[1.1] sm:leading-tight"
+								className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold text-gray-900 dark:text-white mb-6 sm:mb-8 md:mb-10 pb-2 sm:pb-4 px-4 sm:px-6 md:px-8 lg:px-12 leading-[1.1] sm:leading-tight"
 								id="headline"
 							>
 								A weekly quiz for<br />
@@ -141,7 +141,7 @@ export default function HomePage() {
 								</span>
 							</motion.h1>
 						) : (
-							<div className="mb-6 sm:mb-8 md:mb-10 pb-2 sm:pb-4 px-2 sm:px-0">
+							<div className="mb-6 sm:mb-8 md:mb-10 pb-2 sm:pb-4 px-4 sm:px-6 md:px-8 lg:px-12">
 								<Skeleton variant="text" height={120} className="w-full mb-4" />
 								<Skeleton variant="text" height={80} className="w-3/4 mx-auto" />
 							</div>
@@ -152,13 +152,13 @@ export default function HomePage() {
 								initial={{ opacity: 0, y: 10 }}
 								animate={{ opacity: 1, y: 0 }}
 								transition={{ duration: 0.4, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-								className="text-base sm:text-lg md:text-xl text-gray-600 dark:text-[#DCDCDC] mb-8 sm:mb-12 max-w-4xl mx-auto px-2 sm:px-4 md:px-0 leading-relaxed"
+								className="text-base sm:text-lg md:text-xl text-gray-600 dark:text-[#DCDCDC] mb-8 sm:mb-12 max-w-4xl mx-auto px-4 sm:px-6 md:px-8 lg:px-12 leading-relaxed"
 								id="description"
 							>
 								The School Quiz blends general knowledge, educational content, and entertainment - covering music, sport, movies, current affairs, pop culture, and topics relevant to high school students. No insanely hard questions, no AI slop. Just a solid quiz that drops every Monday morning.
 							</motion.p>
 						) : (
-							<div className="mb-8 sm:mb-12 max-w-4xl mx-auto px-2 sm:px-4 md:px-0">
+							<div className="mb-8 sm:mb-12 max-w-4xl mx-auto px-4 sm:px-6 md:px-8 lg:px-12">
 								<SkeletonText lines={3} />
 							</div>
 						)}
@@ -181,38 +181,76 @@ export default function HomePage() {
 					)}
 				</div>
 
+					{/* A new quiz every week heading */}
+					{contentLoaded ? (
+						<motion.div 
+							className="w-full px-4 mt-8 mb-4"
+							initial={{ opacity: 0, y: 20 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ duration: 0.5, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
+						>
+							<div className="max-w-6xl mx-auto text-center">
+								<h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
+									A new quiz every week
+								</h2>
+								<p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+									Explore our back catalogue of weekly quizzes and discover past challenges
+								</p>
+							</div>
+						</motion.div>
+					) : null}
+
+					{/* Quiz Card Stack - Back Catalogue Preview */}
+					{contentLoaded ? (
+						<motion.div
+							className="w-full"
+							initial={{ opacity: 0, y: 30 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ duration: 0.5, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}
+						>
+							<QuizCardStack quizzes={sampleQuizzes} />
+						</motion.div>
+					) : null}
+
+					{/* Interactive Quiz Preview heading */}
+					{contentLoaded ? (
+						<motion.div 
+							className="w-full px-4 mt-12 mb-6"
+							initial={{ opacity: 0, y: 20 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ duration: 0.5, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
+						>
+							<div className="max-w-4xl mx-auto text-center">
+								<h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
+									Interactive quiz experience
+								</h2>
+								<p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+									Switch between presenter and grid views. Navigate questions, reveal answers, and track your score in real-time.
+								</p>
+							</div>
+						</motion.div>
+					) : null}
+
 					{/* Safari Preview Peeking from Bottom */}
 					{contentLoaded ? (
 						<motion.div 
-							className="w-full px-4 mt-4 mb-8"
+							className="w-full px-8 sm:px-12 md:px-16 lg:px-20 xl:px-24 mt-4 mb-8"
 							initial={{ opacity: 0, y: 30 }}
 							animate={{ opacity: 1, y: 0 }}
-							transition={{ duration: 0.5, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+							transition={{ duration: 0.5, delay: 0.45, ease: [0.22, 1, 0.36, 1] }}
 						>
-							<div className="max-w-6xl mx-auto">
+							<div className="max-w-5xl mx-auto">
 								<QuizSafariPreview />
 							</div>
 						</motion.div>
 					) : (
-						<div className="w-full px-4 mt-4 mb-8">
-							<div className="max-w-6xl mx-auto">
+						<div className="w-full px-8 sm:px-12 md:px-16 lg:px-20 xl:px-24 mt-4 mb-8">
+							<div className="max-w-5xl mx-auto">
 								<Skeleton variant="rectangular" height={400} className="w-full rounded-2xl" />
 							</div>
 						</div>
 					)}
 				</section>
-
-				{/* Quiz Card Stack - Back Catalogue Preview */}
-				{contentLoaded && (
-					<motion.div
-						initial={{ opacity: 0, y: 30 }}
-						whileInView={{ opacity: 1, y: 0 }}
-						viewport={{ once: true, margin: "-100px" }}
-						transition={{ duration: 0.5, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
-					>
-						<QuizCardStack quizzes={sampleQuizzes} />
-					</motion.div>
-				)}
 
 				{/* Premium Preview Section for Free Users */}
 				{(isFree || isVisitor) && (

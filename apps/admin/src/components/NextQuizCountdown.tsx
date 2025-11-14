@@ -95,10 +95,10 @@ export default function NextQuizCountdown() {
   // Resize listener to detect narrow viewports
   useEffect(() => {
     const handleResize = () => {
-      const viewportWidth = window.innerWidth;
+      const width = window.innerWidth;
       
-      // Retract at a lower threshold (750px) instead of ~650px
-      const isNarrow = viewportWidth < 750;
+      // Retract at a higher threshold (900px) - hides earlier when viewport reduces
+      const isNarrow = width < 900;
       setIsNarrowViewport(isNarrow);
       
       // Auto-retract on narrow viewports
@@ -130,41 +130,43 @@ export default function NextQuizCountdown() {
       <div className={`fixed top-0 left-0 right-0 z-40 transition-transform duration-500 ease-out ${isRetracted ? '-translate-y-full' : 'translate-y-0'}`}>
         {/* Apple-style notch with curved top edges */}
         <div 
-          className={`bg-[#3B82F6] text-white mx-auto px-6 py-3 shadow-lg overflow-hidden relative rounded-b-2xl transition-colors ${
-            isNarrowViewport ? 'cursor-default' : 'cursor-pointer hover:bg-[#2563EB]'
+          className={`bg-[#3B82F6] text-white mx-auto shadow-lg overflow-hidden relative rounded-b-2xl transition-all duration-300 ${
+            isNarrowViewport ? 'cursor-default w-full' : 'cursor-pointer hover:bg-[#2563EB] w-[clamp(300px,85vw,420px)] max-w-[calc(100%-40px)]'
           }`}
           style={{
-            width: isNarrowViewport ? '100%' : '500px',
             borderTopLeftRadius: '0px',
             borderTopRightRadius: '0px',
             borderBottomLeftRadius: '16px',
-            borderBottomRightRadius: '16px'
+            borderBottomRightRadius: '16px',
+            padding: isNarrowViewport 
+              ? 'clamp(0.5rem, 1.5vw, 0.75rem) clamp(1rem, 3vw, 1.5rem)' 
+              : 'clamp(0.5rem, 1vw, 0.75rem) clamp(1rem, 2vw, 1.5rem)',
           }}
           onClick={handleNotchClick}
         >
-        <div className="relative h-8">
+        <div className="relative" style={{ height: isNarrowViewport ? 'clamp(1.5rem, 4vw, 2rem)' : '2rem' }}>
           <div 
-            className="absolute inset-0 flex items-center gap-3 transition-transform duration-500 ease-in-out"
+            className="absolute inset-0 flex items-center gap-1.5 sm:gap-2 transition-transform duration-500 ease-in-out whitespace-nowrap"
             style={{ transform: `translateX(${currentMessage * -100}%)` }}
           >
                         {/* Countdown Message */}
-                        <div className="w-full flex-shrink-0 flex items-center justify-center gap-3">
-                          <span className="text-base font-medium opacity-90">Your next quiz drops in:</span>
-                          <div className="flex items-center gap-2 text-sm font-mono">
-                            <span className="bg-white/20 px-2 py-1 rounded text-white font-semibold">{timeLeft.days}d</span>
+                        <div className="w-full flex-shrink-0 flex items-center justify-center gap-1.5 sm:gap-2 px-1">
+                          <span className="text-[10px] sm:text-xs md:text-sm font-medium opacity-90">Your next quiz drops in:</span>
+                          <div className="flex items-center gap-0.5 sm:gap-1 text-[10px] sm:text-xs font-mono">
+                            <span className="bg-white/20 px-1 sm:px-1.5 py-0.5 rounded text-white font-semibold">{timeLeft.days}d</span>
                             <span className="text-white/60">:</span>
-                            <span className="bg-white/20 px-2 py-1 rounded text-white font-semibold">{timeLeft.hours.toString().padStart(2, '0')}h</span>
+                            <span className="bg-white/20 px-1 sm:px-1.5 py-0.5 rounded text-white font-semibold">{timeLeft.hours.toString().padStart(2, '0')}h</span>
                             <span className="text-white/60">:</span>
-                            <span className="bg-white/20 px-2 py-1 rounded text-white font-semibold">{timeLeft.minutes.toString().padStart(2, '0')}m</span>
+                            <span className="bg-white/20 px-1 sm:px-1.5 py-0.5 rounded text-white font-semibold">{timeLeft.minutes.toString().padStart(2, '0')}m</span>
                             <span className="text-white/60">:</span>
-                            <span className="bg-white/20 px-2 py-1 rounded text-white font-semibold">{timeLeft.seconds.toString().padStart(2, '0')}s</span>
+                            <span className="bg-white/20 px-1 sm:px-1.5 py-0.5 rounded text-white font-semibold">{timeLeft.seconds.toString().padStart(2, '0')}s</span>
                           </div>
                         </div>
 
                         {/* Latest Quiz Message */}
-                        <div className="w-full flex-shrink-0 flex items-center justify-center gap-3">
-                          <span className="text-base font-medium opacity-90">Latest Quiz:</span>
-                          <span className="text-base font-medium">{typeof messages[1].content === 'string' ? messages[1].content : ''}</span>
+                        <div className="w-full flex-shrink-0 flex items-center justify-center gap-1.5 sm:gap-2 px-1">
+                          <span className="text-[10px] sm:text-xs md:text-sm font-medium opacity-90">Latest Quiz:</span>
+                          <span className="text-[10px] sm:text-xs md:text-sm font-medium truncate max-w-[150px] sm:max-w-[250px] md:max-w-none">{typeof messages[1].content === 'string' ? messages[1].content : ''}</span>
                         </div>
           </div>
         </div>
