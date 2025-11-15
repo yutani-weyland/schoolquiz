@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, User, Settings, Wallet, Users, Pencil, Plus, LogOut, Sun, Moon, LayoutDashboard, Trophy, BarChart3, Crown, Info, Play, BookOpen } from 'lucide-react';
+import { Menu, X, User, Settings, Wallet, Users, Pencil, Plus, LogOut, Sun, Moon, Trophy, BarChart3, Crown, Info, Play, BookOpen } from 'lucide-react';
 import { useUserAccess } from '@/contexts/UserAccessContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { applyTheme, Theme } from '@/lib/theme';
@@ -20,6 +20,18 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
   const [userId, setUserId] = useState<string | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Set data attribute on body when menu is open for CSS targeting
+  useEffect(() => {
+    if (isMenuOpen) {
+      document.body.setAttribute('data-menu-open', 'true');
+    } else {
+      document.body.removeAttribute('data-menu-open');
+    }
+    return () => {
+      document.body.removeAttribute('data-menu-open');
+    };
+  }, [isMenuOpen]);
   
   // Capture safe-area-inset-top once on mount to prevent header jumping on scroll
   useEffect(() => {
@@ -116,8 +128,12 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
     }
   }, [userIsLoggedIn]);
 
-  const handleLinkClick = useCallback(() => {
-    setIsMenuOpen(false);
+  const handleLinkClick = useCallback((e?: React.MouseEvent) => {
+    // Close menu after a tiny delay to ensure Link navigation happens first
+    setTimeout(() => {
+      setIsMenuOpen(false);
+    }, 100);
+    // Don't prevent default - let Next.js Link handle navigation
   }, []);
 
   const handleLogout = useCallback(() => {
@@ -198,7 +214,7 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
 
   return (
     <>
-      <header className="site-header fixed top-0 left-0 right-0 z-[100]">
+      <header className="site-header fixed top-0 left-0 right-0 z-[1100]">
         <div className="flex items-center justify-between w-full" style={{ height: '100%' }}>
           <Link
             id="site-logo"
@@ -245,7 +261,7 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
                   e.stopPropagation();
                   setIsMenuOpen(!isMenuOpen);
                 }}
-                className="w-12 h-12 bg-white dark:bg-gray-900 rounded-full flex items-center justify-center border border-gray-200 dark:border-gray-800 backdrop-blur-sm text-gray-900 dark:text-white relative z-[100] shadow-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex-shrink-0"
+                className="w-12 h-12 bg-white dark:bg-gray-900 rounded-full flex items-center justify-center border border-gray-200 dark:border-gray-800 backdrop-blur-sm text-gray-900 dark:text-white relative z-[120] shadow-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex-shrink-0"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
@@ -286,7 +302,7 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
                       transition={{ duration: 0.2 }}
-                      className="fixed inset-0 bg-black/30 backdrop-blur-md z-[90]"
+                      className="fixed inset-0 bg-black/30 backdrop-blur-md z-[1100] pointer-events-auto"
                       onClick={(e) => {
                         e.stopPropagation();
                         setIsMenuOpen(false);
@@ -305,7 +321,7 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
                     animate={{ x: 0, opacity: 1 }}
                     exit={{ x: "100%", opacity: 0 }}
                     transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                    className="fixed top-20 right-4 w-80 max-w-[calc(100vw-2rem)] max-h-[calc(100vh-6rem)] bg-white dark:bg-gray-800 rounded-3xl border border-gray-200 dark:border-gray-700 flex flex-col z-[100] overflow-hidden"
+                    className="fixed top-20 right-4 w-80 max-w-[calc(100vw-2rem)] max-h-[calc(100vh-6rem)] bg-white dark:bg-gray-800 rounded-3xl border border-gray-200 dark:border-gray-700 flex flex-col z-[1101] overflow-hidden pointer-events-auto"
                   >
                   <div className="p-4 overflow-y-auto flex-1">
                   {/* User Profile Section - Only for logged-in users */}
@@ -414,14 +430,6 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
                     ) : (
                       // Premium user menu
                       <>
-                        <Link
-                          href="/dashboard"
-                          onClick={handleLinkClick}
-                          className="flex items-center gap-3 px-4 py-2.5 rounded-full text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-                        >
-                          <LayoutDashboard className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-                          Dashboard
-                        </Link>
                         <Link
                           href="/quizzes/279/play"
                           onClick={handleLinkClick}

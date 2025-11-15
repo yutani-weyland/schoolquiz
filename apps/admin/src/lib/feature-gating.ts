@@ -67,7 +67,7 @@ export function requirePremium(tier: string | null | undefined): void {
  */
 export function canAccessFeature(
   tier: string | null | undefined,
-  feature: 'previous_quizzes' | 'private_leagues' | 'analytics' | 'achievements' | 'all_leaderboards'
+  feature: 'previous_quizzes' | 'private_leagues' | 'analytics' | 'achievements' | 'all_leaderboards' | 'pdf_downloads'
 ): boolean {
   if (isPremium(tier)) {
     return true; // Premium users have access to everything
@@ -85,6 +85,8 @@ export function canAccessFeature(
       return true; // Free users can view achievements
     case 'all_leaderboards':
       return false; // Basic users can only see organisation leaderboards
+    case 'pdf_downloads':
+      return false; // Basic users cannot download PDFs
     default:
       return false;
   }

@@ -295,7 +295,7 @@ export default function QuizzesPage() {
 												damping: 20
 											}}
 										>
-											<QuizCard quiz={quiz} isNewest={isNewest} />
+											<QuizCard quiz={quiz} isNewest={isNewest} index={index} />
 										</motion.div>
 									);
 								})}

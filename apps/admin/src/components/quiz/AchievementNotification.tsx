@@ -100,7 +100,8 @@ export function AchievementNotification({
 					<div className="flex flex-row items-center gap-2 flex-wrap">
 						<span className={cn(
 							"text-base font-bold",
-							textColor === "white" ? "text-gray-900" : "text-white"
+							textColor === "white" ? "text-gray-900" : "text-white",
+							achievement.name === "Hail Caesar" && "font-bluu-next tracking-wide"
 						)}>
 							{achievement.name}
 						</span>

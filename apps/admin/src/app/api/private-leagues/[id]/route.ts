@@ -134,6 +134,7 @@ export async function GET(
         },
       },
     })
+    }
     
     if (!league) {
       return NextResponse.json(

@@ -107,7 +107,7 @@ export function AchievementBrowserModal({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100]"
+            className="fixed inset-0 bg-black/60 backdrop-blur-md z-[110]"
             onClick={onClose}
           />
 
@@ -117,7 +117,7 @@ export function AchievementBrowserModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 pointer-events-none"
+            className="fixed inset-0 z-[110] flex items-center justify-center p-4 pointer-events-none"
           >
             <div
               className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 max-w-7xl w-full max-h-[90vh] flex flex-col pointer-events-auto overflow-hidden"
@@ -204,10 +204,11 @@ export function AchievementBrowserModal({
                                   width: '100%',
                                   maxWidth: '200px',
                                   margin: '0 auto',
+                                  zIndex: achievement.status === 'unlocked' ? 100 : 1,
                                 }}
                                 whileHover={{ 
                                   scale: 1.08,
-                                  zIndex: 10,
+                                  zIndex: achievement.status === 'unlocked' ? 200 : 10,
                                   transition: { duration: 0.2 }
                                 }}
                               >

@@ -108,7 +108,7 @@ export function PrivateLeaguesAnalytics({ userId, colorScheme = 'blue' }: Privat
   return (
     <div className="space-y-6">
       {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -146,11 +146,28 @@ export function PrivateLeaguesAnalytics({ userId, colorScheme = 'blue' }: Privat
         >
           <div className="flex items-center gap-2 mb-2">
             <BarChart3 className="w-4 h-4 text-blue-500" />
-            <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Avg Score</span>
+            <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Your Avg Score</span>
           </div>
           <div className="text-2xl font-bold text-gray-900 dark:text-white">
             {leagues.length > 0
               ? Math.round(leagues.reduce((sum, l) => sum + l.userAverageScore, 0) / leagues.length)
+              : '-'}
+            <span className="text-sm text-gray-500 dark:text-gray-400 ml-1">%</span>
+          </div>
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200/50 dark:border-gray-800/50 p-5 shadow-sm hover:shadow-md transition-shadow"
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <Award className="w-4 h-4 text-purple-500" />
+            <span className="text-xs font-medium text-gray-600 dark:text-gray-400">League Avg Score</span>
+          </div>
+          <div className="text-2xl font-bold text-gray-900 dark:text-white">
+            {leagues.length > 0
+              ? Math.round(leagues.reduce((sum, l) => sum + l.leagueAverageScore, 0) / leagues.length)
               : '-'}
             <span className="text-sm text-gray-500 dark:text-gray-400 ml-1">%</span>
           </div>

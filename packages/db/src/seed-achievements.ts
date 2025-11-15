@@ -48,13 +48,13 @@ async function main() {
     prisma.achievement.create({
       data: {
         slug: 'hail-caesar',
-        name: 'Hail Caesar',
+        name: 'HAIL, CAESAR!',
         shortDescription: 'Get 5/5 in a History round',
         longDescription: 'Achieve a perfect score in a round focused on historical topics',
         category: 'performance',
         rarity: 'common',
         isPremiumOnly: false,
-        iconKey: 'hail-caesar',
+        iconKey: '/achievements/hail-caesar.png',
         unlockConditionType: 'score_5_of_5',
         unlockConditionConfig: JSON.stringify({ category: 'history', requiredScore: 5 }),
       },
@@ -108,15 +108,43 @@ async function main() {
     prisma.achievement.create({
       data: {
         slug: 'blitzkrieg',
-        name: 'Blitzkrieg',
-        shortDescription: 'Finish a History round under 2 minutes',
-        longDescription: 'Complete a history-themed round in less than 2 minutes',
+        name: 'Blitzkrieg!',
+        shortDescription: 'Get 5/5 in a History round under 2 minutes',
+        longDescription: 'Complete a history-themed round perfectly in less than 2 minutes - lightning fast!',
         category: 'performance',
         rarity: 'uncommon',
         isPremiumOnly: false,
-        iconKey: 'blitzkrieg',
+        iconKey: '/achievements/blitzkreig.png',
         unlockConditionType: 'time_limit',
-        unlockConditionConfig: JSON.stringify({ category: 'history', maxSeconds: 120 }),
+        unlockConditionConfig: JSON.stringify({ category: 'history', maxSeconds: 120, requiredScore: 5 }),
+      },
+    }),
+    prisma.achievement.create({
+      data: {
+        slug: 'doppelganger',
+        name: 'Doppelganger',
+        shortDescription: 'Get the same score 2 weeks in a row',
+        longDescription: 'Achieve the exact same score in consecutive weeks - a true doppelganger performance!',
+        category: 'performance',
+        rarity: 'rare',
+        isPremiumOnly: false,
+        iconKey: '/achievements/doppelganger.png',
+        unlockConditionType: 'same_score_consecutive_weeks',
+        unlockConditionConfig: JSON.stringify({ weeks: 2 }),
+      },
+    }),
+    prisma.achievement.create({
+      data: {
+        slug: 'clutch',
+        name: 'Clutch',
+        shortDescription: 'Get the last question correct to beat the average',
+        longDescription: 'Get the final question right after previous mistakes, putting your score above the average public score for that round',
+        category: 'performance',
+        rarity: 'uncommon',
+        isPremiumOnly: false,
+        iconKey: 'clutch',
+        unlockConditionType: 'clutch_play',
+        unlockConditionConfig: JSON.stringify({ lastQuestionCorrect: true, aboveAverage: true }),
       },
     }),
     prisma.achievement.create({
@@ -145,6 +173,35 @@ async function main() {
         iconKey: 'hat-trick',
         unlockConditionType: 'score_5_of_5',
         unlockConditionConfig: JSON.stringify({ category: 'sports', count: 3 }),
+      },
+    }),
+    // Progress-based achievements - Uncommon
+    prisma.achievement.create({
+      data: {
+        slug: 'quiz-enthusiast',
+        name: 'Quiz Enthusiast',
+        shortDescription: 'Play 25 quizzes',
+        longDescription: 'Complete 25 quizzes to show your dedication to learning',
+        category: 'engagement',
+        rarity: 'uncommon',
+        isPremiumOnly: false,
+        iconKey: 'quiz-enthusiast',
+        unlockConditionType: 'play_n_quizzes_total',
+        unlockConditionConfig: JSON.stringify({ count: 25 }),
+      },
+    }),
+    prisma.achievement.create({
+      data: {
+        slug: 'perfectionist',
+        name: 'Perfectionist',
+        shortDescription: 'Get 5 perfect scores',
+        longDescription: 'Achieve perfect scores on 5 different quizzes',
+        category: 'performance',
+        rarity: 'uncommon',
+        isPremiumOnly: false,
+        iconKey: 'perfectionist',
+        unlockConditionType: 'perfect_scores_total',
+        unlockConditionConfig: JSON.stringify({ count: 5, minQuestions: 5 }),
       },
     }),
   ])
@@ -195,6 +252,49 @@ async function main() {
         unlockConditionConfig: JSON.stringify({ eventTag: 'olympics-2026' }),
       },
     }),
+    // Progress-based achievements - Rare
+    prisma.achievement.create({
+      data: {
+        slug: 'quiz-master-50',
+        name: 'Quiz Master',
+        shortDescription: 'Play 50 quizzes',
+        longDescription: 'Complete 50 quizzes to demonstrate your commitment to learning',
+        category: 'engagement',
+        rarity: 'rare',
+        isPremiumOnly: false,
+        iconKey: 'quiz-master',
+        unlockConditionType: 'play_n_quizzes_total',
+        unlockConditionConfig: JSON.stringify({ count: 50 }),
+      },
+    }),
+    prisma.achievement.create({
+      data: {
+        slug: 'perfect-ten',
+        name: 'Perfect Ten',
+        shortDescription: 'Get 10 perfect scores',
+        longDescription: 'Achieve perfect scores on 10 different quizzes',
+        category: 'performance',
+        rarity: 'rare',
+        isPremiumOnly: false,
+        iconKey: 'perfect-ten',
+        unlockConditionType: 'perfect_scores_total',
+        unlockConditionConfig: JSON.stringify({ count: 10, minQuestions: 5 }),
+      },
+    }),
+    prisma.achievement.create({
+      data: {
+        slug: 'all-rounder',
+        name: 'All Rounder',
+        shortDescription: 'Get a perfect score in 4 or more round types',
+        longDescription: 'Achieve a perfect score in 4 or more different round types',
+        category: 'performance',
+        rarity: 'epic',
+        isPremiumOnly: false,
+        iconKey: 'all-rounder',
+        unlockConditionType: 'perfect_score_multiple_categories',
+        unlockConditionConfig: JSON.stringify({ minCategories: 4, requiredScore: 5 }),
+      },
+    }),
   ])
 
   // Create achievements - Epic (premium only, seasonal)
@@ -229,6 +329,35 @@ async function main() {
         unlockConditionConfig: JSON.stringify({ season: '2025', minPerTerm: 1 }),
       },
     }),
+    // Progress-based achievements - Epic
+    prisma.achievement.create({
+      data: {
+        slug: 'quiz-veteran',
+        name: 'Quiz Veteran',
+        shortDescription: 'Play 100 quizzes',
+        longDescription: 'Complete 100 quizzes - a true testament to your dedication',
+        category: 'engagement',
+        rarity: 'epic',
+        isPremiumOnly: false,
+        iconKey: 'quiz-veteran',
+        unlockConditionType: 'play_n_quizzes_total',
+        unlockConditionConfig: JSON.stringify({ count: 100 }),
+      },
+    }),
+    prisma.achievement.create({
+      data: {
+        slug: 'flawless-victory',
+        name: 'Flawless Victory',
+        shortDescription: 'Get 25 perfect scores',
+        longDescription: 'Achieve perfect scores on 25 different quizzes',
+        category: 'performance',
+        rarity: 'epic',
+        isPremiumOnly: false,
+        iconKey: 'flawless-victory',
+        unlockConditionType: 'perfect_scores_total',
+        unlockConditionConfig: JSON.stringify({ count: 25, minQuestions: 5 }),
+      },
+    }),
   ])
 
   // Create achievements - Legendary (premium only)
@@ -260,6 +389,35 @@ async function main() {
         iconKey: 'perfect-year',
         unlockConditionType: 'full_season_completion',
         unlockConditionConfig: JSON.stringify({ allQuizzes: true }),
+      },
+    }),
+    // Progress-based achievements - Legendary
+    prisma.achievement.create({
+      data: {
+        slug: 'quiz-legend',
+        name: 'Quiz Legend',
+        shortDescription: 'Play 250 quizzes',
+        longDescription: 'Complete 250 quizzes - join the ranks of the true quiz legends',
+        category: 'engagement',
+        rarity: 'legendary',
+        isPremiumOnly: false,
+        iconKey: 'quiz-legend',
+        unlockConditionType: 'play_n_quizzes_total',
+        unlockConditionConfig: JSON.stringify({ count: 250 }),
+      },
+    }),
+    prisma.achievement.create({
+      data: {
+        slug: 'perfect-master',
+        name: 'Perfect Master',
+        shortDescription: 'Get 50 perfect scores',
+        longDescription: 'Achieve perfect scores on 50 different quizzes - the ultimate display of mastery',
+        category: 'performance',
+        rarity: 'legendary',
+        isPremiumOnly: false,
+        iconKey: 'perfect-master',
+        unlockConditionType: 'perfect_scores_total',
+        unlockConditionConfig: JSON.stringify({ count: 50, minQuestions: 5 }),
       },
     }),
   ])

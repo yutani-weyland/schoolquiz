@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { Trophy } from 'lucide-react';
 import { ACHIEVEMENT_MAP, AchievementKey } from '@/components/quiz/achievements';
+import { cn } from '@/lib/utils';
 
 interface TrophyCabinetProps {
   achievements: Array<{
@@ -97,7 +98,10 @@ export function TrophyCabinet({ achievements, colorScheme = 'blue' }: TrophyCabi
                     {achievementDef.icon}
                   </div>
                   <div className="text-center">
-                    <h4 className="font-semibold text-xs text-gray-900 dark:text-white mb-0.5 line-clamp-1">
+                    <h4 className={cn(
+                      "font-semibold text-xs text-gray-900 dark:text-white mb-0.5 line-clamp-1",
+                      achievementDef.name === "Hail Caesar" && "font-bluu-next tracking-wide"
+                    )}>
                       {achievementDef.name}
                     </h4>
                     <div className="text-[10px] text-gray-500 dark:text-gray-400">

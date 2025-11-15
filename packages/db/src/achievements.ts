@@ -91,12 +91,20 @@ export async function evaluateAndAwardAchievementsForQuiz(
     },
   })
 
-  // Get user's existing achievements to avoid duplicates
+  // Get user's existing achievements (both unlocked and in-progress)
   const existingAchievements = await prisma.userAchievement.findMany({
     where: { userId: data.userId },
     select: { achievementId: true },
   })
   const existingAchievementIds = new Set(existingAchievements.map((a) => a.achievementId))
+
+  // Get user's existing achievements with progress for progress-based tracking
+  const existingAchievementsWithProgress = await prisma.userAchievement.findMany({
+    where: { userId: data.userId },
+  })
+  const existingProgressMap = new Map(
+    existingAchievementsWithProgress.map((ua) => [ua.achievementId, ua])
+  )
 
   // Get quiz info if available
   let quizPublicationDate: Date | null = null
@@ -106,10 +114,20 @@ export async function evaluateAndAwardAchievementsForQuiz(
     quizPublicationDate = data.playedAt
   }
 
+  // List of achievement types that track progress over time (progress-based achievements)
+  const progressBasedTypes = [
+    'play_n_quizzes',
+    'play_n_quizzes_total',
+    'perfect_scores_total',
+    'streak',
+    'repeat_quiz',
+  ]
+
   // Evaluate each achievement
   for (const achievement of allAchievements) {
-    // Skip if already unlocked
-    if (existingAchievementIds.has(achievement.id)) {
+    // Skip if already fully unlocked (has unlockedAt)
+    const existingProgress = existingProgressMap.get(achievement.id)
+    if (existingProgress?.unlockedAt) {
       continue
     }
 
@@ -122,6 +140,8 @@ export async function evaluateAndAwardAchievementsForQuiz(
       ? JSON.parse(achievement.unlockConditionConfig)
       : {}
 
+    const isProgressBased = progressBasedTypes.includes(achievement.unlockConditionType)
+    
     let shouldUnlock = false
     let progressValue: number | undefined
     let progressMax: number | undefined
@@ -176,10 +196,48 @@ export async function evaluateAndAwardAchievementsForQuiz(
         // Include current completion
         const totalCount = recentCompletions.length + 1
 
+        // Always track progress for progress-based achievements
+        progressValue = totalCount
+        progressMax = count
+
         if (totalCount >= count) {
           shouldUnlock = true
-          progressValue = totalCount
-          progressMax = count
+        }
+        break
+      }
+
+      case 'play_n_quizzes_total': {
+        // Play N quizzes total (no time window) - progress-based achievement
+        const count = config.count || 50
+        const totalCompletions = user.quizCompletions.length + 1 // Include current completion
+
+        // Always track progress for progress-based achievements
+        progressValue = totalCompletions
+        progressMax = count
+
+        if (totalCompletions >= count) {
+          shouldUnlock = true
+        }
+        break
+      }
+
+      case 'perfect_scores_total': {
+        // Get N perfect scores total (no time window) - progress-based achievement
+        const count = config.count || 10
+        const perfectScores = user.quizCompletions.filter(
+          (c) => c.score === c.totalQuestions && c.totalQuestions >= (config.minQuestions || 5)
+        ).length
+
+        // Check if current completion is a perfect score
+        const isCurrentPerfect = data.score === data.totalQuestions && data.totalQuestions >= (config.minQuestions || 5)
+        const totalPerfectScores = perfectScores + (isCurrentPerfect ? 1 : 0)
+
+        // Always track progress for progress-based achievements
+        progressValue = totalPerfectScores
+        progressMax = count
+
+        if (totalPerfectScores >= count) {
+          shouldUnlock = true
         }
         break
       }
@@ -204,10 +262,12 @@ export async function evaluateAndAwardAchievementsForQuiz(
         // Include current completion
         const totalCompletions = sameQuizCompletions.length + 1
 
+        // Always track progress for progress-based achievements
+        progressValue = totalCompletions
+        progressMax = minCompletions
+
         if (totalCompletions >= minCompletions) {
           shouldUnlock = true
-          progressValue = totalCompletions
-          progressMax = minCompletions
         }
         break
       }
@@ -242,7 +302,7 @@ export async function evaluateAndAwardAchievementsForQuiz(
         const requiredWeeks = config.weeks || 4
         // This would need more complex logic to calculate weekly streaks
         // For now, we'll check if user has played consistently
-        const recentCompletions = user.quizCompletions.slice(0, requiredWeeks)
+        const recentCompletions = user.quizCompletions.slice(0, requiredWeeks * 2) // Get more to calculate streak properly
         const weeksWithQuizzes = new Set<string>()
 
         for (const completion of recentCompletions) {
@@ -253,10 +313,12 @@ export async function evaluateAndAwardAchievementsForQuiz(
         const currentWeekKey = getWeekKey(data.playedAt)
         weeksWithQuizzes.add(currentWeekKey)
 
+        // Always track progress for progress-based achievements
+        progressValue = weeksWithQuizzes.size
+        progressMax = requiredWeeks
+
         if (weeksWithQuizzes.size >= requiredWeeks) {
           shouldUnlock = true
-          progressValue = weeksWithQuizzes.size
-          progressMax = requiredWeeks
         }
         break
       }
@@ -276,8 +338,64 @@ export async function evaluateAndAwardAchievementsForQuiz(
         break
     }
 
-    if (shouldUnlock) {
-      // Award the achievement
+    // For progress-based achievements, create/update progress even if not unlocked
+    if (isProgressBased && progressValue !== undefined && progressMax !== undefined) {
+      // Ensure progress doesn't exceed max and doesn't decrease
+      const cappedProgress = Math.min(Math.max(progressValue, existingProgress?.progressValue || 0), progressMax)
+      
+      if (existingProgress) {
+        // Update existing progress record
+        await prisma.userAchievement.update({
+          where: { id: existingProgress.id },
+          data: {
+            progressValue: cappedProgress,
+            progressMax,
+            // Only set unlockedAt if we just unlocked it
+            unlockedAt: shouldUnlock && !existingProgress.unlockedAt ? new Date() : existingProgress.unlockedAt,
+            quizSlug: shouldUnlock ? data.quizSlug : existingProgress.quizSlug,
+            meta: Object.keys(meta).length > 0 ? JSON.stringify(meta) : existingProgress.meta,
+          },
+        })
+
+        // If we just unlocked it, add to newly unlocked list
+        if (shouldUnlock && !existingProgress.unlockedAt) {
+          newlyUnlocked.push({
+            achievementId: achievement.id,
+            achievementSlug: achievement.slug,
+            quizSlug: data.quizSlug,
+            progressValue: cappedProgress,
+            progressMax,
+            meta,
+          })
+        }
+      } else {
+        // Create new progress record
+        await prisma.userAchievement.create({
+          data: {
+            userId: data.userId,
+            achievementId: achievement.id,
+            quizSlug: shouldUnlock ? data.quizSlug : null,
+            progressValue: cappedProgress,
+            progressMax,
+            unlockedAt: shouldUnlock ? new Date() : null,
+            meta: Object.keys(meta).length > 0 ? JSON.stringify(meta) : null,
+          },
+        })
+
+        // If unlocked, add to newly unlocked list
+        if (shouldUnlock) {
+          newlyUnlocked.push({
+            achievementId: achievement.id,
+            achievementSlug: achievement.slug,
+            quizSlug: data.quizSlug,
+            progressValue: cappedProgress,
+            progressMax,
+            meta,
+          })
+        }
+      }
+    } else if (shouldUnlock) {
+      // For non-progress-based achievements, only create when unlocked
       await prisma.userAchievement.create({
         data: {
           userId: data.userId,

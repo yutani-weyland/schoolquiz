@@ -1,13 +1,13 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Calendar, Share2, Copy, Check, Lock, Crown, Trophy } from "lucide-react";
+import { Calendar, Share2, Copy, Check, Lock, Crown, Trophy, FileDown } from "lucide-react";
 import React, { useState, useMemo, useCallback } from "react";
 import { textOn } from "@/lib/contrast";
 import { formatWeek } from "@/lib/format";
 import { useUserTier } from "@/hooks/useUserTier";
 import { UpgradeModal } from "@/components/premium/UpgradeModal";
-import { canAccessQuiz } from "@/lib/feature-gating";
+import { canAccessQuiz, canAccessFeature } from "@/lib/feature-gating";
 import { sessionStorage } from "@/lib/storage";
 import { logger } from "@/lib/logger";
 
@@ -25,9 +25,13 @@ export type Quiz = {
 interface QuizCardProps {
 	quiz: Quiz;
 	isNewest?: boolean;
+	index?: number; // For rotation angle variation
 }
 
-export function QuizCard({ quiz, isNewest = false }: QuizCardProps) {
+export function QuizCard({ quiz, isNewest = false, index = 0 }: QuizCardProps) {
+	// Slight rotation angles for each card (in degrees) - similar to stats cards
+	const rotations = [-0.75, 0.5, -1, 0.75, -0.5, 1, -0.75, 0.5, -1, 0.75, -0.5, 1];
+	const initialRotation = rotations[index % rotations.length] || 0;
 	const [showShareMenu, setShowShareMenu] = useState(false);
 	const [copied, setCopied] = useState(false);
 	const [hasProgress, setHasProgress] = useState(false); // Always start with false to match server render
@@ -37,6 +41,7 @@ export function QuizCard({ quiz, isNewest = false }: QuizCardProps) {
 	const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 	const [animationKey, setAnimationKey] = useState(0);
 	const [completionData, setCompletionData] = useState<{ score: number; totalQuestions: number } | null>(null);
+	const [isDownloadingPDF, setIsDownloadingPDF] = useState(false);
 	const { tier, isPremium } = useUserTier();
 	
 	// Format date on client only to avoid hydration errors
@@ -144,6 +149,59 @@ export function QuizCard({ quiz, isNewest = false }: QuizCardProps) {
 		}
 	};
 
+	const handleDownloadPDF = async (e: React.MouseEvent) => {
+		e.preventDefault();
+		e.stopPropagation();
+
+		// Check premium access
+		if (!canAccessFeature(tier, 'pdf_downloads')) {
+			setShowUpgradeModal(true);
+			return;
+		}
+
+		setIsDownloadingPDF(true);
+		try {
+			const authToken = localStorage.getItem('authToken');
+			const userId = localStorage.getItem('userId');
+
+			if (!authToken || !userId) {
+				throw new Error('Not authenticated');
+			}
+
+			const response = await fetch(`/api/quizzes/${quiz.slug}/pdf`, {
+				headers: {
+					Authorization: `Bearer ${authToken}`,
+					'X-User-Id': userId,
+				},
+			});
+
+			if (!response.ok) {
+				if (response.status === 403) {
+					setShowUpgradeModal(true);
+					return;
+				}
+				throw new Error('Failed to generate PDF');
+			}
+
+			const blob = await response.blob();
+			const url = window.URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = `quiz-${quiz.slug}.pdf`;
+			document.body.appendChild(a);
+			a.click();
+			window.URL.revokeObjectURL(url);
+			document.body.removeChild(a);
+		} catch (error) {
+			console.error('Error downloading PDF:', error);
+			// Could show a toast notification here
+		} finally {
+			setIsDownloadingPDF(false);
+		}
+	};
+
+	const canDownloadPDF = canAccessFeature(tier, 'pdf_downloads');
+
 	return (
 		<div
 			key={`quiz-card-${quiz.id}`}
@@ -159,10 +217,12 @@ export function QuizCard({ quiz, isNewest = false }: QuizCardProps) {
 						boxShadow: '0 0 0 1px rgba(251, 191, 36, 0.3), 0 0 20px rgba(251, 191, 36, 0.1)',
 					}),
 				}}
+				initial={{ opacity: 0, y: 20, rotate: 0 }}
+				animate={{ opacity: 1, y: 0, rotate: initialRotation }}
 				onMouseEnter={() => setIsHovered(true)}
 				onMouseLeave={() => setIsHovered(false)}
 				whileHover={{ 
-					rotate: isPremiumLocked ? 0.5 : 1.4,
+					rotate: initialRotation + (isPremiumLocked ? 0.5 : 1.4),
 					scale: 1.02,
 					y: -4,
 					boxShadow: isPremiumLocked 
@@ -377,30 +437,76 @@ export function QuizCard({ quiz, isNewest = false }: QuizCardProps) {
 								? "Continue quiz" 
 								: "Play quiz"}
 						</motion.button>
-						<div className="relative">
-							<motion.button
-								type="button"
-								aria-label="Share quiz"
-								className={`inline-flex h-12 w-12 items-center justify-center rounded-full ${
-									text === "white" ? "bg-white/15 text-white hover:bg-white/25" : "bg-black/5 text-gray-900 hover:bg-black/10"
-								}`}
-								onClick={(e) => {
-									e.preventDefault();
-									e.stopPropagation();
-									setShowShareMenu(!showShareMenu);
-								}}
-								whileHover={{ 
-									scale: 1.1,
-									rotate: [0, -12, 12, 0],
-									transition: { 
-										rotate: { duration: 0.5, ease: "easeInOut" },
-										scale: { type: "spring", stiffness: 400, damping: 10 }
-									}
-								}}
-								whileTap={{ scale: 0.85, rotate: -8 }}
-							>
-								<Share2 className="h-6 w-6" />
-							</motion.button>
+						<div className="flex items-center gap-2">
+							{/* PDF Download Button - Premium Only */}
+							{canDownloadPDF && (
+								<motion.button
+									type="button"
+									aria-label="Download PDF"
+									disabled={isDownloadingPDF}
+									className={`inline-flex h-12 w-12 items-center justify-center rounded-full ${
+										text === "white" ? "bg-white/15 text-white hover:bg-white/25" : "bg-black/5 text-gray-900 hover:bg-black/10"
+									} ${isDownloadingPDF ? "opacity-50 cursor-not-allowed" : ""}`}
+									onClick={handleDownloadPDF}
+									whileHover={!isDownloadingPDF ? { 
+										scale: 1.1,
+										transition: { type: "spring", stiffness: 400, damping: 10 }
+									} : {}}
+									whileTap={!isDownloadingPDF ? { scale: 0.85 } : {}}
+									title="Download PDF (Premium)"
+								>
+									<FileDown className={`h-6 w-6 ${isDownloadingPDF ? "animate-pulse" : ""}`} />
+								</motion.button>
+							)}
+							{!canDownloadPDF && (
+								<motion.div className="relative">
+									<motion.button
+										type="button"
+										aria-label="Download PDF (Premium)"
+										className={`inline-flex h-12 w-12 items-center justify-center rounded-full ${
+											text === "white" ? "bg-white/10 text-white/60 hover:bg-white/20" : "bg-black/5 text-gray-900/60 hover:bg-black/10"
+										}`}
+										onClick={(e) => {
+											e.preventDefault();
+											e.stopPropagation();
+											setShowUpgradeModal(true);
+										}}
+										whileHover={{ 
+											scale: 1.1,
+											transition: { type: "spring", stiffness: 400, damping: 10 }
+										}}
+										whileTap={{ scale: 0.85 }}
+										title="Download PDF (Premium Feature)"
+									>
+										<FileDown className="h-6 w-6" />
+									</motion.button>
+									<Crown className="absolute -top-1 -right-1 h-3 w-3 text-yellow-400" />
+								</motion.div>
+							)}
+							<div className="relative">
+								<motion.button
+									type="button"
+									aria-label="Share quiz"
+									className={`inline-flex h-12 w-12 items-center justify-center rounded-full ${
+										text === "white" ? "bg-white/15 text-white hover:bg-white/25" : "bg-black/5 text-gray-900 hover:bg-black/10"
+									}`}
+									onClick={(e) => {
+										e.preventDefault();
+										e.stopPropagation();
+										setShowShareMenu(!showShareMenu);
+									}}
+									whileHover={{ 
+										scale: 1.1,
+										rotate: [0, -12, 12, 0],
+										transition: { 
+											rotate: { duration: 0.5, ease: "easeInOut" },
+											scale: { type: "spring", stiffness: 400, damping: 10 }
+										}
+									}}
+									whileTap={{ scale: 0.85, rotate: -8 }}
+								>
+									<Share2 className="h-6 w-6" />
+								</motion.button>
 
 							<AnimatePresence>
 								{showShareMenu && (
@@ -488,6 +594,7 @@ export function QuizCard({ quiz, isNewest = false }: QuizCardProps) {
 									</motion.div>
 								)}
 							</AnimatePresence>
+							</div>
 						</div>
 					</div>
 				</div>
@@ -497,7 +604,7 @@ export function QuizCard({ quiz, isNewest = false }: QuizCardProps) {
 			<UpgradeModal
 				isOpen={showUpgradeModal}
 				onClose={() => setShowUpgradeModal(false)}
-				feature="Previous Quizzes"
+				feature={canDownloadPDF ? "Previous Quizzes" : "PDF Downloads"}
 			/>
 		</div>
 	);

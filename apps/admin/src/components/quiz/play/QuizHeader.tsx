@@ -236,7 +236,7 @@ export function QuizHeader({
             </motion.div>
 
             {achievements.length > 0 && (
-              <div className="fixed top-6 right-6 w-[380px] max-w-[calc(100vw-2rem)] pointer-events-none z-[80] space-y-3">
+              <div className="fixed top-6 right-6 w-[380px] max-w-[calc(100vw-2rem)] pointer-events-none z-[80] space-y-3 achievement-container transition-all duration-200">
                 <AnimatePresence mode="popLayout">
                   {achievements.slice(0, 5).map((achievement, index) => (
                     <motion.div

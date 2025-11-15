@@ -39,8 +39,8 @@ export function QuizzesGrid({ quizzes }: QuizzesGridProps) {
 
 	return (
 		<div className="grid sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5 mt-6">
-			{filtered.map((quiz) => (
-				<QuizCard key={quiz.id} quiz={quiz} />
+			{filtered.map((quiz, index) => (
+				<QuizCard key={quiz.id} quiz={quiz} index={index} />
 			))}
 		</div>
 	);

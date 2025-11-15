@@ -6,24 +6,78 @@ const MOCK_USERS = {
     id: "user-andrew-123",
     email: "andrew@example.com",
     name: "Andrew",
-    password: "abc123", // In production, this would be hashed
-    tier: "premium", // Premium user
+    password: "abc123",
+    tier: "premium",
   },
   "richard": {
     id: "user-richard-456",
     email: "richard@example.com",
     name: "Richard",
-    password: "abc123", // In production, this would be hashed
-    tier: "basic", // Basic user - will see upgrade prompts
+    password: "abc123",
+    tier: "basic",
   },
   "premium": {
     id: "user-premium-789",
     email: "premium@example.com",
     name: "Premium User",
-    password: "abc123", // In production, this would be hashed
-    tier: "premium", // Premium user
+    password: "abc123",
+    tier: "premium",
   },
 };
+
+/**
+ * Ensure mock user exists in database (for prototyping)
+ * This is non-blocking - signin will work even if DB fails
+ */
+async function ensureMockUserExists(mockUser: typeof MOCK_USERS[keyof typeof MOCK_USERS]) {
+  try {
+    // Dynamic import to avoid build-time errors
+    const { prisma } = await import("@schoolquiz/db");
+    
+    // Check if user exists by ID
+    const existingUser = await prisma.user.findUnique({
+      where: { id: mockUser.id },
+    });
+
+    if (existingUser) {
+      // Update last login
+      try {
+        await prisma.user.update({
+          where: { id: mockUser.id },
+          data: { lastLoginAt: new Date() },
+        });
+      } catch (e) {
+        // Ignore update errors
+      }
+      return;
+    }
+
+    // Check if email exists
+    const emailUser = await prisma.user.findUnique({
+      where: { email: mockUser.email },
+    });
+
+    if (emailUser) {
+      // User exists with different ID - that's fine
+      return;
+    }
+
+    // Create user
+    await prisma.user.create({
+      data: {
+        id: mockUser.id,
+        email: mockUser.email,
+        name: mockUser.name,
+        tier: mockUser.tier,
+        subscriptionStatus: mockUser.tier === 'premium' ? 'ACTIVE' : 'FREE_TRIAL',
+        lastLoginAt: new Date(),
+      },
+    });
+  } catch (error: any) {
+    // Silently fail - signin should work even without DB
+    console.log('Could not create/update user in database (non-fatal):', error?.message || error);
+  }
+}
 
 export async function POST(request: Request) {
   try {
@@ -42,13 +96,19 @@ export async function POST(request: Request) {
       );
       
       if (userKey && password === "abc123") {
-        const user = MOCK_USERS[userKey as keyof typeof MOCK_USERS];
+        const mockUser = MOCK_USERS[userKey as keyof typeof MOCK_USERS];
+        
+        // Try to create/update user in database (non-blocking)
+        ensureMockUserExists(mockUser).catch(() => {
+          // Ignore errors - signin should work regardless
+        });
+        
         return NextResponse.json({
           token: `mock-token-${userKey}-${Date.now()}`,
-          userId: user.id,
-          email: user.email,
-          name: user.name,
-          tier: user.tier || "basic",
+          userId: mockUser.id,
+          email: mockUser.email,
+          name: mockUser.name,
+          tier: mockUser.tier || "basic",
         });
       } else {
         return NextResponse.json(
@@ -58,16 +118,19 @@ export async function POST(request: Request) {
       }
     }
 
-    // Handle other methods (phone, code) - for now, just return error
+    // Handle other methods
     return NextResponse.json(
       { error: "Email + password authentication required for testing" },
       { status: 400 }
     );
-  } catch (error) {
+  } catch (error: any) {
+    console.error('Signin error:', error);
     return NextResponse.json(
-      { error: "Invalid request" },
+      { 
+        error: "Invalid request",
+        details: error?.message || 'Unknown error',
+      },
       { status: 400 }
     );
   }
 }
-

@@ -44,7 +44,7 @@ export const ACHIEVEMENT_DEFINITIONS: Omit<Achievement, 'id' | 'unlockedAt'>[] =
 		rarity: 2,
 	},
 	{
-		name: "Hail Caesar",
+		name: "HAIL, CAESAR!",
 		description: "Sweep every question in a Roman history category",
 		icon: "🦅",
 		iconColor: "#B8860B",

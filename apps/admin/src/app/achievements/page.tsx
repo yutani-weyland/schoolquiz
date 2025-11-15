@@ -38,11 +38,12 @@ const MOCK_ACHIEVEMENTS: Achievement[] = [
 	{
 		id: "1",
 		slug: "hail-caesar",
-		name: "Hail Caesar",
+		name: "HAIL, CAESAR!",
 		shortDescription: "Get 5/5 in a History round",
 		category: "performance",
 		rarity: "common",
 		isPremiumOnly: false,
+		iconKey: "/achievements/hail-caesar.png",
 		series: "Roman History",
 		cardVariant: "foil", // Special foil edition!
 		status: "unlocked",
@@ -103,14 +104,14 @@ const MOCK_ACHIEVEMENTS: Achievement[] = [
 	},
 	{
 		id: "test-foil-silver-1",
-		slug: "silver-star",
-		name: "Silver Star",
-		shortDescription: "Consistent excellence",
-		longDescription: "Show consistent excellence across multiple quizzes",
-		category: "engagement",
-		rarity: "rare",
+		slug: "all-rounder",
+		name: "All Rounder",
+		shortDescription: "Get a perfect score in 4 or more round types",
+		longDescription: "Achieve a perfect score in 4 or more different round types",
+		category: "performance",
+		rarity: "epic",
 		isPremiumOnly: false,
-		cardVariant: "foilSilver", // Silver foil variant!
+		cardVariant: "fullArt",
 		status: "unlocked",
 		unlockedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
 		quizSlug: null,
@@ -138,14 +139,29 @@ const MOCK_ACHIEVEMENTS: Achievement[] = [
 	{
 		id: "5",
 		slug: "blitzkrieg",
-		name: "Blitzkrieg",
-		shortDescription: "Finish a History round under 2 minutes",
+		name: "Blitzkrieg!",
+		shortDescription: "Get 5/5 in a History round under 2 minutes",
 		category: "performance",
 		rarity: "uncommon",
 		isPremiumOnly: false,
+		iconKey: "/achievements/blitzkreig.png",
 		status: "unlocked",
 		unlockedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
 		quizSlug: "12",
+	},
+	{
+		id: "5b",
+		slug: "clutch",
+		name: "Clutch",
+		shortDescription: "Get the last question correct to beat the average",
+		longDescription: "Get the final question right after previous mistakes, putting your score above the average public score for that round",
+		category: "performance",
+		rarity: "uncommon",
+		isPremiumOnly: false,
+		iconKey: "clutch",
+		status: "unlocked",
+		unlockedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+		quizSlug: "15",
 	},
 	{
 		id: "6",
@@ -299,6 +315,64 @@ export default function AchievementsPage() {
 				// These are hardcoded test achievements that should always appear for logged-in users
 				const testAchievements: Achievement[] = [
 					{
+						id: "test-doppelganger-1",
+						slug: "doppelganger",
+						name: "Doppelganger",
+						shortDescription: "Get the same score 2 weeks in a row",
+						longDescription: "Achieve the exact same score in consecutive weeks - a true doppelganger performance!",
+						category: "performance",
+						rarity: "rare",
+						isPremiumOnly: false,
+						iconKey: "/achievements/doppelganger.png",
+						status: "unlocked",
+						unlockedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+						quizSlug: null,
+					},
+					{
+						id: "test-blitzkrieg-1",
+						slug: "blitzkrieg",
+						name: "Blitzkrieg!",
+						shortDescription: "Get 5/5 in a History round under 2 minutes",
+						longDescription: "Complete a history-themed round perfectly in less than 2 minutes - lightning fast!",
+						category: "performance",
+						rarity: "uncommon",
+						isPremiumOnly: false,
+						iconKey: "/achievements/blitzkreig.png",
+						status: "unlocked",
+						unlockedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+						quizSlug: "12",
+					},
+					{
+						id: "test-clutch-1",
+						slug: "clutch",
+						name: "Clutch",
+						shortDescription: "Get the last question correct to beat the average",
+						longDescription: "Get the final question right after previous mistakes, putting your score above the average public score for that round",
+						category: "performance",
+						rarity: "uncommon",
+						isPremiumOnly: false,
+						iconKey: "clutch",
+						status: "unlocked",
+						unlockedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+						quizSlug: "15",
+					},
+					{
+						id: "test-hail-caesar-1",
+						slug: "hail-caesar",
+						name: "HAIL, CAESAR!",
+						shortDescription: "Get 5/5 in a History round",
+						longDescription: "Achieve a perfect score in a round focused on historical topics",
+						category: "performance",
+						rarity: "common",
+						isPremiumOnly: false,
+						iconKey: "/achievements/hail-caesar.png",
+						series: "Roman History",
+						cardVariant: "foil",
+						status: "unlocked",
+						unlockedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+						quizSlug: "10",
+					},
+					{
 						id: "test-foil-gold-1",
 						slug: "golden-champion",
 						name: "Golden Champion",
@@ -343,7 +417,7 @@ export default function AchievementsPage() {
 					{
 						id: "test-fullart-1",
 						slug: "master-mind",
-						name: "Master Mind",
+						name: "95.5 ATAR",
 						shortDescription: "Perfect score on 3 quizzes",
 						longDescription: "Achieve perfection across multiple quizzes",
 						category: "performance",
@@ -384,11 +458,27 @@ export default function AchievementsPage() {
 					},
 				];
 				
+				// Add test achievement with progress bar
+				const progressTestAchievement: Achievement = {
+					id: "test-progress-1",
+					slug: "quiz-master-progress",
+					name: "Quiz Master",
+					shortDescription: "Complete 10 quizzes",
+					longDescription: "Show your dedication by completing 10 quizzes. You're making great progress!",
+					category: "engagement",
+					rarity: "uncommon",
+					isPremiumOnly: false,
+					cardVariant: "standard",
+					status: "locked_free",
+					progressValue: 7,
+					progressMax: 10,
+				};
+				
 				// Remove duplicates by ID, keeping test achievements if they exist
 				const existingIds = new Set(apiAchievements.map(a => a.id));
 				const uniqueTestAchievements = testAchievements.filter(a => !existingIds.has(a.id));
 				
-				setAchievements([...apiAchievements, ...uniqueTestAchievements]);
+				setAchievements([...apiAchievements, ...uniqueTestAchievements, progressTestAchievement]);
 			} catch (error) {
 				console.error('Failed to fetch achievements:', error);
 				// Fallback to mock data
@@ -472,7 +562,7 @@ export default function AchievementsPage() {
 												flexShrink: 0,
 												marginLeft: index > 0 ? '-10px' : '0',
 												zIndex: 6 - index,
-												transform: `rotate(${(index % 3 - 1) * 1.5}deg)`,
+												transform: `rotate(${(index % 3 - 1) * 0.5}deg)`,
 											}}
 										>
 											<AchievementCard
@@ -516,10 +606,10 @@ export default function AchievementsPage() {
 								animate={{ opacity: 1, y: 0 }}
 								transition={{ delay: 0.2 }}
 								onClick={() => setIsBrowserOpen(true)}
-								className="inline-flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+								className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-base font-medium bg-[#3B82F6] text-white hover:bg-[#2563EB] transition-colors shadow-sm hover:shadow-md"
 							>
 								<Search className="w-4 h-4" />
-								Browse all
+								Explore All Achievements
 							</motion.button>
 						)}
 					</motion.div>
@@ -535,7 +625,7 @@ export default function AchievementsPage() {
 						<div className="flex flex-wrap justify-center" style={{ gap: 0 }}>
 							{earnedAchievements.map((achievement, index) => {
 								const isFlipped = flippedCardId === achievement.id
-								const rotation = (index % 5 - 2) * 3 // Subtle angles: -6, -3, 0, 3, 6 degrees
+								const rotation = (index % 5 - 2) * 1 // Subtle angles: -2, -1, 0, 1, 2 degrees
 								const overlap = index > 0 ? '-10px' : '0' // Less overlap, smaller on mobile
 								
 								return (
@@ -559,11 +649,11 @@ export default function AchievementsPage() {
 											maxWidth: '200px',
 											flexShrink: 0,
 											marginLeft: overlap,
-											zIndex: isFlipped ? 1000 : earnedAchievements.length - index,
+											zIndex: isFlipped ? 50 : 10 + earnedAchievements.length - index,
 											transform: `rotate(${isFlipped ? 0 : rotation}deg)`,
 										}}
 										whileHover={{ 
-											zIndex: 1000,
+											zIndex: 50,
 											scale: 1.1,
 											rotate: 0,
 											y: -8,
@@ -615,7 +705,7 @@ export default function AchievementsPage() {
 							<div className="flex flex-wrap justify-center" style={{ gap: 0 }}>
 							{inProgressAchievements.map((achievement, index) => {
 								const isFlipped = flippedCardId === achievement.id
-								const rotation = (index % 5 - 2) * 3 // Subtle angles: -6, -3, 0, 3, 6 degrees
+								const rotation = (index % 5 - 2) * 1 // Subtle angles: -2, -1, 0, 1, 2 degrees
 								const overlap = index > 0 ? '-10px' : '0' // Less overlap, smaller on mobile
 								
 								return (
@@ -639,11 +729,11 @@ export default function AchievementsPage() {
 											maxWidth: '200px',
 											flexShrink: 0,
 											marginLeft: overlap,
-											zIndex: isFlipped ? 1000 : inProgressAchievements.length - index,
+											zIndex: isFlipped ? 50 : 10 + inProgressAchievements.length - index,
 											transform: `rotate(${isFlipped ? 0 : rotation}deg)`,
 										}}
 										whileHover={{ 
-											zIndex: 1000,
+											zIndex: 50,
 											scale: 1.1,
 											rotate: 0,
 											y: -8,
@@ -681,9 +771,10 @@ export default function AchievementsPage() {
 							<div className="text-center">
 								<button
 									onClick={() => setIsBrowserOpen(true)}
-									className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+									className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-base font-medium bg-[#3B82F6] text-white hover:bg-[#2563EB] transition-colors shadow-sm hover:shadow-md"
 								>
-									View all achievements
+									<Search className="w-4 h-4" />
+									Explore All Achievements
 								</button>
 							</div>
 						</motion.div>

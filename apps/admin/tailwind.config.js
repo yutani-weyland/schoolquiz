@@ -56,12 +56,16 @@ module.exports = {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        sans: ["Atkinson Hyperlegible", "system-ui", "-apple-system", "sans-serif"]
+        sans: ["Atkinson Hyperlegible", "system-ui", "-apple-system", "sans-serif"],
+        historic: ["Cinzel", "serif"]
       },
       scrollbar: {
         thin: 'thin',
         thumb: 'scrollbar-thumb',
         track: 'scrollbar-track'
+      },
+      gridTemplateColumns: {
+        '13': 'repeat(13, minmax(0, 1fr))',
       }
     }
   },

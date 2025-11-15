@@ -9,6 +9,7 @@ import { textOn } from "@/lib/contrast";
 import { cn } from "@/lib/utils";
 import { Play, Calendar } from "lucide-react";
 import type { Quiz } from "@/components/quiz/QuizCard";
+import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 
 interface QuizCardStackProps {
   quizzes: Quiz[];
@@ -17,6 +18,7 @@ interface QuizCardStackProps {
 export function QuizCardStack({ quizzes }: QuizCardStackProps) {
   // Show more cards on larger screens: 5 on mobile, 7 on tablet, 8 on desktop
   const [cardCount, setCardCount] = React.useState(5);
+  const [currentQuizStreak, setCurrentQuizStreak] = React.useState(0);
   
   React.useEffect(() => {
     const updateCardCount = () => {
@@ -33,17 +35,51 @@ export function QuizCardStack({ quizzes }: QuizCardStackProps) {
     window.addEventListener('resize', updateCardCount);
     return () => window.removeEventListener('resize', updateCardCount);
   }, []);
+
+  // Fetch user's streak data
+  React.useEffect(() => {
+    const fetchStreak = async () => {
+      try {
+        const authToken = localStorage.getItem('authToken');
+        const userId = localStorage.getItem('userId');
+        
+        if (!authToken || !userId) {
+          // User not logged in, no streak to show
+          return;
+        }
+
+        const response = await fetch('/api/stats', {
+          headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'X-User-Id': userId,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setCurrentQuizStreak(data.streaks?.currentQuizStreak || 0);
+        }
+      } catch (error) {
+        console.error('Failed to fetch streak:', error);
+      }
+    };
+
+    fetchStreak();
+  }, []);
   
   const displayQuizzes = quizzes.slice(0, cardCount);
+  const showFireAnimation = currentQuizStreak >= 3;
   
   return (
     <section className="w-full py-16 px-4 sm:px-6 md:px-8">
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-center">
           <CardStack className="mb-8">
-            {displayQuizzes.map((quiz) => {
+            {displayQuizzes.map((quiz, index) => {
               const text = textOn(quiz.colorHex);
               const formattedDate = formatWeek(quiz.weekISO);
+              const isLastQuiz = index === displayQuizzes.length - 1;
+              const shouldShowFire = showFireAnimation && isLastQuiz;
               
               // Get first 5 tags, truncate long ones
               const displayTags = (quiz.tags || []).slice(0, 5).map(tag => {
@@ -78,6 +114,20 @@ export function QuizCardStack({ quizzes }: QuizCardStackProps) {
                 >
                   {/* Subtle gradient overlay */}
                   <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-black/10 pointer-events-none rounded-3xl opacity-0" />
+                  
+                  {/* Fire animation overlay - only on last quiz when streak >= 3 */}
+                  {shouldShowFire && (
+                    <div className="absolute bottom-0 left-0 right-0 pointer-events-none rounded-b-3xl z-[5] flex items-end justify-center overflow-hidden">
+                      <div className="w-full h-1/3 flex items-end justify-center">
+                        <DotLottieReact
+                          src="/fire-streak.lottie"
+                          loop
+                          autoplay
+                          className="w-full h-full"
+                        />
+                      </div>
+                    </div>
+                  )}
                   
                   <div className="relative z-10 flex flex-col h-full overflow-hidden">
                     <div className="flex items-center justify-between gap-2 sm:gap-3 md:gap-4 mb-1.5 sm:mb-2 md:mb-3 lg:mb-3 xl:mb-2 2xl:mb-2">

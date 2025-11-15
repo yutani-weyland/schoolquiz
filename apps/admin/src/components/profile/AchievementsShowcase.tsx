@@ -6,6 +6,7 @@ import { Trophy, GripVertical, BookOpen, X, Lock } from 'lucide-react';
 import { ACHIEVEMENT_MAP, AchievementKey } from '@/components/quiz/achievements';
 import { AchievementBrowser } from './AchievementBrowser';
 import { useUserTier } from '@/hooks/useUserTier';
+import { cn } from '@/lib/utils';
 
 interface AchievementsShowcaseProps {
   achievements: Array<{
@@ -332,7 +333,11 @@ export function AchievementsShowcase({
                 
                 {/* Achievement Info */}
                 <div className="flex-1 min-w-0 relative z-10">
-                  <h3 className={`font-semibold text-sm ${getRarityTextColor(achievementDef.rarity)} mb-1 line-clamp-1`}>
+                  <h3 className={cn(
+                    "font-semibold text-sm mb-1 line-clamp-1",
+                    getRarityTextColor(achievementDef.rarity),
+                    achievementDef.name === "Hail Caesar" && "font-bluu-next tracking-wide"
+                  )}>
                     {achievementDef.name}
                   </h3>
                   <p className={`text-xs ${getRarityDescriptionColor(achievementDef.rarity)} line-clamp-2 leading-tight mb-2`}>

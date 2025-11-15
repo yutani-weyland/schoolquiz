@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Trophy, Lock, Search, Sparkles } from 'lucide-react';
 import { ACHIEVEMENT_MAP, AchievementKey, ACHIEVEMENT_DEFINITIONS } from '@/components/quiz/achievements';
+import { cn } from '@/lib/utils';
 
 interface AchievementBrowserProps {
   unlockedAchievements: Array<{
@@ -289,7 +290,10 @@ export function AchievementBrowser({ unlockedAchievements, colorScheme = 'blue' 
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2 mb-1">
-                        <h4 className="font-semibold text-sm text-gray-900 dark:text-white">
+                        <h4 className={cn(
+                          "font-semibold text-sm text-gray-900 dark:text-white",
+                          !isHidden && achievement.name === "Hail Caesar" && "font-bluu-next tracking-wide"
+                        )}>
                           {isHidden ? '???' : achievement.name}
                         </h4>
                         {!isHidden && achievement.rarity > 0 && (
