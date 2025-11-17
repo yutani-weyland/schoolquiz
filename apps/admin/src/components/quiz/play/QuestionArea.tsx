@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Flag } from "lucide-react";
 import AnswerReveal from "../AnswerReveal";
 import { QuizQuestion, QuizRound } from "./types";
 
@@ -26,6 +26,7 @@ interface QuestionAreaProps {
   onUnmarkCorrect: () => void;
   onNext: () => void;
   onPrevious: () => void;
+  onFinish?: () => void;
 }
 
 export function QuestionArea({
@@ -50,6 +51,7 @@ export function QuestionArea({
   onUnmarkCorrect,
   onNext,
   onPrevious,
+  onFinish,
 }: QuestionAreaProps) {
   if (!question) {
     return null;
@@ -80,6 +82,7 @@ export function QuestionArea({
           canGoPrevious={canGoPrevious}
           isMouseMoving={isMouseMoving}
           finaleRoundNumber={finaleRoundNumber}
+          onFinish={onFinish}
         />
       )}
     </AnimatePresence>
@@ -177,6 +180,7 @@ interface PresenterModeProps {
   canGoPrevious: boolean;
   isMouseMoving: boolean;
   finaleRoundNumber: number;
+  onFinish?: () => void;
 }
 
 function PresenterMode({
@@ -198,6 +202,7 @@ function PresenterMode({
   canGoPrevious,
   isMouseMoving,
   finaleRoundNumber,
+  onFinish,
 }: PresenterModeProps) {
   const [hasAnswered, setHasAnswered] = useState(false);
   const questionTextRef = useRef<HTMLParagraphElement>(null);
@@ -351,6 +356,8 @@ function PresenterMode({
         hasAnswered={hasAnswered}
         onNext={onNext}
         onPrevious={onPrevious}
+        isLastQuestion={currentIndex === totalQuestions - 1}
+        onFinish={onFinish}
       />
 
       <main
@@ -441,6 +448,8 @@ function PresenterNavigation({
   hasAnswered,
   onNext,
   onPrevious,
+  isLastQuestion,
+  onFinish,
 }: {
   textColor: string;
   canGoNext: boolean;
@@ -450,6 +459,8 @@ function PresenterNavigation({
   hasAnswered: boolean;
   onNext: () => void;
   onPrevious: () => void;
+  isLastQuestion: boolean;
+  onFinish?: () => void;
 }) {
   const shouldShowFullOpacity = isMouseMoving || isQuestionAnswered;
   const arrowOpacity = shouldShowFullOpacity ? 1 : 0.2;
@@ -478,33 +489,81 @@ function PresenterNavigation({
         </AnimatePresence>
       </div>
 
-      <div className="fixed right-4 sm:right-8 z-40" style={{ top: "45%", transform: "translateY(-50%)" }}>
-        <motion.button
-          onClick={onNext}
-          disabled={!canGoNext}
-          animate={{
-            opacity: canGoNext ? arrowOpacity : 0.1,
-            x: hasAnswered && canGoNext ? [0, 12, -12, 0] : 0,
-          }}
-          whileHover={canGoNext ? { opacity: 1, scale: 1.05 } : {}}
-          transition={{
-            duration: hasAnswered ? 0.8 : 0.3,
-            ease: hasAnswered ? "easeInOut" : "easeOut",
-            repeat: hasAnswered && canGoNext ? Infinity : 0,
-            repeatDelay: hasAnswered ? 1.2 : 0,
-          }}
-          className={`p-3 sm:p-4 rounded-full transition-colors duration-700 ease-in-out ${
-            canGoNext
-              ? textColor === "white"
+      <div className="fixed right-4 sm:right-8 z-40 flex flex-col gap-3" style={{ top: "45%", transform: "translateY(-50%)" }}>
+        {/* Next/Finish Button */}
+        {!isLastQuestion && (
+          <motion.button
+            onClick={onNext}
+            disabled={!canGoNext}
+            animate={{
+              opacity: canGoNext ? arrowOpacity : 0.1,
+              x: hasAnswered && canGoNext ? [0, 12, -12, 0] : 0,
+            }}
+            whileHover={canGoNext ? { opacity: 1, scale: 1.05 } : {}}
+            transition={{
+              duration: hasAnswered ? 0.8 : 0.3,
+              ease: hasAnswered ? "easeInOut" : "easeOut",
+              repeat: hasAnswered && canGoNext ? Infinity : 0,
+              repeatDelay: hasAnswered ? 1.2 : 0,
+            }}
+            className={`p-3 sm:p-4 rounded-full transition-colors duration-700 ease-in-out ${
+              canGoNext
+                ? textColor === "white"
+                  ? "bg-white/15 hover:bg-white/25 text-white"
+                  : "bg-black/10 hover:bg-black/15 text-gray-900"
+                : "opacity-30 cursor-not-allowed"
+            }`}
+            whileTap={canGoNext ? { scale: 0.95 } : {}}
+            aria-label="Next question"
+          >
+            <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6" />
+          </motion.button>
+        )}
+        
+        {/* Finish Button - Always visible */}
+        {onFinish && (
+          <motion.button
+            onClick={onFinish}
+            animate={{
+              opacity: arrowOpacity,
+            }}
+            whileHover={{ opacity: 1, scale: 1.05 }}
+            transition={{ duration: 0.3 }}
+            className={`p-3 sm:p-4 rounded-full transition-colors duration-300 ease-in-out ${
+              textColor === "white"
                 ? "bg-white/15 hover:bg-white/25 text-white"
                 : "bg-black/10 hover:bg-black/15 text-gray-900"
-              : "opacity-30 cursor-not-allowed"
-          }`}
-          whileTap={canGoNext ? { scale: 0.95 } : {}}
-          aria-label="Next question"
-        >
-          <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6" />
-        </motion.button>
+            }`}
+            whileTap={{ scale: 0.95 }}
+            aria-label="Finish quiz"
+          >
+            <Flag className="h-5 w-5 sm:h-6 sm:w-6" />
+          </motion.button>
+        )}
+        
+        {/* Last question: show flag only */}
+        {isLastQuestion && !onFinish && (
+          <motion.button
+            onClick={onNext}
+            disabled={!canGoNext}
+            animate={{
+              opacity: canGoNext ? arrowOpacity : 0.1,
+            }}
+            whileHover={canGoNext ? { opacity: 1, scale: 1.05 } : {}}
+            transition={{ duration: 0.3 }}
+            className={`p-3 sm:p-4 rounded-full transition-colors duration-700 ease-in-out ${
+              canGoNext
+                ? textColor === "white"
+                  ? "bg-white/15 hover:bg-white/25 text-white"
+                  : "bg-black/10 hover:bg-black/15 text-gray-900"
+                : "opacity-30 cursor-not-allowed"
+            }`}
+            whileTap={canGoNext ? { scale: 0.95 } : {}}
+            aria-label="Finish quiz"
+          >
+            <Flag className="h-5 w-5 sm:h-6 sm:w-6" />
+          </motion.button>
+        )}
       </div>
     </>
   );

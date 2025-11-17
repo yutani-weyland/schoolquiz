@@ -36,6 +36,7 @@ const sidebarItems = [
   { id: 'teacher-engagement', label: 'Teacher Engagement', href: '/admin/teachers/engagement', icon: Users, section: 'improve' as const },
   
   // System
+  { id: 'achievements', label: 'Achievements', href: '/admin/achievements', icon: Target, section: 'system' as const },
   { id: 'settings', label: 'Settings', href: '/admin/settings', icon: Settings, section: 'system' as const },
 ];
 

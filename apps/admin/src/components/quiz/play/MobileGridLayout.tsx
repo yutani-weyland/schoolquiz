@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, Flag } from "lucide-react";
 import AnswerReveal from "../AnswerReveal";
 import { QuizQuestion, QuizRound, QuizThemeMode } from "./types";
 import { textOn } from "@/lib/contrast";
@@ -25,6 +25,7 @@ interface MobileGridLayoutProps {
   onActiveQuestionSync?: () => void;
   quizSlug?: string;
   weekISO?: string;
+  onFinish?: () => void;
 }
 
 export function MobileGridLayout({
@@ -47,6 +48,7 @@ export function MobileGridLayout({
   onActiveQuestionSync,
   quizSlug,
   weekISO,
+  onFinish,
 }: MobileGridLayoutProps) {
   const [visibleRoundTitle, setVisibleRoundTitle] = useState<number | null>(null);
   const roundTitleRefs = useRef<Map<number, HTMLElement>>(new Map());
@@ -134,6 +136,9 @@ export function MobileGridLayout({
   const totalCorrect = correctAnswers.size;
   const textIsLight = textColor === "white";
   const revealTextColor = textIsLight ? "white" : "black";
+  const allQuestionsAnswered = questions.every(q => 
+    correctAnswers.has(q.id) || incorrectAnswers.has(q.id)
+  );
   const pageBackground =
     themeMode === "colored"
       ? baseColor
@@ -442,6 +447,31 @@ export function MobileGridLayout({
                 </React.Fragment>
               );
             })}
+
+            {/* Finish Button - At end of content, only show if not all questions answered */}
+            {!allQuestionsAnswered && onFinish && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                className="flex justify-center mt-8 mb-4"
+              >
+                <motion.button
+                  onClick={onFinish}
+                  className={`rounded-full font-semibold flex items-center gap-2 sm:gap-3 transition-colors duration-300 ease-in-out whitespace-nowrap backdrop-blur-sm ${
+                    textIsLight
+                      ? "bg-white/20 text-white hover:bg-white/28"
+                      : "bg-black/10 text-gray-900 hover:bg-black/15"
+                  } px-5 py-2.5 sm:px-6 sm:py-3`}
+                  aria-label="Finish quiz"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Flag className="h-4 w-4 sm:h-5 sm:w-5" />
+                  <span className="text-sm sm:text-base font-medium">Finish</span>
+                </motion.button>
+              </motion.div>
+            )}
           </section>
         </main>
 
@@ -489,6 +519,7 @@ export function MobileGridLayout({
           )}
         </AnimatePresence>
 
+        {/* Score Display - Bottom right */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

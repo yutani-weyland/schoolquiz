@@ -190,6 +190,7 @@ export default function QuizzesPage() {
 		}
 	}, [pathname]);
 
+
 	return (
 		<>
 			<SiteHeader fadeLogo={true} />
@@ -234,7 +235,7 @@ export default function QuizzesPage() {
 							)}
 						</AnimatePresence>
 					</div>
-					
+
 					{/* Quizzes Grid - Responsive with overlapping cards on mobile */}
 					<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8 md:gap-6">
 						{isLoading ? (

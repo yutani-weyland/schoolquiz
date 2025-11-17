@@ -343,7 +343,7 @@ export default function HomePage() {
 							animate={{ opacity: 1, y: 0 }}
 							transition={{ duration: 0.5, delay: 0.55, ease: [0.22, 1, 0.36, 1] }}
 						>
-							<div className="max-w-7xl mx-auto flex flex-wrap justify-center" style={{ gap: 0 }}>
+							<div className="max-w-7xl mx-auto flex flex-wrap justify-center gap-4">
 								{[
 									{
 										id: "preview-1",
@@ -406,7 +406,6 @@ export default function HomePage() {
 									},
 								].map((achievement, index) => {
 									const rotation = (index % 5 - 2) * 3; // Subtle angles: -6, -3, 0, 3, 6 degrees
-									const overlap = index > 0 ? '-10px' : '0'; // Less overlap, smaller on mobile
 									const isFlipped = achievement.status === 'unlocked' && flippedCardIds.has(achievement.id);
 									const isUnlocked = achievement.status === 'unlocked';
 									
@@ -430,7 +429,6 @@ export default function HomePage() {
 												width: 'clamp(120px, 25vw, 200px)',
 												maxWidth: '200px',
 												flexShrink: 0,
-												marginLeft: overlap,
 												zIndex: isFlipped ? 1000 : 5 - index,
 											}}
 											whileHover={{ 

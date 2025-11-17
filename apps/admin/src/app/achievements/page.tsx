@@ -622,11 +622,10 @@ export default function AchievementsPage() {
 					className="max-w-7xl mx-auto w-full px-4 mb-16"
 				>
 					{earnedAchievements.length > 0 ? (
-						<div className="flex flex-wrap justify-center" style={{ gap: 0 }}>
+						<div className="flex flex-wrap justify-center gap-4">
 							{earnedAchievements.map((achievement, index) => {
 								const isFlipped = flippedCardId === achievement.id
 								const rotation = (index % 5 - 2) * 1 // Subtle angles: -2, -1, 0, 1, 2 degrees
-								const overlap = index > 0 ? '-10px' : '0' // Less overlap, smaller on mobile
 								
 								return (
 									<motion.div
@@ -648,7 +647,6 @@ export default function AchievementsPage() {
 											width: 'clamp(120px, 25vw, 200px)',
 											maxWidth: '200px',
 											flexShrink: 0,
-											marginLeft: overlap,
 											zIndex: isFlipped ? 50 : 10 + earnedAchievements.length - index,
 											transform: `rotate(${isFlipped ? 0 : rotation}deg)`,
 										}}
@@ -702,11 +700,10 @@ export default function AchievementsPage() {
 									Keep going! You're making progress on these achievements
 								</p>
 							</div>
-							<div className="flex flex-wrap justify-center" style={{ gap: 0 }}>
+							<div className="flex flex-wrap justify-center gap-4">
 							{inProgressAchievements.map((achievement, index) => {
 								const isFlipped = flippedCardId === achievement.id
 								const rotation = (index % 5 - 2) * 1 // Subtle angles: -2, -1, 0, 1, 2 degrees
-								const overlap = index > 0 ? '-10px' : '0' // Less overlap, smaller on mobile
 								
 								return (
 									<motion.div
@@ -728,7 +725,6 @@ export default function AchievementsPage() {
 											width: 'clamp(120px, 25vw, 200px)',
 											maxWidth: '200px',
 											flexShrink: 0,
-											marginLeft: overlap,
 											zIndex: isFlipped ? 50 : 10 + inProgressAchievements.length - index,
 											transform: `rotate(${isFlipped ? 0 : rotation}deg)`,
 										}}

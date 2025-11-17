@@ -431,12 +431,12 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
                       // Premium user menu
                       <>
                         <Link
-                          href="/quizzes/279/play"
+                          href="/quizzes"
                           onClick={handleLinkClick}
                           className="flex items-center gap-3 px-4 py-2.5 rounded-full text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                         >
-                          <Play className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-                          Play Quiz
+                          <BookOpen className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                          Quizzes
                         </Link>
                         <Link
                           href="/leagues"

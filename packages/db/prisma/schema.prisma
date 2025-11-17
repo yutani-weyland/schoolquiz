@@ -484,6 +484,11 @@ model Achievement {
   iconKey               String? // Maps to icon/asset
   unlockConditionType   String // e.g., "score_5_of_5", "play_n_quizzes", "streak", "referral"
   unlockConditionConfig String?  @default("{}") // JSONB parameters for the condition
+  appearance            String?  @default("{}") // JSONB for visual appearance configuration
+  isActive              Boolean  @default(true) // Soft delete / archive flag
+  points                Int? // Optional points value
+  series                String? // Series/collection name (e.g., "Roman History", "Perfect Scores")
+  cardVariant           String? // "standard" | "foil" | "foilGold" | "foilSilver" | "shiny" | "fullArt"
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 
@@ -493,6 +498,7 @@ model Achievement {
   @@index([category])
   @@index([rarity])
   @@index([isPremiumOnly])
+  @@index([isActive])
   @@map("achievements")
 }
 

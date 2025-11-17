@@ -15,6 +15,8 @@ import { QuestionProgressBar } from "./play/QuestionProgressBar";
 import { QuizQuestion, QuizRound, QuizThemeMode } from "./play/types";
 import { trackQuizPlayed, hasExceededFreeQuizzes, hasPlayedQuiz } from "@/lib/quizAttempts";
 import { MidQuizSignupPrompt } from "./MidQuizSignupPrompt";
+import { QuizCompletionModal } from "./QuizCompletionModal";
+import { IncompleteQuizModal } from "./IncompleteQuizModal";
 import { useUserAccess } from "@/contexts/UserAccessContext";
 import { applyTheme, Theme } from "@/lib/theme";
 import { getAuthToken, getUserId } from "@/lib/storage";
@@ -391,6 +393,8 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 	const [correctAnswers, setCorrectAnswers] = useState<Set<number>>(new Set());
 	const [incorrectAnswers, setIncorrectAnswers] = useState<Set<number>>(new Set());
 	const [showPlusOne, setShowPlusOne] = useState(false);
+	const [showCompletionModal, setShowCompletionModal] = useState(false);
+	const [showIncompleteModal, setShowIncompleteModal] = useState(false);
 	const switchToGridView = useCallback(() => {
 		setViewMode("grid");
 		setCurrentScreen("question");
@@ -578,7 +582,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 				correctAnswers.has(q.id) || incorrectAnswers.has(q.id)
 			);
 			
-			if (allAnswered && finalQuestions.length > 0) {
+			if (allAnswered && finalQuestions.length > 0 && !showCompletionModal) {
 				const score = correctAnswers.size;
 				const completionKey = `quiz-${quizSlug}-completion`;
 				const existingCompletion = localStorage.getItem(completionKey);
@@ -677,9 +681,12 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 							setHasSubmittedCompletion(false);
 						});
 				}
+				
+				// Show completion modal
+				setShowCompletionModal(true);
 			}
 		}
-	}, [correctAnswers, incorrectAnswers, finalQuestions.length, quizSlug, isDemo, timer, rounds, hasSubmittedCompletion]);
+	}, [correctAnswers, incorrectAnswers, finalQuestions.length, quizSlug, isDemo, timer, rounds, hasSubmittedCompletion, showCompletionModal]);
 	const [isTimerRunning, setIsTimerRunning] = useState(() => {
 		// Auto-start timer in grid mode
 		if (typeof window !== 'undefined') {
@@ -1122,6 +1129,39 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 		}
 	}, [isDemo, answeredQuestionsCount, hasShownPrompt, RESTRICTED_ANSWER_LIMIT]);
 
+	const completeQuiz = () => {
+		if (typeof window !== 'undefined' && !isDemo) {
+			const score = correctAnswers.size;
+			const completionKey = `quiz-${quizSlug}-completion`;
+			const completionData = {
+				score,
+				totalQuestions: finalQuestions.length,
+				completedAt: new Date().toISOString(),
+			};
+			localStorage.setItem(completionKey, JSON.stringify(completionData));
+			// Show completion modal
+			setShowCompletionModal(true);
+		} else if (isDemo && onDemoComplete) {
+			const score = correctAnswers.size;
+			onDemoComplete(score, finalQuestions.length);
+		}
+	};
+
+	const handleFinishQuiz = () => {
+		// Check if all questions are answered
+		const allAnswered = finalQuestions.every(q => 
+			correctAnswers.has(q.id) || incorrectAnswers.has(q.id)
+		);
+		
+		if (allAnswered) {
+			// All questions answered - complete the quiz
+			completeQuiz();
+		} else {
+			// Show incomplete modal
+			setShowIncompleteModal(true);
+		}
+	};
+
 	const goToNext = () => {
 		const nextIndex = currentIndex + 1;
 		
@@ -1156,16 +1196,16 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 			const score = correctAnswers.size;
 			onDemoComplete(score, finalQuestions.length);
 		} else if (!isDemo && nextIndex >= finalQuestions.length) {
-			// Quiz completed - save completion data to localStorage
-			if (typeof window !== 'undefined') {
-				const score = correctAnswers.size;
-				const completionKey = `quiz-${quizSlug}-completion`;
-				const completionData = {
-					score,
-					totalQuestions: finalQuestions.length,
-					completedAt: new Date().toISOString(),
-				};
-				localStorage.setItem(completionKey, JSON.stringify(completionData));
+			// Reached end - check if all questions answered
+			const allAnswered = finalQuestions.every(q => 
+				correctAnswers.has(q.id) || incorrectAnswers.has(q.id)
+			);
+			if (allAnswered) {
+				// All questions answered - complete the quiz
+				completeQuiz();
+			} else {
+				// Not all answered - show incomplete modal
+				setShowIncompleteModal(true);
 			}
 		}
 	};
@@ -1676,6 +1716,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 								onUnmarkCorrect={() => handleUnmarkCorrect(currentQuestion.id)}
 								onNext={goToNext}
 								onPrevious={goToPrevious}
+								onFinish={!isDemo ? handleFinishQuiz : undefined}
 							/>
 					) : (
 					<MobileGridLayout
@@ -1698,6 +1739,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 						onUnmarkCorrect={handleUnmarkCorrect}
 						quizSlug={quizSlug}
 						weekISO={weekISO}
+						onFinish={handleFinishQuiz}
 					/>
 					)}
 			</div>
@@ -1712,6 +1754,65 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 				}}
 				questionsAnswered={answeredQuestionsCount}
 			/>
+
+			{/* Quiz completion modal */}
+			{!isDemo && (
+				<QuizCompletionModal
+					isOpen={showCompletionModal}
+					onClose={() => {
+						setShowCompletionModal(false);
+						// Navigate to quizzes page when closing
+						window.location.href = '/quizzes';
+					}}
+					score={correctAnswers.size}
+					totalQuestions={finalQuestions.length}
+					quizSlug={quizSlug}
+					quizTitle={quizTitle}
+					onReviewAnswers={() => {
+						// Switch to grid view to review all answers
+						if (viewMode !== 'grid') {
+							switchToGridView();
+						}
+						// Scroll to top
+						window.scrollTo({ top: 0, behavior: 'smooth' });
+					}}
+				/>
+			)}
+
+			{/* Incomplete quiz modal */}
+			{!isDemo && (
+				<IncompleteQuizModal
+					isOpen={showIncompleteModal}
+					onClose={() => setShowIncompleteModal(false)}
+					onFinishAnyway={() => {
+						setShowIncompleteModal(false);
+						completeQuiz();
+					}}
+					unansweredQuestions={finalQuestions.filter(q => 
+						!correctAnswers.has(q.id) && !incorrectAnswers.has(q.id)
+					)}
+					allQuestions={finalQuestions}
+					onNavigateToQuestion={(questionIndex) => {
+						const question = finalQuestions[questionIndex];
+						if (question) {
+							setCurrentIndex(questionIndex);
+							setCurrentRound(question.roundNumber);
+							setCurrentScreen("question");
+							if (viewMode === "grid") {
+								switchToPresenterView();
+							}
+							// Scroll to question in grid view if needed
+							if (viewMode === "grid") {
+								const questionEl = document.getElementById(`mobile-question-${question.id}`);
+								if (questionEl) {
+									questionEl.scrollIntoView({ behavior: "smooth", block: "center" });
+								}
+							}
+						}
+					}}
+					viewMode={viewMode}
+				/>
+			)}
 		</div>
 	);
 }

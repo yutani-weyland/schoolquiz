@@ -8,6 +8,7 @@ import { useUserTier } from "@/hooks/useUserTier";
 import { hasExceededFreeQuizzes, getRemainingFreeQuizzes } from "@/lib/quizAttempts";
 import { QuizSignupModal } from "@/components/premium/QuizSignupModal";
 import { QuizLimitModal } from "@/components/premium/QuizLimitModal";
+import { QuizLockoutModal } from "@/components/quiz/QuizLockoutModal";
 import { storage } from "@/lib/storage";
 import { logger } from "@/lib/logger";
 import { getQuizIntroStartLabel } from "@/lib/quizStartLabel";
@@ -48,6 +49,8 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 	const [formattedDate, setFormattedDate] = useState<string>("");
 	const [showSignupModal, setShowSignupModal] = useState(false);
 	const [showLimitModal, setShowLimitModal] = useState(false);
+	const [showLockoutModal, setShowLockoutModal] = useState(false);
+	const [isQuizCompleted, setIsQuizCompleted] = useState(false);
 	const [mounted, setMounted] = useState(false);
 	const { isLoggedIn: userIsLoggedIn, isVisitor } = useUserAccess();
 	const { tier, isPremium, isLoading } = useUserTier();
@@ -83,6 +86,55 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 		setFormattedDate(formatWeek(quiz.weekISO));
 	}, [quiz.weekISO]);
 	
+	// Check if quiz is completed
+	React.useEffect(() => {
+		if (typeof window !== 'undefined' && loggedIn) {
+			const checkCompletion = async () => {
+				// First check localStorage
+				const completionKey = `quiz-${quiz.slug}-completion`;
+				const completionStr = localStorage.getItem(completionKey);
+				
+				if (completionStr) {
+					try {
+						const completion = JSON.parse(completionStr);
+						if (completion && typeof completion === 'object' && 'score' in completion) {
+							setIsQuizCompleted(true);
+							return;
+						}
+					} catch (err) {
+						// Ignore parse errors
+					}
+				}
+				
+				// Also check API if logged in
+				const token = localStorage.getItem('authToken');
+				const userId = localStorage.getItem('userId');
+				
+				if (token && userId) {
+					try {
+						const response = await fetch(`/api/quiz/completion?quizSlug=${encodeURIComponent(quiz.slug)}`, {
+							headers: {
+								'Authorization': `Bearer ${token}`,
+								'X-User-Id': userId,
+							},
+						});
+						
+						if (response.ok) {
+							const data = await response.json();
+							if (data.completion) {
+								setIsQuizCompleted(true);
+							}
+						}
+					} catch (err) {
+						// Ignore errors
+					}
+				}
+			};
+			
+			checkCompletion();
+		}
+	}, [quiz.slug, loggedIn]);
+
 	// Check authentication on client only to avoid hydration errors
 	useEffect(() => {
 		setMounted(true);
@@ -124,15 +176,27 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 		// Allow visitors to play latest quiz (they'll be limited to 5 questions in QuizPlayer)
 		// Only block if they're logged in but have restrictions
 		if (loggedIn) {
+			// Premium users can always replay
+			if (isPremium) {
+				return; // Allow play
+			}
+			
+			// Free users: check if quiz is already completed
+			if (isQuizCompleted) {
+				e.preventDefault();
+				setShowLockoutModal(true);
+				return;
+			}
+			
 			// Check if basic user has exceeded free quizzes
-			if (!isPremium && hasExceededFreeQuizzes()) {
+			if (hasExceededFreeQuizzes()) {
 				e.preventDefault();
 				setShowLimitModal(true);
 				return;
 			}
 			
 			// Check if basic user is trying to access non-latest quiz
-			if (!isPremium && !isNewest) {
+			if (!isNewest) {
 				e.preventDefault();
 				setShowLimitModal(true);
 				return;
@@ -590,6 +654,11 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 				onClose={() => setShowLimitModal(false)}
 				quizzesPlayed={quizzesPlayed}
 				maxQuizzes={3}
+			/>
+			<QuizLockoutModal
+				isOpen={showLockoutModal}
+				onClose={() => setShowLockoutModal(false)}
+				quizTitle={quiz.title}
 			/>
 		</LayoutGroup>
 	);

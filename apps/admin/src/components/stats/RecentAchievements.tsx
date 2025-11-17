@@ -322,9 +322,9 @@ export function RecentAchievements() {
           {/* Scrolling Achievements Container */}
           <div className="overflow-hidden pb-4 -mx-2 px-2 relative mb-8">
             <motion.div 
-              className="flex gap-0.5 min-w-max"
+              className="flex gap-4 min-w-max"
               animate={{
-                x: [0, -(180 + 2) * recentAchievements.length],
+                x: [0, -(180 + 16) * recentAchievements.length],
               }}
               transition={{
                 x: {

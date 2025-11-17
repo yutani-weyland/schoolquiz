@@ -20,6 +20,11 @@ export interface AchievementCardProps {
     iconKey?: string | null
     series?: string | null // Series/collection name
     cardVariant?: 'standard' | 'foil' | 'foilGold' | 'foilSilver' | 'shiny' | 'fullArt' // Special card designs
+    appearance?: {
+      backgroundImage?: string
+      backgroundColor?: string
+      [key: string]: any
+    }
   }
   status: 'unlocked' | 'locked_free' | 'locked_premium'
   unlockedAt?: string
@@ -130,6 +135,27 @@ export function AchievementCard({
   const isShiny = cardVariant === 'shiny'
   const isFullArt = cardVariant === 'fullArt'
   
+  // Get appearance config
+  const appearance = achievement.appearance || {}
+  const titleFontFamily = appearance.titleFontFamily || 'system-ui'
+  const bodyFontFamily = appearance.bodyFontFamily || 'system-ui'
+  const titleLetterSpacing = appearance.titleLetterSpacing || 0
+  const titleCase = appearance.titleCase || 'normal'
+  
+  // Apply text case transformation
+  const getTitleText = (text: string) => {
+    switch (titleCase) {
+      case 'upper':
+        return text.toUpperCase()
+      case 'title':
+        return text.replace(/\w\S*/g, (txt) => 
+          txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase()
+        )
+      default:
+        return text
+    }
+  }
+  
   // Check if this is the Hail Caesar achievement for Roman marble theme
   const isHailCaesar = achievement.slug === "hail-caesar" || achievement.name === "HAIL, CAESAR!" || achievement.name === "Hail Caesar"
   
@@ -198,10 +224,10 @@ export function AchievementCard({
             (isFoil || isFoilGold || isFoilSilver) && !isHailCaesar && !isBlitzkrieg && !isDoppelganger && !isATAR && !isAllRounder && "foil-card"
           )}
           style={{
-            backgroundColor: isHailCaesar ? '#F5F5F0' : isBlitzkrieg ? '#4A5D23' : isDoppelganger ? '#1E3A8A' : (isATAR || isAllRounder) ? '#003366' : style.bgColor, // White marble for Hail Caesar, camo green for Blitzkrieg, Spiderman blue for Doppelganger, NESA navy for ATAR and All Rounder
-            backgroundImage: isHailCaesar ? 'url(/achievements/roman-marble-texture.png)' : (isBlitzkrieg || isDoppelganger || isATAR || isAllRounder) ? 'none' : undefined,
-            backgroundSize: isHailCaesar ? 'cover' : undefined,
-            backgroundPosition: isHailCaesar ? 'center' : undefined,
+            backgroundColor: isHailCaesar ? '#F5F5F0' : isBlitzkrieg ? '#4A5D23' : isDoppelganger ? '#1E3A8A' : (isATAR || isAllRounder) ? '#003366' : (achievement.appearance?.backgroundColor || style.bgColor), // White marble for Hail Caesar, camo green for Blitzkrieg, Spiderman blue for Doppelganger, NESA navy for ATAR and All Rounder
+            backgroundImage: isHailCaesar ? 'url(/achievements/roman-marble-texture.png)' : (isBlitzkrieg || isDoppelganger || isATAR || isAllRounder) ? 'none' : (achievement.appearance?.backgroundImage ? `url(${achievement.appearance.backgroundImage})` : undefined),
+            backgroundSize: isHailCaesar ? 'cover' : (achievement.appearance?.backgroundImage ? 'cover' : undefined),
+            backgroundPosition: isHailCaesar ? 'center' : (achievement.appearance?.backgroundImage ? 'center' : undefined),
             backgroundBlendMode: isHailCaesar ? 'overlay' : undefined,
             boxShadow: isUnlocked 
               ? (isHailCaesar
@@ -494,18 +520,25 @@ export function AchievementCard({
                 "group-hover:translate-y-[-4px]",
                 !isHailCaesar && !isBlitzkrieg && !isDoppelganger && !isATAR && !isAllRounder && style.text
               )}
-              style={isBlitzkrieg ? {
-                letterSpacing: '0.05em',
-                textShadow: '2px 2px 4px rgba(0,0,0,0.9), 0 0 10px rgba(255,165,0,0.6), 0 0 20px rgba(255,140,0,0.4)',
-              } : isDoppelganger ? {
-                letterSpacing: '0.08em',
-                textShadow: '2px 2px 4px rgba(0,0,0,0.9), 0 0 10px rgba(220,38,38,0.6), 0 0 20px rgba(239,68,68,0.4)',
-              } : (isATAR || isAllRounder) ? {
-                letterSpacing: '0.05em',
-                textShadow: '2px 2px 4px rgba(0,0,0,0.8)',
-              } : undefined}
+              style={{
+                ...(isBlitzkrieg ? {
+                  letterSpacing: '0.05em',
+                  textShadow: '2px 2px 4px rgba(0,0,0,0.9), 0 0 10px rgba(255,165,0,0.6), 0 0 20px rgba(255,140,0,0.4)',
+                } : isDoppelganger ? {
+                  letterSpacing: '0.08em',
+                  textShadow: '2px 2px 4px rgba(0,0,0,0.9), 0 0 10px rgba(220,38,38,0.6), 0 0 20px rgba(239,68,68,0.4)',
+                } : (isATAR || isAllRounder) ? {
+                  letterSpacing: '0.05em',
+                  textShadow: '2px 2px 4px rgba(0,0,0,0.8)',
+                } : {
+                  fontFamily: titleFontFamily,
+                  letterSpacing: `${titleLetterSpacing}px`,
+                }),
+              }}
               >
-                {achievement.name}
+                {!isHailCaesar && !isBlitzkrieg && !isDoppelganger && !isATAR && !isAllRounder 
+                  ? getTitleText(achievement.name)
+                  : achievement.name}
               </h3>
 
               {/* Brief Description Preview */}
@@ -519,13 +552,17 @@ export function AchievementCard({
                 "tracking-wide",
                 isBlitzkrieg ? "mb-0" : "mb-3"
               )}
-              style={isBlitzkrieg ? {
-                textShadow: '1px 1px 2px rgba(0,0,0,0.9), 0 0 6px rgba(255,165,0,0.5)',
-              } : isDoppelganger ? {
-                textShadow: '1px 1px 2px rgba(0,0,0,0.9), 0 0 6px rgba(220,38,38,0.5)',
-              } : (isATAR || isAllRounder) ? {
-                textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
-              } : undefined}
+              style={{
+                ...(isBlitzkrieg ? {
+                  textShadow: '1px 1px 2px rgba(0,0,0,0.9), 0 0 6px rgba(255,165,0,0.5)',
+                } : isDoppelganger ? {
+                  textShadow: '1px 1px 2px rgba(0,0,0,0.9), 0 0 6px rgba(220,38,38,0.5)',
+                } : (isATAR || isAllRounder) ? {
+                  textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+                } : {
+                  fontFamily: bodyFontFamily,
+                }),
+              }}
               >
                 {achievement.shortDescription}
               </p>
@@ -954,18 +991,25 @@ export function AchievementCard({
                   "leading-tight",
                   !isHailCaesar && !isBlitzkrieg && !isDoppelganger && !isATAR && !isAllRounder && style.text
                 )}
-                style={isBlitzkrieg ? {
-                  letterSpacing: '0.05em',
-                  textShadow: '2px 2px 4px rgba(0,0,0,0.9), 0 0 10px rgba(255,165,0,0.6), 0 0 20px rgba(255,140,0,0.4)',
-                } : isDoppelganger ? {
-                  letterSpacing: '0.08em',
-                  textShadow: '2px 2px 4px rgba(0,0,0,0.9), 0 0 10px rgba(220,38,38,0.6), 0 0 20px rgba(239,68,68,0.4)',
-                } : (isATAR || isAllRounder) ? {
-                  letterSpacing: '0.05em',
-                  textShadow: '2px 2px 4px rgba(0,0,0,0.8)',
-                } : undefined}
+                style={{
+                  ...(isBlitzkrieg ? {
+                    letterSpacing: '0.05em',
+                    textShadow: '2px 2px 4px rgba(0,0,0,0.9), 0 0 10px rgba(255,165,0,0.6), 0 0 20px rgba(255,140,0,0.4)',
+                  } : isDoppelganger ? {
+                    letterSpacing: '0.08em',
+                    textShadow: '2px 2px 4px rgba(0,0,0,0.9), 0 0 10px rgba(220,38,38,0.6), 0 0 20px rgba(239,68,68,0.4)',
+                  } : (isATAR || isAllRounder) ? {
+                    letterSpacing: '0.05em',
+                    textShadow: '2px 2px 4px rgba(0,0,0,0.8)',
+                  } : {
+                    fontFamily: titleFontFamily,
+                    letterSpacing: `${titleLetterSpacing}px`,
+                  }),
+                }}
                 >
-                  {achievement.name}
+                  {!isHailCaesar && !isBlitzkrieg && !isDoppelganger && !isATAR && !isAllRounder 
+                    ? getTitleText(achievement.name)
+                    : achievement.name}
                 </h3>
                 <p className={cn(
                   "text-sm",
@@ -975,13 +1019,17 @@ export function AchievementCard({
                   "line-clamp-4",
                   "tracking-wide"
                 )}
-                style={isBlitzkrieg ? {
-                  textShadow: '1px 1px 3px rgba(0,0,0,0.9), 0 0 8px rgba(255,165,0,0.5)',
-                } : isDoppelganger ? {
-                  textShadow: '1px 1px 3px rgba(0,0,0,0.9), 0 0 8px rgba(220,38,38,0.5)',
-                } : (isATAR || isAllRounder) ? {
-                  textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
-                } : undefined}
+                style={{
+                  ...(isBlitzkrieg ? {
+                    textShadow: '1px 1px 3px rgba(0,0,0,0.9), 0 0 8px rgba(255,165,0,0.5)',
+                  } : isDoppelganger ? {
+                    textShadow: '1px 1px 3px rgba(0,0,0,0.9), 0 0 8px rgba(220,38,38,0.5)',
+                  } : (isATAR || isAllRounder) ? {
+                    textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+                  } : {
+                    fontFamily: bodyFontFamily,
+                  }),
+                }}
                 >
                   {achievement.longDescription || achievement.shortDescription}
                 </p>

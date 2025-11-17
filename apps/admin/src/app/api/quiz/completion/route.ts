@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@schoolquiz/db'
-import { evaluateAndAwardAchievementsForQuiz } from '@schoolquiz/db/achievements'
+import { evaluateAndAwardAchievementsForQuiz } from '@schoolquiz/db'
 
 async function getUserFromToken(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
@@ -21,6 +21,63 @@ async function getUserFromToken(request: NextRequest) {
   })
   
   return user
+}
+
+/**
+ * GET /api/quiz/completion?quizSlug=xxx
+ * Get quiz completion data for the current user
+ */
+export async function GET(request: NextRequest) {
+  try {
+    const user = await getUserFromToken(request)
+    
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+    
+    const { searchParams } = new URL(request.url)
+    const quizSlug = searchParams.get('quizSlug')
+    
+    if (!quizSlug) {
+      return NextResponse.json(
+        { error: 'Missing quizSlug parameter' },
+        { status: 400 }
+      )
+    }
+    
+    const completion = await prisma.quizCompletion.findUnique({
+      where: {
+        userId_quizSlug: {
+          userId: user.id,
+          quizSlug,
+        },
+      },
+    })
+    
+    if (!completion) {
+      return NextResponse.json({ completion: null })
+    }
+    
+    return NextResponse.json({
+      completion: {
+        id: completion.id,
+        quizSlug: completion.quizSlug,
+        score: completion.score,
+        totalQuestions: completion.totalQuestions,
+        completedAt: completion.completedAt.toISOString(),
+        timeSeconds: completion.timeSeconds,
+      },
+    })
+  } catch (error: any) {
+    console.error('Error fetching quiz completion:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch quiz completion', details: error.message },
+      { status: 500 }
+    )
+  }
 }
 
 /**

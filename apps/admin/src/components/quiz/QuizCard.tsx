@@ -84,25 +84,63 @@ export function QuizCard({ quiz, isNewest = false, index = 0 }: QuizCardProps) {
 	// Check for quiz completion data
 	React.useEffect(() => {
 		if (typeof window !== 'undefined') {
-			// Check localStorage for completion data
-			const completionKey = `quiz-${quiz.slug}-completion`;
-			const completionStr = sessionStorage.get<string | null>(completionKey, null);
-			
-			if (completionStr) {
-				try {
-					const completion = typeof completionStr === 'string' ? JSON.parse(completionStr) : completionStr;
-					if (completion && typeof completion === 'object' && 'score' in completion && 'totalQuestions' in completion) {
-						setCompletionData({
-							score: completion.score as number,
-							totalQuestions: completion.totalQuestions as number,
-						});
+			const fetchCompletionData = async () => {
+				// First check localStorage for completion data
+				const completionKey = `quiz-${quiz.slug}-completion`;
+				const completionStr = localStorage.getItem(completionKey);
+				
+				if (completionStr) {
+					try {
+						const completion = JSON.parse(completionStr);
+						if (completion && typeof completion === 'object' && 'score' in completion && 'totalQuestions' in completion) {
+							setCompletionData({
+								score: completion.score as number,
+								totalQuestions: completion.totalQuestions as number,
+							});
+							return; // Found in localStorage, no need to check API
+						}
+					} catch (err) {
+						logger.error('Failed to parse completion data from localStorage:', err);
 					}
-				} catch (err) {
-					logger.error('Failed to parse completion data:', err);
 				}
-			} else {
-				setCompletionData(null);
-			}
+				
+				// If not in localStorage and user is logged in, try fetching from API
+				const token = localStorage.getItem('authToken');
+				const userId = localStorage.getItem('userId');
+				
+				if (token && userId) {
+					try {
+						const response = await fetch(`/api/quiz/completion?quizSlug=${encodeURIComponent(quiz.slug)}`, {
+							headers: {
+								'Authorization': `Bearer ${token}`,
+								'X-User-Id': userId,
+							},
+						});
+						
+						if (response.ok) {
+							const data = await response.json();
+							if (data.completion && data.completion.score !== undefined && data.completion.totalQuestions !== undefined) {
+								setCompletionData({
+									score: data.completion.score,
+									totalQuestions: data.completion.totalQuestions,
+								});
+								// Also save to localStorage for future use
+								localStorage.setItem(completionKey, JSON.stringify({
+									score: data.completion.score,
+									totalQuestions: data.completion.totalQuestions,
+									completedAt: data.completion.completedAt,
+								}));
+							}
+						}
+					} catch (err) {
+						logger.error('Failed to fetch completion data from API:', err);
+					}
+				} else {
+					setCompletionData(null);
+				}
+			};
+			
+			fetchCompletionData();
 		}
 	}, [quiz.slug]);
 	
@@ -433,6 +471,8 @@ export function QuizCard({ quiz, isNewest = false, index = 0 }: QuizCardProps) {
 								? "Coming soon" 
 								: isPremiumLocked 
 								? "Play quiz" 
+								: completionData
+								? "Play Again"
 								: mounted && hasProgress 
 								? "Continue quiz" 
 								: "Play quiz"}
