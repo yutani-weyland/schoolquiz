@@ -28,76 +28,31 @@ export function FileUpload({
     const file = event.target.files?.[0]
     if (!file) return
 
-    // Show preview immediately
-    const previewUrl = URL.createObjectURL(file)
-    setPreview(previewUrl)
-
-    // Upload file
+    // For now, use local blob URL - no server upload needed
     setIsUploading(true)
     try {
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('type', type)
-
-      const response = await fetch('/api/admin/achievements/upload', {
-        method: 'POST',
-        body: formData,
-      })
-
-      if (!response.ok) {
-        let errorMessage = 'Upload failed'
-        try {
-          const error = await response.json()
-          errorMessage = error.error || error.details || errorMessage
-        } catch (e) {
-          // If response is not JSON, try to get text
-          try {
-            const text = await response.text()
-            errorMessage = text || errorMessage
-          } catch (e2) {
-            // Ignore
-          }
-        }
-        throw new Error(errorMessage)
-      }
-
-      let data
-      try {
-        data = await response.json()
-      } catch (error) {
-        throw new Error('Invalid response from server')
-      }
-
-      if (!data || !data.url) {
-        throw new Error('Invalid response: missing URL')
-      }
-
-      onChange(data.url)
-      setPreview(data.url)
+      // Create a blob URL for local use
+      const blobUrl = URL.createObjectURL(file)
+      setPreview(blobUrl)
+      
+      // Use the blob URL as the value
+      // Note: blob URLs are temporary and only work in the current browser session
+      // For production, you'll want to upload to a server and get a permanent URL
+      onChange(blobUrl)
     } catch (error: any) {
-      console.error('Upload error:', error)
-      const errorMessage = error.message || 'Unknown error occurred'
-      console.error('Full error details:', {
-        message: errorMessage,
-        stack: error.stack,
-        name: error.name,
-      })
-      alert(`Failed to upload: ${errorMessage}\n\nCheck the browser console for more details.`)
+      console.error('File selection error:', error)
+      alert(`Failed to load file: ${error.message || 'Unknown error'}`)
       setPreview(value || null)
-      // Clean up object URL on error
-      if (preview && preview.startsWith('blob:')) {
-        URL.revokeObjectURL(preview)
-      }
     } finally {
       setIsUploading(false)
-      // Clean up object URL
-      if (preview && preview.startsWith('blob:')) {
-        URL.revokeObjectURL(preview)
-      }
     }
   }
 
   const handleRemove = () => {
+    // Clean up blob URL if it exists
+    if (preview && preview.startsWith('blob:')) {
+      URL.revokeObjectURL(preview)
+    }
     onChange('')
     setPreview(null)
     if (fileInputRef.current) {

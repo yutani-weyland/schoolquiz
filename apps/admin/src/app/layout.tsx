@@ -41,6 +41,109 @@ export default async function RootLayout({
 				<link rel="preconnect" href="https://raw.githubusercontent.com" crossOrigin="anonymous" />
 				<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet" />
 				<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&display=swap" rel="stylesheet" />
+				{/* Achievement card fonts - Expanded library */}
+				{/* Sans Serif */}
+				<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;500;600;700&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;500;700&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+				{/* Display - Bold & Edgy */}
+				<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Righteous&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Bungee&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Bungee+Shade&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Bungee+Inline&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Bungee+Hairline&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Audiowide&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Rubik+Glitch&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Russo+One&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Creepster&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Fascinate&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Fascinate+Inline&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Faster+One&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Freckle+Face&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Frijole&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Fugaz+One&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Graduate&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Griffy&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Iceberg&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Iceland&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Jockey+One&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Knewave&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Londrina+Outline&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Londrina+Shadow&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Londrina+Sketch&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Londrina+Solid&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Megrim&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Metal&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Metal+Mania&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Monofett&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Monoton&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Nosifer&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Nova+Square&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Plaster&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Ribeye&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Ribeye+Marrow&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Rye&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Seymour+One&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Sigmar+One&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Stalinist+One&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Stardos+Stencil&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Wallpoet&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Wendy+One&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Zilla+Slab+Highlight&display=swap" rel="stylesheet" />
+				{/* Futuristic & Tech */}
+				<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Aldrich&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Electrolize&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Share+Tech&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Quantico:wght@400;700&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Sarpanch:wght@400;500;600;700&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Saira:wght@400;500;600;700&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Saira+Extra+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Saira+Stencil+One&display=swap" rel="stylesheet" />
+				{/* Retro & Vintage */}
+				<link href="https://fonts.googleapis.com/css2?family=Butcherman&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Ewert&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Flamenco:wght@400&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Gravitas+One&display=swap" rel="stylesheet" />
+				{/* Serif */}
+				<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;500;600;700&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=PT+Serif:wght@400;700&display=swap" rel="stylesheet" />
+				<link href="https://fonts.googleapis.com/css2?family=Source+Serif+Pro:wght@400;600;700&display=swap" rel="stylesheet" />
 				<script
 					dangerouslySetInnerHTML={{
 						__html: `

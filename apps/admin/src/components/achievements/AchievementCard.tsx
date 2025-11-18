@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Lock, Sparkles, Calendar } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -19,10 +19,11 @@ export interface AchievementCardProps {
     seasonTag?: string | null
     iconKey?: string | null
     series?: string | null // Series/collection name
-    cardVariant?: 'standard' | 'foil' | 'foilGold' | 'foilSilver' | 'shiny' | 'fullArt' // Special card designs
+    cardVariant?: 'standard' | 'foil' | 'foilGold' | 'foilSilver' | 'prismatic' | 'neon' | 'shiny' | 'fullArt' // Special card designs
     appearance?: {
       backgroundImage?: string
       backgroundColor?: string
+      material?: 'standard' | 'wood' | 'stone' | 'glass' | 'steel' | 'paper' | 'parchment'
       [key: string]: any
     }
   }
@@ -32,52 +33,81 @@ export interface AchievementCardProps {
   percentOfPlayers?: number
   progressValue?: number
   progressMax?: number
+  isTracked?: boolean // For achievements earned over multiple weeks
+  trackedWeeks?: number // Total weeks for tracked achievement
+  trackedProgress?: number // Current week progress (e.g., 3 out of 8 weeks)
   tier: UserTier
   onUpgradeClick?: () => void
   isFlipped?: boolean // Controlled flip state
   onFlipChange?: (flipped: boolean) => void // Callback when flip state changes
+  triggerEntrance?: boolean // Trigger entrance animation for testing
 }
 
+// Rarity icons - subtle indicators for each rarity
+const rarityIcons: Record<string, { icon: string; label: string }> = {
+  common: { icon: '', label: '' },
+  uncommon: { icon: '●', label: 'Uncommon' }, // Small circle
+  rare: { icon: '◆', label: 'Rare' }, // Diamond
+  epic: { icon: '✦', label: 'Epic' }, // Sparkle
+  legendary: { icon: '✧', label: 'Legendary' }, // Star sparkle
+}
+
+// WoW rarity colors with enhanced visual effects
 const rarityStyles = {
   common: {
-    bgColor: '#F59E0B', // Vibrant amber/orange
-    border: 'border-amber-400/80',
-    glowColor: 'rgba(245, 158, 11, 0.5)', // amber-500
+    bgColor: '#9D9D9D', // Gray
+    border: 'border-gray-400/80',
+    glowColor: 'rgba(157, 157, 157, 0.5)',
     text: 'text-white',
     badge: 'bg-white/40 text-white',
     iconBg: 'bg-white/50',
+    borderStyle: 'flat', // Standard: flat border
+    glowStyle: 'none',
+    revealAnimation: 'simple', // Standard: simple flip
   },
   uncommon: {
-    bgColor: '#10B981', // Emerald green - vibrant like quiz cards
-    border: 'border-emerald-300/80',
-    glowColor: 'rgba(16, 185, 129, 0.5)', // emerald-500
+    bgColor: '#1EFF00', // Green
+    border: 'border-green-300/80',
+    glowColor: 'rgba(30, 255, 0, 0.5)',
     text: 'text-white',
     badge: 'bg-white/30 text-white',
     iconBg: 'bg-white/40',
+    borderStyle: 'silver', // Silver: subtle gradient + shine
+    glowStyle: 'silver',
+    revealAnimation: 'simple',
   },
   rare: {
-    bgColor: '#3B82F6', // Bright blue - vibrant like quiz cards
+    bgColor: '#0070DD', // Blue
     border: 'border-blue-300/80',
-    glowColor: 'rgba(59, 130, 246, 0.5)', // blue-500
+    glowColor: 'rgba(0, 112, 221, 0.5)',
     text: 'text-white',
     badge: 'bg-white/30 text-white',
     iconBg: 'bg-white/40',
+    borderStyle: 'gold', // Gold: warm gradient + light shimmer
+    glowStyle: 'gold',
+    revealAnimation: 'rare', // Rare: flip + burst + particle effect
   },
   epic: {
-    bgColor: '#A855F7', // Vibrant purple - like quiz cards
+    bgColor: '#A335EE', // Purple
     border: 'border-purple-300/80',
-    glowColor: 'rgba(168, 85, 247, 0.5)', // purple-500
+    glowColor: 'rgba(163, 53, 238, 0.5)',
     text: 'text-white',
     badge: 'bg-white/30 text-white',
     iconBg: 'bg-white/40',
+    borderStyle: 'gold',
+    glowStyle: 'gold',
+    revealAnimation: 'rare',
   },
   legendary: {
-    bgColor: '#F59E0B', // Golden amber - vibrant like quiz cards
-    border: 'border-yellow-300/80',
-    glowColor: 'rgba(245, 158, 11, 0.6)', // amber-500
+    bgColor: '#FF8000', // Orange/Gold
+    border: 'border-orange-300/80',
+    glowColor: 'rgba(255, 128, 0, 0.6)',
     text: 'text-white',
     badge: 'bg-white/40 text-white',
     iconBg: 'bg-white/50',
+    borderStyle: 'holo', // Holo: animated gradient overlay, slow movement
+    glowStyle: 'holo',
+    revealAnimation: 'rare',
   },
 }
 
@@ -107,16 +137,32 @@ export function AchievementCard({
   percentOfPlayers,
   progressValue,
   progressMax,
+  isTracked,
+  trackedWeeks,
+  trackedProgress,
   tier,
   onUpgradeClick,
   isFlipped: controlledIsFlipped,
   onFlipChange,
+  triggerEntrance,
 }: AchievementCardProps) {
   const style = rarityStyles[achievement.rarity as keyof typeof rarityStyles] || rarityStyles.common
   const isUnlocked = status === 'unlocked'
   const isLockedPremium = status === 'locked_premium'
   const icon = getIcon(achievement.iconKey, achievement.rarity)
   const [internalIsFlipped, setInternalIsFlipped] = useState(false)
+  const [hasRevealed, setHasRevealed] = useState(false)
+  const [entranceKey, setEntranceKey] = useState(0)
+  const rarityIcon = rarityIcons[achievement.rarity] || rarityIcons.common
+  const isRareReveal = style.revealAnimation === 'rare' && isUnlocked && !hasRevealed
+  
+  // Trigger entrance animation when triggerEntrance changes
+  useEffect(() => {
+    if (triggerEntrance) {
+      setEntranceKey(prev => prev + 1)
+      setHasRevealed(false)
+    }
+  }, [triggerEntrance])
   
   // Use controlled flip state if provided, otherwise use internal state
   const isFlipped = controlledIsFlipped !== undefined ? controlledIsFlipped : internalIsFlipped
@@ -126,21 +172,105 @@ export function AchievementCard({
       setInternalIsFlipped(flipped)
     }
     onFlipChange?.(flipped)
+    
+    // Mark as revealed when first flipped (for rare cards)
+    if (flipped && isRareReveal) {
+      setHasRevealed(true)
+    }
   }
   
   const cardVariant = achievement.cardVariant || 'standard'
   const isFoil = cardVariant === 'foil'
   const isFoilGold = cardVariant === 'foilGold'
   const isFoilSilver = cardVariant === 'foilSilver'
+  const isPrismatic = cardVariant === 'prismatic'
+  const isNeon = cardVariant === 'neon'
   const isShiny = cardVariant === 'shiny'
   const isFullArt = cardVariant === 'fullArt'
   
-  // Get appearance config
-  const appearance = achievement.appearance || {}
-  const titleFontFamily = appearance.titleFontFamily || 'system-ui'
-  const bodyFontFamily = appearance.bodyFontFamily || 'system-ui'
-  const titleLetterSpacing = appearance.titleLetterSpacing || 0
-  const titleCase = appearance.titleCase || 'normal'
+         // Get appearance config
+         const appearance = achievement.appearance || {}
+         const titleFontFamilyRaw = appearance.titleFontFamily || 'system-ui'
+         const bodyFontFamilyRaw = appearance.bodyFontFamily || 'system-ui'
+         // Ensure fonts with spaces are properly quoted
+         const titleFontFamily = titleFontFamilyRaw.includes(' ') ? `"${titleFontFamilyRaw}"` : titleFontFamilyRaw
+         const bodyFontFamily = bodyFontFamilyRaw.includes(' ') ? `"${bodyFontFamilyRaw}"` : bodyFontFamilyRaw
+         const titleLetterSpacing = appearance.titleLetterSpacing || 0
+         const titleCase = appearance.titleCase || 'normal'
+         const titleColor = appearance.titleColor
+         const bodyColor = appearance.bodyColor
+         const material = appearance.material || 'standard'
+  
+  // Check if background image exists - if so, effects should be more transparent
+  const hasBackgroundImage = !!appearance.backgroundImage
+  const effectOpacity = hasBackgroundImage ? 0.5 : 1.0 // 50% opacity if background image exists, 100% otherwise
+  
+  // Material texture styles
+  const getMaterialStyle = () => {
+    // Always use the rarity color as base, unless explicitly overridden
+    // Ensure we always have a valid color - use style.bgColor as fallback
+    const baseColor = achievement.appearance?.backgroundColor || style.bgColor || '#9D9D9D'
+    
+    switch (material) {
+      case 'wood':
+        return {
+          background: `linear-gradient(135deg, ${baseColor} 0%, ${baseColor}dd 50%, ${baseColor}cc 100%),
+                      repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px),
+                      repeating-linear-gradient(0deg, transparent, transparent 8px, rgba(0,0,0,0.02) 8px, rgba(0,0,0,0.02) 10px)`,
+          backgroundSize: '100% 100%, 100% 100%, 100% 100%',
+          backgroundColor: baseColor, // Fallback color
+        }
+      case 'stone':
+        return {
+          background: `linear-gradient(135deg, ${baseColor} 0%, ${baseColor}ee 25%, ${baseColor}dd 50%, ${baseColor}ee 75%, ${baseColor} 100%),
+                      radial-gradient(circle at 20% 30%, rgba(255,255,255,0.1) 0%, transparent 50%),
+                      radial-gradient(circle at 80% 70%, rgba(0,0,0,0.1) 0%, transparent 50%)`,
+          backgroundSize: '100% 100%, 100% 100%, 100% 100%',
+          backgroundColor: baseColor, // Fallback color
+        }
+      case 'glass':
+        return {
+          background: `linear-gradient(135deg, ${baseColor}40 0%, ${baseColor}60 50%, ${baseColor}40 100%)`,
+          backdropFilter: 'blur(10px)',
+          backgroundColor: `${baseColor}80`, // Semi-transparent base
+        }
+      case 'steel':
+        return {
+          background: `linear-gradient(135deg, ${baseColor} 0%, ${baseColor}cc 25%, ${baseColor} 50%, ${baseColor}cc 75%, ${baseColor} 100%),
+                      repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.05) 10px, rgba(255,255,255,0.05) 11px)`,
+          backgroundSize: '100% 100%, 100% 100%',
+          backgroundColor: baseColor, // Fallback color
+        }
+      case 'paper':
+        return {
+          background: `linear-gradient(135deg, #faf9f6 0%, #f5f4f1 100%),
+                      repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(0,0,0,0.02) 1px, rgba(0,0,0,0.02) 2px)`,
+          backgroundSize: '100% 100%, 100% 100%',
+          backgroundColor: '#faf9f6', // Paper color
+        }
+      case 'parchment':
+        return {
+          background: `linear-gradient(135deg, #f4e8d0 0%, #e8dcc0 50%, #f4e8d0 100%),
+                      radial-gradient(ellipse at 50% 0%, rgba(139,69,19,0.1) 0%, transparent 50%),
+                      repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(139,69,19,0.03) 1px, rgba(139,69,19,0.03) 2px)`,
+          backgroundSize: '100% 100%, 100% 100%, 100% 100%',
+          backgroundColor: '#f4e8d0', // Parchment color
+        }
+      default:
+        // Standard material - just use the base color
+        // CRITICAL: Always ensure backgroundColor is set
+        return {
+          backgroundColor: baseColor,
+        }
+    }
+  }
+  
+  const materialStyle = getMaterialStyle()
+  
+  // Tracked achievement progress (weeks-based)
+  const trackedProgressPercent = isTracked && trackedWeeks && trackedProgress !== undefined 
+    ? Math.min((trackedProgress / trackedWeeks) * 100, 100) 
+    : 0
   
   // Apply text case transformation
   const getTitleText = (text: string) => {
@@ -181,11 +311,52 @@ export function AchievementCard({
     }
   }
 
+  // Entrance animations based on rarity
+  const getEntranceAnimation = () => {
+    const rarity = achievement.rarity as keyof typeof rarityStyles
+    const revealType = style.revealAnimation
+    
+    if (revealType === 'rare') {
+      // Rare/Epic/Legendary: dramatic entrance with scale and rotation
+      return {
+        initial: { opacity: 0, y: 50, scale: 0.3, rotateY: -180 },
+        animate: { 
+          opacity: (isUnlocked || isInProgress) ? 1 : 0.5, 
+          y: 0, 
+          scale: isRareReveal ? [0.3, 1.2, 1] : 1,
+          rotateY: 0,
+        },
+        transition: { 
+          duration: isRareReveal ? 0.8 : 0.6, 
+          ease: [0.34, 1.56, 0.64, 1],
+          scale: isRareReveal ? { times: [0, 0.5, 1], duration: 0.8 } : undefined,
+        }
+      }
+    } else {
+      // Common/Uncommon: simple fade and slide
+      return {
+        initial: { opacity: 0, y: 20, scale: 0.95 },
+        animate: { 
+          opacity: (isUnlocked || isInProgress) ? 1 : 0.5, 
+          y: 0, 
+          scale: 1,
+        },
+        transition: { 
+          duration: 0.4, 
+          ease: [0.22, 1, 0.36, 1],
+        }
+      }
+    }
+  }
+  
+  const entranceAnim = getEntranceAnimation()
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20, scale: 0.95 }}
-      animate={{ opacity: (isUnlocked || isInProgress) ? 1 : 0.5, y: 0, scale: 1 }}
-      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+      key={entranceKey}
+      initial={entranceAnim.initial}
+      animate={entranceAnim.animate}
+      transition={entranceAnim.transition}
              className="relative w-full aspect-[3/4] max-w-[200px] sm:max-w-[200px] mx-auto group [perspective:2000px] overflow-hidden rounded-2xl"
              style={{ 
                maxWidth: 'clamp(120px, 25vw, 200px)',
@@ -200,35 +371,68 @@ export function AchievementCard({
       } : {}}
     >
       {/* Card Container */}
-      <div
+      <motion.div
         className={cn(
           "relative w-full h-full",
           "[transform-style:preserve-3d]",
-          "transition-all duration-700 ease-out",
-            isFlipped && (isUnlocked || isInProgress)
-            ? "[transform:rotateY(180deg)]"
-            : "[transform:rotateY(0deg)]"
         )}
+        animate={{
+          rotateY: isFlipped && (isUnlocked || isInProgress) ? 180 : 0,
+          scale: isRareReveal && isFlipped ? [1, 1.05, 1] : 1,
+        }}
+        transition={{
+          rotateY: {
+            duration: isRareReveal ? 0.8 : 0.7,
+            ease: isRareReveal ? [0.34, 1.56, 0.64, 1] : 'ease-out',
+          },
+          scale: isRareReveal ? {
+            duration: 0.8,
+            times: [0, 0.5, 1],
+          } : undefined,
+        }}
       >
         {/* Front of Card */}
-        <div
+        <motion.div
           className={cn(
             "absolute inset-0 w-full h-full",
-            "[backface-visibility:hidden] [transform:rotateY(0deg)]",
+            "[backface-visibility:hidden]",
             "overflow-hidden rounded-2xl",
             "border-2",
-            isHailCaesar ? "border-gray-300/60" : isBlitzkrieg ? "border-amber-900/60" : isDoppelganger ? "border-blue-600/70" : (isATAR || isAllRounder) ? "border-blue-800/70" : (isFoil || isFoilGold || isFoilSilver) ? "border-white/60" : style.border,
-            "transition-all duration-700",
-            isFlipped ? "opacity-0" : "opacity-100",
+            isHailCaesar ? "border-gray-300/60" : isBlitzkrieg ? "border-amber-900/60" : isDoppelganger ? "border-blue-600/70" : (isATAR || isAllRounder) ? "border-blue-800/70" : (isFoil || isFoilGold || isFoilSilver || isPrismatic || isNeon) ? "border-white/60" : style.border,
             (isUnlocked || isInProgress) && "cursor-pointer",
-            (isFoil || isFoilGold || isFoilSilver) && !isHailCaesar && !isBlitzkrieg && !isDoppelganger && !isATAR && !isAllRounder && "foil-card"
+            (isFoil || isFoilGold || isFoilSilver || isPrismatic || isNeon || isShiny) && !isHailCaesar && !isBlitzkrieg && !isDoppelganger && !isATAR && !isAllRounder && "foil-card"
           )}
+          animate={{
+            opacity: isFlipped ? 0 : 1,
+            rotateY: 0,
+          }}
+          transition={{ duration: 0.7, ease: 'ease-out' }}
           style={{
-            backgroundColor: isHailCaesar ? '#F5F5F0' : isBlitzkrieg ? '#4A5D23' : isDoppelganger ? '#1E3A8A' : (isATAR || isAllRounder) ? '#003366' : (achievement.appearance?.backgroundColor || style.bgColor), // White marble for Hail Caesar, camo green for Blitzkrieg, Spiderman blue for Doppelganger, NESA navy for ATAR and All Rounder
-            backgroundImage: isHailCaesar ? 'url(/achievements/roman-marble-texture.png)' : (isBlitzkrieg || isDoppelganger || isATAR || isAllRounder) ? 'none' : (achievement.appearance?.backgroundImage ? `url(${achievement.appearance.backgroundImage})` : undefined),
-            backgroundSize: isHailCaesar ? 'cover' : (achievement.appearance?.backgroundImage ? 'cover' : undefined),
-            backgroundPosition: isHailCaesar ? 'center' : (achievement.appearance?.backgroundImage ? 'center' : undefined),
-            backgroundBlendMode: isHailCaesar ? 'overlay' : undefined,
+            rotateY: 0,
+            ...(isHailCaesar || isBlitzkrieg || isDoppelganger || isATAR || isAllRounder
+              ? {
+                  backgroundColor: isHailCaesar ? '#F5F5F0' : isBlitzkrieg ? '#4A5D23' : isDoppelganger ? '#1E3A8A' : '#003366',
+                  backgroundImage: isHailCaesar ? 'url(/achievements/roman-marble-texture.png)' : 'none',
+                  backgroundSize: isHailCaesar ? 'cover' : undefined,
+                  backgroundPosition: isHailCaesar ? 'center' : undefined,
+                  backgroundBlendMode: isHailCaesar ? 'overlay' : undefined,
+                }
+              : achievement.appearance?.backgroundImage
+              ? {
+                  backgroundColor: achievement.appearance?.backgroundColor || style.bgColor || '#9D9D9D',
+                  backgroundImage: `url(${achievement.appearance.backgroundImage})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  ...(material !== 'standard' ? (() => {
+                    const { backgroundColor, ...rest } = materialStyle;
+                    return rest;
+                  })() : {}),
+                }
+              : {
+                  ...materialStyle,
+                  // Ensure backgroundColor is always set, even if materialStyle doesn't have it
+                  backgroundColor: materialStyle.backgroundColor || achievement.appearance?.backgroundColor || style.bgColor || '#9D9D9D',
+                }),
             boxShadow: isUnlocked 
               ? (isHailCaesar
                 ? '0 10px 40px -5px rgba(0, 0, 0, 0.2), 0 0 30px rgba(200, 200, 200, 0.3), inset 0 0 60px rgba(255, 255, 255, 0.2)'
@@ -244,6 +448,12 @@ export function AchievementCard({
                 ? '0 10px 40px -5px rgba(255, 215, 0, 0.4), 0 0 60px rgba(255, 165, 0, 0.3)'
                 : isFoilSilver
                 ? '0 10px 40px -5px rgba(192, 192, 192, 0.4), 0 0 60px rgba(255, 255, 255, 0.2)'
+                : isPrismatic
+                ? '0 10px 40px -5px rgba(59, 130, 246, 0.4), 0 0 60px rgba(168, 85, 247, 0.3), 0 0 80px rgba(236, 72, 153, 0.2)'
+                : isNeon
+                ? '0 0 20px rgba(34, 197, 94, 0.6), 0 0 40px rgba(34, 197, 94, 0.4), 0 0 60px rgba(34, 197, 94, 0.3), 0 10px 40px -5px rgba(34, 197, 94, 0.2)'
+                : isShiny
+                ? '0 10px 40px -5px rgba(255, 255, 255, 0.3), 0 0 40px rgba(255, 255, 255, 0.2)'
                 : `0 10px 30px -5px ${style.glowColor}`)
               : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
           }}
@@ -369,12 +579,13 @@ export function AchievementCard({
             </>
           )}
           
-          {/* Foil Background Effect */}
+          {/* Card Variant Effects on Front */}
           {isFoil && !isHailCaesar && (
             <>
               <div 
-                className="absolute inset-0 foil-gradient opacity-100"
+                className="absolute inset-0 foil-gradient"
                 style={{
+                  opacity: effectOpacity,
                   background: `linear-gradient(135deg, 
                     ${style.bgColor} 0%, 
                     rgba(255, 215, 0, 0.6) 25%, 
@@ -424,6 +635,219 @@ export function AchievementCard({
               />
             </>
           )}
+
+          {isFoilGold && (
+            <>
+              <div 
+                className="absolute inset-0 foil-gradient"
+                style={{
+                  opacity: effectOpacity,
+                  background: `linear-gradient(135deg, 
+                    #FFD700 0%, 
+                    #FFA500 25%, 
+                    #FFD700 50%, 
+                    #FFA500 75%, 
+                    #FFD700 100%)`,
+                }}
+              />
+              <motion.div
+                className="absolute inset-0 foil-shimmer"
+                animate={{
+                  backgroundPosition: ['0% 0%', '100% 100%'],
+                }}
+                transition={{
+                  duration: 2.5,
+                  repeat: Infinity,
+                  repeatType: 'reverse',
+                  ease: 'linear',
+                }}
+                style={{
+                  background: `linear-gradient(
+                    45deg,
+                    transparent 30%,
+                    rgba(255, 255, 200, 0.6) 50%,
+                    transparent 70%
+                  )`,
+                  backgroundSize: '200% 200%',
+                }}
+              />
+            </>
+          )}
+
+          {isFoilSilver && (
+            <>
+              <div 
+                className="absolute inset-0 foil-gradient"
+                style={{
+                  opacity: effectOpacity,
+                  background: `linear-gradient(135deg, 
+                    #C0C0C0 0%, 
+                    #E8E8E8 25%, 
+                    #C0C0C0 50%, 
+                    #E8E8E8 75%, 
+                    #C0C0C0 100%)`,
+                }}
+              />
+              <motion.div
+                className="absolute inset-0 foil-shimmer"
+                animate={{
+                  backgroundPosition: ['0% 0%', '100% 100%'],
+                }}
+                transition={{
+                  duration: 2.5,
+                  repeat: Infinity,
+                  repeatType: 'reverse',
+                  ease: 'linear',
+                }}
+                style={{
+                  background: `linear-gradient(
+                    45deg,
+                    transparent 30%,
+                    rgba(255, 255, 255, 0.7) 50%,
+                    transparent 70%
+                  )`,
+                  backgroundSize: '200% 200%',
+                }}
+              />
+            </>
+          )}
+
+          {isPrismatic && (
+            <>
+              <div 
+                className="absolute inset-0 foil-gradient"
+                style={{
+                  opacity: effectOpacity,
+                  background: `linear-gradient(135deg, 
+                    ${style.bgColor} 0%, 
+                    rgba(6, 182, 212, 0.7) 20%,
+                    rgba(59, 130, 246, 0.7) 40%,
+                    rgba(168, 85, 247, 0.7) 60%,
+                    rgba(236, 72, 153, 0.7) 80%,
+                    ${style.bgColor} 100%)`,
+                }}
+              />
+              <motion.div
+                className="absolute inset-0 foil-shimmer"
+                animate={{
+                  backgroundPosition: ['0% 0%', '100% 100%'],
+                }}
+                transition={{
+                  duration: 3.5,
+                  repeat: Infinity,
+                  repeatType: 'reverse',
+                  ease: 'linear',
+                }}
+                style={{
+                  background: `linear-gradient(
+                    45deg,
+                    transparent 25%,
+                    rgba(255, 255, 255, 0.6) 50%,
+                    transparent 75%
+                  )`,
+                  backgroundSize: '200% 200%',
+                }}
+              />
+              {/* Prismatic light refraction effect */}
+              <motion.div
+                className="absolute inset-0 opacity-40"
+                animate={{
+                  background: [
+                    'linear-gradient(45deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%)',
+                    'linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%)',
+                    'linear-gradient(45deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%)',
+                  ],
+                }}
+                transition={{
+                  duration: 4,
+                  repeat: Infinity,
+                  ease: 'easeInOut',
+                }}
+              />
+            </>
+          )}
+
+          {isNeon && (
+            <>
+              {/* Neon glow border effect */}
+              <motion.div
+                className="absolute inset-0 rounded-2xl"
+                style={{
+                  opacity: effectOpacity,
+                  boxShadow: 'inset 0 0 20px rgba(34, 197, 94, 0.5), inset 0 0 40px rgba(34, 197, 94, 0.3)',
+                }}
+                animate={{
+                  boxShadow: [
+                    'inset 0 0 20px rgba(34, 197, 94, 0.5), inset 0 0 40px rgba(34, 197, 94, 0.3)',
+                    'inset 0 0 30px rgba(34, 197, 94, 0.7), inset 0 0 50px rgba(34, 197, 94, 0.5)',
+                    'inset 0 0 20px rgba(34, 197, 94, 0.5), inset 0 0 40px rgba(34, 197, 94, 0.3)',
+                  ],
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: 'easeInOut',
+                }}
+              />
+              {/* Animated neon scan line */}
+              <motion.div
+                className="absolute inset-0"
+                animate={{
+                  background: [
+                    'linear-gradient(0deg, transparent 0%, rgba(34, 197, 94, 0.3) 50%, transparent 100%)',
+                    'linear-gradient(0deg, transparent 0%, rgba(34, 197, 94, 0.3) 50%, transparent 100%)',
+                  ],
+                  backgroundPosition: ['0% 0%', '0% 100%'],
+                }}
+                transition={{
+                  duration: 3,
+                  repeat: Infinity,
+                  ease: 'linear',
+                }}
+                style={{
+                  backgroundSize: '100% 200%',
+                }}
+              />
+            </>
+          )}
+
+          {isShiny && (
+            <>
+              <motion.div
+                className="absolute inset-0"
+                style={{ opacity: effectOpacity }}
+                animate={{
+                  background: [
+                    `radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.4) 0%, transparent 50%)`,
+                    `radial-gradient(circle at 80% 70%, rgba(255, 255, 255, 0.4) 0%, transparent 50%)`,
+                    `radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.4) 0%, transparent 50%)`,
+                  ],
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: 'easeInOut',
+                }}
+              />
+            </>
+          )}
+
+          {isFullArt && !isATAR && !isAllRounder && (
+            <>
+              <div 
+                className="absolute inset-0 opacity-70"
+                style={{
+                  background: `linear-gradient(
+                    180deg,
+                    ${style.bgColor} 0%,
+                    transparent 30%,
+                    transparent 70%,
+                    ${style.bgColor} 100%
+                  )`,
+                }}
+              />
+            </>
+          )}
           
           {/* Locked Overlay - only show if not in progress */}
           {!isUnlocked && !isInProgress && (
@@ -436,6 +860,21 @@ export function AchievementCard({
           
           {/* In Progress - no overlay, show at full opacity */}
 
+          {/* Rarity Icon - Top Left Corner */}
+          {rarityIcon.icon && isUnlocked && (
+            <div className="absolute top-2 left-2 z-20">
+              <div 
+                className="text-white/90 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] text-[10px] font-normal opacity-80"
+                title={rarityIcon.label}
+                style={{
+                  textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+                }}
+              >
+                {rarityIcon.icon}
+              </div>
+            </div>
+          )}
+
           {/* Premium Badge */}
           {achievement.isPremiumOnly && isUnlocked && (
             <div className="absolute top-3 right-3 z-20">
@@ -443,6 +882,198 @@ export function AchievementCard({
                 <Sparkles className="w-3 h-3 text-white" />
               </div>
             </div>
+          )}
+
+          {/* Rarity-based Border Effects - Overlay on existing border */}
+          {isUnlocked && !isFoil && !isFoilGold && !isFoilSilver && !isPrismatic && !isNeon && !isHailCaesar && !isBlitzkrieg && !isDoppelganger && !isATAR && !isAllRounder && (
+            <>
+              {/* Silver Border Effect (Uncommon) */}
+              {style.borderStyle === 'silver' && (
+                <>
+                  <div 
+                    className="absolute -inset-[2px] rounded-2xl pointer-events-none z-10"
+                    style={{
+                      border: '2px solid transparent',
+                      background: 'linear-gradient(white, white) padding-box, linear-gradient(135deg, rgba(192, 192, 192, 0.8), rgba(255, 255, 255, 0.9), rgba(192, 192, 192, 0.8)) border-box',
+                      backgroundClip: 'padding-box, border-box',
+                    }}
+                  />
+                  <motion.div
+                    className="absolute -inset-[2px] rounded-2xl pointer-events-none z-10"
+                    style={{
+                      background: 'linear-gradient(135deg, transparent 30%, rgba(255, 255, 255, 0.3) 50%, transparent 70%)',
+                    }}
+                    animate={{
+                      backgroundPosition: ['-200% 0', '200% 0'],
+                    }}
+                    transition={{
+                      duration: 3,
+                      repeat: Infinity,
+                      ease: 'linear',
+                    }}
+                  />
+                </>
+              )}
+
+              {/* Gold Border Effect (Rare/Epic) */}
+              {style.borderStyle === 'gold' && (
+                <>
+                  <div 
+                    className="absolute -inset-[2px] rounded-2xl pointer-events-none z-10"
+                    style={{
+                      border: '2px solid transparent',
+                      background: 'linear-gradient(white, white) padding-box, linear-gradient(135deg, rgba(255, 215, 0, 0.9), rgba(255, 255, 255, 1), rgba(255, 165, 0, 0.9)) border-box',
+                      backgroundClip: 'padding-box, border-box',
+                    }}
+                  />
+                  <motion.div
+                    className="absolute -inset-[2px] rounded-2xl pointer-events-none z-10"
+                    style={{
+                      background: 'linear-gradient(135deg, transparent 30%, rgba(255, 215, 0, 0.4) 50%, transparent 70%)',
+                    }}
+                    animate={{
+                      backgroundPosition: ['-200% 0', '200% 0'],
+                    }}
+                    transition={{
+                      duration: 2.5,
+                      repeat: Infinity,
+                      ease: 'linear',
+                    }}
+                  />
+                </>
+              )}
+
+              {/* Holo Border Effect (Legendary) */}
+              {style.borderStyle === 'holo' && (
+                <>
+                  <div 
+                    className="absolute -inset-[2px] rounded-2xl pointer-events-none z-10"
+                    style={{
+                      border: '2px solid transparent',
+                      background: 'linear-gradient(white, white) padding-box, linear-gradient(45deg, rgba(255, 0, 150, 0.8), rgba(0, 255, 255, 0.8), rgba(255, 255, 0, 0.8), rgba(255, 0, 150, 0.8)) border-box',
+                      backgroundClip: 'padding-box, border-box',
+                      backgroundSize: '200% 200%',
+                    }}
+                  />
+                  <motion.div
+                    className="absolute -inset-[2px] rounded-2xl pointer-events-none z-10"
+                    style={{
+                      background: 'linear-gradient(45deg, rgba(255, 0, 150, 0.3), rgba(0, 255, 255, 0.3), rgba(255, 255, 0, 0.3), rgba(255, 0, 150, 0.3))',
+                      backgroundSize: '200% 200%',
+                    }}
+                    animate={{
+                      backgroundPosition: ['0% 0%', '100% 100%'],
+                    }}
+                    transition={{
+                      duration: 4,
+                      repeat: Infinity,
+                      ease: 'linear',
+                    }}
+                  />
+                </>
+              )}
+            </>
+          )}
+
+          {/* Rarity-based Glow Effects */}
+          {isUnlocked && style.glowStyle !== 'none' && (
+            <>
+              {style.glowStyle === 'silver' && (
+                <motion.div
+                  className="absolute inset-0 rounded-2xl pointer-events-none -z-10"
+                  style={{
+                    boxShadow: '0 0 20px rgba(192, 192, 192, 0.4), 0 0 40px rgba(255, 255, 255, 0.2)',
+                  }}
+                  animate={{
+                    opacity: [0.6, 0.8, 0.6],
+                  }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: 'easeInOut',
+                  }}
+                />
+              )}
+              {style.glowStyle === 'gold' && (
+                <motion.div
+                  className="absolute inset-0 rounded-2xl pointer-events-none -z-10"
+                  style={{
+                    boxShadow: '0 0 30px rgba(255, 215, 0, 0.5), 0 0 60px rgba(255, 165, 0, 0.3)',
+                  }}
+                  animate={{
+                    opacity: [0.7, 1, 0.7],
+                  }}
+                  transition={{
+                    duration: 1.5,
+                    repeat: Infinity,
+                    ease: 'easeInOut',
+                  }}
+                />
+              )}
+              {style.glowStyle === 'holo' && (
+                <motion.div
+                  className="absolute inset-0 rounded-2xl pointer-events-none -z-10"
+                  style={{
+                    boxShadow: '0 0 40px rgba(255, 0, 150, 0.4), 0 0 60px rgba(0, 255, 255, 0.3), 0 0 80px rgba(255, 255, 0, 0.2)',
+                  }}
+                  animate={{
+                    boxShadow: [
+                      '0 0 40px rgba(255, 0, 150, 0.4), 0 0 60px rgba(0, 255, 255, 0.3), 0 0 80px rgba(255, 255, 0, 0.2)',
+                      '0 0 40px rgba(0, 255, 255, 0.4), 0 0 60px rgba(255, 255, 0, 0.3), 0 0 80px rgba(255, 0, 150, 0.2)',
+                      '0 0 40px rgba(255, 255, 0, 0.4), 0 0 60px rgba(255, 0, 150, 0.3), 0 0 80px rgba(0, 255, 255, 0.2)',
+                      '0 0 40px rgba(255, 0, 150, 0.4), 0 0 60px rgba(0, 255, 255, 0.3), 0 0 80px rgba(255, 255, 0, 0.2)',
+                    ],
+                  }}
+                  transition={{
+                    duration: 3,
+                    repeat: Infinity,
+                    ease: 'linear',
+                  }}
+                />
+              )}
+            </>
+          )}
+
+          {/* Rare Reveal Animation - Particle Burst */}
+          {isRareReveal && (
+            <motion.div
+              className="absolute inset-0 pointer-events-none z-30"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0, 1, 0] }}
+              transition={{ duration: 1.5 }}
+            >
+              {[...Array(12)].map((_, i) => (
+                <motion.div
+                  key={i}
+                  className="absolute top-1/2 left-1/2 w-2 h-2 rounded-full"
+                  style={{
+                    background: style.glowStyle === 'holo' 
+                      ? `hsl(${(i * 30) % 360}, 100%, 60%)`
+                      : style.glowStyle === 'gold'
+                      ? 'rgba(255, 215, 0, 0.9)'
+                      : 'rgba(255, 255, 255, 0.9)',
+                    boxShadow: '0 0 10px currentColor',
+                  }}
+                  initial={{
+                    x: 0,
+                    y: 0,
+                    scale: 0,
+                    opacity: 1,
+                  }}
+                  animate={{
+                    x: Math.cos((i * 30) * Math.PI / 180) * 100,
+                    y: Math.sin((i * 30) * Math.PI / 180) * 100,
+                    scale: [0, 1.5, 0],
+                    opacity: [1, 1, 0],
+                  }}
+                  transition={{
+                    duration: 1,
+                    delay: 0.1,
+                    ease: 'easeOut',
+                  }}
+                />
+              ))}
+            </motion.div>
           )}
 
           {/* Card Content */}
@@ -457,65 +1088,80 @@ export function AchievementCard({
                 "flex items-center justify-center",
                 (isHailCaesar || isBlitzkrieg || isDoppelganger) ? "flex-none mb-3" : "flex-1 mb-3"
               )}>
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: 0.1, type: 'spring', stiffness: 200 }}
-                  className={cn(
-                    (isHailCaesar || isBlitzkrieg || isDoppelganger) ? "min-h-0 relative" : "w-20 h-20 sm:w-24 sm:h-24",
-                    isHailCaesar ? "bg-transparent" : isBlitzkrieg ? "bg-transparent" : isDoppelganger ? "bg-transparent" : style.iconBg,
-                    isHailCaesar ? "rounded-none" : isBlitzkrieg ? "rounded-none" : isDoppelganger ? "rounded-none" : "rounded-xl",
-                    !isHailCaesar && !isBlitzkrieg && !isDoppelganger && "backdrop-blur-sm",
-                    (isHailCaesar || isBlitzkrieg || isDoppelganger) ? "" : "border-2 border-white/30",
-                    "flex items-center justify-center",
-                    (isHailCaesar || isBlitzkrieg || isDoppelganger) ? "" : "shadow-lg",
-                    (isHailCaesar || isBlitzkrieg || isDoppelganger) ? "" : "overflow-hidden"
-                  )}
-                  style={(isHailCaesar || isBlitzkrieg || isDoppelganger) ? { width: 'auto', height: 'auto', maxHeight: isBlitzkrieg ? '100px' : isDoppelganger ? '110px' : '110px', maxWidth: '100%' } : undefined}
-                >
-                  {achievement.iconKey && (achievement.iconKey.startsWith('http') || achievement.iconKey.startsWith('/') || achievement.iconKey.includes('.')) ? (
-                    <>
-                      <img 
-                        src={achievement.iconKey} 
-                        alt={achievement.name}
-                        className={cn(
-                          (isHailCaesar || isBlitzkrieg || isDoppelganger) ? "object-contain" : "w-full h-full object-contain",
-                          isHailCaesar ? "h-auto max-h-[110px] sm:max-h-[120px] w-auto" : isBlitzkrieg ? "h-auto max-h-[100px] sm:max-h-[110px] w-auto" : isDoppelganger ? "h-auto max-h-[110px] sm:max-h-[120px] w-auto" : "p-2"
-                        )}
-                        style={(isHailCaesar || isBlitzkrieg || isDoppelganger) ? { 
-                          height: 'auto',
-                          width: 'auto',
-                          maxHeight: isBlitzkrieg ? '100px' : isDoppelganger ? '110px' : '110px',
-                          maxWidth: '100%',
-                          filter: isBlitzkrieg ? 'sepia(25%) contrast(115%) brightness(0.85) saturate(75%)' : undefined,
-                        } : undefined}
-                      />
-                      {/* Army-style overlay filter for Blitzkrieg image */}
-                      {isBlitzkrieg && (
-                        <div 
-                          className="absolute inset-0 pointer-events-none"
-                          style={{
-                            background: 'linear-gradient(135deg, rgba(74, 93, 35, 0.2) 0%, rgba(61, 74, 26, 0.25) 50%, rgba(85, 104, 47, 0.2) 100%)',
-                            mixBlendMode: 'multiply',
-                          }}
-                        />
+                {achievement.iconKey && (achievement.iconKey.startsWith('http') || achievement.iconKey.startsWith('blob:') || achievement.iconKey.startsWith('/') || achievement.iconKey.includes('.')) ? (
+                  // PNG Sticker - no container, natural size
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.1, type: 'spring', stiffness: 200 }}
+                    className={cn(
+                      "relative",
+                      (isHailCaesar || isBlitzkrieg || isDoppelganger) ? "min-h-0" : ""
+                    )}
+                    style={(isHailCaesar || isBlitzkrieg || isDoppelganger) ? { 
+                      maxHeight: isBlitzkrieg ? '100px' : isDoppelganger ? '110px' : '110px', 
+                      maxWidth: '100%' 
+                    } : {
+                      maxHeight: '120px',
+                      maxWidth: '100%'
+                    }}
+                  >
+                    <img 
+                      src={achievement.iconKey} 
+                      alt={achievement.name}
+                      className={cn(
+                        "object-contain",
+                        isHailCaesar ? "h-auto max-h-[110px] sm:max-h-[120px] w-auto" : isBlitzkrieg ? "h-auto max-h-[100px] sm:max-h-[110px] w-auto" : isDoppelganger ? "h-auto max-h-[110px] sm:max-h-[120px] w-auto" : "h-auto max-h-[120px] w-auto"
                       )}
-                    </>
-                  ) : (
+                      style={{ 
+                        height: 'auto',
+                        width: 'auto',
+                        filter: isBlitzkrieg ? 'sepia(25%) contrast(115%) brightness(0.85) saturate(75%)' : undefined,
+                      }}
+                    />
+                    {/* Army-style overlay filter for Blitzkrieg image */}
+                    {isBlitzkrieg && (
+                      <div 
+                        className="absolute inset-0 pointer-events-none"
+                        style={{
+                          background: 'linear-gradient(135deg, rgba(74, 93, 35, 0.2) 0%, rgba(61, 74, 26, 0.25) 50%, rgba(85, 104, 47, 0.2) 100%)',
+                          mixBlendMode: 'multiply',
+                        }}
+                      />
+                    )}
+                  </motion.div>
+                ) : (
+                  // Emoji icon - keep in container
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.1, type: 'spring', stiffness: 200 }}
+                    className={cn(
+                      (isHailCaesar || isBlitzkrieg || isDoppelganger) ? "min-h-0 relative" : "w-20 h-20 sm:w-24 sm:h-24",
+                      isHailCaesar ? "bg-transparent" : isBlitzkrieg ? "bg-transparent" : isDoppelganger ? "bg-transparent" : style.iconBg,
+                      isHailCaesar ? "rounded-none" : isBlitzkrieg ? "rounded-none" : isDoppelganger ? "rounded-none" : "rounded-xl",
+                      !isHailCaesar && !isBlitzkrieg && !isDoppelganger && "backdrop-blur-sm",
+                      (isHailCaesar || isBlitzkrieg || isDoppelganger) ? "" : "border-2 border-white/30",
+                      "flex items-center justify-center",
+                      (isHailCaesar || isBlitzkrieg || isDoppelganger) ? "" : "shadow-lg",
+                      (isHailCaesar || isBlitzkrieg || isDoppelganger) ? "" : "overflow-hidden"
+                    )}
+                    style={(isHailCaesar || isBlitzkrieg || isDoppelganger) ? { width: 'auto', height: 'auto', maxHeight: isBlitzkrieg ? '100px' : isDoppelganger ? '110px' : '110px', maxWidth: '100%' } : undefined}
+                  >
                     <span className={cn(
                       (isHailCaesar || isBlitzkrieg || isDoppelganger) ? "text-4xl sm:text-5xl" : "text-4xl sm:text-5xl"
                     )} role="img" aria-label={achievement.name}>
                       {icon}
                     </span>
-                  )}
-                </motion.div>
+                  </motion.div>
+                )}
               </div>
 
               {/* Title */}
               <h3 className={cn(
                 "font-bold mb-2 text-center",
                 isHailCaesar ? "text-gray-900 drop-shadow-[0_1px_3px_rgba(0,0,0,0.3)] font-bluu-next tracking-wide text-xl" : isBlitzkrieg ? "text-amber-400 font-black tracking-wider drop-shadow-[0_2px_4px_rgba(0,0,0,0.8),0_0_8px_rgba(255,165,0,0.5)] text-xl sm:text-2xl font-germania" : isDoppelganger ? "text-white font-bold tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.8),0_0_8px_rgba(220,38,38,0.6)] text-sm sm:text-base font-backissues uppercase" : (isATAR || isAllRounder) ? "text-white font-public-sans tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] text-lg sm:text-xl" : "text-base",
-                "line-clamp-2 leading-tight",
+                "line-clamp-2 leading-tight break-words overflow-wrap-anywhere",
                 "transition-all duration-500 ease-out",
                 "group-hover:translate-y-[-4px]",
                 !isHailCaesar && !isBlitzkrieg && !isDoppelganger && !isATAR && !isAllRounder && style.text
@@ -533,6 +1179,7 @@ export function AchievementCard({
                 } : {
                   fontFamily: titleFontFamily,
                   letterSpacing: `${titleLetterSpacing}px`,
+                  ...(titleColor && { color: titleColor }),
                 }),
               }}
               >
@@ -546,7 +1193,7 @@ export function AchievementCard({
                 "text-xs text-center",
                 isHailCaesar ? "text-gray-800 drop-shadow-[0_1px_2px_rgba(0,0,0,0.2)]" : isBlitzkrieg ? "text-amber-300 font-medium drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : isDoppelganger ? "text-red-200 font-medium drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : (isATAR || isAllRounder) ? "text-white font-public-sans drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : style.text,
                 isHailCaesar ? "opacity-95" : (isBlitzkrieg || isDoppelganger || isATAR || isAllRounder) ? "opacity-100" : "opacity-90",
-                "line-clamp-2 leading-tight",
+                "line-clamp-2 leading-tight break-words overflow-wrap-anywhere",
                 "transition-all duration-500 ease-out delay-75",
                 "group-hover:translate-y-[-4px]",
                 "tracking-wide",
@@ -561,6 +1208,7 @@ export function AchievementCard({
                   textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
                 } : {
                   fontFamily: bodyFontFamily,
+                  ...(bodyColor && { color: bodyColor }),
                 }),
               }}
               >
@@ -570,8 +1218,41 @@ export function AchievementCard({
 
             {/* Footer */}
             <div className={cn("space-y-2", isBlitzkrieg ? "mt-auto" : "mt-auto")}>
+              {/* Tracked Achievement Progress Bar - Show for tracked achievements */}
+              {isTracked && trackedWeeks && trackedProgress !== undefined && (
+                <div className="space-y-1 relative z-20">
+                  <div className={cn(
+                    "w-full h-2 rounded-full overflow-hidden",
+                    isHailCaesar ? "bg-gray-300/40 backdrop-blur-sm" : isBlitzkrieg ? "bg-amber-900/40 backdrop-blur-sm" : isDoppelganger ? "bg-red-900/40 backdrop-blur-sm" : (isATAR || isAllRounder) ? "bg-blue-900/40 backdrop-blur-sm" : "bg-white/20 backdrop-blur-sm"
+                  )}>
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${trackedProgressPercent}%` }}
+                      transition={{ duration: 0.8, ease: 'easeOut' }}
+                      className={cn(
+                        "h-full rounded-full bg-gradient-to-r",
+                        isHailCaesar ? "from-gray-600 to-gray-700" : isBlitzkrieg ? "from-amber-500 to-amber-600" : isDoppelganger ? "from-red-500 to-red-600" : (isATAR || isAllRounder) ? "from-blue-500 to-blue-600" : "from-blue-400 to-blue-500",
+                        "shadow-sm"
+                      )}
+                    />
+                  </div>
+                  <div className={cn(
+                    "flex items-center justify-between text-xs",
+                    isHailCaesar ? "text-gray-800 drop-shadow-[0_1px_2px_rgba(0,0,0,0.2)]" : isBlitzkrieg ? "text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : isDoppelganger ? "text-red-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : (isATAR || isAllRounder) ? "text-white font-public-sans drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : style.text,
+                    "opacity-90"
+                  )}>
+                    <span className="font-medium">
+                      Week {trackedProgress} / {trackedWeeks}
+                    </span>
+                    <span className="font-bold">
+                      {Math.round(trackedProgressPercent)}%
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {/* Progress Bar - Show for in-progress achievements */}
-              {isInProgress && progressMax && (
+              {isInProgress && progressMax && !isTracked && (
                 <div className="space-y-1 relative z-20">
                   <div className={cn(
                     "w-full h-1.5 rounded-full overflow-hidden",
@@ -649,29 +1330,52 @@ export function AchievementCard({
               style={{ pointerEvents: 'none' }}
             />
           )}
-        </div>
+        </motion.div>
 
         {/* Back of Card */}
         {(isUnlocked || isInProgress) && (
-          <div
+          <motion.div
             className={cn(
               "absolute inset-0 w-full h-full",
-              "[backface-visibility:hidden] [transform:rotateY(180deg)]",
+              "[backface-visibility:hidden]",
               "overflow-hidden rounded-2xl",
               "p-4",
             "border-2",
-            isHailCaesar ? "border-gray-300/60" : isBlitzkrieg ? "border-amber-900/60" : isDoppelganger ? "border-blue-600/70" : (isATAR || isAllRounder) ? "border-blue-800/70" : (isFoil || isFoilGold || isFoilSilver) ? "border-white/60" : style.border,
+            isHailCaesar ? "border-gray-300/60" : isBlitzkrieg ? "border-amber-900/60" : isDoppelganger ? "border-blue-600/70" : (isATAR || isAllRounder) ? "border-blue-800/70" : (isFoil || isFoilGold || isFoilSilver || isPrismatic || isNeon) ? "border-white/60" : style.border,
             "flex flex-col items-center justify-center",
-              "transition-all duration-700",
-              !isFlipped ? "opacity-0" : "opacity-100",
-              (isFoil || isFoilGold || isFoilSilver) && !isHailCaesar && !isBlitzkrieg && !isDoppelganger && !isATAR && !isAllRounder && "foil-card"
+              (isFoil || isFoilGold || isFoilSilver || isPrismatic || isNeon || isShiny) && !isHailCaesar && !isBlitzkrieg && !isDoppelganger && !isATAR && !isAllRounder && "foil-card"
             )}
-          style={{
-            backgroundColor: isHailCaesar ? '#F5F5F0' : isBlitzkrieg ? '#4A5D23' : isDoppelganger ? '#1E3A8A' : (isATAR || isAllRounder) ? '#003366' : style.bgColor, // White marble for Hail Caesar, camo green for Blitzkrieg, Spiderman blue for Doppelganger, NESA navy for ATAR and All Rounder
-            backgroundImage: isHailCaesar ? 'url(/achievements/roman-marble-texture.png)' : (isBlitzkrieg || isDoppelganger || isATAR || isAllRounder) ? 'none' : undefined,
-            backgroundSize: isHailCaesar ? 'cover' : undefined,
-            backgroundPosition: isHailCaesar ? 'center' : undefined,
-            backgroundBlendMode: isHailCaesar ? 'overlay' : undefined,
+            animate={{
+              opacity: !isFlipped ? 0 : 1,
+              rotateY: 180,
+            }}
+            transition={{ duration: 0.7, ease: 'ease-out' }}
+            style={{
+              rotateY: 180,
+              ...(isHailCaesar || isBlitzkrieg || isDoppelganger || isATAR || isAllRounder
+                ? {
+                    backgroundColor: isHailCaesar ? '#F5F5F0' : isBlitzkrieg ? '#4A5D23' : isDoppelganger ? '#1E3A8A' : '#003366',
+                    backgroundImage: isHailCaesar ? 'url(/achievements/roman-marble-texture.png)' : 'none',
+                    backgroundSize: isHailCaesar ? 'cover' : undefined,
+                    backgroundPosition: isHailCaesar ? 'center' : undefined,
+                    backgroundBlendMode: isHailCaesar ? 'overlay' : undefined,
+                  }
+                : achievement.appearance?.backgroundImage
+                ? {
+                    backgroundColor: achievement.appearance?.backgroundColor || style.bgColor || '#9D9D9D',
+                    backgroundImage: `url(${achievement.appearance.backgroundImage})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    ...(material !== 'standard' ? (() => {
+                      const { backgroundColor, ...rest } = materialStyle;
+                      return rest;
+                    })() : {}),
+                  }
+                : {
+                    ...materialStyle,
+                    // Ensure backgroundColor is always set, even if materialStyle doesn't have it
+                    backgroundColor: materialStyle.backgroundColor || achievement.appearance?.backgroundColor || style.bgColor || '#9D9D9D',
+                  }),
             boxShadow: isHailCaesar
               ? '0 10px 40px -5px rgba(0, 0, 0, 0.2), 0 0 30px rgba(200, 200, 200, 0.3), inset 0 0 60px rgba(255, 255, 255, 0.2)'
               : isBlitzkrieg
@@ -808,12 +1512,178 @@ export function AchievementCard({
               </>
             )}
             
+            {/* Rarity Icon (Back) - Top Left Corner */}
+            {rarityIcon.icon && isUnlocked && (
+              <div className="absolute top-2 left-2 z-20">
+                <div 
+                  className="text-white/90 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] text-[10px] font-normal opacity-80"
+                  title={rarityIcon.label}
+                  style={{
+                    textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+                  }}
+                >
+                  {rarityIcon.icon}
+                </div>
+              </div>
+            )}
+
+            {/* Rarity-based Border Effects (Back) - Overlay on existing border */}
+            {isUnlocked && !isFoil && !isFoilGold && !isFoilSilver && !isPrismatic && !isNeon && !isHailCaesar && !isBlitzkrieg && !isDoppelganger && !isATAR && !isAllRounder && (
+              <>
+                {/* Silver Border Effect (Uncommon) */}
+                {style.borderStyle === 'silver' && (
+                  <>
+                    <div 
+                      className="absolute -inset-[2px] rounded-2xl pointer-events-none z-10"
+                      style={{
+                        border: '2px solid transparent',
+                        background: 'linear-gradient(white, white) padding-box, linear-gradient(135deg, rgba(192, 192, 192, 0.8), rgba(255, 255, 255, 0.9), rgba(192, 192, 192, 0.8)) border-box',
+                        backgroundClip: 'padding-box, border-box',
+                      }}
+                    />
+                    <motion.div
+                      className="absolute -inset-[2px] rounded-2xl pointer-events-none z-10"
+                      style={{
+                        background: 'linear-gradient(135deg, transparent 30%, rgba(255, 255, 255, 0.3) 50%, transparent 70%)',
+                      }}
+                      animate={{
+                        backgroundPosition: ['-200% 0', '200% 0'],
+                      }}
+                      transition={{
+                        duration: 3,
+                        repeat: Infinity,
+                        ease: 'linear',
+                      }}
+                    />
+                  </>
+                )}
+
+                {/* Gold Border Effect (Rare/Epic) */}
+                {style.borderStyle === 'gold' && (
+                  <>
+                    <div 
+                      className="absolute -inset-[2px] rounded-2xl pointer-events-none z-10"
+                      style={{
+                        border: '2px solid transparent',
+                        background: 'linear-gradient(white, white) padding-box, linear-gradient(135deg, rgba(255, 215, 0, 0.9), rgba(255, 255, 255, 1), rgba(255, 165, 0, 0.9)) border-box',
+                        backgroundClip: 'padding-box, border-box',
+                      }}
+                    />
+                    <motion.div
+                      className="absolute -inset-[2px] rounded-2xl pointer-events-none z-10"
+                      style={{
+                        background: 'linear-gradient(135deg, transparent 30%, rgba(255, 215, 0, 0.4) 50%, transparent 70%)',
+                      }}
+                      animate={{
+                        backgroundPosition: ['-200% 0', '200% 0'],
+                      }}
+                      transition={{
+                        duration: 2.5,
+                        repeat: Infinity,
+                        ease: 'linear',
+                      }}
+                    />
+                  </>
+                )}
+
+                {/* Holo Border Effect (Legendary) */}
+                {style.borderStyle === 'holo' && (
+                  <>
+                    <div 
+                      className="absolute -inset-[2px] rounded-2xl pointer-events-none z-10"
+                      style={{
+                        border: '2px solid transparent',
+                        background: 'linear-gradient(white, white) padding-box, linear-gradient(45deg, rgba(255, 0, 150, 0.8), rgba(0, 255, 255, 0.8), rgba(255, 255, 0, 0.8), rgba(255, 0, 150, 0.8)) border-box',
+                        backgroundClip: 'padding-box, border-box',
+                        backgroundSize: '200% 200%',
+                      }}
+                    />
+                    <motion.div
+                      className="absolute -inset-[2px] rounded-2xl pointer-events-none z-10"
+                      style={{
+                        background: 'linear-gradient(45deg, rgba(255, 0, 150, 0.3), rgba(0, 255, 255, 0.3), rgba(255, 255, 0, 0.3), rgba(255, 0, 150, 0.3))',
+                        backgroundSize: '200% 200%',
+                      }}
+                      animate={{
+                        backgroundPosition: ['0% 0%', '100% 100%'],
+                      }}
+                      transition={{
+                        duration: 4,
+                        repeat: Infinity,
+                        ease: 'linear',
+                      }}
+                    />
+                  </>
+                )}
+              </>
+            )}
+
+            {/* Rarity-based Glow Effects (Back) */}
+            {isUnlocked && style.glowStyle !== 'none' && (
+              <>
+                {style.glowStyle === 'silver' && (
+                  <motion.div
+                    className="absolute inset-0 rounded-2xl pointer-events-none -z-10"
+                    style={{
+                      boxShadow: '0 0 20px rgba(192, 192, 192, 0.4), 0 0 40px rgba(255, 255, 255, 0.2)',
+                    }}
+                    animate={{
+                      opacity: [0.6, 0.8, 0.6],
+                    }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: 'easeInOut',
+                    }}
+                  />
+                )}
+                {style.glowStyle === 'gold' && (
+                  <motion.div
+                    className="absolute inset-0 rounded-2xl pointer-events-none -z-10"
+                    style={{
+                      boxShadow: '0 0 30px rgba(255, 215, 0, 0.5), 0 0 60px rgba(255, 165, 0, 0.3)',
+                    }}
+                    animate={{
+                      opacity: [0.7, 1, 0.7],
+                    }}
+                    transition={{
+                      duration: 1.5,
+                      repeat: Infinity,
+                      ease: 'easeInOut',
+                    }}
+                  />
+                )}
+                {style.glowStyle === 'holo' && (
+                  <motion.div
+                    className="absolute inset-0 rounded-2xl pointer-events-none -z-10"
+                    style={{
+                      boxShadow: '0 0 40px rgba(255, 0, 150, 0.4), 0 0 60px rgba(0, 255, 255, 0.3), 0 0 80px rgba(255, 255, 0, 0.2)',
+                    }}
+                    animate={{
+                      boxShadow: [
+                        '0 0 40px rgba(255, 0, 150, 0.4), 0 0 60px rgba(0, 255, 255, 0.3), 0 0 80px rgba(255, 255, 0, 0.2)',
+                        '0 0 40px rgba(0, 255, 255, 0.4), 0 0 60px rgba(255, 255, 0, 0.3), 0 0 80px rgba(255, 0, 150, 0.2)',
+                        '0 0 40px rgba(255, 255, 0, 0.4), 0 0 60px rgba(255, 0, 150, 0.3), 0 0 80px rgba(0, 255, 255, 0.2)',
+                        '0 0 40px rgba(255, 0, 150, 0.4), 0 0 60px rgba(0, 255, 255, 0.3), 0 0 80px rgba(255, 255, 0, 0.2)',
+                      ],
+                    }}
+                    transition={{
+                      duration: 3,
+                      repeat: Infinity,
+                      ease: 'linear',
+                    }}
+                  />
+                )}
+              </>
+            )}
+
             {/* Card Variant Effects on Back */}
             {isFoil && !isHailCaesar && (
               <>
                 <div 
-                  className="absolute inset-0 foil-gradient opacity-100"
+                  className="absolute inset-0 foil-gradient"
                   style={{
+                    opacity: effectOpacity,
                     background: `linear-gradient(135deg, 
                       ${style.bgColor} 0%, 
                       rgba(255, 215, 0, 0.6) 25%, 
@@ -865,8 +1735,9 @@ export function AchievementCard({
             {isFoilGold && (
               <>
                 <div 
-                  className="absolute inset-0 foil-gradient opacity-100"
+                  className="absolute inset-0 foil-gradient"
                   style={{
+                    opacity: effectOpacity,
                     background: `linear-gradient(135deg, 
                       #FFD700 0%, 
                       #FFA500 25%, 
@@ -902,8 +1773,9 @@ export function AchievementCard({
             {isFoilSilver && (
               <>
                 <div 
-                  className="absolute inset-0 foil-gradient opacity-100"
+                  className="absolute inset-0 foil-gradient"
                   style={{
+                    opacity: effectOpacity,
                     background: `linear-gradient(135deg, 
                       #C0C0C0 0%, 
                       #E8E8E8 25%, 
@@ -936,10 +1808,110 @@ export function AchievementCard({
               </>
             )}
 
+            {isPrismatic && (
+              <>
+                <div 
+                  className="absolute inset-0 foil-gradient"
+                  style={{
+                    opacity: effectOpacity,
+                    background: `linear-gradient(135deg, 
+                      ${style.bgColor} 0%, 
+                      rgba(6, 182, 212, 0.7) 20%,
+                      rgba(59, 130, 246, 0.7) 40%,
+                      rgba(168, 85, 247, 0.7) 60%,
+                      rgba(236, 72, 153, 0.7) 80%,
+                      ${style.bgColor} 100%)`,
+                  }}
+                />
+                <motion.div
+                  className="absolute inset-0 foil-shimmer"
+                  animate={{
+                    backgroundPosition: ['0% 0%', '100% 100%'],
+                  }}
+                  transition={{
+                    duration: 3.5,
+                    repeat: Infinity,
+                    repeatType: 'reverse',
+                    ease: 'linear',
+                  }}
+                  style={{
+                    background: `linear-gradient(
+                      45deg,
+                      transparent 25%,
+                      rgba(255, 255, 255, 0.6) 50%,
+                      transparent 75%
+                    )`,
+                    backgroundSize: '200% 200%',
+                  }}
+                />
+                {/* Prismatic light refraction effect */}
+                <motion.div
+                  className="absolute inset-0 opacity-40"
+                  animate={{
+                    background: [
+                      'linear-gradient(45deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%)',
+                      'linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%)',
+                      'linear-gradient(45deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%)',
+                    ],
+                  }}
+                  transition={{
+                    duration: 4,
+                    repeat: Infinity,
+                    ease: 'easeInOut',
+                  }}
+                />
+              </>
+            )}
+
+            {isNeon && (
+              <>
+                {/* Neon glow border effect */}
+                <motion.div
+                  className="absolute inset-0 rounded-2xl"
+                  style={{
+                    opacity: effectOpacity,
+                    boxShadow: 'inset 0 0 20px rgba(34, 197, 94, 0.5), inset 0 0 40px rgba(34, 197, 94, 0.3)',
+                  }}
+                  animate={{
+                    boxShadow: [
+                      'inset 0 0 20px rgba(34, 197, 94, 0.5), inset 0 0 40px rgba(34, 197, 94, 0.3)',
+                      'inset 0 0 30px rgba(34, 197, 94, 0.7), inset 0 0 50px rgba(34, 197, 94, 0.5)',
+                      'inset 0 0 20px rgba(34, 197, 94, 0.5), inset 0 0 40px rgba(34, 197, 94, 0.3)',
+                    ],
+                  }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: 'easeInOut',
+                  }}
+                />
+                {/* Animated neon scan line */}
+                <motion.div
+                  className="absolute inset-0"
+                  animate={{
+                    background: [
+                      'linear-gradient(0deg, transparent 0%, rgba(34, 197, 94, 0.3) 50%, transparent 100%)',
+                      'linear-gradient(0deg, transparent 0%, rgba(34, 197, 94, 0.3) 50%, transparent 100%)',
+                    ],
+                    backgroundPosition: ['0% 0%', '0% 100%'],
+                  }}
+                  transition={{
+                    duration: 3,
+                    repeat: Infinity,
+                    ease: 'linear',
+                  }}
+                  style={{
+                    backgroundSize: '100% 200%',
+                  }}
+                />
+              </>
+            )}
+
             {isShiny && (
               <>
                 <motion.div
                   className="absolute inset-0"
+                  style={{ opacity: effectOpacity }}
                   animate={{
                     background: [
                       `radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.4) 0%, transparent 50%)`,
@@ -988,7 +1960,7 @@ export function AchievementCard({
                 <h3 className={cn(
                   "font-bold",
                   isHailCaesar ? "text-gray-900 drop-shadow-[0_1px_3px_rgba(0,0,0,0.3)] font-bluu-next tracking-wide text-2xl uppercase" : isBlitzkrieg ? "text-amber-400 font-black tracking-wider drop-shadow-[0_2px_4px_rgba(0,0,0,0.8),0_0_8px_rgba(255,165,0,0.5)] text-xl sm:text-2xl font-germania" : isDoppelganger ? "text-white font-bold tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.8),0_0_8px_rgba(220,38,38,0.6)] text-base sm:text-lg font-backissues uppercase" : (isATAR || isAllRounder) ? "text-white font-public-sans tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] text-xl sm:text-2xl" : "text-lg",
-                  "leading-tight",
+                  "leading-tight break-words overflow-wrap-anywhere",
                   !isHailCaesar && !isBlitzkrieg && !isDoppelganger && !isATAR && !isAllRounder && style.text
                 )}
                 style={{
@@ -1001,12 +1973,13 @@ export function AchievementCard({
                   } : (isATAR || isAllRounder) ? {
                     letterSpacing: '0.05em',
                     textShadow: '2px 2px 4px rgba(0,0,0,0.8)',
-                  } : {
-                    fontFamily: titleFontFamily,
-                    letterSpacing: `${titleLetterSpacing}px`,
-                  }),
-                }}
-                >
+                } : {
+                  fontFamily: titleFontFamily,
+                  letterSpacing: `${titleLetterSpacing}px`,
+                  ...(titleColor && { color: titleColor }),
+                }),
+              }}
+              >
                   {!isHailCaesar && !isBlitzkrieg && !isDoppelganger && !isATAR && !isAllRounder 
                     ? getTitleText(achievement.name)
                     : achievement.name}
@@ -1017,7 +1990,7 @@ export function AchievementCard({
                   "opacity-90",
                   "leading-relaxed",
                   "line-clamp-4",
-                  "tracking-wide"
+                  "tracking-wide break-words overflow-wrap-anywhere"
                 )}
                 style={{
                   ...(isBlitzkrieg ? {
@@ -1028,6 +2001,7 @@ export function AchievementCard({
                     textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
                   } : {
                     fontFamily: bodyFontFamily,
+                    ...(bodyColor && { color: bodyColor }),
                   }),
                 }}
                 >
@@ -1035,8 +2009,41 @@ export function AchievementCard({
                 </p>
               </div>
 
+              {/* Tracked Achievement Progress Bar on Back - Show for tracked achievements */}
+              {isTracked && trackedWeeks && trackedProgress !== undefined && (
+                <div className="space-y-1.5 pt-1">
+                  <div className={cn(
+                    "w-full h-2 rounded-full overflow-hidden",
+                    isHailCaesar ? "bg-gray-300/40 backdrop-blur-sm" : isBlitzkrieg ? "bg-amber-900/40 backdrop-blur-sm" : isDoppelganger ? "bg-red-900/40 backdrop-blur-sm" : (isATAR || isAllRounder) ? "bg-blue-900/40 backdrop-blur-sm" : "bg-white/20 backdrop-blur-sm"
+                  )}>
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${trackedProgressPercent}%` }}
+                      transition={{ duration: 0.8, ease: 'easeOut' }}
+                      className={cn(
+                        "h-full rounded-full bg-gradient-to-r",
+                        isHailCaesar ? "from-gray-600 to-gray-700" : isBlitzkrieg ? "from-amber-500 to-amber-600" : isDoppelganger ? "from-red-500 to-red-600" : (isATAR || isAllRounder) ? "from-blue-500 to-blue-600" : "from-blue-400 to-blue-500",
+                        "shadow-sm"
+                      )}
+                    />
+                  </div>
+                  <div className={cn(
+                    "flex items-center justify-center gap-2 text-sm",
+                    isHailCaesar ? "text-gray-800 drop-shadow-[0_1px_2px_rgba(0,0,0,0.2)]" : isBlitzkrieg ? "text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : isDoppelganger ? "text-red-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : (isATAR || isAllRounder) ? "text-white font-public-sans drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : style.text,
+                    "opacity-90"
+                  )}>
+                    <span className="font-medium">
+                      Week {trackedProgress} / {trackedWeeks}
+                    </span>
+                    <span className="font-bold">
+                      {Math.round(trackedProgressPercent)}%
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {/* Progress Bar on Back - Show for in-progress achievements */}
-              {isInProgress && progressMax && (
+              {isInProgress && progressMax && !isTracked && (
                 <div className="space-y-1.5 pt-1">
                   <div className={cn(
                     "w-full h-2 rounded-full overflow-hidden",
@@ -1101,9 +2108,9 @@ export function AchievementCard({
                 )}
               </div>
             </div>
-          </div>
+          </motion.div>
         )}
-      </div>
+      </motion.div>
     </motion.div>
   )
 }

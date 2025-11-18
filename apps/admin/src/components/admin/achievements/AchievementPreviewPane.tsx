@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Eye, EyeOff, Monitor, Moon, Sun, Maximize2 } from 'lucide-react'
+import { Eye, EyeOff, Monitor, Moon, Sun, Maximize2, X, Sparkles } from 'lucide-react'
 import { AchievementCard } from '@/components/achievements/AchievementCard'
 import { useAchievementFormContext } from './AchievementFormContext'
 
@@ -27,6 +27,8 @@ export function AchievementPreviewPane() {
   const [previewVariant, setPreviewVariant] = useState<'compact' | 'detailed'>('compact')
   const [previewStatus, setPreviewStatus] = useState<'unlocked' | 'locked_free' | 'locked_premium'>('unlocked')
   const [previewBackground, setPreviewBackground] = useState<'neutral' | 'app' | 'dark' | 'light'>('neutral')
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const [triggerEntrance, setTriggerEntrance] = useState(false)
 
   // Format date in Australian format
   const formatDate = (date: Date) => {
@@ -73,120 +75,65 @@ export function AchievementPreviewPane() {
     light: 'bg-white',
   }
 
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 h-full flex flex-col">
-      {/* Compact Header with Controls */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-            Live Preview
-          </h3>
-        </div>
-        
-        {/* Compact Controls Row */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* View Toggle - Compact buttons */}
-          <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-            <button
-              onClick={() => setPreviewVariant('compact')}
-              className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                previewVariant === 'compact'
-                  ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-              }`}
-              title="Compact view"
-            >
-              Compact
-            </button>
-            <button
-              onClick={() => setPreviewVariant('detailed')}
-              className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                previewVariant === 'detailed'
-                  ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-              }`}
-              title="Detailed view"
-            >
-              Detailed
-            </button>
-          </div>
-
-          {/* Status Toggle */}
-          <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-            <button
-              onClick={() => setPreviewStatus('unlocked')}
-              className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                previewStatus === 'unlocked'
-                  ? 'bg-green-500 text-white shadow-sm'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-              }`}
-              title="Unlocked state"
-            >
-              <Eye className="w-3 h-3" />
-            </button>
-            <button
-              onClick={() => setPreviewStatus('locked_free')}
-              className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                previewStatus === 'locked_free'
-                  ? 'bg-gray-600 text-white shadow-sm'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-              }`}
-              title="Locked state"
-            >
-              <EyeOff className="w-3 h-3" />
-            </button>
-          </div>
-
-          {/* Background Selector - Icon buttons */}
-          <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-            <button
-              onClick={() => setPreviewBackground('neutral')}
-              className={`p-1.5 rounded transition-colors ${
-                previewBackground === 'neutral'
-                  ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-              }`}
-              title="Neutral background"
-            >
-              <Monitor className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => setPreviewBackground('dark')}
-              className={`p-1.5 rounded transition-colors ${
-                previewBackground === 'dark'
-                  ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-              }`}
-              title="Dark background"
-            >
-              <Moon className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => setPreviewBackground('light')}
-              className={`p-1.5 rounded transition-colors ${
-                previewBackground === 'light'
-                  ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-              }`}
-              title="Light background"
-            >
-              <Sun className="w-3.5 h-3.5" />
-            </button>
+  // Fullscreen modal
+  if (isFullscreen) {
+    return (
+      <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-8">
+        <div className="relative w-full max-w-2xl">
+          <button
+            onClick={() => setIsFullscreen(false)}
+            className="absolute -top-12 right-0 p-2 text-white hover:bg-white/10 rounded-lg transition-colors"
+            title="Close fullscreen"
+          >
+            <X className="w-6 h-6" />
+          </button>
+          <div className={`${backgroundStyles[previewBackground]} rounded-lg p-8 flex items-center justify-center`}>
+            <div className="w-full max-w-md">
+              <AchievementCard
+                achievement={previewAchievement}
+                status={previewStatus}
+                unlockedAt={previewStatus === 'unlocked' ? previewDate : undefined}
+                quizSlug={previewStatus === 'unlocked' ? '12' : null}
+                tier="premium"
+                isFlipped={previewVariant === 'detailed'}
+                onFlipChange={() => {}}
+                triggerEntrance={triggerEntrance}
+              />
+            </div>
           </div>
         </div>
       </div>
+    )
+  }
 
-      {/* Large Preview Area */}
+  return (
+    <div className="bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/50 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 h-full flex flex-col shadow-[0_1px_3px_rgba(0,0,0,0.08),inset_0_1px_0_0_rgba(255,255,255,0.9)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.3),inset_0_1px_0_0_rgba(255,255,255,0.05)]">
+      {/* Minimal Header */}
+      <div className="px-6 py-4 border-b border-gray-200/50 dark:border-gray-700/50 flex-shrink-0 flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+          Preview
+        </h3>
+        <button
+          onClick={() => setIsFullscreen(true)}
+          className="p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100/50 dark:hover:bg-gray-700/50 rounded-xl transition-colors"
+          title="Fullscreen view"
+        >
+          <Maximize2 className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Preview Area - Card First */}
       <div
-        className={`flex-1 rounded-lg m-4 ${backgroundStyles[previewBackground]} transition-colors flex items-center justify-center`}
+        className={`flex-1 ${backgroundStyles[previewBackground]} transition-colors flex items-center justify-center px-4 py-4 overflow-auto`}
         style={{ minHeight: 0 }}
       >
         <div
-          className={`transition-all ${
+          className={`transition-all cursor-pointer ${
             previewVariant === 'compact'
-              ? 'w-full max-w-[280px]'
-              : 'w-full max-w-[420px]'
+              ? 'w-full max-w-[500px]'
+              : 'w-full max-w-[700px]'
           }`}
+          onClick={() => setPreviewVariant(previewVariant === 'compact' ? 'detailed' : 'compact')}
         >
           <AchievementCard
             achievement={previewAchievement}
@@ -195,16 +142,117 @@ export function AchievementPreviewPane() {
             quizSlug={previewStatus === 'unlocked' ? '12' : null}
             tier="premium"
             isFlipped={previewVariant === 'detailed'}
-            onFlipChange={() => {}} // Controlled, so this won't be called
+            onFlipChange={(flipped) => setPreviewVariant(flipped ? 'detailed' : 'compact')}
+            triggerEntrance={triggerEntrance}
           />
         </div>
       </div>
 
-      {/* Minimal Footer */}
-      <div className="px-4 pb-3 pt-2 border-t border-gray-200 dark:border-gray-700">
-        <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
-          {previewStatus === 'unlocked' ? `Unlocked ${previewDate}` : 'Updates in real-time'}
-        </p>
+      {/* Controls Below Card */}
+      <div className="px-6 py-3 border-t border-gray-200/50 dark:border-gray-700/50 flex-shrink-0">
+        <div className="flex items-center justify-center gap-2 flex-wrap">
+          {/* View Toggle */}
+          <div className="flex items-center gap-1 bg-gradient-to-br from-gray-100 to-gray-50/50 dark:from-gray-700 dark:to-gray-700/50 rounded-xl p-1 shadow-[inset_0_1px_2px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)]">
+            <button
+              onClick={() => setPreviewVariant('compact')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                previewVariant === 'compact'
+                  ? 'bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-600 dark:to-gray-600/50 text-gray-900 dark:text-white shadow-[0_1px_2px_rgba(0,0,0,0.1)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.3)]'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              }`}
+              title="Compact view"
+            >
+              Front
+            </button>
+            <button
+              onClick={() => setPreviewVariant('detailed')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                previewVariant === 'detailed'
+                  ? 'bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-600 dark:to-gray-600/50 text-gray-900 dark:text-white shadow-[0_1px_2px_rgba(0,0,0,0.1)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.3)]'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              }`}
+              title="Detailed view"
+            >
+              Back
+            </button>
+          </div>
+
+          {/* Status Toggle */}
+          <div className="flex items-center gap-1 bg-gradient-to-br from-gray-100 to-gray-50/50 dark:from-gray-700 dark:to-gray-700/50 rounded-xl p-1 shadow-[inset_0_1px_2px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)]">
+            <button
+              onClick={() => setPreviewStatus('unlocked')}
+              className={`p-2 rounded-lg transition-all ${
+                previewStatus === 'unlocked'
+                  ? 'bg-gradient-to-br from-green-500 to-green-600 text-white shadow-[0_1px_2px_rgba(0,0,0,0.1)]'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              }`}
+              title="Unlocked"
+            >
+              <Eye className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setPreviewStatus('locked_free')}
+              className={`p-2 rounded-lg transition-all ${
+                previewStatus === 'locked_free'
+                  ? 'bg-gradient-to-br from-gray-600 to-gray-700 text-white shadow-[0_1px_2px_rgba(0,0,0,0.1)]'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              }`}
+              title="Locked"
+            >
+              <EyeOff className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Background Selector */}
+          <div className="flex items-center gap-1 bg-gradient-to-br from-gray-100 to-gray-50/50 dark:from-gray-700 dark:to-gray-700/50 rounded-xl p-1 shadow-[inset_0_1px_2px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)]">
+            <button
+              onClick={() => setPreviewBackground('neutral')}
+              className={`p-2 rounded-lg transition-all ${
+                previewBackground === 'neutral'
+                  ? 'bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-600 dark:to-gray-600/50 text-gray-900 dark:text-white shadow-[0_1px_2px_rgba(0,0,0,0.1)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.3)]'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              }`}
+              title="Neutral"
+            >
+              <Monitor className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setPreviewBackground('dark')}
+              className={`p-2 rounded-lg transition-all ${
+                previewBackground === 'dark'
+                  ? 'bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-600 dark:to-gray-600/50 text-gray-900 dark:text-white shadow-[0_1px_2px_rgba(0,0,0,0.1)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.3)]'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              }`}
+              title="Dark"
+            >
+              <Moon className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setPreviewBackground('light')}
+              className={`p-2 rounded-lg transition-all ${
+                previewBackground === 'light'
+                  ? 'bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-600 dark:to-gray-600/50 text-gray-900 dark:text-white shadow-[0_1px_2px_rgba(0,0,0,0.1)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.3)]'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              }`}
+              title="Light"
+            >
+              <Sun className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Entrance Animation Trigger */}
+          <button
+            onClick={() => {
+              setTriggerEntrance(true)
+              setTimeout(() => setTriggerEntrance(false), 100)
+            }}
+            className="px-4 py-2 bg-gradient-to-br from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-xl text-sm font-medium shadow-[0_1px_2px_rgba(0,0,0,0.1)] transition-all flex items-center gap-2"
+            title="Test entrance animation"
+          >
+            <Sparkles className="w-4 h-4" />
+            Test Entrance
+          </button>
+        </div>
       </div>
     </div>
   )

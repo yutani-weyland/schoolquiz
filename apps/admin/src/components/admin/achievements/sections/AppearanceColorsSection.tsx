@@ -137,7 +137,6 @@ export function AppearanceColorsSection({
             {appearance.patternOpacity || 0}
           </p>
         </div>
-      </div>
     </div>
   )
 }

@@ -88,7 +88,7 @@ export async function POST(request: Request) {
     if (method === "email" && email && password) {
       const emailLower = email.toLowerCase();
       
-      // Find user by email or name
+      // First, check mock users
       const userKey = Object.keys(MOCK_USERS).find(
         key => 
           MOCK_USERS[key as keyof typeof MOCK_USERS].email.toLowerCase() === emailLower ||
@@ -110,12 +110,42 @@ export async function POST(request: Request) {
           name: mockUser.name,
           tier: mockUser.tier || "basic",
         });
-      } else {
-        return NextResponse.json(
-          { error: "Invalid credentials" },
-          { status: 401 }
-        );
       }
+
+      // If not in mock users, check database
+      // For testing, accept password "abc123" for any database user
+      try {
+        const { prisma } = await import("@schoolquiz/db");
+        const dbUser = await prisma.user.findUnique({
+          where: { email: emailLower },
+        });
+
+        if (dbUser && password === "abc123") {
+          // Update last login
+          await prisma.user.update({
+            where: { id: dbUser.id },
+            data: { lastLoginAt: new Date() },
+          }).catch(() => {
+            // Ignore update errors
+          });
+
+          return NextResponse.json({
+            token: `mock-token-${dbUser.id}-${Date.now()}`,
+            userId: dbUser.id,
+            email: dbUser.email,
+            name: dbUser.name || "",
+            tier: dbUser.tier || "basic",
+          });
+        }
+      } catch (error) {
+        // Database check failed - continue to error response
+        console.log('Database check failed (non-fatal):', error);
+      }
+      
+      return NextResponse.json(
+        { error: "Invalid credentials" },
+        { status: 401 }
+      );
     }
 
     // Handle other methods

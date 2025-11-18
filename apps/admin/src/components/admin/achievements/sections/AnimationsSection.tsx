@@ -54,7 +54,6 @@ export function AnimationsSection({
             </span>
           </label>
         </div>
-      </div>
     </div>
   )
 }

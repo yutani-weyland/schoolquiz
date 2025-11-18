@@ -45,7 +45,6 @@ export function DescriptionsSection({
             {formData.longDescription?.length || 0}/500 characters
           </p>
         </div>
-      </div>
     </div>
   )
 }

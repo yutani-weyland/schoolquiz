@@ -30,7 +30,7 @@ export function BasicsSection({ formData, updateField }: BasicsSectionProps) {
             type="text"
             value={formData.name}
             onChange={(e) => handleNameChange(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-2.5 border border-gray-300/50 dark:border-gray-700/50 rounded-xl bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/50 backdrop-blur-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] shadow-[inset_0_1px_2px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)]"
             placeholder="e.g., Blitzkrieg!"
             required
           />
@@ -44,7 +44,7 @@ export function BasicsSection({ formData, updateField }: BasicsSectionProps) {
             type="text"
             value={formData.slug}
             onChange={(e) => updateField('slug', e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-2.5 border border-gray-300/50 dark:border-gray-700/50 rounded-xl bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/50 backdrop-blur-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] shadow-[inset_0_1px_2px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)]"
             placeholder="e.g., blitzkrieg"
             required
           />
@@ -61,9 +61,9 @@ export function BasicsSection({ formData, updateField }: BasicsSectionProps) {
             <select
               value={formData.category}
               onChange={(e) => updateField('category', e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2.5 border border-gray-300/50 dark:border-gray-700/50 rounded-xl bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/50 backdrop-blur-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] shadow-[inset_0_1px_2px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)]"
             >
-              <option value="performance">Performance</option>
+              <option value="performance" style={{ paddingTop: '0.5rem' }}>Performance</option>
               <option value="engagement">Engagement</option>
               <option value="social">Social</option>
               <option value="event">Event</option>
@@ -78,9 +78,9 @@ export function BasicsSection({ formData, updateField }: BasicsSectionProps) {
             <select
               value={formData.rarity}
               onChange={(e) => updateField('rarity', e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2.5 border border-gray-300/50 dark:border-gray-700/50 rounded-xl bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/50 backdrop-blur-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] shadow-[inset_0_1px_2px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)]"
             >
-              <option value="common">Common</option>
+              <option value="common" style={{ paddingTop: '0.5rem' }}>Common</option>
               <option value="uncommon">Uncommon</option>
               <option value="rare">Rare</option>
               <option value="epic">Epic</option>
@@ -89,21 +89,6 @@ export function BasicsSection({ formData, updateField }: BasicsSectionProps) {
           </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Points (optional)
-          </label>
-          <input
-            type="number"
-            value={formData.points || ''}
-            onChange={(e) =>
-              updateField('points', e.target.value ? parseInt(e.target.value) : null)
-            }
-            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="e.g., 100"
-          />
-        </div>
-      </div>
     </div>
   )
 }

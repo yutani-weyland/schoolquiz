@@ -88,7 +88,6 @@ export function AppearanceLayoutSection({
             {appearance.rotationDegrees || 0}°
           </p>
         </div>
-      </div>
     </div>
   )
 }

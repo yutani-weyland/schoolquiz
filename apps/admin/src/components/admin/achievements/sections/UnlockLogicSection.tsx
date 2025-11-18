@@ -100,7 +100,6 @@ export function UnlockLogicSection({
             </p>
           </div>
         )}
-      </div>
     </div>
   )
 }

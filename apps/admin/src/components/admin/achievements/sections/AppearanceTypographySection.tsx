@@ -80,7 +80,6 @@ export function AppearanceTypographySection({
             {appearance.titleLetterSpacing || 0}px
           </p>
         </div>
-      </div>
     </div>
   )
 }

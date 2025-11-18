@@ -1,0 +1,38 @@
+# Global rules for SchoolQuiz
+
+- This is a Next.js app using the App Router.
+
+- There is an existing basic admin area that will be replaced by a new admin at `/admin`.
+
+- There is an existing "Achievement Creator" feature in the current admin. 
+
+  - This MUST be preserved and eventually migrated into the new admin.
+
+  - Do NOT delete or break it. Later phases will integrate it properly.
+
+- Data is stored in Postgres (likely via Supabase). Reuse existing quiz/session/score schemas and services. 
+
+  - Do NOT invent a completely separate quiz model unless explicitly instructed.
+
+- Use TypeScript everywhere. Avoid `any`.
+
+- Use the existing UI system (shadcn/ui + project UI components). Do NOT introduce new UI libraries.
+
+- Admin routes live under `app/admin/*`.
+
+  - The new admin must provide: Overview, Organisations, Users, Quizzes, Scheduling, Analytics, Billing, Support, System, and Achievements (Achievement Creator).
+
+- Respect roles: PlatformAdmin, OrgAdmin, Teacher, Student, Parent.
+
+  - Only admins (at minimum PlatformAdmin) should access `/admin/*`.
+
+# Project docs
+
+- For the roadmap and detailed admin requirements, read:
+
+  - `PHASES.md`
+
+  - `docs/admin-dashboard-plan.md`
+
+before making large structural changes.
+

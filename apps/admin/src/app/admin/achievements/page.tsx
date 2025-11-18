@@ -1,11 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Trophy, Plus, Edit2, Copy, Trash2, Search } from 'lucide-react'
+import { Trophy, Plus, Edit2, Copy, Trash2 } from 'lucide-react'
 import { AdminAchievementEditor } from '@/components/admin/achievements/AdminAchievementEditor'
 import { AchievementPreviewPane } from '@/components/admin/achievements/AchievementPreviewPane'
 import { AchievementFormProvider } from '@/components/admin/achievements/AchievementFormContext'
 import { useAchievementForm } from '@/components/admin/achievements/useAchievementForm'
+import { DataTable, Column } from '@/components/admin/DataTable'
 
 interface Achievement {
   id: string
@@ -122,208 +123,249 @@ export default function AdminAchievementsPage() {
     setSelectedAchievement(null)
   }
 
-  const filteredAchievements = achievements.filter((a) => {
-    const query = searchQuery.toLowerCase()
-    return (
-      a.name.toLowerCase().includes(query) ||
-      a.slug.toLowerCase().includes(query) ||
-      a.category.toLowerCase().includes(query) ||
-      a.rarity.toLowerCase().includes(query)
-    )
-  })
+  // Create form hook at the top level to avoid conditional hook calls
+  const formHook = useAchievementForm(selectedAchievement)
+  const { formData } = formHook
 
   if (isCreating || selectedAchievement) {
-    // We need to create the form hook here to share state
-    const EditorWrapper = () => {
-      const formHook = useAchievementForm(selectedAchievement)
-      const { formData } = formHook
-      
-      return (
-        <AchievementFormProvider formData={formData}>
-          <div className="h-[calc(100vh-8rem)]">
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr,1.2fr] gap-6 h-full">
-              {/* Editor - Left Panel */}
-              <div className="min-w-0">
-                <AdminAchievementEditor
-                  achievement={selectedAchievement}
-                  onSave={handleSave}
-                  onCancel={() => {
-                    setIsCreating(false)
-                    setSelectedAchievement(null)
-                  }}
-                  formHook={formHook}
-                />
-              </div>
-
-              {/* Preview - Right Panel (Larger) */}
-              <div className="min-w-0">
-                <AchievementPreviewPane />
-              </div>
+    return (
+      <AchievementFormProvider formData={formData}>
+        <div className="h-full flex flex-col min-h-0">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6 flex-shrink-0">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight flex items-center gap-3">
+                <Trophy className="w-8 h-8 text-blue-500" />
+                {selectedAchievement ? 'Edit Achievement' : 'New Achievement'}
+              </h1>
+              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                {selectedAchievement ? 'Update achievement details' : 'Create a new achievement card'}
+              </p>
             </div>
           </div>
-        </AchievementFormProvider>
-      )
-    }
-    
-    return <EditorWrapper />
+
+          {/* Editor and Preview Grid */}
+          <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr,1.2fr] gap-6 min-h-0 overflow-hidden">
+            {/* Editor - Left Panel */}
+            <div className="min-h-0 overflow-hidden flex flex-col">
+              <AdminAchievementEditor
+                achievement={selectedAchievement}
+                onSave={handleSave}
+                onCancel={() => {
+                  setIsCreating(false)
+                  setSelectedAchievement(null)
+                }}
+                formHook={formHook}
+              />
+            </div>
+
+            {/* Preview - Right Panel */}
+            <div className="min-h-0 overflow-hidden flex flex-col">
+              <AchievementPreviewPane />
+            </div>
+          </div>
+        </div>
+      </AchievementFormProvider>
+    )
   }
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="space-y-6 h-full flex flex-col">
       {/* Header */}
-      <div className="mb-8 flex items-center justify-between">
+      <div className="flex items-center justify-between flex-shrink-0">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-3">
-            <Trophy className="w-8 h-8" />
-            Achievement Builder
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight flex items-center gap-3">
+            <Trophy className="w-8 h-8 text-blue-500" />
+            Achievements
           </h1>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
             Create and manage achievement cards
           </p>
         </div>
         <button
           onClick={handleCreate}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-[0_2px_8px_rgba(59,130,246,0.3),inset_0_1px_0_0_rgba(255,255,255,0.2)] hover:shadow-[0_4px_12px_rgba(59,130,246,0.4),inset_0_1px_0_0_rgba(255,255,255,0.2)]"
         >
           <Plus className="w-4 h-4" />
           New Achievement
         </button>
       </div>
 
-      {/* Search */}
-      <div className="mb-6">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search achievements..."
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-      </div>
-
-      {/* List */}
-      {isLoading ? (
-        <div className="text-center py-12 text-gray-600 dark:text-gray-400">
-          Loading achievements...
-        </div>
-      ) : filteredAchievements.length === 0 ? (
-        <div className="text-center py-12">
-          <Trophy className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-gray-400 mb-4">
-            {searchQuery ? 'No achievements found' : 'No achievements yet'}
-          </p>
-          {!searchQuery && (
+      {/* Table */}
+      <div className="flex-1 min-h-0 bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/50 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.08),inset_0_1px_0_0_rgba(255,255,255,0.9)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.3),inset_0_1px_0_0_rgba(255,255,255,0.05)]">
+        {isLoading ? (
+          <div className="p-12 text-center">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">Loading achievements...</p>
+          </div>
+        ) : achievements.length === 0 ? (
+          <div className="p-12 text-center">
+            <Trophy className="mx-auto h-12 w-12 text-gray-400" />
+            <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">No achievements found</p>
             <button
               onClick={handleCreate}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="mt-4 inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-[0_2px_8px_rgba(59,130,246,0.3),inset_0_1px_0_0_rgba(255,255,255,0.2)]"
             >
               <Plus className="w-4 h-4" />
               Create Your First Achievement
             </button>
-          )}
-        </div>
-      ) : (
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-              <tr>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-900 dark:text-white">
-                  Name
-                </th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-900 dark:text-white">
-                  Slug
-                </th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-900 dark:text-white">
-                  Category
-                </th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-900 dark:text-white">
-                  Rarity
-                </th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-900 dark:text-white">
-                  Status
-                </th>
-                <th className="text-right py-3 px-4 text-sm font-medium text-gray-900 dark:text-white">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {filteredAchievements.map((achievement) => (
-                <tr
-                  key={achievement.id}
-                  className="hover:bg-gray-50 dark:hover:bg-gray-700/50"
-                >
-                  <td className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-white">
-                    {achievement.name}
-                  </td>
-                  <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
-                    {achievement.slug}
-                  </td>
-                  <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
-                    {achievement.category}
-                  </td>
-                  <td className="py-3 px-4">
-                    <span
-                      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                        achievement.rarity === 'legendary'
-                          ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
-                          : achievement.rarity === 'epic'
-                          ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
-                          : achievement.rarity === 'rare'
-                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
-                          : achievement.rarity === 'uncommon'
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                          : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-                      }`}
+          </div>
+        ) : (
+          <DataTable
+            data={achievements}
+            columns={[
+              {
+                key: 'name',
+                label: 'Name',
+                sortable: true,
+                filterable: true,
+                render: (name) => (
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">{name}</span>
+                ),
+              },
+              {
+                key: 'slug',
+                label: 'Slug',
+                sortable: true,
+                filterable: true,
+                render: (slug) => (
+                  <code className="text-xs text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
+                    {slug}
+                  </code>
+                ),
+              },
+              {
+                key: 'category',
+                label: 'Category',
+                sortable: true,
+                filterable: true,
+                filterType: 'select',
+                filterOptions: [
+                  { label: 'All Categories', value: '' },
+                  ...Array.from(new Set(achievements.map(a => a.category))).map(cat => ({
+                    label: cat,
+                    value: cat,
+                  })),
+                ],
+                render: (category) => (
+                  <span className="text-sm text-gray-600 dark:text-gray-400">{category}</span>
+                ),
+              },
+              {
+                key: 'rarity',
+                label: 'Rarity',
+                sortable: true,
+                filterable: true,
+                filterType: 'select',
+                filterOptions: [
+                  { label: 'All Rarities', value: '' },
+                  { label: 'Common', value: 'common' },
+                  { label: 'Uncommon', value: 'uncommon' },
+                  { label: 'Rare', value: 'rare' },
+                  { label: 'Epic', value: 'epic' },
+                  { label: 'Legendary', value: 'legendary' },
+                ],
+                render: (rarity) => (
+                  <span
+                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      rarity === 'legendary'
+                        ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
+                        : rarity === 'epic'
+                        ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
+                        : rarity === 'rare'
+                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
+                        : rarity === 'uncommon'
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                        : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                    }`}
+                  >
+                    {rarity}
+                  </span>
+                ),
+              },
+              {
+                key: 'isActive',
+                label: 'Status',
+                sortable: true,
+                filterable: true,
+                filterType: 'select',
+                filterOptions: [
+                  { label: 'All Statuses', value: '' },
+                  { label: 'Active', value: 'true' },
+                  { label: 'Inactive', value: 'false' },
+                ],
+                render: (isActive) => (
+                  <span
+                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      isActive
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                        : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                    }`}
+                  >
+                    {isActive ? 'Active' : 'Inactive'}
+                  </span>
+                ),
+              },
+              {
+                key: 'createdAt',
+                label: 'Created',
+                sortable: true,
+                filterable: true,
+                filterType: 'date',
+                render: (date) => (
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    {new Date(date).toLocaleDateString('en-AU', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric',
+                    })}
+                  </span>
+                ),
+              },
+              {
+                key: 'actions',
+                label: 'Actions',
+                sortable: false,
+                render: (_, achievement) => (
+                  <div className="flex items-center justify-end gap-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleEdit(achievement)
+                      }}
+                      className="p-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                      title="Edit"
                     >
-                      {achievement.rarity}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <span
-                      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                        achievement.isActive
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                          : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-                      }`}
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleDuplicate(achievement)
+                      }}
+                      className="p-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                      title="Duplicate"
                     >
-                      {achievement.isActive ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => handleEdit(achievement)}
-                        className="p-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                        title="Edit"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDuplicate(achievement)}
-                        className="p-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                        title="Duplicate"
-                      >
-                        <Copy className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(achievement.id)}
-                        className="p-2 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                        title="Delete"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+                      <Copy className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleDelete(achievement.id)
+                      }}
+                      className="p-2 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                      title="Delete"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ),
+              },
+            ]}
+            defaultSort={{ key: 'createdAt', direction: 'desc' }}
+          />
+        )}
+      </div>
     </div>
   )
 }

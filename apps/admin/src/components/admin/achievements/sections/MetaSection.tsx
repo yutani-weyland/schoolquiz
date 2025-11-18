@@ -38,30 +38,35 @@ export function MetaSection({ formData, updateField }: MetaSectionProps) {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Season Tag (optional)
+            Season / Year / Collection
           </label>
           <input
             type="text"
             value={formData.seasonTag || ''}
             onChange={(e) => updateField('seasonTag', e.target.value)}
             className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="e.g., olympics-2026"
+            placeholder="e.g., olympics-2026, halloween-2025, 2024"
           />
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            Organize achievements by season, year, or collection
+          </p>
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Series (optional)
+            Series / Collection Name
           </label>
           <input
             type="text"
             value={formData.series || ''}
             onChange={(e) => updateField('series', e.target.value)}
             className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="e.g., Roman History"
+            placeholder="e.g., Roman History, Perfect Scores, Speed Run"
           />
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            Group related achievements together
+          </p>
         </div>
-      </div>
     </div>
   )
 }

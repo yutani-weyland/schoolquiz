@@ -50,7 +50,6 @@ export function IconSection({ formData, updateField }: IconSectionProps) {
             <option value="fullArt">Full Art</option>
           </select>
         </div>
-      </div>
     </div>
   )
 }

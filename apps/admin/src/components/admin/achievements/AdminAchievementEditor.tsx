@@ -1,17 +1,16 @@
 'use client'
 
-import { Save, X, FileText, Palette, Type, Layout, Image, Zap, Settings } from 'lucide-react'
+import { Save, X, FileText, Image as ImageIcon, Sparkles, Layers, Settings } from 'lucide-react'
 import { useAchievementForm } from './useAchievementForm'
 import { AchievementFormProvider } from './AchievementFormContext'
 import { AccordionSection } from './AccordionSection'
 import { BasicsSection } from './sections/BasicsSection'
-import { DescriptionsSection } from './sections/DescriptionsSection'
 import { UnlockLogicSection } from './sections/UnlockLogicSection'
-import { AppearanceColorsSection } from './sections/AppearanceColorsSection'
-import { AppearanceTypographySection } from './sections/AppearanceTypographySection'
-import { AppearanceLayoutSection } from './sections/AppearanceLayoutSection'
-import { IconSection } from './sections/IconSection'
-import { AnimationsSection } from './sections/AnimationsSection'
+import { RarityPresetSection } from './sections/RarityPresetSection'
+import { FrontCardSection } from './sections/FrontCardSection'
+import { BackCardSection } from './sections/BackCardSection'
+import { BackgroundSection } from './sections/BackgroundSection'
+import { EffectTogglesSection } from './sections/EffectTogglesSection'
 import { MetaSection } from './sections/MetaSection'
 
 interface AdminAchievementEditorProps {
@@ -63,16 +62,16 @@ export function AdminAchievementEditor({
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 h-full flex flex-col">
-      {/* Compact Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+    <div className="bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/50 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 h-full flex flex-col shadow-[0_1px_3px_rgba(0,0,0,0.08),inset_0_1px_0_0_rgba(255,255,255,0.9)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.3),inset_0_1px_0_0_rgba(255,255,255,0.05)]">
+      {/* Header with Actions */}
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200/50 dark:border-gray-700/50 flex-shrink-0">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-          {achievement ? 'Edit Achievement' : 'New Achievement'}
+          Achievement Settings
         </h2>
         <div className="flex items-center gap-2">
           <button
             onClick={onCancel}
-            className="p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            className="p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100/50 dark:hover:bg-gray-700/50 rounded-xl transition-colors"
             title="Cancel"
           >
             <X className="w-4 h-4" />
@@ -80,7 +79,7 @@ export function AdminAchievementEditor({
           <button
             onClick={handleSave}
             disabled={isSaving}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl text-sm font-medium hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-[0_2px_8px_rgba(59,130,246,0.3),inset_0_1px_0_0_rgba(255,255,255,0.2)] hover:shadow-[0_4px_12px_rgba(59,130,246,0.4),inset_0_1px_0_0_rgba(255,255,255,0.2)]"
           >
             <Save className="w-4 h-4" />
             {isSaving ? 'Saving...' : 'Save'}
@@ -88,73 +87,99 @@ export function AdminAchievementEditor({
         </div>
       </div>
 
-      {/* Organized Form Sections with Accordions */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        {/* Content & Logic */}
-        <AccordionSection
-          title="Content & Logic"
-          icon={<FileText className="w-4 h-4" />}
-          defaultOpen={true}
-        >
-          <div className="space-y-4">
+      {/* Form with Collapsible Sections */}
+      <div className="flex-1 overflow-y-auto px-6 py-4">
+        <div className="w-full space-y-3">
+          {/* Basics */}
+          <AccordionSection
+            title="Basics"
+            icon={<FileText className="w-4 h-4" />}
+            defaultOpen={true}
+          >
             <BasicsSection formData={formData} updateField={updateField} />
-            <DescriptionsSection formData={formData} updateField={updateField} />
+          </AccordionSection>
+
+          {/* Rarity */}
+          <AccordionSection
+            title="Rarity"
+            icon={<Sparkles className="w-4 h-4" />}
+            defaultOpen={true}
+          >
+            <RarityPresetSection
+              formData={formData}
+              updateField={updateField}
+              updateAppearance={updateAppearance}
+            />
+          </AccordionSection>
+
+          {/* Background */}
+          <AccordionSection
+            title="Background"
+            icon={<ImageIcon className="w-4 h-4" />}
+            defaultOpen={true}
+          >
+            <BackgroundSection
+              formData={formData}
+              updateAppearance={updateAppearance}
+            />
+          </AccordionSection>
+
+          {/* Front Card */}
+          <AccordionSection
+            title="Front Card"
+            icon={<Layers className="w-4 h-4" />}
+            defaultOpen={true}
+          >
+            <FrontCardSection
+              formData={formData}
+              updateField={updateField}
+              updateAppearance={updateAppearance}
+            />
+          </AccordionSection>
+
+          {/* Back Card */}
+          <AccordionSection
+            title="Back Card"
+            icon={<Layers className="w-4 h-4" />}
+          >
+            <BackCardSection
+              formData={formData}
+              updateField={updateField}
+              updateAppearance={updateAppearance}
+            />
+          </AccordionSection>
+
+          {/* Effects */}
+          <AccordionSection
+            title="Effects"
+            icon={<Sparkles className="w-4 h-4" />}
+          >
+            <EffectTogglesSection
+              formData={formData}
+              updateField={updateField}
+            />
+          </AccordionSection>
+
+          {/* Unlock Logic */}
+          <AccordionSection
+            title="Unlock Logic"
+            icon={<Settings className="w-4 h-4" />}
+          >
             <UnlockLogicSection
               formData={formData}
               updateField={updateField}
               updateConditionConfig={updateConditionConfig}
             />
-          </div>
-        </AccordionSection>
+          </AccordionSection>
 
-        {/* Visual Design */}
-        <AccordionSection
-          title="Visual Design"
-          icon={<Palette className="w-4 h-4" />}
-          defaultOpen={true}
-        >
-          <div className="space-y-4">
-            <AppearanceColorsSection
-              formData={formData}
-              updateAppearance={updateAppearance}
-            />
-            <AppearanceTypographySection
-              formData={formData}
-              updateAppearance={updateAppearance}
-            />
-            <AppearanceLayoutSection
-              formData={formData}
-              updateAppearance={updateAppearance}
-            />
-          </div>
-        </AccordionSection>
-
-        {/* Assets */}
-        <AccordionSection
-          title="Assets"
-          icon={<Image className="w-4 h-4" />}
-        >
-          <IconSection formData={formData} updateField={updateField} />
-        </AccordionSection>
-
-        {/* Effects */}
-        <AccordionSection
-          title="Effects & Animation"
-          icon={<Zap className="w-4 h-4" />}
-        >
-          <AnimationsSection
-            formData={formData}
-            updateAppearance={updateAppearance}
-          />
-        </AccordionSection>
-
-        {/* Settings */}
-        <AccordionSection
-          title="Settings"
-          icon={<Settings className="w-4 h-4" />}
-        >
-          <MetaSection formData={formData} updateField={updateField} />
-        </AccordionSection>
+          {/* Settings */}
+          <AccordionSection
+            title="Settings"
+            icon={<Settings className="w-4 h-4" />}
+          >
+            <MetaSection formData={formData} updateField={updateField} />
+          </AccordionSection>
+        </div>
       </div>
     </div>
   )
