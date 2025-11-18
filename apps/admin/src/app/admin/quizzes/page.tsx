@@ -2,9 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { BookOpen, FileDown, Calendar, Users, TrendingUp, Plus } from 'lucide-react'
+import { BookOpen, FileDown, Plus, Search, Filter, ArrowUpDown, ArrowUp, ArrowDown, CheckCircle2, FileText } from 'lucide-react'
 import Link from 'next/link'
-import { DataTable, Column } from '@/components/admin/DataTable'
 
 interface Quiz {
   id: string
@@ -16,6 +15,8 @@ interface Quiz {
   seasonalTag?: string | null
   publicationDate?: string | null
   status: string
+  pdfUrl?: string | null
+  pdfStatus?: string | null
   createdAt: string
   updatedAt: string
   _count: {
@@ -28,7 +29,11 @@ export default function AdminQuizzesPage() {
   const router = useRouter()
   const [quizzes, setQuizzes] = useState<Quiz[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
   const [page, setPage] = useState(1)
+  const [sortBy, setSortBy] = useState<string>('createdAt')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 50,
@@ -38,7 +43,7 @@ export default function AdminQuizzesPage() {
 
   useEffect(() => {
     fetchQuizzes()
-  }, [page])
+  }, [searchQuery, statusFilter, page, sortBy, sortOrder])
 
   const fetchQuizzes = async () => {
     try {
@@ -47,13 +52,55 @@ export default function AdminQuizzesPage() {
         page: page.toString(),
         limit: '50',
       })
+      if (searchQuery) params.append('search', searchQuery)
+      if (statusFilter) params.append('status', statusFilter)
 
       const response = await fetch(`/api/admin/quizzes?${params}`)
       const data = await response.json()
       console.log('Quizzes API response:', data)
       
       if (response.ok) {
-        setQuizzes(data.quizzes || [])
+        let fetchedQuizzes = data.quizzes || []
+        
+        // Client-side sorting
+        fetchedQuizzes = [...fetchedQuizzes].sort((a, b) => {
+          let aVal: any
+          let bVal: any
+          
+          switch (sortBy) {
+            case 'title':
+              aVal = a.title.toLowerCase()
+              bVal = b.title.toLowerCase()
+              break
+            case 'status':
+              aVal = a.status
+              bVal = b.status
+              break
+            case 'rounds':
+              aVal = a._count.rounds
+              bVal = b._count.rounds
+              break
+            case 'runs':
+              aVal = a._count.runs
+              bVal = b._count.runs
+              break
+            case 'publicationDate':
+              aVal = a.publicationDate ? new Date(a.publicationDate).getTime() : 0
+              bVal = b.publicationDate ? new Date(b.publicationDate).getTime() : 0
+              break
+            case 'createdAt':
+            default:
+              aVal = new Date(a.createdAt).getTime()
+              bVal = new Date(b.createdAt).getTime()
+              break
+          }
+          
+          if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1
+          if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1
+          return 0
+        })
+        
+        setQuizzes(fetchedQuizzes)
         setPagination(data.pagination || pagination)
       } else {
         console.error('API error:', data)
@@ -65,9 +112,42 @@ export default function AdminQuizzesPage() {
     }
   }
 
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortBy(column)
+      setSortOrder('asc')
+    }
+    setPage(1)
+  }
+
+  const SortableHeader = ({ column, label }: { column: string; label: string }) => {
+    const isSorted = sortBy === column
+    return (
+      <th
+        className="px-6 py-3 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider cursor-pointer hover:bg-[hsl(var(--muted))] transition-colors"
+        onClick={() => handleSort(column)}
+      >
+        <div className="flex items-center gap-2">
+          <span>{label}</span>
+          {isSorted ? (
+            sortOrder === 'asc' ? (
+              <ArrowUp className="w-4 h-4" />
+            ) : (
+              <ArrowDown className="w-4 h-4" />
+            )
+          ) : (
+            <ArrowUpDown className="w-4 h-4 opacity-50" />
+          )}
+        </div>
+      </th>
+    )
+  }
+
   const getStatusBadge = (status: string) => {
     const styles = {
-      draft: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+      draft: 'bg-[hsl(var(--muted))] text-[hsl(var(--foreground))]',
       scheduled: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
       published: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
     }
@@ -94,178 +174,201 @@ export default function AdminQuizzesPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
+          <h1 className="text-3xl font-bold text-[hsl(var(--foreground))] tracking-tight">
             Quizzes
           </h1>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+          <p className="mt-2 text-sm text-[hsl(var(--muted-foreground))]">
             Manage quizzes, view analytics, and schedule publications
           </p>
         </div>
         <Link
           href="/admin/quizzes/builder"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl font-medium hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-[0_2px_8px_rgba(59,130,246,0.3),inset_0_1px_0_0_rgba(255,255,255,0.2)] hover:shadow-[0_4px_12px_rgba(59,130,246,0.4),inset_0_1px_0_0_rgba(255,255,255,0.2)]"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] rounded-xl font-medium hover:bg-[hsl(var(--primary))]/90 transition-colors"
         >
           <Plus className="w-4 h-4" />
           Create Quiz
         </Link>
       </div>
 
+      {/* Filters */}
+      <div className="bg-[hsl(var(--card))] rounded-2xl border border-[hsl(var(--border))] p-4">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[hsl(var(--muted-foreground))] z-10" />
+            <input
+              type="text"
+              placeholder="Search quizzes..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value)
+                setPage(1)
+              }}
+              className="w-full pl-10 pr-4 py-2 border border-[hsl(var(--border))] rounded-xl bg-[hsl(var(--input))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] placeholder:text-[hsl(var(--muted-foreground))]"
+            />
+          </div>
+          <div className="relative">
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[hsl(var(--muted-foreground))] z-10" />
+            <select
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value)
+                setPage(1)
+              }}
+              className="pl-10 pr-8 py-2 border border-[hsl(var(--border))] rounded-xl bg-[hsl(var(--input))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
+            >
+              <option value="">All Statuses</option>
+              <option value="draft">Draft</option>
+              <option value="scheduled">Scheduled</option>
+              <option value="published">Published</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
       {/* Table */}
-      <div className="bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/50 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.08),inset_0_1px_0_0_rgba(255,255,255,0.9)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.3),inset_0_1px_0_0_rgba(255,255,255,0.05)]">
+      <div className="bg-[hsl(var(--card))] rounded-2xl border border-[hsl(var(--border))] overflow-hidden">
         {isLoading ? (
           <div className="p-12 text-center">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-            <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">Loading quizzes...</p>
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[hsl(var(--primary))]"></div>
+            <p className="mt-4 text-sm text-[hsl(var(--muted-foreground))]">Loading quizzes...</p>
           </div>
         ) : quizzes.length === 0 ? (
           <div className="p-12 text-center">
-            <BookOpen className="mx-auto h-12 w-12 text-gray-400" />
-            <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">No quizzes found</p>
+            <BookOpen className="mx-auto h-12 w-12 text-[hsl(var(--muted-foreground))]" />
+            <p className="mt-4 text-sm text-[hsl(var(--muted-foreground))]">No quizzes found</p>
           </div>
         ) : (
           <>
-            <DataTable
-              data={quizzes}
-              columns={[
-                {
-                  key: 'title',
-                  label: 'Quiz',
-                  sortable: true,
-                  filterable: false,
-                  render: (_, quiz) => (
-                    <div className="flex items-center">
-                      <BookOpen className="w-5 h-5 text-gray-400 mr-3 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            router.push(`/admin/quizzes/${quiz.id}`)
-                          }}
-                          className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline text-left"
-                        >
-                          {quiz.title}
-                        </button>
-                        {quiz.blurb && (
-                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">
-                            {quiz.blurb}
-                          </div>
-                        )}
-                        {quiz.theme && (
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="text-xs text-gray-400 dark:text-gray-500">
-                              {quiz.theme}
-                            </span>
-                            {quiz.audience && (
-                              <>
-                                <span className="text-gray-300 dark:text-gray-600">•</span>
-                                <span className="text-xs text-gray-400 dark:text-gray-500">
-                                  {quiz.audience}
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-[hsl(var(--muted))] border-b border-[hsl(var(--border))]">
+                  <tr>
+                    <SortableHeader column="title" label="Quiz" />
+                    <SortableHeader column="status" label="Status" />
+                    <SortableHeader column="rounds" label="Rounds" />
+                    <SortableHeader column="runs" label="Runs" />
+                    <SortableHeader column="publicationDate" label="Published" />
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
+                      PDF
+                    </th>
+                    <SortableHeader column="createdAt" label="Created" />
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider w-20">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-[hsl(var(--card))]/50 divide-y divide-[hsl(var(--border))]">
+                  {quizzes.map((quiz) => (
+                    <tr
+                      key={quiz.id}
+                      className="hover:bg-[hsl(var(--muted))] transition-colors"
+                    >
+                      <td className="px-6 py-4">
+                        <div className="flex items-center">
+                          <BookOpen className="w-5 h-5 text-[hsl(var(--muted-foreground))] mr-3 flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                router.push(`/admin/quizzes/${quiz.id}`)
+                              }}
+                              className="text-sm font-medium text-[hsl(var(--primary))] hover:underline text-left"
+                            >
+                              {quiz.title}
+                            </button>
+                            {quiz.blurb && (
+                              <div className="text-xs text-[hsl(var(--muted-foreground))] mt-1 truncate">
+                                {quiz.blurb}
+                              </div>
+                            )}
+                            {quiz.theme && (
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-xs text-[hsl(var(--muted-foreground))]">
+                                  {quiz.theme}
                                 </span>
-                              </>
+                                {quiz.audience && (
+                                  <>
+                                    <span className="text-[hsl(var(--border))]">•</span>
+                                    <span className="text-xs text-[hsl(var(--muted-foreground))]">
+                                      {quiz.audience}
+                                    </span>
+                                  </>
+                                )}
+                              </div>
                             )}
                           </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {getStatusBadge(quiz.status)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[hsl(var(--foreground))]">
+                        {quiz._count.rounds}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[hsl(var(--foreground))]">
+                        {quiz._count.runs}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[hsl(var(--muted-foreground))]">
+                        {formatDate(quiz.publicationDate)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {quiz.pdfStatus === 'approved' ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                            <CheckCircle2 className="w-3 h-3" />
+                            Approved
+                          </span>
+                        ) : quiz.pdfStatus === 'generated' ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                            <FileText className="w-3 h-3" />
+                            Review
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                            None
+                          </span>
                         )}
-                      </div>
-                    </div>
-                  ),
-                },
-                {
-                  key: 'status',
-                  label: 'Status',
-                  sortable: true,
-                  filterable: true,
-                  filterType: 'select',
-                  filterOptions: [
-                    { label: 'All Statuses', value: '' },
-                    { label: 'Draft', value: 'draft' },
-                    { label: 'Scheduled', value: 'scheduled' },
-                    { label: 'Published', value: 'published' },
-                  ],
-                  render: (status) => getStatusBadge(status),
-                },
-                {
-                  key: '_count.rounds',
-                  label: 'Rounds',
-                  sortable: true,
-                  render: (_, quiz) => quiz._count.rounds,
-                },
-                {
-                  key: '_count.runs',
-                  label: 'Runs',
-                  sortable: true,
-                  render: (_, quiz) => quiz._count.runs,
-                },
-                {
-                  key: 'publicationDate',
-                  label: 'Published',
-                  sortable: true,
-                  filterable: true,
-                  filterType: 'date',
-                  render: (date) => formatDate(date),
-                },
-                {
-                  key: 'createdAt',
-                  label: 'Created',
-                  sortable: true,
-                  filterable: true,
-                  filterType: 'date',
-                  render: (date) => formatDate(date),
-                },
-                {
-                  key: 'actions',
-                  label: 'Actions',
-                  sortable: false,
-                  render: (_, quiz) => (
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          router.push(`/admin/quizzes/builder?edit=${quiz.id}`)
-                        }}
-                        className="px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-                      >
-                        Edit
-                      </button>
-                      {quiz.status === 'published' && (
-                        <button
-                          onClick={async (e) => {
-                            e.stopPropagation()
-                            try {
-                              const response = await fetch(`/api/admin/quizzes/${quiz.id}/pdf`, {
-                                method: 'POST',
-                              })
-                              const data = await response.json()
-                              if (response.ok && data.pdfUrl) {
-                                window.open(data.pdfUrl, '_blank')
-                              } else {
-                                alert(data.error || 'Failed to generate PDF')
-                              }
-                            } catch (error) {
-                              console.error('Failed to generate PDF:', error)
-                              alert('Failed to generate PDF')
-                            }
-                          }}
-                          className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-colors inline-flex items-center gap-1"
-                          title="Generate PDF"
-                        >
-                          <FileDown className="w-3 h-3" />
-                          PDF
-                        </button>
-                      )}
-                    </div>
-                  ),
-                },
-              ]}
-              defaultSort={{ key: 'createdAt', direction: 'desc' }}
-            />
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[hsl(var(--muted-foreground))]">
+                        {formatDate(quiz.createdAt)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              router.push(`/admin/quizzes/builder?edit=${quiz.id}`)
+                            }}
+                            className="px-3 py-1.5 text-xs font-medium text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/10 rounded-lg transition-colors"
+                          >
+                            Edit
+                          </button>
+                          {quiz.pdfStatus === 'generated' && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                router.push(`/admin/quizzes/${quiz.id}?tab=pdf`)
+                              }}
+                              className="px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                              title="Review PDF"
+                            >
+                              Review PDF
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
             {/* Pagination */}
             {pagination.totalPages > 1 && (
-              <div className="px-6 py-4 border-t border-gray-200/50 dark:border-gray-700/50 flex items-center justify-between bg-gradient-to-br from-gray-50/50 to-white/30 dark:from-gray-900/30 dark:to-gray-800/20">
-                <div className="text-sm text-gray-700 dark:text-gray-300">
+              <div className="px-6 py-4 border-t border-[hsl(var(--border))] flex items-center justify-between bg-[hsl(var(--muted))]">
+                <div className="text-sm text-[hsl(var(--foreground))]">
                   Showing {((page - 1) * pagination.limit) + 1} to{' '}
                   {Math.min(page * pagination.limit, pagination.total)} of {pagination.total} results
                 </div>
@@ -273,14 +376,14 @@ export default function AdminQuizzesPage() {
                   <button
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                     disabled={page === 1}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/50 border border-gray-300/50 dark:border-gray-700/50 rounded-xl hover:bg-gradient-to-br hover:from-gray-50 hover:to-gray-100/50 dark:hover:from-gray-700 dark:hover:to-gray-700/50 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_1px_2px_rgba(0,0,0,0.05),inset_0_1px_0_0_rgba(255,255,255,0.9)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.2),inset_0_1px_0_0_rgba(255,255,255,0.05)] hover:shadow-[0_2px_4px_rgba(0,0,0,0.08),inset_0_1px_0_0_rgba(255,255,255,0.9)] dark:hover:shadow-[0_2px_4px_rgba(0,0,0,0.3),inset_0_1px_0_0_rgba(255,255,255,0.05)] transition-all duration-200"
+                    className="px-4 py-2 text-sm font-medium text-[hsl(var(--foreground))] bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl hover:bg-[hsl(var(--muted))] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     Previous
                   </button>
                   <button
                     onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
                     disabled={page === pagination.totalPages}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/50 border border-gray-300/50 dark:border-gray-700/50 rounded-xl hover:bg-gradient-to-br hover:from-gray-50 hover:to-gray-100/50 dark:hover:from-gray-700 dark:hover:to-gray-700/50 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_1px_2px_rgba(0,0,0,0.05),inset_0_1px_0_0_rgba(255,255,255,0.9)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.2),inset_0_1px_0_0_rgba(255,255,255,0.05)] hover:shadow-[0_2px_4px_rgba(0,0,0,0.08),inset_0_1px_0_0_rgba(255,255,255,0.9)] dark:hover:shadow-[0_2px_4px_rgba(0,0,0,0.3),inset_0_1px_0_0_rgba(255,255,255,0.05)] transition-all duration-200"
+                    className="px-4 py-2 text-sm font-medium text-[hsl(var(--foreground))] bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl hover:bg-[hsl(var(--muted))] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     Next
                   </button>
