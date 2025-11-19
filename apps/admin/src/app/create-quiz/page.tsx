@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { SpellCheckInput } from "@/components/SpellCheckInput";
+import { QUIZ_CONSTANTS } from "@schoolquiz/db";
 
 // Dark mode toggle component
 function ThemeToggle() {
@@ -90,12 +91,11 @@ interface Category {
   icon: string;
 }
 
-const STANDARD_ROUND_COUNT = 4;
-const QUESTIONS_PER_STANDARD_ROUND = 6;
-const PEOPLE_ROUND_COUNT = 1;
-const TOTAL_ROUNDS = STANDARD_ROUND_COUNT + 1; // Includes People's Question finale
-const TOTAL_QUESTIONS =
-	STANDARD_ROUND_COUNT * QUESTIONS_PER_STANDARD_ROUND + PEOPLE_ROUND_COUNT;
+const STANDARD_ROUND_COUNT = QUIZ_CONSTANTS.STANDARD_ROUND_COUNT;
+const QUESTIONS_PER_STANDARD_ROUND = QUIZ_CONSTANTS.QUESTIONS_PER_STANDARD_ROUND;
+const PEOPLE_ROUND_COUNT = QUIZ_CONSTANTS.PEOPLE_ROUND_QUESTION_COUNT;
+const TOTAL_ROUNDS = QUIZ_CONSTANTS.TOTAL_ROUNDS;
+const TOTAL_QUESTIONS = QUIZ_CONSTANTS.TOTAL_QUESTIONS;
 
 export default function CreateQuiz() {
   const router = useRouter();
