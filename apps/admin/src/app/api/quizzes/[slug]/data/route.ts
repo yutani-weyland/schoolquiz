@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getMockQuizData, hasMockQuizData } from '@/lib/mock/quiz-fixtures';
+import { validateQuizStructure } from '@/lib/validation/quizValidation';
 
 /**
  * GET /api/quizzes/[slug]/data
@@ -33,6 +34,14 @@ export async function GET(
 				{ error: 'Quiz not found' },
 				{ status: 404 }
 			);
+		}
+
+		// Validate quiz structure
+		const validation = validateQuizStructure(quizData);
+		if (!validation.valid) {
+			console.error(`[Quiz API] Validation failed for quiz ${slug}:`, validation.errors);
+			// Still return data but log validation errors
+			// In production, you might want to return 500 or fix the data
 		}
 
 		return NextResponse.json(quizData);
