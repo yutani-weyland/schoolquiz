@@ -1,10 +1,12 @@
 'use client';
 
-import { useState } from 'react';
-import { Trophy, Plus, X, Edit2, Mail, Copy, Check, Users, LogIn, Eye } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Trophy, Plus, X, Edit2, Mail, Copy, Check, Users, LogIn, Eye, BarChart3, Settings } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { allColors } from '@/lib/colors';
+import { PrivateLeaguesAnalytics } from '@/components/profile/PrivateLeaguesAnalytics';
+import { getUserId } from '@/lib/storage';
 
 // Use the combined palette: 2025 trending warm colors + modern vibrant colors
 export const leagueColors = allColors;
@@ -161,13 +163,49 @@ function textOn(bg: string): 'black' | 'white' {
   return luminance > 0.5 ? 'black' : 'white';
 }
 
+type TabType = 'performance' | 'manage';
+
 export function PrivateLeaguesTab() {
+  const [activeTab, setActiveTab] = useState<TabType>('performance');
+  const [userId, setUserId] = useState<string | null>(null);
   const [leaderboards, setLeaderboards] = useState<League[]>(mockLeaderboards);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [invitingId, setInvitingId] = useState<string | null>(null);
   const [viewingMembersId, setViewingMembersId] = useState<string | null>(null);
+
+  // Get user ID on mount
+  useEffect(() => {
+    const currentUserId = getUserId();
+    if (currentUserId) {
+      setUserId(currentUserId);
+    } else {
+      // Fallback: try to fetch from API or use mock
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        fetch('/api/user/profile', {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.id) {
+              setUserId(data.id);
+            } else {
+              // Fallback to mock user ID
+              setUserId('user-andrew-123');
+            }
+          })
+          .catch(() => {
+            // Fallback to mock user ID
+            setUserId('user-andrew-123');
+          });
+      } else {
+        // Fallback to mock user ID
+        setUserId('user-andrew-123');
+      }
+    }
+  }, []);
 
   const handleUpdate = (id: string, updates: Partial<League>) => {
     setLeaderboards(leaderboards.map(lb => lb.id === id ? { ...lb, ...updates } : lb));
@@ -182,10 +220,138 @@ export function PrivateLeaguesTab() {
           Private Leagues
         </h1>
         <p className="text-base md:text-lg text-gray-600 dark:text-gray-400 max-w-2xl">
-          Create and manage your private competitions
+          Track your performance and manage your private competitions
         </p>
       </div>
 
+      {/* Tab Navigation */}
+      <div className="flex gap-2 border-b border-gray-200 dark:border-gray-800">
+        <button
+          onClick={() => setActiveTab('performance')}
+          className={`relative px-6 py-3 text-base font-medium transition-colors ${
+            activeTab === 'performance'
+              ? 'text-blue-600 dark:text-blue-400'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <BarChart3 className="w-5 h-5" />
+            <span>My Performance</span>
+          </div>
+          {activeTab === 'performance' && (
+            <motion.div
+              layoutId="activeTab"
+              className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400"
+              initial={false}
+              transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+            />
+          )}
+        </button>
+        <button
+          onClick={() => setActiveTab('manage')}
+          className={`relative px-6 py-3 text-base font-medium transition-colors ${
+            activeTab === 'manage'
+              ? 'text-blue-600 dark:text-blue-400'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <Settings className="w-5 h-5" />
+            <span>Manage Leagues</span>
+          </div>
+          {activeTab === 'manage' && (
+            <motion.div
+              layoutId="activeTab"
+              className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400"
+              initial={false}
+              transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+            />
+          )}
+        </button>
+      </div>
+
+      {/* Tab Content */}
+      <AnimatePresence mode="wait">
+        {activeTab === 'performance' ? (
+          <motion.div
+            key="performance"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+          >
+            {userId ? (
+              <PrivateLeaguesAnalytics userId={userId} colorScheme="blue" />
+            ) : (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center">
+                  <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                  <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+                </div>
+              </div>
+            )}
+          </motion.div>
+        ) : (
+          <motion.div
+            key="manage"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+          >
+            <ManageLeaguesView
+              leaderboards={leaderboards}
+              setLeaderboards={setLeaderboards}
+              showCreateModal={showCreateModal}
+              setShowCreateModal={setShowCreateModal}
+              showJoinModal={showJoinModal}
+              setShowJoinModal={setShowJoinModal}
+              editingId={editingId}
+              setEditingId={setEditingId}
+              invitingId={invitingId}
+              setInvitingId={setInvitingId}
+              viewingMembersId={viewingMembersId}
+              setViewingMembersId={setViewingMembersId}
+              handleUpdate={handleUpdate}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function ManageLeaguesView({
+  leaderboards,
+  setLeaderboards,
+  showCreateModal,
+  setShowCreateModal,
+  showJoinModal,
+  setShowJoinModal,
+  editingId,
+  setEditingId,
+  invitingId,
+  setInvitingId,
+  viewingMembersId,
+  setViewingMembersId,
+  handleUpdate,
+}: {
+  leaderboards: League[];
+  setLeaderboards: React.Dispatch<React.SetStateAction<League[]>>;
+  showCreateModal: boolean;
+  setShowCreateModal: React.Dispatch<React.SetStateAction<boolean>>;
+  showJoinModal: boolean;
+  setShowJoinModal: React.Dispatch<React.SetStateAction<boolean>>;
+  editingId: string | null;
+  setEditingId: React.Dispatch<React.SetStateAction<string | null>>;
+  invitingId: string | null;
+  setInvitingId: React.Dispatch<React.SetStateAction<string | null>>;
+  viewingMembersId: string | null;
+  setViewingMembersId: React.Dispatch<React.SetStateAction<string | null>>;
+  handleUpdate: (id: string, updates: Partial<League>) => void;
+}) {
+  return (
+    <div className="space-y-8">
       {/* Action Buttons */}
       <div className="flex flex-col sm:flex-row gap-4">
         <button
@@ -233,6 +399,7 @@ export function PrivateLeaguesTab() {
         <div className="text-center py-24 text-gray-400 dark:text-gray-600">
           <Trophy className="w-16 h-16 mx-auto mb-4 opacity-50" />
           <p className="text-lg">No leagues yet</p>
+          <p className="text-sm mt-2">Create or join a league to get started</p>
         </div>
       )}
 

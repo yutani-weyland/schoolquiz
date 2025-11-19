@@ -444,12 +444,12 @@ export default function LeaguesPage() {
       // Update league in local state for prototype
       const updatedLeagues = leagues.map(league => 
         league.id === selectedLeague.id
-          ? { ...league, name, description: description || null }
+          ? { ...league, name, description: description || null, color: leagueColor }
           : league
       )
       
       setLeagues(updatedLeagues)
-      setSelectedLeague({ ...selectedLeague, name, description: description || null })
+      setSelectedLeague({ ...selectedLeague, name, description: description || null, color: leagueColor })
       setShowEditModal(false)
       e.currentTarget.reset()
     } catch (error) {
@@ -596,7 +596,7 @@ export default function LeaguesPage() {
     return (
       <>
         <SiteHeader />
-        <main className="min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-white pt-32 pb-16 px-4 sm:px-8">
+        <main className="min-h-screen bg-white dark:bg-[#0F1419] text-gray-900 dark:text-white pt-32 pb-16 px-4 sm:px-8">
           <div className="max-w-6xl mx-auto text-center py-16">
             <Trophy className="w-16 h-16 text-gray-400 mx-auto mb-6" />
             <h1 className="text-4xl font-bold mb-4">Private Leagues</h1>
@@ -621,7 +621,7 @@ export default function LeaguesPage() {
     return (
       <>
         <SiteHeader />
-        <main className="min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-white pt-32 pb-16 px-4 sm:px-8">
+        <main className="min-h-screen bg-white dark:bg-[#0F1419] text-gray-900 dark:text-white pt-32 pb-16 px-4 sm:px-8">
           <div className="max-w-6xl mx-auto text-center py-16">
             <div className="text-gray-500 dark:text-gray-400">Loading leagues...</div>
           </div>
@@ -651,7 +651,7 @@ export default function LeaguesPage() {
   return (
     <>
       <SiteHeader />
-      <main className="min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-white pt-24 sm:pt-32 pb-16 px-4 sm:px-8">
+      <main className="min-h-screen bg-white dark:bg-[#0F1419] text-gray-900 dark:text-white pt-24 sm:pt-32 pb-16 px-4 sm:px-8">
         <div className="max-w-6xl mx-auto">
           {/* Header */}
           <div className="mb-12">
@@ -734,7 +734,10 @@ export default function LeaguesPage() {
                         {isCreator(selectedLeague) && (
                           <>
                             <button
-                              onClick={() => setShowEditModal(true)}
+                              onClick={() => {
+                                setLeagueColor(selectedLeague?.color || '#3B82F6')
+                                setShowEditModal(true)
+                              }}
                               className="inline-flex items-center justify-center gap-2 h-10 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-full font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-600 focus:ring-offset-2"
                               title="Edit league"
                             >
@@ -1174,15 +1177,68 @@ export default function LeaguesPage() {
                       name="description"
                       rows={3}
                       defaultValue={selectedLeague.description || ''}
-                      className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:border-transparent resize-none transition-all"
+                      className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:border-transparent resize-none transition-all"
+                      style={{ '--tw-ring-color': leagueColor } as React.CSSProperties}
+                      onFocus={(e) => e.currentTarget.style.boxShadow = `0 0 0 2px ${leagueColor}`}
+                      onBlur={(e) => e.currentTarget.style.boxShadow = ''}
                       placeholder="Describe your league..."
                     />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-3 text-gray-900 dark:text-white">League Color</label>
+                    <div className="grid grid-cols-8 gap-2">
+                      {[
+                        '#3B82F6', // Blue
+                        '#8B5CF6', // Purple
+                        '#10B981', // Emerald
+                        '#F59E0B', // Amber
+                        '#EF4444', // Red
+                        '#EC4899', // Pink
+                        '#06B6D4', // Cyan
+                        '#84CC16', // Lime
+                        '#6366F1', // Indigo
+                        '#F97316', // Orange
+                        '#14B8A6', // Teal
+                        '#A855F7', // Violet
+                        '#22C55E', // Green
+                        '#EAB308', // Yellow
+                        '#F43F5E', // Rose
+                        '#0EA5E9', // Sky
+                      ].map((color) => (
+                        <button
+                          key={color}
+                          type="button"
+                          onClick={() => setLeagueColor(color)}
+                          className={`w-10 h-10 rounded-lg border-2 transition-all ${
+                            leagueColor === color
+                              ? 'border-gray-900 dark:border-white scale-110 ring-2 ring-offset-2'
+                              : 'border-gray-200 dark:border-gray-600 hover:scale-105'
+                          }`}
+                          style={{ backgroundColor: color }}
+                          aria-label={`Select color ${color}`}
+                        />
+                      ))}
+                    </div>
                   </div>
                   <div className="flex gap-3 pt-2">
                     <button
                       type="submit"
                       disabled={editing}
-                      className="flex-1 inline-flex items-center justify-center h-11 px-4 bg-[#3B82F6] text-white rounded-full font-medium hover:bg-[#2563EB] transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:ring-offset-2"
+                      className="flex-1 inline-flex items-center justify-center h-11 px-4 text-white rounded-full font-medium transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-offset-2"
+                      style={{ 
+                        backgroundColor: leagueColor,
+                        '--tw-ring-color': leagueColor,
+                      } as React.CSSProperties}
+                      onMouseEnter={(e) => {
+                        if (!editing) {
+                          e.currentTarget.style.backgroundColor = darkenColor(leagueColor, 10)
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!editing) {
+                          e.currentTarget.style.backgroundColor = leagueColor
+                        }
+                      }}
                     >
                       {editing ? 'Saving...' : 'Save Changes'}
                     </button>

@@ -34,11 +34,11 @@ export function QuizSignupModal({ isOpen, onClose }: QuizSignupModalProps) {
             className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
           >
             <div
-              className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-2xl max-w-md w-full pointer-events-auto overflow-hidden"
+              className="bg-white dark:bg-[#1A1F2E] rounded-3xl border border-gray-200 dark:border-[#2D3748] shadow-2xl max-w-md w-full pointer-events-auto overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
-              <div className="relative p-6 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+              <div className="relative p-6 border-b border-gray-200 dark:border-[#2D3748] bg-white dark:bg-[#1A1F2E]">
                 <button
                   onClick={onClose}
                   className="absolute top-6 right-6 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
@@ -62,7 +62,7 @@ export function QuizSignupModal({ isOpen, onClose }: QuizSignupModalProps) {
 
               {/* Content */}
               <div className="p-6 space-y-6">
-                <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+                <div className="bg-gray-50 dark:bg-[#1A1F2E]/50 rounded-xl p-4 border border-gray-200 dark:border-[#2D3748]">
                   <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
                     Sign up for a free account and get <strong>3 quizzes for free</strong>! 
                     You'll be able to play the latest weekly quiz and track your progress.

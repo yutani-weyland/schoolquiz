@@ -9,7 +9,7 @@ export function Footer() {
 	return (
 		<footer className="relative bg-[#3B82F6] text-white pt-20 pb-8 px-4 md:px-8">
 			{/* Rounded top corners effect - page background curving down into footer */}
-			<div className="absolute top-0 left-0 right-0 h-6 md:h-8 bg-gray-50 dark:bg-[#1A1A1A] rounded-b-[1.5rem] md:rounded-b-[2.5rem]" />
+			<div className="absolute top-0 left-0 right-0 h-6 md:h-8 bg-gray-50 dark:bg-[#0F1419] rounded-b-[1.5rem] md:rounded-b-[2.5rem]" />
 			
 			<div className="max-w-7xl mx-auto relative z-10">
 				<div className="flex flex-col md:flex-row justify-between items-start gap-12 mb-12">

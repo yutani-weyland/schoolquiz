@@ -21,7 +21,7 @@ export default function Error({
   }, [error]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-[#0F1419] p-4">
       <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 text-center">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
           Something went wrong
@@ -47,5 +47,6 @@ export default function Error({
     </div>
   );
 }
+
 
 

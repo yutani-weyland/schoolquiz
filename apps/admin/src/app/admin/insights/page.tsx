@@ -123,8 +123,7 @@ export default function InsightsPage() {
     <div className="max-w-7xl mx-auto">
       {/* Page Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-3">
-          <BarChart3 className="w-8 h-8" />
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
           Insights
         </h1>
         <p className="text-gray-600 dark:text-gray-400">Decision-grade KPIs and performance analytics</p>

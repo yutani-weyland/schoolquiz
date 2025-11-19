@@ -5,9 +5,10 @@ import "../styles/global.css";
 export interface Props {
   title: string;
   description?: string;
+  customScrollbar?: boolean;
 }
 
-const { title, description = "Weekly quiz for Australian students" } = Astro.props;
+const { title, description = "Weekly quiz for Australian students", customScrollbar = false } = Astro.props;
 ---
 
 <!DOCTYPE html>
@@ -35,7 +36,7 @@ const { title, description = "Weekly quiz for Australian students" } = Astro.pro
       })();
     </script>
   </head>
-  <body class="bg-gray-50 dark:bg-[#1A1A1A] text-gray-900 dark:text-white">
+  <body class={`bg-gray-50 dark:bg-[#0F1419] text-gray-900 dark:text-white ${customScrollbar ? 'scrollbar-custom' : ''}`}>
     <slot />
     <script is:inline>
       // Ensure theme persists across ViewTransitions and page navigations

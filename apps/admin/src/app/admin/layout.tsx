@@ -1,5 +1,6 @@
 import { AdminSidebar } from '@/components/admin/AdminSidebar'
 import { AdminTopbar } from '@/components/admin/AdminTopbar'
+import { ScrollArea } from '@/components/ui/scroll-area'
 
 interface AdminLayoutProps {
   children: React.ReactNode
@@ -45,16 +46,18 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
   }
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-gray-50 dark:bg-gray-900">
+    <div className="flex h-screen w-screen overflow-hidden bg-[hsl(var(--background))]">
       {/* Sidebar */}
       <AdminSidebar />
       
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-gray-50 dark:bg-gray-900">
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-[hsl(var(--background))]">
         <AdminTopbar />
-        <main className="flex-1 overflow-auto p-6">
-          {children}
-        </main>
+        <ScrollArea className="flex-1">
+          <main className="p-6 bg-[hsl(var(--background))]">
+            {children}
+          </main>
+        </ScrollArea>
       </div>
     </div>
   )

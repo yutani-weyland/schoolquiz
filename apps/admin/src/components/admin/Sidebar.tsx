@@ -71,10 +71,10 @@ export function Sidebar() {
     const content = (
       <Link
         href={item.href}
-        className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
+        className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
           isActive 
-            ? 'bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-900/30 dark:to-blue-900/20 text-blue-700 dark:text-blue-300 shadow-[0_1px_3px_rgba(59,130,246,0.15),inset_0_1px_0_0_rgba(255,255,255,0.9)] dark:shadow-[0_1px_3px_rgba(59,130,246,0.2),inset_0_1px_0_0_rgba(255,255,255,0.05)]' 
-            : 'text-gray-700 dark:text-gray-300 hover:bg-gradient-to-br hover:from-gray-50 hover:to-gray-100/50 dark:hover:from-gray-800/50 dark:hover:to-gray-800/30 hover:shadow-[0_1px_3px_rgba(0,0,0,0.08),inset_0_1px_0_0_rgba(255,255,255,0.9)] dark:hover:shadow-[0_1px_3px_rgba(0,0,0,0.2),inset_0_1px_0_0_rgba(255,255,255,0.05)]'
+            ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]' 
+            : 'text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]'
         }`}
       >
         <Icon className="w-5 h-5 flex-shrink-0" />
@@ -91,11 +91,11 @@ export function Sidebar() {
             </Tooltip.Trigger>
             <Tooltip.Portal>
               <Tooltip.Content 
-                className="bg-slate-900 text-white text-xs px-2 py-1 rounded shadow-lg"
+                className="bg-[hsl(var(--raised))] text-[hsl(var(--foreground))] border border-[hsl(var(--border))] text-xs px-2 py-1 rounded shadow-lg z-50"
                 side="right"
               >
                 {item.label}
-                <Tooltip.Arrow className="fill-slate-900" />
+                <Tooltip.Arrow className="fill-[hsl(var(--raised))]" />
               </Tooltip.Content>
             </Tooltip.Portal>
           </Tooltip.Root>
@@ -107,20 +107,20 @@ export function Sidebar() {
   };
 
   return (
-    <div className={`bg-gray-50 dark:bg-gray-900 border-r border-gray-200/50 dark:border-gray-700/50 transition-all duration-200 ${
+    <div className={`bg-[hsl(var(--card))] border-r border-[hsl(var(--border))] transition-all duration-200 ${
       collapsed ? 'w-16' : 'w-60'
     }`}>
       <div className="sticky top-0 h-screen flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200/50 dark:border-gray-700/50 bg-white dark:bg-gray-900">
+        <div className="flex items-center justify-between p-4 border-b border-[hsl(var(--border))] bg-[hsl(var(--card))]">
           {!collapsed && (
-            <div className="text-lg font-semibold text-gray-900 dark:text-white">
+            <div className="text-lg font-semibold text-[hsl(var(--foreground))]">
               Admin
             </div>
           )}
           <button
             onClick={toggleCollapsed}
-            className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-all duration-200"
+            className="p-2 rounded-xl hover:bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] transition-all duration-200"
           >
             {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
           </button>

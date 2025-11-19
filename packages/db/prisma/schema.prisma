@@ -62,20 +62,21 @@ model Category {
 }
 
 model Question {
-  id          String    @id @default(cuid())
-  categoryId  String
-  text        String
-  answer      String
-  explanation String?
-  difficulty  Float // 0-1 scale
-  tags        String    @default("") // Comma-separated tags
-  status      String    @default("draft") // draft, review, published, archived
-  createdBy   String
-  usageCount  Int       @default(0)
-  lastUsedAt  DateTime?
-  isUsed      Boolean   @default(false) // Track if question has been used in a published quiz
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id              String    @id @default(cuid())
+  categoryId      String
+  text            String
+  answer          String
+  explanation     String?
+  difficulty      Float // 0-1 scale
+  tags            String    @default("") // Comma-separated tags
+  status          String    @default("draft") // draft, review, published, archived
+  createdBy       String
+  isPeopleQuestion Boolean  @default(false) // True if this is a people's question
+  usageCount      Int       @default(0)
+  lastUsedAt      DateTime?
+  isUsed          Boolean   @default(false) // Track if question has been used in a published quiz
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   category Category            @relation(fields: [categoryId], references: [id])
   creator  Teacher             @relation(fields: [createdBy], references: [id])
@@ -100,6 +101,7 @@ model Quiz {
   seasonalTag     String?
   publicationDate DateTime?
   status          String    @default("draft") // draft, scheduled, published
+  colorHex        String?   // Hex color for quiz card (e.g., "#FFE135")
   createdBy       String
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -109,6 +111,7 @@ model Quiz {
   rounds  Round[]
   runs    Run[]
   pdfUrl  String? // URL to generated PDF
+  pdfStatus String? // pending, generated, approved
 
   @@map("quizzes")
 }

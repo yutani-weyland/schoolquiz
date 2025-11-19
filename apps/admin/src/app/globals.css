@@ -102,25 +102,37 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222.2 84% 4.9%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96%;
-    --accent-foreground: 222.2 84% 4.9%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    /* HSL-based color system - Light mode */
+    /* Background colors - Light mode (100% = lightest base, 95% = cards, 90% = raised) */
+    --background: 0 0% 100%;         /* Base background - lightest */
+    --card: 0 0% 100%;               /* Card/surface background */
+    --card-foreground: 0 0% 10%;     /* Card text */
+    --popover: 0 0% 100%;            /* Popover background */
+    --popover-foreground: 0 0% 10%;  /* Popover text */
+    --raised: 0 0% 95%;              /* Raised/highlighted elements */
+    
+    /* Text colors - Light mode */
+    --foreground: 0 0% 10%;          /* Primary text - high contrast */
+    --muted-foreground: 0 0% 45%;    /* Muted/secondary text */
+    
+    /* Interactive elements */
+    --primary: 217 91% 50%;          /* Primary action color (blue) */
+    --primary-foreground: 0 0% 100%; /* Text on primary */
+    --secondary: 0 0% 96%;           /* Secondary background */
+    --secondary-foreground: 0 0% 10%; /* Text on secondary */
+    --accent: 0 0% 96%;              /* Accent background */
+    --accent-foreground: 0 0% 10%;   /* Text on accent */
+    --muted: 0 0% 96%;               /* Muted background */
+    
+    /* Borders and inputs */
+    --border: 0 0% 90%;              /* Border color */
+    --input: 0 0% 100%;              /* Input background */
+    --ring: 217 91% 50%;             /* Focus ring */
+    
+    /* Semantic colors */
+    --destructive: 0 84% 60%;        /* Error/destructive actions */
+    --destructive-foreground: 0 0% 100%; /* Text on destructive */
+    
     --radius: 0.5rem;
     
     /* Round colors - unified with tokens.ts */
@@ -182,25 +194,38 @@
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    /* HSL-based color system - Dark gray backgrounds (not pure black) */
+    /* Using #0F1419 (similar to login page) for better visual consistency */
+    
+    /* Background colors - Dark gray base, subtle cards */
+    --background: 210 20% 8%;        /* Base background - dark gray (#0F1419) */
+    --card: 210 20% 10%;             /* Card/surface - slightly lighter */
+    --popover: 210 20% 10%;          /* Popover background */
+    --raised: 210 20% 12%;           /* Raised/highlighted elements */
+    
+    /* Text colors - High contrast for readability */
+    --foreground: 0 0% 98%;          /* Primary text - nearly white */
+    --card-foreground: 0 0% 98%;     /* Card text */
+    --popover-foreground: 0 0% 98%;  /* Popover text */
+    --muted-foreground: 0 0% 63%;    /* Muted/secondary text - readable but subtle */
+    
+    /* Interactive elements */
+    --primary: 217 91% 60%;          /* Primary action color (blue) */
+    --primary-foreground: 0 0% 100%; /* Text on primary */
+    --secondary: 0 0% 6%;            /* Secondary background - very subtle */
+    --secondary-foreground: 0 0% 98%; /* Text on secondary */
+    --accent: 0 0% 6%;               /* Accent background */
+    --accent-foreground: 0 0% 98%;   /* Text on accent */
+    --muted: 0 0% 6%;                /* Muted background - extremely subtle */
+    
+    /* Borders and inputs */
+    --border: 0 0% 12%;              /* Border color - subtle but visible */
+    --input: 0 0% 3%;                /* Input background - matches card */
+    --ring: 217 91% 60%;             /* Focus ring */
+    
+    /* Semantic colors */
+    --destructive: 0 84% 60%;        /* Error/destructive actions */
+    --destructive-foreground: 0 0% 100%; /* Text on destructive */
     
     /* Card colors in dark mode */
     --card-bg: var(--card-bg-dark);
@@ -219,6 +244,24 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "kern" 1, "liga" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  
+  /* Improved typography for card headings and values */
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+  }
+  
+  /* Better font rendering for bold text in cards */
+  .font-bold,
+  .font-extrabold,
+  .font-semibold {
+    letter-spacing: -0.01em;
   }
 }
 

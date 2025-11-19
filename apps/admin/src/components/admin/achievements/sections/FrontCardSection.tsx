@@ -40,7 +40,7 @@ export function FrontCardSection({
         <button
           type="button"
           onClick={() => setIsFontBrowserOpen(true)}
-          className="w-full px-4 py-3 pt-3.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center justify-between"
+          className="w-full px-4 py-3 pt-3.5 border border-gray-300 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center justify-between"
           style={{ paddingTop: '0.875rem' }}
         >
           <span style={{ fontFamily: currentFont === 'system-ui' ? 'system-ui' : `"${currentFont}"` }}>
@@ -71,7 +71,7 @@ export function FrontCardSection({
           onChange={(e) => updateField('shortDescription', e.target.value)}
           rows={3}
           maxLength={150}
-          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
           placeholder="Brief description for front of card"
         />
         <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">

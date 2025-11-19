@@ -27,9 +27,9 @@ function Calendar({
         caption: "flex justify-center pt-1 relative items-center",
         caption_label: "text-sm font-medium hidden",
         dropdowns: "flex justify-center gap-1",
-        dropdown: "h-7 px-2 text-sm font-medium bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/50 border border-gray-300/50 dark:border-gray-700/50 rounded-xl text-gray-900 dark:text-white shadow-[inset_0_1px_2px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)]",
-        dropdown_month: "h-7 px-2 text-sm font-medium bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/50 border border-gray-300/50 dark:border-gray-700/50 rounded-xl text-gray-900 dark:text-white shadow-[inset_0_1px_2px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)]",
-        dropdown_year: "h-7 px-2 text-sm font-medium bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/50 border border-gray-300/50 dark:border-gray-700/50 rounded-xl text-gray-900 dark:text-white shadow-[inset_0_1px_2px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)]",
+        dropdown: "h-7 px-2 text-sm font-medium bg-[hsl(var(--input))] border border-[hsl(var(--border))] rounded-xl text-[hsl(var(--foreground))]",
+        dropdown_month: "h-7 px-2 text-sm font-medium bg-[hsl(var(--input))] border border-[hsl(var(--border))] rounded-xl text-[hsl(var(--foreground))]",
+        dropdown_year: "h-7 px-2 text-sm font-medium bg-[hsl(var(--input))] border border-[hsl(var(--border))] rounded-xl text-[hsl(var(--foreground))]",
         dropdown_icon: "h-4 w-4 opacity-50",
         nav: "space-x-1 flex items-center",
         button_previous: cn(

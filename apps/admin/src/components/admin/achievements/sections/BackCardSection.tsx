@@ -33,7 +33,7 @@ export function BackCardSection({
           onChange={(e) => updateField('longDescription', e.target.value)}
           rows={4}
           maxLength={500}
-          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
           placeholder="Detailed description for back of card"
         />
         <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -49,7 +49,7 @@ export function BackCardSection({
         <button
           type="button"
           onClick={() => setIsFontBrowserOpen(true)}
-          className="w-full px-4 py-3 pt-3.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center justify-between"
+          className="w-full px-4 py-3 pt-3.5 border border-gray-300 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center justify-between"
           style={{ paddingTop: '0.875rem' }}
         >
           <span style={{ fontFamily: currentFont === 'system-ui' ? 'system-ui' : `"${currentFont}"` }}>

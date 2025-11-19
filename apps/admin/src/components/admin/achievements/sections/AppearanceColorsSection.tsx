@@ -29,16 +29,16 @@ export function AppearanceColorsSection({
           <div className="flex items-center gap-3">
             <input
               type="color"
-              value={appearance.backgroundColor || '#F59E0B'}
+              value={appearance.backgroundColor || '#9D9D9D'}
               onChange={(e) => updateAppearance('backgroundColor', e.target.value)}
               className="w-16 h-10 border border-gray-300 dark:border-gray-700 rounded cursor-pointer"
             />
             <input
               type="text"
-              value={appearance.backgroundColor || '#F59E0B'}
+              value={appearance.backgroundColor || '#9D9D9D'}
               onChange={(e) => updateAppearance('backgroundColor', e.target.value)}
-              className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="#F59E0B"
+              className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              placeholder="#9D9D9D"
             />
           </div>
           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -57,8 +57,8 @@ export function AppearanceColorsSection({
               onChange={(e) =>
                 updateAppearance('backgroundGradientFrom', e.target.value || undefined)
               }
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="#F59E0B"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              placeholder="#9D9D9D"
             />
           </div>
           <div>
@@ -71,8 +71,8 @@ export function AppearanceColorsSection({
               onChange={(e) =>
                 updateAppearance('backgroundGradientTo', e.target.value || undefined)
               }
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="#F59E0B"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              placeholder="#9D9D9D"
             />
           </div>
         </div>
@@ -93,7 +93,7 @@ export function AppearanceColorsSection({
                 type="text"
                 value={appearance.textColorPrimary || '#FFFFFF'}
                 onChange={(e) => updateAppearance('textColorPrimary', e.target.value)}
-                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               />
             </div>
           </div>
@@ -112,7 +112,7 @@ export function AppearanceColorsSection({
                 type="text"
                 value={appearance.textColorSecondary || '#FFFFFF'}
                 onChange={(e) => updateAppearance('textColorSecondary', e.target.value)}
-                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               />
             </div>
           </div>

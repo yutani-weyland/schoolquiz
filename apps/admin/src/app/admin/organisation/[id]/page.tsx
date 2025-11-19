@@ -98,7 +98,7 @@ export default function OrganisationAdminPage() {
   const StatusIcon = statusBadge.icon;
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900">
+    <div className="min-h-screen bg-white dark:bg-[#0F1419]">
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Header */}
         <div className="mb-8">

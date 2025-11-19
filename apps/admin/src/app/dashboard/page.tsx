@@ -305,9 +305,9 @@ export default function Dashboard() {
          ];
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900">
+    <div className="min-h-screen bg-white dark:bg-[#0F1419]">
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 py-3 px-6 bg-white/95 dark:bg-gray-900/95 backdrop-blur border-b border-gray-200 dark:border-gray-700">
+      <header className="fixed top-0 left-0 right-0 z-50 py-3 px-6 bg-white/95 dark:bg-[#0F1419]/95 backdrop-blur border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
           <div className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
             The School Quiz

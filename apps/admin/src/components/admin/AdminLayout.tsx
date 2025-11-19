@@ -9,7 +9,7 @@ interface AdminLayoutProps {
 
 export function AdminLayout({ children }: AdminLayoutProps) {
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-white dark:bg-[hsl(var(--background))]">
       <div className="flex">
         {/* Sidebar */}
         <Sidebar />
@@ -20,7 +20,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           <Topbar />
           
           {/* Page Content */}
-          <main className="flex-1 p-6">
+          <main className="flex-1 p-6 bg-white dark:bg-[hsl(var(--background))]">
             {children}
           </main>
         </div>

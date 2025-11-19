@@ -75,7 +75,7 @@ export function FeatureShowcase() {
 	const [selectedFeature, setSelectedFeature] = useState(features[0]);
 
 	return (
-		<section className="py-32 px-4 bg-white dark:bg-gray-900">
+		<section className="py-32 px-4 bg-white dark:bg-[#0F1419]">
 			<div className="max-w-7xl mx-auto">
 				{/* Header */}
 				<div className="text-center mb-24">
@@ -98,7 +98,7 @@ export function FeatureShowcase() {
 								className={`w-full text-left group relative overflow-hidden rounded-2xl p-6 border-2 transition-all duration-300 ${
 									selectedFeature.id === feature.id
 										? "border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20 shadow-lg"
-										: "border-gray-200 dark:border-gray-800 hover:border-blue-300 dark:hover:border-blue-700 bg-white dark:bg-gray-800"
+										: "border-gray-200 dark:border-[#2D3748] hover:border-blue-300 dark:hover:border-blue-600 bg-white dark:bg-[#1A1F2E]"
 								}`}
 								whileHover={{ scale: 1.02 }}
 								whileTap={{ scale: 0.98 }}

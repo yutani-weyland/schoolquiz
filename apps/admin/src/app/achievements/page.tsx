@@ -8,7 +8,7 @@ import { AchievementBrowserModal } from "@/components/achievements/AchievementBr
 import { useUserTier } from "@/hooks/useUserTier";
 import { useUserAccess } from "@/contexts/UserAccessContext";
 import type { UserTier } from "@/lib/feature-gating";
-import { Trophy, Search } from "lucide-react";
+import { Trophy, Search, Filter, ChevronDown, Calendar, X } from "lucide-react";
 import { Footer } from "@/components/Footer";
 
 type AchievementStatus = "unlocked" | "locked_free" | "locked_premium";
@@ -269,6 +269,13 @@ export default function AchievementsPage() {
 	const [isBrowserOpen, setIsBrowserOpen] = useState(false);
 	const [localStoragePremium, setLocalStoragePremium] = useState(false);
 	const [flippedCardId, setFlippedCardId] = useState<string | null>(null);
+	
+	// Filter and sort state
+	const [searchQuery, setSearchQuery] = useState('');
+	const [categoryFilter, setCategoryFilter] = useState<string>('all');
+	const [statusFilter, setStatusFilter] = useState<'all' | 'unlocked' | 'in-progress' | 'yet-to-earn'>('all');
+	const [dateSort, setDateSort] = useState<'newest' | 'oldest'>('newest');
+	const [showHidden, setShowHidden] = useState(false);
 
 	// Use localStorage first (most immediate), then context, then hook
 	// This ensures premium status is detected even if API calls fail
@@ -494,27 +501,58 @@ export default function AchievementsPage() {
 	const unlockedCount = achievements.filter((a) => a.status === "unlocked").length;
 	const totalCount = achievements.length;
 
-	// Get earned achievements (unlocked, sorted by most recent)
-	const earnedAchievements = achievements
-		.filter((a) => a.status === "unlocked")
-		.sort((a, b) => {
+	// Get all unique categories
+	const categories = Array.from(new Set(achievements.map(a => a.category)));
+
+	// Filter and sort achievements
+	const filteredAndSortedAchievements = React.useMemo(() => {
+		let filtered = achievements.filter((a) => {
+			// Search filter
+			if (searchQuery) {
+				const query = searchQuery.toLowerCase();
+				if (!a.name.toLowerCase().includes(query) && 
+					!a.shortDescription.toLowerCase().includes(query)) {
+					return false;
+				}
+			}
+
+			// Category filter
+			if (categoryFilter !== 'all' && a.category !== categoryFilter) {
+				return false;
+			}
+
+			// Status filter
+			if (statusFilter === 'unlocked' && a.status !== 'unlocked') return false;
+			if (statusFilter === 'in-progress' && (a.status === 'unlocked' || !a.progressValue || a.progressValue === 0)) return false;
+			if (statusFilter === 'yet-to-earn' && (a.status === 'unlocked' || (a.progressValue && a.progressValue > 0))) return false;
+
+			// Hidden filter (locked premium achievements)
+			if (!showHidden && a.status === 'locked_premium') return false;
+
+			return true;
+		});
+
+		// Sort by date earned
+		filtered = filtered.sort((a, b) => {
 			const dateA = a.unlockedAt ? new Date(a.unlockedAt).getTime() : 0;
 			const dateB = b.unlockedAt ? new Date(b.unlockedAt).getTime() : 0;
-			return dateB - dateA; // Most recent first
+			
+			if (dateA === 0 && dateB === 0) return 0;
+			if (dateA === 0) return 1; // Items without dates go to end
+			if (dateB === 0) return -1;
+			
+			return dateSort === 'newest' ? dateB - dateA : dateA - dateB;
 		});
 
-	// Get in-progress achievements (have progress but not unlocked)
-	const inProgressAchievements = achievements
-		.filter((a) => a.status !== "unlocked" && a.progressValue !== undefined && a.progressValue > 0)
-		.sort((a, b) => {
-			// Sort by progress percentage (highest first)
-			const percentA = a.progressMax ? (a.progressValue || 0) / a.progressMax : 0;
-			const percentB = b.progressMax ? (b.progressValue || 0) / b.progressMax : 0;
-			return percentB - percentA;
-		});
+		return filtered;
+	}, [achievements, searchQuery, categoryFilter, statusFilter, dateSort, showHidden]);
 
-	// Get locked achievements (not yet earned and no progress)
-	const lockedAchievements = achievements.filter(
+	// Separate into groups for display
+	const earnedAchievements = filteredAndSortedAchievements.filter((a) => a.status === "unlocked");
+	const inProgressAchievements = filteredAndSortedAchievements.filter(
+		(a) => a.status !== "unlocked" && a.progressValue !== undefined && a.progressValue > 0
+	);
+	const yetToEarnAchievements = filteredAndSortedAchievements.filter(
 		(a) => a.status !== "unlocked" && (a.progressValue === undefined || a.progressValue === 0)
 	);
 
@@ -531,11 +569,10 @@ export default function AchievementsPage() {
 								animate={{ opacity: 1, y: 0 }}
 								transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
 							>
-								<Trophy className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-6" />
-								<h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-gray-900 dark:text-white mb-4">
-									Achievement Collection
-								</h1>
-								<p className="text-lg text-gray-600 dark:text-gray-400 mb-8 max-w-2xl mx-auto">
+						<h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-[hsl(var(--foreground))] mb-4">
+							Achievement Collection
+						</h1>
+								<p className="text-lg text-[hsl(var(--muted-foreground))] mb-8 max-w-2xl mx-auto">
 									Create a free account to start tracking your quiz progress and earning achievements.
 								</p>
 							</motion.div>
@@ -592,44 +629,128 @@ export default function AchievementsPage() {
 						initial={{ opacity: 0, y: 20 }}
 						animate={{ opacity: 1, y: 0 }}
 						transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-						className="max-w-4xl mx-auto text-center mb-12"
+						className="max-w-4xl mx-auto text-center mb-8"
 					>
-						<h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 dark:text-white mb-4">
-							Achievements
+						<h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-[hsl(var(--foreground))] mb-4">
+							Your Achievements
 						</h1>
-						<p className="text-lg text-gray-600 dark:text-gray-400 mb-6">
+						<p className="text-lg text-[hsl(var(--muted-foreground))] mb-6">
 							{isLoading ? 'Loading...' : `${unlockedCount} of ${totalCount} unlocked`}
 						</p>
-						{isPremium && (
-							<motion.button
-								initial={{ opacity: 0, y: 10 }}
-								animate={{ opacity: 1, y: 0 }}
-								transition={{ delay: 0.2 }}
-								onClick={() => setIsBrowserOpen(true)}
-								className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-base font-medium bg-[#3B82F6] text-white hover:bg-[#2563EB] transition-colors shadow-sm hover:shadow-md"
+					</motion.div>
+
+					{/* Subtle Filters */}
+					<motion.div
+						initial={{ opacity: 0, y: 10 }}
+						animate={{ opacity: 1, y: 0 }}
+						transition={{ duration: 0.4, delay: 0.1 }}
+						className="max-w-4xl mx-auto mb-8 px-4"
+					>
+						<div className="flex flex-col sm:flex-row gap-3 items-center justify-center">
+							{/* Search */}
+							<div className="relative flex-1 max-w-md w-full">
+								<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[hsl(var(--muted-foreground))]" />
+								<input
+									type="text"
+									placeholder="Search achievements..."
+									value={searchQuery}
+									onChange={(e) => setSearchQuery(e.target.value)}
+									className="w-full pl-10 pr-4 py-2 text-sm bg-[hsl(var(--muted))]/50 border border-[hsl(var(--border))] rounded-full text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] transition-all"
+								/>
+								{searchQuery && (
+									<button
+										onClick={() => setSearchQuery('')}
+										className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-[hsl(var(--muted))] rounded-full transition-colors"
+									>
+										<X className="w-3 h-3 text-[hsl(var(--muted-foreground))]" />
+									</button>
+								)}
+							</div>
+
+							{/* Category Filter */}
+							<select
+								value={categoryFilter}
+								onChange={(e) => setCategoryFilter(e.target.value)}
+								className="px-4 py-2 text-sm bg-[hsl(var(--muted))]/50 border border-[hsl(var(--border))] rounded-full text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] transition-all cursor-pointer"
 							>
-								<Search className="w-4 h-4" />
-								Explore All Achievements
-							</motion.button>
-						)}
+								<option value="all">All Categories</option>
+								{categories.map(cat => (
+									<option key={cat} value={cat}>
+										{cat.charAt(0).toUpperCase() + cat.slice(1)}
+									</option>
+								))}
+							</select>
+
+							{/* Status Filter */}
+							<select
+								value={statusFilter}
+								onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
+								className="px-4 py-2 text-sm bg-[hsl(var(--muted))]/50 border border-[hsl(var(--border))] rounded-full text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] transition-all cursor-pointer"
+							>
+								<option value="all">All Status</option>
+								<option value="unlocked">Unlocked</option>
+								<option value="in-progress">In Progress</option>
+								<option value="yet-to-earn">Yet to Earn</option>
+							</select>
+
+							{/* Date Sort */}
+							<button
+								onClick={() => setDateSort(dateSort === 'newest' ? 'oldest' : 'newest')}
+								className="px-4 py-2 text-sm bg-[hsl(var(--muted))]/50 border border-[hsl(var(--border))] rounded-full text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] transition-all flex items-center gap-2"
+								title={`Sort by date: ${dateSort === 'newest' ? 'Newest first' : 'Oldest first'}`}
+							>
+								<Calendar className="w-4 h-4" />
+								{dateSort === 'newest' ? 'Newest' : 'Oldest'}
+							</button>
+
+							{/* Show Hidden Toggle */}
+							{isPremium && (
+								<button
+									onClick={() => setShowHidden(!showHidden)}
+									className={`px-4 py-2 text-sm border rounded-full transition-all flex items-center gap-2 ${
+										showHidden
+											? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] border-[hsl(var(--primary))]'
+											: 'bg-[hsl(var(--muted))]/50 border-[hsl(var(--border))] text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]'
+									}`}
+									title={showHidden ? 'Hide premium locked' : 'Show premium locked'}
+								>
+									<Filter className="w-4 h-4" />
+									Hidden
+								</button>
+							)}
+						</div>
 					</motion.div>
 
 				{/* Unlocked Achievements */}
-				<motion.div
-					initial={{ opacity: 0, y: 20 }}
-					animate={{ opacity: 1, y: 0 }}
-					transition={{ duration: 0.5, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-					className="max-w-7xl mx-auto w-full px-4 mb-16"
-				>
-					{earnedAchievements.length > 0 ? (
+				{earnedAchievements.length > 0 && (
+					<motion.div
+						initial={{ opacity: 0, y: 20 }}
+						animate={{ opacity: 1, y: 0 }}
+						transition={{ duration: 0.5, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+						className="max-w-7xl mx-auto w-full px-4 mb-16"
+					>
+						{(statusFilter === 'all' || statusFilter === 'unlocked') && (
+							<div className="mb-6 text-center">
+								<h2 className="text-2xl md:text-3xl font-bold text-[hsl(var(--foreground))] mb-2">
+									Unlocked
+								</h2>
+								{statusFilter === 'all' && (
+									<p className="text-sm text-[hsl(var(--muted-foreground))]">
+										{earnedAchievements.length} achievement{earnedAchievements.length !== 1 ? 's' : ''} earned
+									</p>
+								)}
+							</div>
+						)}
 						<div className="flex flex-wrap justify-center gap-4">
-							{earnedAchievements.map((achievement, index) => {
+							<AnimatePresence mode="popLayout">
+								{earnedAchievements.map((achievement, index) => {
 								const isFlipped = flippedCardId === achievement.id
 								const rotation = (index % 5 - 2) * 1 // Subtle angles: -2, -1, 0, 1, 2 degrees
 								
 								return (
 									<motion.div
 										key={achievement.id}
+										layout
 										initial={{ opacity: 0, y: 20, scale: 0.9 }}
 										animate={{ 
 											opacity: 1, 
@@ -637,10 +758,12 @@ export default function AchievementsPage() {
 											scale: 1,
 											rotate: isFlipped ? 0 : rotation,
 										}}
+										exit={{ opacity: 0, scale: 0.8, y: -10 }}
 										transition={{ 
-											duration: 0.4, 
-											delay: index * 0.05,
-											ease: [0.22, 1, 0.36, 1]
+											duration: 0.3, 
+											delay: index * 0.02,
+											ease: [0.22, 1, 0.36, 1],
+											layout: { duration: 0.4 }
 										}}
 										className="relative"
 										style={{
@@ -674,40 +797,64 @@ export default function AchievementsPage() {
 									</motion.div>
 								)
 							})}
+							</AnimatePresence>
 						</div>
-					) : (
-						<div className="text-center py-16">
-							<p className="text-gray-600 dark:text-gray-400">
-								Start playing quizzes to earn achievements
-							</p>
-						</div>
-					)}
-				</motion.div>
+					</motion.div>
+				)}
+
+				{/* No results message */}
+				{filteredAndSortedAchievements.length === 0 && !isLoading && (
+					<motion.div
+						initial={{ opacity: 0 }}
+						animate={{ opacity: 1 }}
+						className="text-center py-16"
+					>
+						<p className="text-[hsl(var(--muted-foreground))] mb-4">
+							{searchQuery || categoryFilter !== 'all' || statusFilter !== 'all' 
+								? 'No achievements match your filters'
+								: 'Start playing quizzes to earn achievements'}
+						</p>
+						{(searchQuery || categoryFilter !== 'all' || statusFilter !== 'all') && (
+							<button
+								onClick={() => {
+									setSearchQuery('')
+									setCategoryFilter('all')
+									setStatusFilter('all')
+								}}
+								className="text-sm text-[hsl(var(--primary))] hover:underline"
+							>
+								Clear filters
+							</button>
+						)}
+					</motion.div>
+				)}
 
 				{/* In Progress Achievements */}
-					{inProgressAchievements.length > 0 && (
-						<motion.div
-							initial={{ opacity: 0, y: 20 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{ duration: 0.5, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-							className="max-w-7xl mx-auto w-full px-4 mb-16"
-						>
-							<div className="mb-6">
-								<h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2">
-									In Progress
-								</h2>
-								<p className="text-sm text-gray-600 dark:text-gray-400">
-									Keep going! You're making progress on these achievements
-								</p>
-							</div>
+				{inProgressAchievements.length > 0 && (statusFilter === 'all' || statusFilter === 'in-progress') && (
+					<motion.div
+						initial={{ opacity: 0, y: 20 }}
+						animate={{ opacity: 1, y: 0 }}
+						transition={{ duration: 0.5, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+						className="max-w-7xl mx-auto w-full px-4 mb-16"
+					>
+						<div className="mb-6 text-center">
+							<h2 className="text-2xl md:text-3xl font-bold text-[hsl(var(--foreground))] mb-2">
+								In Progress
+							</h2>
+							<p className="text-sm text-[hsl(var(--muted-foreground))]">
+								Keep going! You're making progress on these achievements
+							</p>
+						</div>
 							<div className="flex flex-wrap justify-center gap-4">
-							{inProgressAchievements.map((achievement, index) => {
+							<AnimatePresence mode="popLayout">
+								{inProgressAchievements.map((achievement, index) => {
 								const isFlipped = flippedCardId === achievement.id
 								const rotation = (index % 5 - 2) * 1 // Subtle angles: -2, -1, 0, 1, 2 degrees
 								
 								return (
 									<motion.div
 										key={achievement.id}
+										layout
 										initial={{ opacity: 0, y: 20, scale: 0.9 }}
 										animate={{ 
 											opacity: 1, 
@@ -715,10 +862,12 @@ export default function AchievementsPage() {
 											scale: 1,
 											rotate: isFlipped ? 0 : rotation,
 										}}
+										exit={{ opacity: 0, scale: 0.8, y: -10 }}
 										transition={{ 
-											duration: 0.4, 
-											delay: index * 0.03,
-											ease: [0.22, 1, 0.36, 1]
+											duration: 0.3, 
+											delay: index * 0.02,
+											ease: [0.22, 1, 0.36, 1],
+											layout: { duration: 0.4 }
 										}}
 										className="relative"
 										style={{
@@ -752,12 +901,90 @@ export default function AchievementsPage() {
 										</motion.div>
 									)
 								})}
+							</AnimatePresence>
+							</div>
+						</motion.div>
+					)}
+
+					{/* Yet to Earn Achievements */}
+					{yetToEarnAchievements.length > 0 && (statusFilter === 'all' || statusFilter === 'yet-to-earn') && (
+						<motion.div
+							initial={{ opacity: 0, y: 20 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ duration: 0.5, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+							className="max-w-7xl mx-auto w-full px-4 mb-16"
+						>
+							<div className="mb-6 text-center">
+								<h2 className="text-2xl md:text-3xl font-bold text-[hsl(var(--foreground))] mb-2">
+									Yet to Earn
+								</h2>
+								<p className="text-sm text-[hsl(var(--muted-foreground))]">
+									Start working towards these achievements
+								</p>
+							</div>
+							<div className="flex flex-wrap justify-center gap-4">
+								<AnimatePresence mode="popLayout">
+									{yetToEarnAchievements.map((achievement, index) => {
+									const isFlipped = flippedCardId === achievement.id
+									const rotation = (index % 5 - 2) * 1 // Subtle angles: -2, -1, 0, 1, 2 degrees
+									
+									return (
+										<motion.div
+											key={achievement.id}
+											layout
+											initial={{ opacity: 0, y: 20, scale: 0.9 }}
+											animate={{ 
+												opacity: 1, 
+												y: 0, 
+												scale: 1,
+												rotate: isFlipped ? 0 : rotation,
+											}}
+											exit={{ opacity: 0, scale: 0.8, y: -10 }}
+											transition={{ 
+												duration: 0.3, 
+												delay: index * 0.02,
+												ease: [0.22, 1, 0.36, 1],
+												layout: { duration: 0.4 }
+											}}
+											className="relative"
+											style={{
+												width: 'clamp(120px, 25vw, 200px)',
+												maxWidth: '200px',
+												flexShrink: 0,
+												zIndex: isFlipped ? 50 : 10 + yetToEarnAchievements.length - index,
+												transform: `rotate(${isFlipped ? 0 : rotation}deg)`,
+											}}
+											whileHover={{ 
+												zIndex: 50,
+												scale: 1.1,
+												rotate: 0,
+												y: -8,
+												transition: { duration: 0.2 }
+											}}
+										>
+											<AchievementCard
+												achievement={achievement}
+												status={achievement.status}
+												unlockedAt={achievement.unlockedAt}
+												quizSlug={achievement.quizSlug}
+												progressValue={achievement.progressValue}
+												progressMax={achievement.progressMax}
+												tier={tier}
+												isFlipped={isFlipped}
+												onFlipChange={(flipped) => {
+													setFlippedCardId(flipped ? achievement.id : null)
+												}}
+											/>
+										</motion.div>
+									)
+								})}
+								</AnimatePresence>
 							</div>
 						</motion.div>
 					)}
 
 					{/* Achievement Browser Link - Only show if premium */}
-					{isPremium && lockedAchievements.length > 0 && (
+					{isPremium && (
 						<motion.div
 							initial={{ opacity: 0, y: 20 }}
 							animate={{ opacity: 1, y: 0 }}

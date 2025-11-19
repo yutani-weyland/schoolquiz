@@ -25,7 +25,7 @@ export function IconSection({ formData, updateField }: IconSectionProps) {
             type="text"
             value={formData.iconKey || ''}
             onChange={(e) => updateField('iconKey', e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
             placeholder="e.g., 🏆 or /achievements/blitzkreig.png"
           />
           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -40,7 +40,7 @@ export function IconSection({ formData, updateField }: IconSectionProps) {
           <select
             value={formData.cardVariant || 'standard'}
             onChange={(e) => updateField('cardVariant', e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
           >
             <option value="standard">Standard</option>
             <option value="foil">Foil</option>

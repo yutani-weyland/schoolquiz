@@ -20,7 +20,7 @@ export function DescriptionsSection({
             onChange={(e) => updateField('shortDescription', e.target.value)}
             rows={2}
             maxLength={150}
-            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
             placeholder="e.g., Get 5/5 in a History round under 2 minutes"
             required
           />
@@ -38,7 +38,7 @@ export function DescriptionsSection({
             onChange={(e) => updateField('longDescription', e.target.value)}
             rows={4}
             maxLength={500}
-            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
             placeholder="e.g., Complete a history-themed round perfectly in less than 2 minutes - lightning fast!"
           />
           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">

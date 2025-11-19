@@ -101,16 +101,16 @@ export default function SignUpForm() {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg rounded-3xl p-10 md:p-12"
+      className="bg-white dark:bg-[#1A1F2E] border border-gray-200 dark:border-[#2D3748] shadow-lg rounded-3xl p-10 md:p-12"
     >
 
       {/* Method Selector */}
-      <div className="flex gap-2 mb-6 p-1 bg-gray-100 dark:bg-gray-700 rounded-full">
+      <div className="flex gap-2 mb-6 p-1 bg-gray-100 dark:bg-[#1A1F2E] rounded-full">
         <button
           onClick={() => setMethod("email")}
           className={`flex-1 px-4 py-2 rounded-full font-medium transition-all ${
             method === "email"
-              ? "bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm"
+              ? "bg-white dark:bg-[#252B3A] text-gray-900 dark:text-white shadow-sm"
               : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
           }`}
         >
@@ -120,7 +120,7 @@ export default function SignUpForm() {
           onClick={() => setMethod("phone")}
           className={`flex-1 px-4 py-2 rounded-full font-medium transition-all ${
             method === "phone"
-              ? "bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm"
+              ? "bg-white dark:bg-[#252B3A] text-gray-900 dark:text-white shadow-sm"
               : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
           }`}
         >
@@ -130,7 +130,7 @@ export default function SignUpForm() {
           onClick={() => setMethod("code")}
           className={`flex-1 px-4 py-2 rounded-full font-medium transition-all ${
             method === "code"
-              ? "bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm"
+              ? "bg-white dark:bg-[#252B3A] text-gray-900 dark:text-white shadow-sm"
               : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
           }`}
         >
@@ -158,7 +158,7 @@ export default function SignUpForm() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-[#2D3748] rounded-xl bg-white dark:bg-[#1A1F2E] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   placeholder="you@example.com"
                 />
               </div>
@@ -183,7 +183,7 @@ export default function SignUpForm() {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   required
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-[#2D3748] rounded-xl bg-white dark:bg-[#1A1F2E] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   placeholder="+61 400 000 000"
                 />
               </div>
@@ -208,7 +208,7 @@ export default function SignUpForm() {
                   value={signupCode}
                   onChange={(e) => setSignupCode(e.target.value)}
                   required
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-[#2D3748] rounded-xl bg-white dark:bg-[#1A1F2E] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   placeholder="Enter your signup code"
                 />
               </div>

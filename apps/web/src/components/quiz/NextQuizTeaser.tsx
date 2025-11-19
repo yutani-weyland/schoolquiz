@@ -64,7 +64,7 @@ export function NextQuizTeaser() {
 			transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
 		>
 			<motion.div
-				className="rounded-3xl p-7 sm:p-9 shadow-md h-full min-h-[430px] flex flex-col relative overflow-hidden bg-gray-50 dark:bg-gray-900 border border-dashed border-gray-300 dark:border-gray-700"
+				className="rounded-3xl p-7 sm:p-9 shadow-md h-full min-h-[430px] flex flex-col relative overflow-hidden bg-gray-50 dark:bg-[#1A1F2E] border border-dashed border-gray-300 dark:border-[#2D3748]"
 				whileHover={{
 					rotate: 0.8,
 					scale: 1.01,
@@ -106,7 +106,7 @@ export function NextQuizTeaser() {
 						{countdownSegments.map((segment) => (
 							<div
 								key={segment.label}
-								className="rounded-2xl border border-gray-200/80 dark:border-gray-700/70 bg-white dark:bg-white/5 px-3 py-2.5 text-center"
+								className="rounded-2xl border border-gray-200/80 dark:border-[#2D3748]/70 bg-white dark:bg-white/5 px-3 py-2.5 text-center"
 							>
 								<p className="text-2xl font-extrabold text-gray-900 dark:text-white tabular-nums">
 									{segment.value}
@@ -132,7 +132,7 @@ export function NextQuizTeaser() {
 					{["???", "???", "???", "???", "???"].map((tag, index) => (
 						<motion.span
 							key={`${tag}-${index}`}
-							className="px-3 py-1.5 rounded-full text-xs font-semibold bg-gray-200/80 text-gray-600 dark:bg-gray-700/80 dark:text-gray-200"
+							className="px-3 py-1.5 rounded-full text-xs font-semibold bg-gray-200/80 text-gray-600 dark:bg-[#252B3A]/80 dark:text-gray-200"
 							initial={{ opacity: 0, scale: 0.85 }}
 							animate={{ opacity: 1, scale: 1 }}
 							transition={{ delay: 0.08 * index, duration: 0.25 }}

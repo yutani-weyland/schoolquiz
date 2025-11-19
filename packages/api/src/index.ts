@@ -24,6 +24,7 @@ export const QuizSchema = z.object({
   difficultyBand: z.string().optional(),
   theme: z.string().optional(),
   seasonalTag: z.string().optional(),
+  colorHex: z.string().optional(),
 });
 
 export const CreateQuizSchema = QuizSchema.extend({
@@ -157,6 +158,7 @@ export async function createQuiz(data: z.infer<typeof CreateQuizSchema>) {
       difficultyBand: validatedData.difficultyBand,
       theme: validatedData.theme,
       seasonalTag: validatedData.seasonalTag,
+      colorHex: validatedData.colorHex,
       schoolId: validatedData.schoolId,
       createdBy: validatedData.createdBy,
       status: 'draft'

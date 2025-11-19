@@ -167,12 +167,12 @@ export default function UpgradePage() {
 
         {/* Pricing Type Selector */}
         <div className="max-w-2xl mx-auto mb-8 sm:mb-12">
-          <div className="inline-flex gap-2 p-1.5 bg-gray-100 dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700">
+          <div className="inline-flex gap-2 p-1.5 bg-gray-100 dark:bg-[#1A1F2E] rounded-2xl border border-gray-200 dark:border-[#2D3748]">
             <button
               onClick={() => setPricingType("individual")}
               className={`relative px-6 sm:px-8 py-3 sm:py-3.5 rounded-xl font-semibold text-sm sm:text-base transition-all duration-200 ${
                 pricingType === "individual"
-                  ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-md"
+                  ? "bg-white dark:bg-[#252B3A] text-gray-900 dark:text-white shadow-md"
                   : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
               }`}
             >
@@ -182,7 +182,7 @@ export default function UpgradePage() {
               onClick={() => setPricingType("organization")}
               className={`relative px-6 sm:px-8 py-3 sm:py-3.5 rounded-xl font-semibold text-sm sm:text-base transition-all duration-200 flex items-center gap-2 ${
                 pricingType === "organization"
-                  ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-md"
+                  ? "bg-white dark:bg-[#252B3A] text-gray-900 dark:text-white shadow-md"
                   : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
               }`}
             >
@@ -197,12 +197,12 @@ export default function UpgradePage() {
 
         {/* Plan Selector */}
         <div className="max-w-2xl mx-auto mb-8 sm:mb-12">
-          <div className="inline-flex gap-2 p-1.5 bg-gray-100 dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700">
+          <div className="inline-flex gap-2 p-1.5 bg-gray-100 dark:bg-[#1A1F2E] rounded-2xl border border-gray-200 dark:border-[#2D3748]">
             <button
               onClick={() => setSelectedPlan("monthly")}
               className={`relative px-6 sm:px-8 py-3 sm:py-3.5 rounded-xl font-semibold text-sm sm:text-base transition-all duration-200 ${
                 selectedPlan === "monthly"
-                  ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-md"
+                  ? "bg-white dark:bg-[#252B3A] text-gray-900 dark:text-white shadow-md"
                   : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
               }`}
             >
@@ -212,7 +212,7 @@ export default function UpgradePage() {
               onClick={() => setSelectedPlan("annual")}
               className={`relative px-6 sm:px-8 py-3 sm:py-3.5 rounded-xl font-semibold text-sm sm:text-base transition-all duration-200 ${
                 selectedPlan === "annual"
-                  ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-md"
+                  ? "bg-white dark:bg-[#252B3A] text-gray-900 dark:text-white shadow-md"
                   : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
               }`}
             >
@@ -238,7 +238,7 @@ export default function UpgradePage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="group relative bg-white dark:bg-gray-900 rounded-3xl border-2 border-gray-200 dark:border-gray-800 p-6 sm:p-8 lg:p-10 hover:border-gray-300 dark:hover:border-gray-700 transition-all duration-300"
+                className="group relative bg-white dark:bg-[#1A1F2E] rounded-3xl border-2 border-gray-200 dark:border-[#2D3748] p-6 sm:p-8 lg:p-10 hover:border-gray-300 dark:hover:border-[#3D4758] transition-all duration-300"
               >
                 <div className="space-y-6">
                   <div>
@@ -295,7 +295,7 @@ export default function UpgradePage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="group relative bg-gradient-to-br from-gray-900 to-gray-800 dark:from-gray-800 dark:to-gray-900 rounded-3xl border-2 border-gray-900 dark:border-gray-700 p-6 sm:p-8 lg:p-10 text-white"
+                className="group relative bg-gradient-to-br from-gray-900 to-gray-800 dark:from-gray-800 dark:to-gray-900 rounded-3xl border-2 border-gray-900 dark:border-[#2D3748] p-6 sm:p-8 lg:p-10 text-white"
               >
                 <div className="absolute top-4 right-4 sm:top-6 sm:right-6">
                   <span className="bg-white/20 backdrop-blur-sm text-white text-xs font-semibold px-3 py-1.5 rounded-full">
@@ -367,7 +367,7 @@ export default function UpgradePage() {
                 transition={{ delay: 0.1 }}
                 className="mb-12 sm:mb-16"
               >
-                <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-6 sm:p-8 lg:p-10 shadow-xl">
+                <div className="bg-white dark:bg-[#1A1F2E] rounded-3xl border border-gray-200 dark:border-[#2D3748] p-6 sm:p-8 lg:p-10 shadow-xl">
                   {/* Header */}
                   <div className="text-center mb-8 sm:mb-12">
                     <motion.div
@@ -387,7 +387,7 @@ export default function UpgradePage() {
                   </div>
 
                   {/* Interactive Slider Section */}
-                  <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800/50 dark:to-gray-900/50 rounded-2xl p-6 sm:p-8 lg:p-10 mb-8 border border-gray-200 dark:border-gray-700">
+                  <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800/50 dark:to-gray-900/50 rounded-2xl p-6 sm:p-8 lg:p-10 mb-8 border border-gray-200 dark:border-[#2D3748]">
                     <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 mb-8">
                       <div className="flex-1">
                         <label className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-3 mb-2">
@@ -421,7 +421,7 @@ export default function UpgradePage() {
                         max="200"
                         value={teacherCount}
                         onChange={(e) => setTeacherCount(parseInt(e.target.value))}
-                        className="w-full h-3 bg-gray-200 dark:bg-gray-700 rounded-full appearance-none cursor-pointer slider"
+                        className="w-full h-3 bg-gray-200 dark:bg-[#252B3A] rounded-full appearance-none cursor-pointer slider"
                         style={{
                           background: `linear-gradient(to right, 
                             rgb(147 51 234) 0%, 
@@ -486,7 +486,7 @@ export default function UpgradePage() {
                             ? "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300"
                             : discountTier.color === "blue"
                             ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
-                            : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+                            : "bg-gray-100 dark:bg-[#1A1F2E] text-gray-700 dark:text-gray-300"
                         }`}>
                           <Percent className="w-5 h-5" />
                           <span className="text-xl">{orgPricing.discountPercent.toFixed(1)}%</span>
@@ -501,13 +501,13 @@ export default function UpgradePage() {
                   </div>
 
                   {/* Pricing Breakdown */}
-                  <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 sm:p-8 border-2 border-gray-200 dark:border-gray-700">
+                  <div className="bg-white dark:bg-[#1A1F2E] rounded-2xl p-6 sm:p-8 border-2 border-gray-200 dark:border-[#2D3748]">
                     <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-6 text-center">
                       Pricing Breakdown
                     </h3>
 
                     <div className="space-y-4 mb-6 max-w-md mx-auto">
-                      <div className="flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-700">
+                      <div className="flex items-center justify-between py-3 border-b border-gray-200 dark:border-[#2D3748]">
                         <span className="text-gray-600 dark:text-gray-400">
                           {teacherCount} × ${selectedPlan === "monthly" ? "9" : "6"}/{selectedPlan === "monthly" ? "month" : "year"}
                         </span>
@@ -520,7 +520,7 @@ export default function UpgradePage() {
                         <motion.div
                           initial={{ opacity: 0, x: -10 }}
                           animate={{ opacity: 1, x: 0 }}
-                          className="flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-700"
+                          className="flex items-center justify-between py-3 border-b border-gray-200 dark:border-[#2D3748]"
                         >
                           <span className="text-green-600 dark:text-green-400 flex items-center gap-2 font-medium">
                             <TrendingDown className="w-4 h-4" />
@@ -546,7 +546,7 @@ export default function UpgradePage() {
                         </motion.span>
                       </div>
 
-                      <div className="pt-4 border-t border-gray-200 dark:border-gray-700 text-center">
+                      <div className="pt-4 border-t border-gray-200 dark:border-[#2D3748] text-center">
                         <p className="text-sm text-gray-600 dark:text-gray-400">
                           <span className="font-semibold text-lg text-gray-900 dark:text-white">
                             ${orgPricing.perTeacher.toFixed(2)}
@@ -595,7 +595,7 @@ export default function UpgradePage() {
           transition={{ delay: 0.4 }}
           className="max-w-5xl mx-auto"
         >
-          <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-6 sm:p-8 lg:p-10 shadow-lg">
+          <div className="bg-white dark:bg-[#1A1F2E] rounded-3xl border border-gray-200 dark:border-[#2D3748] p-6 sm:p-8 lg:p-10 shadow-lg">
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-8 sm:mb-10 text-center">
               What you get with Premium
             </h2>
@@ -615,7 +615,7 @@ export default function UpgradePage() {
                   transition={{ delay: 0.5 + index * 0.05 }}
                   className="flex gap-4 p-4 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                 >
-                  <div className="flex-shrink-0 w-10 h-10 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center">
+                  <div className="flex-shrink-0 w-10 h-10 bg-gray-100 dark:bg-[#1A1F2E] rounded-lg flex items-center justify-center">
                     <Check className="w-5 h-5 text-gray-700 dark:text-gray-300" />
                   </div>
                   <div>

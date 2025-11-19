@@ -128,7 +128,7 @@ export default function FAQ() {
 	}, []);
 
 	return (
-		<section className="bg-white dark:bg-gray-900 py-16 sm:py-20">
+		<section className="bg-white dark:bg-[#0F1419] py-16 sm:py-20">
 			<div className="mx-auto max-w-6xl px-6">
 				<header className="mx-auto max-w-3xl text-center mb-16">
 					<h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-neutral-900 dark:text-white">
@@ -149,7 +149,7 @@ export default function FAQ() {
 									onClick={() => scrollToCategory(category.name)}
 									className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
 										activeCategory === category.name
-											? "bg-gray-100 dark:bg-gray-800 font-semibold text-neutral-900 dark:text-white"
+											? "bg-gray-100 dark:bg-[#1A1F2E] font-semibold text-neutral-900 dark:text-white"
 											: "text-neutral-600 dark:text-neutral-400 hover:bg-gray-50 dark:hover:bg-gray-800/50"
 									}`}
 								>
@@ -195,7 +195,7 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
 	const [isOpen, setIsOpen] = useState(false);
 
 	return (
-		<div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800 overflow-hidden">
+		<div className="rounded-2xl border border-gray-200 dark:border-[#2D3748] bg-white dark:bg-[#1A1F2E] overflow-hidden">
 			<button
 				type="button"
 				className="w-full flex items-center justify-between p-6 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-2xl transition-colors"

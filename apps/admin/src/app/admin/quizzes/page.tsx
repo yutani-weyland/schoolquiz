@@ -17,6 +17,7 @@ interface Quiz {
   status: string
   pdfUrl?: string | null
   pdfStatus?: string | null
+  specialEdition?: boolean | null
   createdAt: string
   updatedAt: string
   _count: {
@@ -56,7 +57,26 @@ export default function AdminQuizzesPage() {
       if (statusFilter) params.append('status', statusFilter)
 
       const response = await fetch(`/api/admin/quizzes?${params}`)
-      const data = await response.json()
+      
+      // Read response as text first to check if it's HTML
+      const text = await response.text()
+      
+      // Check if response looks like HTML (error page)
+      if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html') || text.trim().startsWith('<!')) {
+        console.error('API returned HTML instead of JSON. This usually means the route does not exist or returned an error page.')
+        console.error('Response preview:', text.substring(0, 500))
+        throw new Error('API endpoint returned HTML error page. Check if /api/admin/quizzes route exists.')
+      }
+      
+      // Try to parse as JSON
+      let data
+      try {
+        data = JSON.parse(text)
+      } catch (jsonError: any) {
+        console.error('Failed to parse JSON response. Error:', jsonError.message)
+        console.error('Response preview:', text.substring(0, 500))
+        throw new Error(`Invalid JSON response: ${jsonError.message}`)
+      }
       console.log('Quizzes API response:', data)
       
       if (response.ok) {
@@ -75,10 +95,6 @@ export default function AdminQuizzesPage() {
             case 'status':
               aVal = a.status
               bVal = b.status
-              break
-            case 'rounds':
-              aVal = a._count.rounds
-              bVal = b._count.rounds
               break
             case 'runs':
               aVal = a._count.runs
@@ -107,6 +123,14 @@ export default function AdminQuizzesPage() {
       }
     } catch (error) {
       console.error('Failed to fetch quizzes:', error)
+      // Set empty state on error
+      setQuizzes([])
+      setPagination({
+        page: 1,
+        limit: 50,
+        total: 0,
+        totalPages: 0,
+      })
     } finally {
       setIsLoading(false)
     }
@@ -126,7 +150,7 @@ export default function AdminQuizzesPage() {
     const isSorted = sortBy === column
     return (
       <th
-        className="px-6 py-3 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider cursor-pointer hover:bg-[hsl(var(--muted))] transition-colors"
+        className="px-4 py-3 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider cursor-pointer hover:bg-[hsl(var(--muted))] transition-colors whitespace-nowrap"
         onClick={() => handleSort(column)}
       >
         <div className="flex items-center gap-2">
@@ -243,78 +267,99 @@ export default function AdminQuizzesPage() {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full table-auto">
                 <thead className="bg-[hsl(var(--muted))] border-b border-[hsl(var(--border))]">
                   <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider whitespace-nowrap">
+                      ID
+                    </th>
                     <SortableHeader column="title" label="Quiz" />
                     <SortableHeader column="status" label="Status" />
-                    <SortableHeader column="rounds" label="Rounds" />
                     <SortableHeader column="runs" label="Runs" />
                     <SortableHeader column="publicationDate" label="Published" />
-                    <th className="px-6 py-3 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider whitespace-nowrap">
                       PDF
                     </th>
                     <SortableHeader column="createdAt" label="Created" />
-                    <th className="px-6 py-3 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider w-20">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider whitespace-nowrap">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-[hsl(var(--card))]/50 divide-y divide-[hsl(var(--border))]">
-                  {quizzes.map((quiz) => (
+                <tbody className="bg-[hsl(var(--card))] divide-y divide-[hsl(var(--border))]">
+                  {(() => {
+                    // Calculate quiz IDs: Sort published quizzes by publication date
+                    // Special editions are excluded from the numbering
+                    const publishedQuizzes = quizzes
+                      .filter(q => q.status === 'published' && !q.specialEdition)
+                      .sort((a, b) => {
+                        const dateA = a.publicationDate ? new Date(a.publicationDate).getTime() : 0
+                        const dateB = b.publicationDate ? new Date(b.publicationDate).getTime() : 0
+                        return dateA - dateB
+                      })
+                    
+                    const quizIdMap = new Map<string, number>()
+                    publishedQuizzes.forEach((q, idx) => {
+                      quizIdMap.set(q.id, idx + 1)
+                    })
+                    
+                    return quizzes.map((quiz, index) => {
+                      const isSpecialEdition = quiz.specialEdition === true
+                      const quizId = isSpecialEdition 
+                        ? 'SE' 
+                        : quizIdMap.get(quiz.id) || null
+                    
+                    return (
                     <tr
                       key={quiz.id}
-                      className="hover:bg-[hsl(var(--muted))] transition-colors"
+                      className="hover:bg-[hsl(var(--muted))]/50 transition-colors"
                     >
-                      <td className="px-6 py-4">
-                        <div className="flex items-center">
-                          <BookOpen className="w-5 h-5 text-[hsl(var(--muted-foreground))] mr-3 flex-shrink-0" />
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          {quizId !== null ? (
+                            <span className="text-sm font-mono font-medium text-[hsl(var(--foreground))]">
+                              {quizId}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-[hsl(var(--muted-foreground))]">-</span>
+                          )}
+                          {isSpecialEdition && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
+                              SE
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="flex items-start">
                           <div className="flex-1 min-w-0">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation()
                                 router.push(`/admin/quizzes/${quiz.id}`)
                               }}
-                              className="text-sm font-medium text-[hsl(var(--primary))] hover:underline text-left"
+                              className="text-sm font-semibold text-[hsl(var(--foreground))] hover:text-[hsl(var(--primary))] hover:underline text-left block"
                             >
                               {quiz.title}
                             </button>
                             {quiz.blurb && (
-                              <div className="text-xs text-[hsl(var(--muted-foreground))] mt-1 truncate">
+                              <div className="text-xs text-[hsl(var(--muted-foreground))] mt-1 line-clamp-1">
                                 {quiz.blurb}
-                              </div>
-                            )}
-                            {quiz.theme && (
-                              <div className="flex items-center gap-2 mt-1">
-                                <span className="text-xs text-[hsl(var(--muted-foreground))]">
-                                  {quiz.theme}
-                                </span>
-                                {quiz.audience && (
-                                  <>
-                                    <span className="text-[hsl(var(--border))]">•</span>
-                                    <span className="text-xs text-[hsl(var(--muted-foreground))]">
-                                      {quiz.audience}
-                                    </span>
-                                  </>
-                                )}
                               </div>
                             )}
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-4 py-4 whitespace-nowrap">
                         {getStatusBadge(quiz.status)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[hsl(var(--foreground))]">
-                        {quiz._count.rounds}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[hsl(var(--foreground))]">
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-[hsl(var(--foreground))] font-medium">
                         {quiz._count.runs}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[hsl(var(--muted-foreground))]">
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-[hsl(var(--muted-foreground))]">
                         {formatDate(quiz.publicationDate)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-4 py-4 whitespace-nowrap">
                         {quiz.pdfStatus === 'approved' ? (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
                             <CheckCircle2 className="w-3 h-3" />
@@ -331,17 +376,17 @@ export default function AdminQuizzesPage() {
                           </span>
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[hsl(var(--muted-foreground))]">
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-[hsl(var(--muted-foreground))]">
                         {formatDate(quiz.createdAt)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-4 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-2">
                           <button
                             onClick={(e) => {
                               e.stopPropagation()
                               router.push(`/admin/quizzes/builder?edit=${quiz.id}`)
                             }}
-                            className="px-3 py-1.5 text-xs font-medium text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/10 rounded-lg transition-colors"
+                            className="px-3 py-1.5 text-xs font-medium text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/10 rounded-lg transition-colors whitespace-nowrap"
                           >
                             Edit
                           </button>
@@ -351,23 +396,25 @@ export default function AdminQuizzesPage() {
                                 e.stopPropagation()
                                 router.push(`/admin/quizzes/${quiz.id}?tab=pdf`)
                               }}
-                              className="px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                              className="px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors whitespace-nowrap"
                               title="Review PDF"
                             >
-                              Review PDF
+                              Review
                             </button>
                           )}
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    )
+                  })
+                  })()}
                 </tbody>
               </table>
             </div>
 
             {/* Pagination */}
             {pagination.totalPages > 1 && (
-              <div className="px-6 py-4 border-t border-[hsl(var(--border))] flex items-center justify-between bg-[hsl(var(--muted))]">
+              <div className="px-4 py-4 border-t border-[hsl(var(--border))] flex items-center justify-between bg-[hsl(var(--muted))]">
                 <div className="text-sm text-[hsl(var(--foreground))]">
                   Showing {((page - 1) * pagination.limit) + 1} to{' '}
                   {Math.min(page * pagination.limit, pagination.total)} of {pagination.total} results

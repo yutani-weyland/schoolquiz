@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { HelpCircle, Filter, AlertCircle, Clock, CheckCircle2, MessageSquare, User, Building2 } from 'lucide-react'
+import { HelpCircle, Filter, AlertCircle, Clock, CheckCircle2, User, Building2 } from 'lucide-react'
 
 interface SupportTicket {
   id: string
@@ -183,7 +183,6 @@ export default function SupportPage() {
                         </div>
                       )}
                       <div className="flex items-center gap-1">
-                        <MessageSquare className="w-4 h-4" />
                         <span>{ticket.replies.length} replies</span>
                       </div>
                     </div>

@@ -17,17 +17,17 @@ export function KpiCard({ label, value, delta, hint, spark, ci, n }: KpiCardProp
   return (
     <div className="rounded-lg border bg-white dark:bg-gray-800 p-4">
       <div className="flex items-start justify-between">
-        <div className="text-sm text-slate-500 dark:text-slate-400">
+        <div className="text-sm font-medium text-[hsl(var(--muted-foreground))]">
           {label}
-          {hint && <span className="ml-1 text-slate-400 dark:text-slate-500">· {hint}</span>}
+          {hint && <span className="ml-1 font-normal opacity-75">· {hint}</span>}
         </div>
         {typeof delta === "number" && (
-          <span className={pos ? "text-emerald-600 dark:text-emerald-400" : neg ? "text-rose-600 dark:text-rose-400" : "text-slate-500 dark:text-slate-400"}>
+          <span className={pos ? "text-emerald-600 dark:text-emerald-400" : neg ? "text-rose-600 dark:text-rose-400" : "text-[hsl(var(--muted-foreground))]"}>
             {pos ? "▲" : neg ? "▼" : "•"} {Math.abs(delta).toFixed(1)}%
           </span>
         )}
       </div>
-      <div className="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">
+      <div className="mt-1 text-2xl font-bold text-[hsl(var(--foreground))] tracking-tight">
         {typeof value === "number" ? value.toLocaleString() : value}
       </div>
       {spark && (
@@ -46,7 +46,7 @@ export function KpiCard({ label, value, delta, hint, spark, ci, n }: KpiCardProp
         </div>
       )}
       {ci && n && (
-        <div className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+        <div className="mt-1 text-xs font-normal text-[hsl(var(--muted-foreground))] opacity-75">
           CI: {ci.lo.toFixed(1)}-{ci.hi.toFixed(1)}% (n={n})
         </div>
       )}

@@ -1,6 +1,8 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
+import Link from 'next/link'
 import { User, LogOut, Sun, Moon } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -24,6 +26,12 @@ const pageTitles: Record<string, string> = {
 export function AdminTopbar() {
   const pathname = usePathname()
   const { isDark, toggleTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+  
+  // Prevent hydration mismatch by only showing theme-dependent content after mount
+  useEffect(() => {
+    setMounted(true)
+  }, [])
   
   // Get page title from pathname
   const getPageTitle = () => {
@@ -54,35 +62,52 @@ export function AdminTopbar() {
   }
 
   return (
-    <div className="sticky top-0 z-40 bg-white dark:bg-gray-900 border-b border-gray-200/50 dark:border-gray-700/50">
+    <div className="sticky top-0 z-40 bg-[hsl(var(--card))] border-b border-[hsl(var(--border))] backdrop-blur-sm bg-opacity-95">
       <div className="flex items-center justify-between px-6 h-16">
         {/* Page Title */}
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
+        <h1 className="text-2xl font-bold text-[hsl(var(--foreground))] tracking-tight">
           {getPageTitle()}
         </h1>
 
-        {/* User Menu */}
+        {/* User Menu - Reordered: User, Theme, Sign Out */}
         <div className="flex items-center gap-2">
-          <button
-            onClick={toggleTheme}
-            className="p-2.5 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100/50 dark:from-gray-800 dark:to-gray-800/50 text-gray-600 dark:text-gray-400 hover:from-gray-100 hover:to-gray-200/50 dark:hover:from-gray-700 dark:hover:to-gray-700/50 transition-all duration-200 shadow-[0_1px_2px_rgba(0,0,0,0.05),inset_0_1px_0_0_rgba(255,255,255,0.9)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.2),inset_0_1px_0_0_rgba(255,255,255,0.05)] hover:shadow-[0_2px_4px_rgba(0,0,0,0.08),inset_0_1px_0_0_rgba(255,255,255,0.9)] dark:hover:shadow-[0_2px_4px_rgba(0,0,0,0.3),inset_0_1px_0_0_rgba(255,255,255,0.05)] border border-gray-200/60 dark:border-gray-800/60"
-            title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+          {/* User Profile Button */}
+          <Link
+            href="/account"
+            className="p-2.5 rounded-xl bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]/80 hover:text-[hsl(var(--foreground))] border border-[hsl(var(--border))] transition-colors"
+            title="Account settings"
           >
-            {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-          </button>
+            <User className="w-4 h-4" />
+          </Link>
+
+          {/* Theme Toggle */}
+          {mounted ? (
+            <button
+              onClick={toggleTheme}
+              className="p-2.5 rounded-xl bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]/80 hover:text-[hsl(var(--foreground))] border border-[hsl(var(--border))] transition-colors"
+              title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+          ) : (
+            // Placeholder during SSR to prevent hydration mismatch
+            <button
+              className="p-2.5 rounded-xl bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]/80 hover:text-[hsl(var(--foreground))] border border-[hsl(var(--border))] transition-colors"
+              title="Toggle theme"
+              aria-label="Toggle theme"
+            >
+              <Moon className="w-4 h-4" />
+            </button>
+          )}
+
+          {/* Sign Out Button */}
           <button
             onClick={handleSignOut}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gradient-to-br hover:from-white hover:to-gray-50/50 dark:hover:from-gray-800 dark:hover:to-gray-800/50 rounded-xl transition-all duration-200 shadow-[0_1px_2px_rgba(0,0,0,0.05),inset_0_1px_0_0_rgba(255,255,255,0.9)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.2),inset_0_1px_0_0_rgba(255,255,255,0.05)] hover:shadow-[0_2px_4px_rgba(0,0,0,0.08),inset_0_1px_0_0_rgba(255,255,255,0.9)] dark:hover:shadow-[0_2px_4px_rgba(0,0,0,0.3),inset_0_1px_0_0_rgba(255,255,255,0.05)] border border-gray-200/60 dark:border-gray-800/60"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-xl border border-[hsl(var(--border))] transition-colors"
             title="Sign out"
           >
             <LogOut className="w-4 h-4" />
             <span className="hidden sm:inline">Sign Out</span>
-          </button>
-          <button
-            className="p-2.5 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100/50 dark:from-gray-800 dark:to-gray-800/50 text-gray-600 dark:text-gray-400 hover:from-gray-100 hover:to-gray-200/50 dark:hover:from-gray-700 dark:hover:to-gray-700/50 transition-all duration-200 shadow-[0_1px_2px_rgba(0,0,0,0.05),inset_0_1px_0_0_rgba(255,255,255,0.9)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.2),inset_0_1px_0_0_rgba(255,255,255,0.05)] hover:shadow-[0_2px_4px_rgba(0,0,0,0.08),inset_0_1px_0_0_rgba(255,255,255,0.9)] dark:hover:shadow-[0_2px_4px_rgba(0,0,0,0.3),inset_0_1px_0_0_rgba(255,255,255,0.05)] border border-gray-200/60 dark:border-gray-800/60"
-            title="User menu"
-          >
-            <User className="w-4 h-4" />
           </button>
         </div>
       </div>

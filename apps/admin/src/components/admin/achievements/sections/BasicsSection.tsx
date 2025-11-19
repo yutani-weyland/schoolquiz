@@ -3,9 +3,10 @@
 interface BasicsSectionProps {
   formData: any
   updateField: (field: string, value: any) => void
+  updateAppearance?: (field: string, value: any) => void
 }
 
-export function BasicsSection({ formData, updateField }: BasicsSectionProps) {
+export function BasicsSection({ formData, updateField, updateAppearance }: BasicsSectionProps) {
   const generateSlug = (name: string) => {
     return name
       .toLowerCase()
@@ -30,7 +31,7 @@ export function BasicsSection({ formData, updateField }: BasicsSectionProps) {
             type="text"
             value={formData.name}
             onChange={(e) => handleNameChange(e.target.value)}
-            className="w-full px-4 py-2.5 border border-gray-300/50 dark:border-gray-700/50 rounded-xl bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/50 backdrop-blur-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] shadow-[inset_0_1px_2px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)]"
+            className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
             placeholder="e.g., Blitzkrieg!"
             required
           />
@@ -44,7 +45,7 @@ export function BasicsSection({ formData, updateField }: BasicsSectionProps) {
             type="text"
             value={formData.slug}
             onChange={(e) => updateField('slug', e.target.value)}
-            className="w-full px-4 py-2.5 border border-gray-300/50 dark:border-gray-700/50 rounded-xl bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/50 backdrop-blur-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] shadow-[inset_0_1px_2px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)]"
+            className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
             placeholder="e.g., blitzkrieg"
             required
           />
@@ -61,7 +62,7 @@ export function BasicsSection({ formData, updateField }: BasicsSectionProps) {
             <select
               value={formData.category}
               onChange={(e) => updateField('category', e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300/50 dark:border-gray-700/50 rounded-xl bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/50 backdrop-blur-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] shadow-[inset_0_1px_2px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)]"
+              className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
             >
               <option value="performance" style={{ paddingTop: '0.5rem' }}>Performance</option>
               <option value="engagement">Engagement</option>
@@ -77,8 +78,22 @@ export function BasicsSection({ formData, updateField }: BasicsSectionProps) {
             </label>
             <select
               value={formData.rarity}
-              onChange={(e) => updateField('rarity', e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300/50 dark:border-gray-700/50 rounded-xl bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/50 backdrop-blur-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] shadow-[inset_0_1px_2px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)]"
+              onChange={(e) => {
+                updateField('rarity', e.target.value)
+                // Update backgroundColor to match rarity when changed from dropdown
+                if (updateAppearance) {
+                  const rarityColors: Record<string, string> = {
+                    common: '#9D9D9D',
+                    uncommon: '#1EFF00',
+                    rare: '#0070DD',
+                    epic: '#A335EE',
+                    legendary: '#FF8000',
+                  }
+                  const newColor = rarityColors[e.target.value] || '#9D9D9D'
+                  updateAppearance('backgroundColor', newColor)
+                }
+              }}
+              className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
             >
               <option value="common" style={{ paddingTop: '0.5rem' }}>Common</option>
               <option value="uncommon">Uncommon</option>

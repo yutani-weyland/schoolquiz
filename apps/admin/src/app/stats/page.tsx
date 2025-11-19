@@ -237,7 +237,7 @@ export default function StatsPage() {
   return (
     <>
       <SiteHeader />
-      <main className="min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-white pt-24 sm:pt-32 pb-16 px-4 sm:px-8 overflow-visible">
+      <main className="min-h-screen bg-white dark:bg-[#0F1419] text-gray-900 dark:text-white pt-24 sm:pt-32 pb-16 px-4 sm:px-8 overflow-visible">
         <div className="max-w-6xl mx-auto overflow-visible">
           {/* Header */}
           <div className="text-center mb-8 sm:mb-12">

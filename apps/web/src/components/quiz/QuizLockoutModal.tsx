@@ -36,11 +36,11 @@ export function QuizLockoutModal({ isOpen, onClose, attemptsUsed, maxAttempts }:
             className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
           >
             <div
-              className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-2xl max-w-md w-full pointer-events-auto overflow-hidden"
+              className="bg-white dark:bg-[#1A1F2E] rounded-3xl border border-gray-200 dark:border-[#2D3748] shadow-2xl max-w-md w-full pointer-events-auto overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
-              <div className="relative p-6 border-b border-gray-200 dark:border-gray-800 bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
+              <div className="relative p-6 border-b border-gray-200 dark:border-[#2D3748] bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
                 <button
                   onClick={onClose}
                   className="absolute top-6 right-6 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
@@ -64,7 +64,7 @@ export function QuizLockoutModal({ isOpen, onClose, attemptsUsed, maxAttempts }:
 
               {/* Content */}
               <div className="p-6 space-y-6">
-                <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+                <div className="bg-gray-50 dark:bg-[#1A1F2E]/50 rounded-xl p-4 border border-gray-200 dark:border-[#2D3748]">
                   <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
                     You've already played this quiz {attemptsUsed} time{attemptsUsed !== 1 ? 's' : ''}. 
                     To continue playing unlimited quizzes and access all features, please sign up for a free account.

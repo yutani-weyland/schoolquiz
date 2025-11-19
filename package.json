@@ -20,5 +20,10 @@
   },
   "dependencies": {
     "lucide-react": "^0.294.0"
+  },
+  "pnpm": {
+    "patchedDependencies": {
+      "@radix-ui/react-slot@1.2.4": "patches/@radix-ui__react-slot@1.2.4.patch"
+    }
   }
 }

@@ -23,7 +23,7 @@ export function UnlockLogicSection({
           <select
             value={conditionType}
             onChange={(e) => updateField('unlockConditionType', e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
           >
             <option value="score_perfect_in_category_under_seconds">
               Perfect score in category under time
@@ -44,7 +44,7 @@ export function UnlockLogicSection({
               <select
                 value={config.category || ''}
                 onChange={(e) => updateConditionConfig('category', e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               >
                 <option value="history">History</option>
                 <option value="science">Science</option>
@@ -63,7 +63,7 @@ export function UnlockLogicSection({
                 onChange={(e) =>
                   updateConditionConfig('seconds', parseInt(e.target.value) || 0)
                 }
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                 placeholder="e.g., 120"
               />
             </div>
@@ -82,7 +82,7 @@ export function UnlockLogicSection({
                 onChange={(e) =>
                   updateConditionConfig('score', e.target.value ? parseInt(e.target.value) : null)
                 }
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                 placeholder="Leave empty for any score"
               />
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">

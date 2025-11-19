@@ -113,20 +113,20 @@ export function DataTable<T extends Record<string, any>>({
   const filterableColumns = columns.filter((col) => col.filterable)
 
   return (
-    <div className="space-y-4">
+    <div>
       {/* Search and Filters */}
       {(searchable || filterableColumns.length > 0) && (
-        <div className="p-4 bg-gradient-to-br from-gray-50 to-gray-100/50 dark:from-gray-900 dark:to-gray-900/50 border-b border-gray-200/50 dark:border-gray-700/50">
+        <div className="p-4 bg-[hsl(var(--card))] border-b border-[hsl(var(--border))]">
           <div className="flex flex-col gap-4">
             {searchable && (
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 dark:text-gray-400 z-10" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[hsl(var(--muted-foreground))] z-10" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search..."
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300/50 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-800 backdrop-blur-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] shadow-[inset_0_1px_2px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)]"
+                  className="w-full pl-10 pr-4 py-2 border border-[hsl(var(--border))] rounded-xl bg-[hsl(var(--input))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] placeholder:text-[hsl(var(--muted-foreground))]"
                 />
               </div>
             )}
@@ -150,8 +150,8 @@ export function DataTable<T extends Record<string, any>>({
                           })
                         }
                       >
-                        <SelectTrigger className="w-full pl-10 pr-8 py-2 h-10 rounded-xl text-sm border-gray-300/50 dark:border-gray-700/50 bg-white dark:bg-gray-800">
-                          <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400 z-10 pointer-events-none" />
+                        <SelectTrigger className="w-full pl-10 pr-8 py-2 h-10 rounded-xl text-sm border-[hsl(var(--border))] bg-[hsl(var(--input))] text-[hsl(var(--foreground))]">
+                          <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[hsl(var(--muted-foreground))] z-10 pointer-events-none" />
                           <SelectValue placeholder={`All ${col.label}`} />
                         </SelectTrigger>
                         <SelectContent>
@@ -179,7 +179,7 @@ export function DataTable<T extends Record<string, any>>({
                       />
                     ) : (
                       <div className="relative">
-                        <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400 z-10 pointer-events-none" />
+                        <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[hsl(var(--muted-foreground))] z-10 pointer-events-none" />
                         <input
                           type="text"
                           value={filters[col.key] || ''}
@@ -190,7 +190,7 @@ export function DataTable<T extends Record<string, any>>({
                             }))
                           }
                           placeholder={`Filter by ${col.label}...`}
-                          className="w-full pl-10 pr-4 py-2 border border-gray-300/50 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-800 backdrop-blur-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                          className="w-full pl-10 pr-4 py-2 border border-[hsl(var(--border))] rounded-xl bg-[hsl(var(--input))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] text-sm placeholder:text-[hsl(var(--muted-foreground))]"
                         />
                       </div>
                     )}
@@ -204,21 +204,21 @@ export function DataTable<T extends Record<string, any>>({
 
       {/* Table */}
       <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gradient-to-br from-gray-50 to-gray-100/50 dark:from-gray-900 dark:to-gray-900/50 border-b border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm">
+        <table className="w-full border-collapse">
+          <thead className="bg-[hsl(var(--muted))]">
             <tr>
               {columns.map((col) => (
                 <th
                   key={col.key}
-                  className={`px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider ${
-                    col.sortable ? 'cursor-pointer hover:bg-gray-100/50 dark:hover:bg-gray-800/50' : ''
+                  className={`px-6 py-3 text-left text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wider ${
+                    col.sortable ? 'cursor-pointer hover:bg-[hsl(var(--muted))]' : ''
                   }`}
                   onClick={() => col.sortable && handleSort(col.key)}
                 >
                   <div className="flex items-center gap-2">
                     <span>{col.label}</span>
                     {col.sortable && (
-                      <span className="text-gray-400 dark:text-gray-500">
+                      <span className="text-[hsl(var(--muted-foreground))]">
                         {sortKey === col.key ? (
                           sortDirection === 'asc' ? (
                             <ArrowUp className="w-4 h-4" />
@@ -235,10 +235,10 @@ export function DataTable<T extends Record<string, any>>({
               ))}
             </tr>
           </thead>
-          <tbody className="bg-white/50 dark:bg-gray-800/50 divide-y divide-gray-200/50 dark:divide-gray-700/50">
+          <tbody className="bg-[hsl(var(--card))]/50 divide-y divide-[hsl(var(--border))]">
             {filteredAndSortedData.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="px-6 py-12 text-center text-sm text-gray-500 dark:text-gray-400">
+                <td colSpan={columns.length} className="px-6 py-12 text-center text-sm text-[hsl(var(--muted-foreground))]">
                   No results found
                 </td>
               </tr>
@@ -246,12 +246,12 @@ export function DataTable<T extends Record<string, any>>({
               filteredAndSortedData.map((row, index) => (
                 <tr
                   key={row.id || index}
-                  className="hover:bg-gradient-to-r hover:from-gray-50/80 hover:to-gray-100/40 dark:hover:from-gray-700/30 dark:hover:to-gray-700/20 transition-all duration-200"
+                  className="hover:bg-[hsl(var(--muted))] transition-colors cursor-pointer"
                 >
                   {columns.map((col) => {
                     const value = getNestedValue(row, col.key)
                     return (
-                      <td key={col.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                      <td key={col.key} className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[hsl(var(--foreground))]">
                         {col.render ? col.render(value, row) : String(value ?? '')}
                       </td>
                     )
@@ -265,7 +265,7 @@ export function DataTable<T extends Record<string, any>>({
 
       {/* Results count */}
       {filteredAndSortedData.length !== data.length && (
-        <div className="px-6 py-3 text-sm text-gray-500 dark:text-gray-400 border-t border-gray-200/50 dark:border-gray-700/50 bg-gradient-to-br from-gray-50/50 to-white/30 dark:from-gray-900/30 dark:to-gray-800/20">
+        <div className="px-6 py-3 text-sm text-[hsl(var(--muted-foreground))] border-t border-[hsl(var(--border))] bg-[hsl(var(--card))]">
           Showing {filteredAndSortedData.length} of {data.length} results
         </div>
       )}

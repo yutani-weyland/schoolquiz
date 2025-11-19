@@ -195,7 +195,7 @@ export default async function RootLayout({
 					`}
 				</Script>
 			</head>
-			<body className="bg-gray-50 dark:bg-[#1A1A1A] text-gray-900 dark:text-white" suppressHydrationWarning>
+			<body className="bg-gray-50 dark:bg-[#0F1419] text-[hsl(var(--foreground))]" suppressHydrationWarning>
 				<ThemeProvider>
 					<UserAccessProvider>
 						{children}

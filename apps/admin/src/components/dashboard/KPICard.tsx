@@ -48,9 +48,9 @@ export function KPICard({ title, value, trend, icon, format = 'number', subtitle
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 hover:border-gray-300 dark:hover:border-gray-600 transition-colors">
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1">
-          <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">{title}</p>
+          <p className="text-sm font-medium text-[hsl(var(--muted-foreground))] mb-1">{title}</p>
           <div className="flex items-baseline gap-2">
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">
+            <p className="text-2xl font-bold text-[hsl(var(--foreground))] tracking-tight">
               {formatValue(value)}
             </p>
             <div className={`flex items-center gap-1 text-sm ${getTrendColor()}`}>
@@ -59,11 +59,11 @@ export function KPICard({ title, value, trend, icon, format = 'number', subtitle
             </div>
           </div>
           {subtitle && (
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{subtitle}</p>
+            <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1 font-normal">{subtitle}</p>
           )}
         </div>
         {icon && (
-          <div className="text-gray-400 dark:text-gray-500">
+          <div className="text-[hsl(var(--muted-foreground))] opacity-60">
             {icon}
           </div>
         )}
@@ -129,16 +129,16 @@ export function ProgressRing({ title, current, total, color = '#3B82F6', subtitl
             />
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-lg font-bold text-gray-900 dark:text-white">{percentage}%</span>
+            <span className="text-lg font-bold text-[hsl(var(--foreground))] tracking-tight">{percentage}%</span>
           </div>
         </div>
         <div className="flex-1">
-          <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">{title}</p>
-          <p className="text-lg font-semibold text-gray-900 dark:text-white">
+          <p className="text-sm font-medium text-[hsl(var(--muted-foreground))] mb-1">{title}</p>
+          <p className="text-lg font-bold text-[hsl(var(--foreground))] tracking-tight">
             {current.toLocaleString()} / {total.toLocaleString()}
           </p>
           {subtitle && (
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{subtitle}</p>
+            <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1 font-normal">{subtitle}</p>
           )}
         </div>
       </div>

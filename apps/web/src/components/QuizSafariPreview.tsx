@@ -238,7 +238,7 @@ export default function QuizSafariPreview() {
 
 	return (
 		<div className="w-full max-w-5xl mx-auto">
-			<div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl overflow-hidden relative" style={{ height: '800px' }}>
+			<div className="bg-white dark:bg-[#1A1F2E] rounded-3xl shadow-2xl overflow-hidden relative" style={{ height: '800px' }}>
 				{/* Browser-like header */}
 				<div className="bg-gray-100 dark:bg-gray-700 px-6 py-4 flex items-center gap-3">
 					<div className="flex gap-2">

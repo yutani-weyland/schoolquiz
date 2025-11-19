@@ -119,7 +119,7 @@ export default function PremiumPage() {
 	];
 
 	return (
-		<main className="min-h-screen bg-gray-50 dark:bg-[#1A1A1A] pt-24 pb-16 px-6">
+		<main className="min-h-screen bg-gray-50 dark:bg-[#0F1419] pt-24 pb-16 px-6">
 			<div className="mx-auto max-w-7xl">
 				{/* Header */}
 				<motion.div
@@ -138,7 +138,7 @@ export default function PremiumPage() {
 
 				{/* Pricing Type Toggle */}
 				<div className="flex justify-center mb-8">
-					<div className="inline-flex rounded-full border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800 p-1">
+					<div className="inline-flex rounded-full border border-gray-200 dark:border-[#2D3748] bg-white dark:bg-[#1A1F2E] p-1">
 						<button
 							type="button"
 							onClick={() => setPricingType("individual")}
@@ -177,11 +177,11 @@ export default function PremiumPage() {
 						initial={{ opacity: 0, x: -20 }}
 						animate={{ opacity: 1, x: 0 }}
 						transition={{ duration: 0.5, delay: 0.1 }}
-						className="border border-gray-200 dark:border-gray-800 rounded-lg p-5 sm:p-6 bg-white dark:bg-gray-900 h-fit relative"
+						className="border border-gray-200 dark:border-[#2D3748] rounded-lg p-5 sm:p-6 bg-white dark:bg-[#1A1F2E] h-fit relative"
 					>
 						{/* Plan Toggle - Top Right */}
 						<div className="absolute top-5 right-5 sm:top-6 sm:right-6">
-							<div className="inline-flex rounded-full border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800 p-1">
+							<div className="inline-flex rounded-full border border-gray-200 dark:border-[#2D3748] bg-white dark:bg-[#1A1F2E] p-1">
 								<button
 									type="button"
 									onClick={() => setPlan("monthly")}
@@ -289,7 +289,7 @@ export default function PremiumPage() {
 									</div>
 
 									{/* Slider Section */}
-									<div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 sm:p-5 mb-4 border border-gray-200 dark:border-gray-700">
+									<div className="bg-gray-50 dark:bg-[#1A1F2E]/50 rounded-xl p-4 sm:p-5 mb-4 border border-gray-200 dark:border-[#2D3748]">
 										<div className="flex items-center justify-between mb-4">
 											<label className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
 												{discountTier.icon}
@@ -344,7 +344,7 @@ export default function PremiumPage() {
 														? "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300"
 														: discountTier.color === "blue"
 														? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
-														: "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+														: "bg-gray-100 dark:bg-[#1A1F2E] text-gray-700 dark:text-gray-300"
 												}`}>
 													<Percent className="w-4 h-4" />
 													{orgPricing.discountPercent.toFixed(1)}% Volume Discount
@@ -359,7 +359,7 @@ export default function PremiumPage() {
 
 									{/* Pricing Breakdown */}
 									<div className="space-y-2 mb-4">
-										<div className="flex items-center justify-between py-1.5 border-b border-gray-200 dark:border-gray-700">
+										<div className="flex items-center justify-between py-1.5 border-b border-gray-200 dark:border-[#2D3748]">
 											<span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
 												{teacherCount} × ${plan === "monthly" ? monthlyPrice : (yearlyPrice / 12).toFixed(2)}/{plan === "monthly" ? "mo" : "mo"}
 											</span>
@@ -372,7 +372,7 @@ export default function PremiumPage() {
 											<motion.div
 												initial={{ opacity: 0, x: -10 }}
 												animate={{ opacity: 1, x: 0 }}
-												className="flex items-center justify-between py-1.5 border-b border-gray-200 dark:border-gray-700"
+												className="flex items-center justify-between py-1.5 border-b border-gray-200 dark:border-[#2D3748]"
 											>
 												<span className="text-xs sm:text-sm text-green-600 dark:text-green-400 flex items-center gap-1">
 													<TrendingDown className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -398,7 +398,7 @@ export default function PremiumPage() {
 											</motion.span>
 										</div>
 
-										<div className="pt-1.5 border-t border-gray-200 dark:border-gray-700 text-center">
+										<div className="pt-1.5 border-t border-gray-200 dark:border-[#2D3748] text-center">
 											<p className="text-xs text-gray-600 dark:text-gray-400">
 												<span className="font-semibold text-gray-900 dark:text-white">
 													${orgPricing.perTeacher.toFixed(2)}
@@ -443,7 +443,7 @@ export default function PremiumPage() {
 						initial={{ opacity: 0, x: 20 }}
 						animate={{ opacity: 1, x: 0 }}
 						transition={{ duration: 0.5, delay: 0.2 }}
-						className="border border-gray-200 dark:border-gray-800 rounded-lg p-5 sm:p-6 bg-white dark:bg-gray-900 sticky top-24 h-fit"
+						className="border border-gray-200 dark:border-[#2D3748] rounded-lg p-5 sm:p-6 bg-white dark:bg-[#1A1F2E] sticky top-24 h-fit"
 					>
 						<h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-4">
 							Feature Preview
@@ -474,7 +474,7 @@ export default function PremiumPage() {
 									</div>
 
 									{/* Feature Image/Screenshot */}
-									<div className="relative rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 shadow-lg">
+									<div className="relative rounded-xl overflow-hidden border border-gray-200 dark:border-[#2D3748] bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 shadow-lg">
 										{features[hoveredFeature].image ? (
 											<img
 												src={features[hoveredFeature].image}
@@ -505,7 +505,7 @@ export default function PremiumPage() {
 									exit={{ opacity: 0 }}
 									className="text-center py-8 sm:py-12"
 								>
-									<div className="bg-gradient-to-br from-blue-50 to-gray-50 dark:from-blue-900/10 dark:to-gray-800/50 rounded-xl p-8 sm:p-12 mb-3 border border-gray-200 dark:border-gray-700">
+									<div className="bg-gradient-to-br from-blue-50 to-gray-50 dark:from-blue-900/10 dark:to-gray-800/50 rounded-xl p-8 sm:p-12 mb-3 border border-gray-200 dark:border-[#2D3748]">
 										<div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
 											<Star className="w-8 h-8 text-blue-600 dark:text-blue-400" />
 										</div>
@@ -562,7 +562,7 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
 	const [isOpen, setIsOpen] = React.useState(false);
 
 	return (
-		<div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden">
+		<div className="rounded-lg border border-gray-200 dark:border-[#2D3748] bg-white dark:bg-[#1A1F2E] overflow-hidden">
 			<button
 				type="button"
 				className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"

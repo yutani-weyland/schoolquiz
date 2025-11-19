@@ -21,11 +21,31 @@ type Action =
 const key = (id: string) => `tsq:v2:${id}`;
 
 function advance(r: number, q: number) {
-	return q < 4 ? { r, q: q + 1 } : r < 4 ? { r: r + 1, q: 0 } : { r, q };
+	// 4 rounds of 6 questions each (r=0-3, q=0-5), then 1 peoples round question (r=4, q=0)
+	if (r < 4) {
+		// Standard rounds: 6 questions each
+		return q < 5 ? { r, q: q + 1 } : { r: r + 1, q: 0 };
+	} else if (r === 4) {
+		// Peoples round: only 1 question (q=0), stay here
+		return { r, q };
+	} else {
+		// Beyond peoples round, stay at last position
+		return { r: 4, q: 0 };
+	}
 }
 
 function back(r: number, q: number) {
-	return q > 0 ? { r, q: q - 1 } : r > 0 ? { r: r - 1, q: 4 } : { r, q };
+	// 4 rounds of 6 questions each (r=0-3, q=0-5), then 1 peoples round question (r=4, q=0)
+	if (r === 4 && q === 0) {
+		// From peoples round, go to last question of round 3
+		return { r: 3, q: 5 };
+	} else if (r > 0) {
+		// Not at first round
+		return q > 0 ? { r, q: q - 1 } : { r: r - 1, q: 5 };
+	} else {
+		// At first round, first question
+		return q > 0 ? { r, q: q - 1 } : { r, q };
+	}
 }
 
 export function useQuizState(quizId: string, mode: Mode) {

@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  '@radix-ui/react-slot@1.2.4':
+    hash: ilxxcur4ernvigmc3hqqceacee
+    path: patches/@radix-ui__react-slot@1.2.4.patch
+
 importers:
 
   .:
@@ -65,7 +70,7 @@ importers:
         version: 2.0.0(@types/react-dom@18.2.0)(@types/react@18.2.0)(react-dom@18.2.0)(react@18.2.0)
       '@radix-ui/react-slot':
         specifier: ^1.2.4
-        version: 1.2.4(@types/react@18.2.0)(react@18.2.0)
+        version: 1.2.4(patch_hash=ilxxcur4ernvigmc3hqqceacee)(@types/react@18.2.0)(react@18.2.0)
       '@radix-ui/react-tabs':
         specifier: ^1.1.13
         version: 1.1.13(@types/react-dom@18.2.0)(@types/react@18.2.0)(react-dom@18.2.0)(react@18.2.0)
@@ -3157,7 +3162,7 @@ packages:
       react: 18.2.0
     dev: false
 
-  /@radix-ui/react-slot@1.2.4(@types/react@18.2.0)(react@18.2.0):
+  /@radix-ui/react-slot@1.2.4(patch_hash=ilxxcur4ernvigmc3hqqceacee)(@types/react@18.2.0)(react@18.2.0):
     resolution: {integrity: sha512-Jl+bCv8HxKnlTLVrcDE8zTMJ09R9/ukw4qBs/oZClOfoQk/cOTbDn+NceXfV7j09YPVQUryJPHurafcSg6EVKA==}
     peerDependencies:
       '@types/react': '*'
@@ -3170,6 +3175,7 @@ packages:
       '@types/react': 18.2.0
       react: 18.2.0
     dev: false
+    patched: true
 
   /@radix-ui/react-tabs@1.1.13(@types/react-dom@18.2.0)(@types/react@18.2.0)(react-dom@18.2.0)(react@18.2.0):
     resolution: {integrity: sha512-7xdcatg7/U+7+Udyoj2zodtI9H/IIopqo+YOIcZOq1nJwXWBZ9p8xiu5llXlekDbZkca79a/fozEYQXIA4sW6A==}

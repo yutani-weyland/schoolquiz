@@ -23,7 +23,7 @@ interface AchievementFormData {
 
 const defaultAppearance = {
   variant: 'compact' as const,
-  backgroundColor: '#F59E0B',
+  backgroundColor: '#9D9D9D', // Common grey instead of orange
   backgroundGradientFrom: undefined,
   backgroundGradientTo: undefined,
   patternOpacity: 0,

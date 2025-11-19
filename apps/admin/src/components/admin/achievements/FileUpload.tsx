@@ -10,6 +10,7 @@ interface FileUploadProps {
   type: 'background' | 'sticker'
   accept?: string
   className?: string
+  compact?: boolean
 }
 
 export function FileUpload({
@@ -19,6 +20,7 @@ export function FileUpload({
   type,
   accept = 'image/png,image/jpeg,image/jpg,image/webp',
   className = '',
+  compact = false,
 }: FileUploadProps) {
   const [isUploading, setIsUploading] = useState(false)
   const [preview, setPreview] = useState<string | null>(value || null)
@@ -60,15 +62,22 @@ export function FileUpload({
     }
   }
 
+  const height = compact ? 'h-20' : 'h-32'
+  const iconSize = compact ? 'w-5 h-5' : 'w-8 h-8'
+  const textSize = compact ? 'text-xs' : 'text-sm'
+  const iconSizeSmall = compact ? 'w-3 h-3' : 'w-4 h-4'
+
   return (
     <div className={className}>
-      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-        {label}
-      </label>
+      {label && (
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          {label}
+        </label>
+      )}
 
       {preview ? (
         <div className="relative">
-          <div className="relative w-full h-32 bg-gray-100 dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 overflow-hidden">
+          <div className={`relative w-full ${height} bg-[hsl(var(--muted))] rounded-lg border border-[hsl(var(--border))] overflow-hidden`}>
             <img
               src={preview}
               alt="Preview"
@@ -76,33 +85,35 @@ export function FileUpload({
             />
             {isUploading && (
               <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                <Loader2 className="w-6 h-6 text-white animate-spin" />
+                <Loader2 className={`${iconSize} text-white animate-spin`} />
               </div>
             )}
             <button
               type="button"
               onClick={handleRemove}
               disabled={isUploading}
-              className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              className={`absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed`}
             >
-              <X className="w-4 h-4" />
+              <X className={iconSizeSmall} />
             </button>
           </div>
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-            {value || 'Uploaded'}
-          </p>
+          {!compact && (
+            <p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">
+              {value || 'Uploaded'}
+            </p>
+          )}
         </div>
       ) : (
         <div
           onClick={() => !isUploading && fileInputRef.current?.click()}
           className={`
-            relative w-full h-32 border-2 border-dashed rounded-lg
+            relative w-full ${height} border-2 border-dashed rounded-lg
             flex flex-col items-center justify-center
             cursor-pointer transition-colors
             ${
               isUploading
-                ? 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800'
-                : 'border-gray-300 dark:border-gray-700 hover:border-blue-500 dark:hover:border-blue-400 bg-gray-50 dark:bg-gray-800'
+                ? 'border-[hsl(var(--border))] bg-[hsl(var(--muted))]'
+                : 'border-[hsl(var(--border))] hover:border-[hsl(var(--primary))] bg-[hsl(var(--muted))]'
             }
           `}
         >
@@ -116,18 +127,20 @@ export function FileUpload({
           />
           {isUploading ? (
             <>
-              <Loader2 className="w-8 h-8 text-gray-400 animate-spin mb-2" />
-              <p className="text-sm text-gray-500 dark:text-gray-400">Uploading...</p>
+              <Loader2 className={`${iconSize} text-[hsl(var(--muted-foreground))] animate-spin mb-1`} />
+              <p className={`${textSize} text-[hsl(var(--muted-foreground))]`}>Uploading...</p>
             </>
           ) : (
             <>
-              <Upload className="w-8 h-8 text-gray-400 mb-2" />
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Click to upload {type === 'background' ? 'background' : 'sticker'}
+              <Upload className={`${iconSize} text-[hsl(var(--muted-foreground))] mb-1`} />
+              <p className={`${textSize} text-[hsl(var(--foreground))] text-center px-2`}>
+                {compact ? 'Upload' : `Click to upload ${type === 'background' ? 'background' : 'sticker'}`}
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                PNG, JPG, or WebP (max 5MB)
-              </p>
+              {!compact && (
+                <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1">
+                  PNG, JPG, or WebP (max 5MB)
+                </p>
+              )}
             </>
           )}
         </div>

@@ -97,8 +97,7 @@ export default function AuditLogPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight flex items-center gap-3">
-          <FileText className="w-8 h-8 text-blue-500" />
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
           Audit Log
         </h1>
         <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">

@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     // }
 
     const body = await request.json()
-    const { id, title, status, rounds, createdBy } = body
+    const { id, title, status, rounds, createdBy, colorHex } = body
 
     // For testing: Return success with dummy data
     // TODO: Implement actual database save
@@ -80,6 +80,7 @@ export async function POST(request: NextRequest) {
         id: id || `quiz-${Date.now()}`,
         title,
         status,
+        colorHex: colorHex || null,
         rounds: rounds.length,
         createdAt: new Date().toISOString(),
       },

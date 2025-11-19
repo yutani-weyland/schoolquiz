@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search') || ''
 
     // TODO: Fetch from database where rounds haven't been used in published quizzes
-    // For now, return dummy data
+    // For now, return dummy data with usage stats
     const dummyRounds = [
       {
         id: 'r-1',
@@ -38,7 +38,14 @@ export async function GET(request: NextRequest) {
             categoryId: 'cat-2',
           },
         ],
-        isUsed: false,
+        isUsed: true,
+        // Usage tracking - used in published quiz
+        usedInDraftQuizzes: 0,
+        usedInPublishedQuizzes: 1,
+        usageCount: 1,
+        lastUsedAt: '2024-11-12T00:00:00Z',
+        // Performance stats
+        successRate: 0.78,
       },
       {
         id: 'r-2',
@@ -63,6 +70,33 @@ export async function GET(request: NextRequest) {
           },
         ],
         isUsed: false,
+        // Usage tracking - unused
+        usedInDraftQuizzes: 0,
+        usedInPublishedQuizzes: 0,
+        usageCount: 0,
+        lastUsedAt: null,
+      },
+      {
+        id: 'r-3',
+        title: 'NAIDOC Week',
+        categoryId: 'cat-6',
+        categoryName: 'NAIDOC Week',
+        blurb: 'Questions about NAIDOC Week and Indigenous culture',
+        questions: [
+          {
+            id: 'q-r3-1',
+            text: 'What does NAIDOC stand for?',
+            answer: 'National Aborigines and Islanders Day Observance Committee',
+            explanation: 'NAIDOC Week celebrates the history, culture and achievements of Aboriginal and Torres Strait Islander peoples.',
+            categoryId: 'cat-6',
+          },
+        ],
+        isUsed: false,
+        // Usage tracking - used in draft only
+        usedInDraftQuizzes: 1,
+        usedInPublishedQuizzes: 0,
+        usageCount: 1,
+        lastUsedAt: '2024-11-08T00:00:00Z',
       },
     ]
 

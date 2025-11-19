@@ -672,9 +672,9 @@ export default function CreateQuiz() {
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900">
+    <div className="min-h-screen bg-white dark:bg-[#0F1419]">
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 py-3 px-6 bg-white/95 dark:bg-gray-900/95 backdrop-blur border-b border-gray-200 dark:border-gray-700">
+      <header className="fixed top-0 left-0 right-0 z-50 py-3 px-6 bg-white/95 dark:bg-[#0F1419]/95 backdrop-blur border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
           <div className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
             The School Quiz
@@ -1184,7 +1184,7 @@ export default function CreateQuiz() {
              </main>
 
              {/* Sticky Progress Bar */}
-             <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 py-3 z-40">
+             <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-[#0F1419] border-t border-gray-200 dark:border-gray-700 py-3 z-40">
                <div className="max-w-full mx-auto px-6 flex justify-between items-center">
                  <div className="flex items-center space-x-4">
                   <div className="text-sm text-gray-600 dark:text-gray-400">

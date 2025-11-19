@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search') || ''
 
     // TODO: Fetch from database where isUsed = false
-    // For now, return dummy data
+    // For now, return dummy data with usage stats
     const dummyQuestions = [
       {
         id: 'q-1',
@@ -26,6 +26,14 @@ export async function GET(request: NextRequest) {
         categoryName: 'Geography',
         difficulty: 0.4,
         isUsed: false,
+        // Usage tracking
+        usedInDraftQuizzes: 0,
+        usedInPublishedQuizzes: 0,
+        usageCount: 0,
+        lastUsedAt: null,
+        // Performance stats
+        successRate: undefined,
+        totalAttempts: 0,
       },
       {
         id: 'q-2',
@@ -35,7 +43,15 @@ export async function GET(request: NextRequest) {
         categoryId: 'cat-2',
         categoryName: 'WW2 History',
         difficulty: 0.7,
-        isUsed: false,
+        isUsed: true,
+        // Usage tracking - used in published quiz
+        usedInDraftQuizzes: 0,
+        usedInPublishedQuizzes: 2,
+        usageCount: 2,
+        lastUsedAt: '2024-11-15T00:00:00Z',
+        // Performance stats
+        successRate: 0.78,
+        totalAttempts: 150,
       },
       {
         id: 'q-3',
@@ -46,6 +62,32 @@ export async function GET(request: NextRequest) {
         categoryName: 'NAIDOC Week',
         difficulty: 0.6,
         isUsed: false,
+        // Usage tracking - used in draft only
+        usedInDraftQuizzes: 1,
+        usedInPublishedQuizzes: 0,
+        usageCount: 1,
+        lastUsedAt: '2024-11-10T00:00:00Z',
+        // Performance stats
+        successRate: undefined,
+        totalAttempts: 0,
+      },
+      {
+        id: 'q-4',
+        text: 'What is the largest state in Australia by area?',
+        answer: 'Western Australia',
+        explanation: 'Western Australia is the largest state, covering about one-third of the continent.',
+        categoryId: 'cat-4',
+        categoryName: 'Geography',
+        difficulty: 0.5,
+        isUsed: false,
+        // Usage tracking
+        usedInDraftQuizzes: 0,
+        usedInPublishedQuizzes: 0,
+        usageCount: 0,
+        lastUsedAt: null,
+        // Performance stats
+        successRate: undefined,
+        totalAttempts: 0,
       },
     ]
 

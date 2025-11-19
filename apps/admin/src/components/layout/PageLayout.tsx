@@ -16,7 +16,7 @@ export function PageLayout({ children, className = '', headerFadeLogo = false }:
   return (
     <>
       <SiteHeader fadeLogo={headerFadeLogo} />
-      <main className={`min-h-screen bg-gray-50 dark:bg-[#1A1A1A] pt-24 pb-16 ${className}`}>
+      <main className={`min-h-screen bg-gray-50 dark:bg-[#0F1419] pt-24 pb-16 ${className}`}>
         {children}
       </main>
     </>

@@ -135,8 +135,7 @@ export default function AdminOrganisationDetailPage() {
             <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
           </button>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight flex items-center gap-3">
-              <Building2 className="w-8 h-8 text-blue-500" />
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
               {organisation.name}
             </h1>
             {organisation.emailDomain && (

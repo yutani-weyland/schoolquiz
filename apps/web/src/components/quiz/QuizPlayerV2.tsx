@@ -63,7 +63,8 @@ export function QuizPlayerV2({ quizTitle, quizColor, quizSlug, questions, rounds
 		return sorted;
 	}, [questions]);
 
-	const cursor = state.r * 5 + state.q;
+	// 4 rounds of 6 questions each (24 questions) + 1 peoples round question (25 total)
+	const cursor = state.r < 4 ? state.r * 6 + state.q : 24; // r=4, q=0 maps to index 24
 	const currentQuestion = flat[cursor];
 	const isFirst = cursor === 0;
 	const isLast = cursor === flat.length - 1;
@@ -156,8 +157,16 @@ export function QuizPlayerV2({ quizTitle, quizColor, quizSlug, questions, rounds
 				<HUD
 					total={flat.length}
 					current={cursor}
-					segments={[5, 5, 5, 5, 5]}
-					onJump={(i) => dispatch({ type: "GOTO", r: Math.floor(i / 5), q: i % 5 })}
+					segments={[6, 6, 6, 6, 1]}
+					onJump={(i) => {
+						if (i < 24) {
+							// Standard rounds: 6 questions each
+							dispatch({ type: "GOTO", r: Math.floor(i / 6), q: i % 6 });
+						} else {
+							// Peoples round: 1 question
+							dispatch({ type: "GOTO", r: 4, q: 0 });
+						}
+					}}
 				/>
 			</div>
 

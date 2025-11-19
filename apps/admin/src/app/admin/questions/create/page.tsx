@@ -190,8 +190,7 @@ export default function CreateQuestionOrRoundPage() {
             <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
           </Link>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight flex items-center gap-3">
-              <Plus className="w-8 h-8 text-blue-500" />
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
               Create Question or Round
             </h1>
             <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
@@ -240,7 +239,7 @@ export default function CreateQuestionOrRoundPage() {
               <select
                 value={question.categoryId}
                 onChange={(e) => setQuestion(prev => ({ ...prev, categoryId: e.target.value }))}
-                className="w-full px-4 py-2.5 border border-gray-300/50 dark:border-gray-700/50 rounded-xl bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/50 backdrop-blur-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2.5 border border-gray-300/50 dark:border-gray-700/50 rounded-xl bg-white dark:bg-[#1A1A1A] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Select a category</option>
                 {categories.map(cat => (
@@ -257,7 +256,7 @@ export default function CreateQuestionOrRoundPage() {
                 value={question.text}
                 onChange={(e) => setQuestion(prev => ({ ...prev, text: e.target.value }))}
                 rows={3}
-                className="w-full px-4 py-2.5 border border-gray-300/50 dark:border-gray-700/50 rounded-xl bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/50 backdrop-blur-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2.5 border border-gray-300/50 dark:border-gray-700/50 rounded-xl bg-white dark:bg-[#1A1A1A] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Enter the question..."
               />
             </div>
@@ -270,7 +269,7 @@ export default function CreateQuestionOrRoundPage() {
                 type="text"
                 value={question.answer}
                 onChange={(e) => setQuestion(prev => ({ ...prev, answer: e.target.value }))}
-                className="w-full px-4 py-2.5 border border-gray-300/50 dark:border-gray-700/50 rounded-xl bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/50 backdrop-blur-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2.5 border border-gray-300/50 dark:border-gray-700/50 rounded-xl bg-white dark:bg-[#1A1A1A] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Enter the answer..."
               />
             </div>
@@ -283,7 +282,7 @@ export default function CreateQuestionOrRoundPage() {
                 value={question.explanation || ''}
                 onChange={(e) => setQuestion(prev => ({ ...prev, explanation: e.target.value }))}
                 rows={2}
-                className="w-full px-4 py-2.5 border border-gray-300/50 dark:border-gray-700/50 rounded-xl bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/50 backdrop-blur-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2.5 border border-gray-300/50 dark:border-gray-700/50 rounded-xl bg-white dark:bg-[#1A1A1A] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Optional explanation..."
               />
             </div>
@@ -315,7 +314,7 @@ export default function CreateQuestionOrRoundPage() {
                   type="text"
                   value={round.title}
                   onChange={(e) => setRound(prev => ({ ...prev, title: e.target.value }))}
-                  className="w-full px-4 py-2.5 border border-gray-300/50 dark:border-gray-700/50 rounded-xl bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/50 backdrop-blur-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2.5 border border-gray-300/50 dark:border-gray-700/50 rounded-xl bg-white dark:bg-[#1A1A1A] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="e.g., WW2 History"
                 />
               </div>
@@ -327,7 +326,7 @@ export default function CreateQuestionOrRoundPage() {
                 <select
                   value={round.categoryId}
                   onChange={(e) => setRound(prev => ({ ...prev, categoryId: e.target.value }))}
-                  className="w-full px-4 py-2.5 border border-gray-300/50 dark:border-gray-700/50 rounded-xl bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/50 backdrop-blur-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2.5 border border-gray-300/50 dark:border-gray-700/50 rounded-xl bg-white dark:bg-[#1A1A1A] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Select a category</option>
                   {categories.map(cat => (
@@ -345,7 +344,7 @@ export default function CreateQuestionOrRoundPage() {
                 value={round.blurb || ''}
                 onChange={(e) => setRound(prev => ({ ...prev, blurb: e.target.value }))}
                 rows={2}
-                className="w-full px-4 py-2.5 border border-gray-300/50 dark:border-gray-700/50 rounded-xl bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/50 backdrop-blur-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2.5 border border-gray-300/50 dark:border-gray-700/50 rounded-xl bg-white dark:bg-[#1A1A1A] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Optional description..."
               />
             </div>
@@ -387,14 +386,14 @@ export default function CreateQuestionOrRoundPage() {
                         value={q.text}
                         onChange={(e) => updateRoundQuestion(index, 'text', e.target.value)}
                         rows={2}
-                        className="w-full px-3 py-2 border border-gray-300/50 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        className="w-full px-3 py-2 border border-gray-300/50 dark:border-gray-700/50 rounded-lg bg-white dark:bg-[#1A1A1A] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                         placeholder="Question..."
                       />
                       <input
                         type="text"
                         value={q.answer}
                         onChange={(e) => updateRoundQuestion(index, 'answer', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300/50 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        className="w-full px-3 py-2 border border-gray-300/50 dark:border-gray-700/50 rounded-lg bg-white dark:bg-[#1A1A1A] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                         placeholder="Answer..."
                       />
                     </div>

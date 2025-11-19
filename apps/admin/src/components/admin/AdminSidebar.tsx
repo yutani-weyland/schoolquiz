@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import * as Tooltip from '@radix-ui/react-tooltip'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import {
   LayoutDashboard,
   Building2,
@@ -19,6 +21,7 @@ import {
   ChevronRight,
   MessageSquare,
   Plus,
+  ChevronDown,
 } from 'lucide-react'
 
 interface SidebarItem {
@@ -56,7 +59,6 @@ const sidebarSections: SidebarSection[] = [
     label: 'Content',
     items: [
       { id: 'quizzes', label: 'Quizzes', href: '/admin/quizzes', icon: BookOpen },
-      { id: 'create-question', label: 'Create Question/Round', href: '/admin/questions/create', icon: Plus },
       { id: 'question-submissions', label: 'Question Submissions', href: '/admin/questions/submissions', icon: MessageSquare },
       { id: 'achievements', label: 'Achievements', href: '/admin/achievements', icon: Trophy },
     ],
@@ -88,6 +90,7 @@ const sidebarSections: SidebarSection[] = [
 
 export function AdminSidebar() {
   const [collapsed, setCollapsed] = useState(false)
+  const [openSections, setOpenSections] = useState<string[]>(['content', 'management'])
   const pathname = usePathname()
 
   // Persist collapsed state
@@ -113,8 +116,8 @@ export function AdminSidebar() {
         href={item.href}
         className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
           isActive 
-            ? 'bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-900/30 dark:to-blue-900/20 text-blue-700 dark:text-blue-300 shadow-[0_1px_3px_rgba(59,130,246,0.15),inset_0_1px_0_0_rgba(255,255,255,0.9)] dark:shadow-[0_1px_3px_rgba(59,130,246,0.2),inset_0_1px_0_0_rgba(255,255,255,0.05)]' 
-            : 'text-gray-700 dark:text-gray-300 hover:bg-gradient-to-br hover:from-gray-50 hover:to-gray-100/50 dark:hover:from-gray-800/50 dark:hover:to-gray-800/30 hover:shadow-[0_1px_3px_rgba(0,0,0,0.08),inset_0_1px_0_0_rgba(255,255,255,0.9)] dark:hover:shadow-[0_1px_3px_rgba(0,0,0,0.2),inset_0_1px_0_0_rgba(255,255,255,0.05)]'
+            ? 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]' 
+            : 'text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]'
         }`}
       >
         <Icon className="w-5 h-5 flex-shrink-0" />
@@ -131,11 +134,11 @@ export function AdminSidebar() {
             </Tooltip.Trigger>
             <Tooltip.Portal>
               <Tooltip.Content 
-                className="bg-slate-900 text-white text-xs px-2 py-1 rounded shadow-lg z-50"
+                className="bg-[hsl(var(--raised))] text-[hsl(var(--foreground))] border border-[hsl(var(--border))] text-xs px-2 py-1 rounded shadow-lg z-50"
                 side="right"
               >
                 {item.label}
-                <Tooltip.Arrow className="fill-slate-900" />
+                <Tooltip.Arrow className="fill-[hsl(var(--raised))]" />
               </Tooltip.Content>
             </Tooltip.Portal>
           </Tooltip.Root>
@@ -147,20 +150,20 @@ export function AdminSidebar() {
   }
 
   return (
-    <div className={`bg-gray-50 dark:bg-gray-900 border-r border-gray-200/50 dark:border-gray-700/50 transition-all duration-200 ${
+    <div className={`bg-[hsl(var(--card))] border-r border-[hsl(var(--border))] transition-all duration-200 ${
       collapsed ? 'w-16' : 'w-60'
     }`}>
       <div className="sticky top-0 h-screen flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200/50 dark:border-gray-700/50 bg-white dark:bg-gray-900">
+        <div className="flex items-center justify-between p-4 border-b border-[hsl(var(--border))] bg-[hsl(var(--card))]">
           {!collapsed && (
-            <div className="text-lg font-semibold text-gray-900 dark:text-white">
+            <div className="text-lg font-semibold text-[hsl(var(--foreground))]">
               Admin
             </div>
           )}
           <button
             onClick={toggleCollapsed}
-            className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-all duration-200"
+            className="p-2 rounded-xl hover:bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] transition-all duration-200"
             aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
@@ -168,26 +171,43 @@ export function AdminSidebar() {
         </div>
 
         {/* Navigation */}
-        <div className="flex-1 overflow-y-auto p-3">
-          <div className="space-y-6">
-            {sidebarSections.map((section) => (
-              <div key={section.id} className="space-y-2">
-                {section.label && !collapsed && (
-                  <div className="px-3 py-1.5">
-                    <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      {section.label}
-                    </h3>
+        <ScrollArea className="flex-1 p-3">
+          <Accordion
+            type="multiple"
+            value={collapsed ? [] : openSections}
+            onValueChange={setOpenSections}
+            className="w-full space-y-1"
+          >
+            {sidebarSections.map((section) => {
+              // Overview section is always visible without collapsible
+              if (!section.label || section.id === 'overview') {
+                return (
+                  <div key={section.id} className="space-y-1 mb-2">
+                    {section.items.map((item) => (
+                      <SidebarItem key={item.id} item={item} />
+                    ))}
                   </div>
-                )}
-                <div className="space-y-1">
-                  {section.items.map((item) => (
-                    <SidebarItem key={item.id} item={item} />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+                )
+              }
+
+              // Other sections are collapsible
+              return (
+                <AccordionItem key={section.id} value={section.id} className="border-0">
+                  <AccordionTrigger className="px-3 py-2.5 hover:no-underline hover:bg-[hsl(var(--muted))] rounded-xl text-sm font-medium text-[hsl(var(--foreground))] data-[state=open]:bg-[hsl(var(--muted))]">
+                    {!collapsed && <span>{section.label}</span>}
+                  </AccordionTrigger>
+                  <AccordionContent className="pt-1 pb-2 px-0">
+                    <div className="space-y-1">
+                      {section.items.map((item) => (
+                        <SidebarItem key={item.id} item={item} />
+                      ))}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              )
+            })}
+          </Accordion>
+        </ScrollArea>
       </div>
     </div>
   )

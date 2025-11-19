@@ -29,9 +29,9 @@ interface QuizCardProps {
 }
 
 export function QuizCard({ quiz, isNewest = false, index = 0 }: QuizCardProps) {
-	// Slight rotation angles for each card (in degrees) - similar to stats cards
-	const rotations = [-0.75, 0.5, -1, 0.75, -0.5, 1, -0.75, 0.5, -1, 0.75, -0.5, 1];
-	const initialRotation = rotations[index % rotations.length] || 0;
+	// Random tilt angles for hover effect (in degrees) - creates varied interactivity
+	const hoverTilts = [-1.5, 1.2, -1.8, 1.5, -1.2, 1.8, -1.5, 1.2, -1.8, 1.5, -1.2, 1.8];
+	const hoverTilt = hoverTilts[index % hoverTilts.length] || 0;
 	const [showShareMenu, setShowShareMenu] = useState(false);
 	const [copied, setCopied] = useState(false);
 	const [hasProgress, setHasProgress] = useState(false); // Always start with false to match server render
@@ -244,9 +244,11 @@ export function QuizCard({ quiz, isNewest = false, index = 0 }: QuizCardProps) {
 		<div
 			key={`quiz-card-${quiz.id}`}
 			className="h-auto sm:h-full"
+			onMouseEnter={() => setIsHovered(true)}
+			onMouseLeave={() => setIsHovered(false)}
 		>
 			<motion.div
-				className="rounded-3xl p-4 sm:p-7 md:p-9 shadow-lg h-auto sm:h-full min-h-[215px] sm:min-h-[380px] md:min-h-[430px] flex flex-col relative overflow-hidden cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
+				className={`rounded-3xl p-4 sm:p-7 md:p-9 shadow-lg h-auto sm:h-full min-h-[215px] sm:min-h-[380px] md:min-h-[430px] flex flex-col relative overflow-hidden cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 transition-shadow duration-300 ${isHovered ? (isPremiumLocked ? 'shadow-[0_0_0_1px_rgba(251,191,36,0.4),0_25px_50px_-12px_rgba(251,191,36,0.2)]' : 'shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)]') : ''}`}
 				style={{ 
 					backgroundColor: quiz.colorHex,
 					viewTransitionName: `quiz-${quiz.id}`,
@@ -256,22 +258,27 @@ export function QuizCard({ quiz, isNewest = false, index = 0 }: QuizCardProps) {
 					}),
 				}}
 				initial={{ opacity: 0, y: 20, rotate: 0 }}
-				animate={{ opacity: 1, y: 0, rotate: initialRotation }}
-				onMouseEnter={() => setIsHovered(true)}
-				onMouseLeave={() => setIsHovered(false)}
+				animate={{ 
+					opacity: 1, 
+					y: 0, 
+					rotate: isHovered ? hoverTilt : 0,
+					scale: isHovered ? 1.02 : 1,
+					transition: {
+						type: "spring",
+						stiffness: 300,
+						damping: 20
+					}
+				}}
 				whileHover={{ 
-					rotate: initialRotation + (isPremiumLocked ? 0.5 : 1.4),
+					rotate: hoverTilt,
 					scale: 1.02,
 					y: -4,
-					boxShadow: isPremiumLocked 
-						? "0 0 0 1px rgba(251, 191, 36, 0.4), 0 25px 50px -12px rgba(251, 191, 36, 0.2)"
-						: "0 25px 50px -12px rgba(0, 0, 0, 0.25)"
 				}}
 				whileTap={{ scale: 0.98 }}
 				transition={{ 
 					type: "spring",
 					stiffness: 300,
-					damping: 25
+					damping: 20
 				}}
 				onClick={(e) => {
 					e.stopPropagation();

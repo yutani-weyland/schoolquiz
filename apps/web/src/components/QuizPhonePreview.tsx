@@ -12,7 +12,7 @@ export default function QuizPhonePreview() {
       
       {/* Quiz content overlay */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div className="w-24 h-36 bg-white dark:bg-gray-800 rounded-2xl p-2 shadow-lg">
+        <div className="w-24 h-36 bg-white dark:bg-[#1A1F2E] rounded-2xl p-2 shadow-lg">
           <div className="text-center">
             <div className="text-xs font-bold text-gray-900 dark:text-white mb-2">
               Round 1: TikTok Trends

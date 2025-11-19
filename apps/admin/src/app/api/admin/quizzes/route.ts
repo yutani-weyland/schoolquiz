@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import { prisma } from '@schoolquiz/db'
 import { dummyQuizzes } from '@/lib/dummy-quiz-data'
+import { getQuizColor as getStoredColor, hasQuizColor } from '@/lib/quiz-color-store'
 
 /**
  * GET /api/admin/quizzes
@@ -45,8 +46,16 @@ export async function GET(request: NextRequest) {
     const total = filtered.length
     const quizzes = filtered.slice(skip, skip + limit)
 
+    // Override colorHex for quizzes that have been updated
+    const quizzesWithColors = quizzes.map(quiz => {
+      if (hasQuizColor(quiz.id)) {
+        return { ...quiz, colorHex: getStoredColor(quiz.id)! }
+      }
+      return quiz
+    })
+
     return NextResponse.json({
-      quizzes,
+      quizzes: quizzesWithColors,
       pagination: {
         page,
         limit,

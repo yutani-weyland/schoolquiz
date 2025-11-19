@@ -148,6 +148,7 @@ export default function Questions() {
   const [showEditorDrawer, setShowEditorDrawer] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
+  const [expandedQuestions, setExpandedQuestions] = useState<Set<string>>(new Set());
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
@@ -334,9 +335,9 @@ export default function Questions() {
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900">
+    <div className="min-h-screen bg-white dark:bg-[#0F1419]">
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 py-3 px-6 bg-white/95 dark:bg-gray-900/95 backdrop-blur border-b border-gray-200 dark:border-gray-700">
+      <header className="fixed top-0 left-0 right-0 z-50 py-3 px-6 bg-white/95 dark:bg-[#0F1419]/95 backdrop-blur border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
           <div className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
             The School Quiz
@@ -721,12 +722,31 @@ export default function Questions() {
                           className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
                         >
                           <td className="px-4 py-3">
-                            <div className="text-sm font-medium text-gray-900 dark:text-white line-clamp-2">
+                            <div className={`text-sm font-medium text-gray-900 dark:text-white ${expandedQuestions.has(question.id) ? '' : 'line-clamp-2'}`}>
                               {question.question}
                             </div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            <div className={`text-xs text-gray-500 dark:text-gray-400 mt-1 ${expandedQuestions.has(question.id) ? '' : 'line-clamp-1'}`}>
                               {question.answer}
                             </div>
+                            {(question.question.length > 100 || question.answer.length > 50) && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setExpandedQuestions(prev => {
+                                    const next = new Set(prev);
+                                    if (next.has(question.id)) {
+                                      next.delete(question.id);
+                                    } else {
+                                      next.add(question.id);
+                                    }
+                                    return next;
+                                  });
+                                }}
+                                className="text-xs text-blue-600 dark:text-blue-400 hover:underline mt-1"
+                              >
+                                {expandedQuestions.has(question.id) ? 'Show less' : 'Show more'}
+                              </button>
+                            )}
                           </td>
                           <td className="px-4 py-3">
                             <span className="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-full">

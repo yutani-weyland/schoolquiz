@@ -24,6 +24,8 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '50')
     const skip = (page - 1) * limit
+    const sortBy = searchParams.get('sortBy') || 'createdAt'
+    const sortOrder = searchParams.get('sortOrder') || 'desc'
 
     // For testing: Always use dummy data
     // TODO: Switch to database when ready
@@ -40,6 +42,46 @@ export async function GET(request: NextRequest) {
     if (tier) {
       filtered = filtered.filter(user => user.tier === tier)
     }
+    
+    // Apply sorting
+    filtered.sort((a, b) => {
+      let aValue: any
+      let bValue: any
+      
+      switch (sortBy) {
+        case 'name':
+          aValue = a.name || a.email
+          bValue = b.name || b.email
+          break
+        case 'email':
+          aValue = a.email
+          bValue = b.email
+          break
+        case 'tier':
+          aValue = a.tier
+          bValue = b.tier
+          break
+        case 'lastLoginAt':
+          aValue = a.lastLoginAt ? new Date(a.lastLoginAt).getTime() : 0
+          bValue = b.lastLoginAt ? new Date(b.lastLoginAt).getTime() : 0
+          break
+        case 'createdAt':
+        default:
+          aValue = new Date(a.createdAt).getTime()
+          bValue = new Date(b.createdAt).getTime()
+          break
+      }
+      
+      if (aValue === bValue) return 0
+      if (aValue == null) return 1
+      if (bValue == null) return -1
+      
+      const comparison = typeof aValue === 'string' 
+        ? aValue.localeCompare(bValue)
+        : aValue - bValue
+      
+      return sortOrder === 'asc' ? comparison : -comparison
+    })
     
     const total = filtered.length
     const users = filtered.slice(skip, skip + limit)
