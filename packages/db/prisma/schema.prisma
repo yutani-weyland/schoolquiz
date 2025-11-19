@@ -41,7 +41,7 @@ model Teacher {
 model Category {
   id            String   @id @default(cuid())
   name          String   @unique
-  parentId      String?  // For subcategories
+  parentId      String? // For subcategories
   description   String?
   seasonalTag   String?
   difficultyMin Float    @default(0)
@@ -52,37 +52,37 @@ model Category {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  parent     Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
-  children   Category[] @relation("CategoryHierarchy")
-  questions  Question[]
-  rounds     Round[]
+  parent    Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children  Category[] @relation("CategoryHierarchy")
+  questions Question[]
+  rounds    Round[]
 
   @@index([parentId])
   @@map("categories")
 }
 
 model Question {
-  id              String    @id @default(cuid())
-  categoryId      String
-  text            String
-  answer          String
-  explanation     String?
-  difficulty      Float // 0-1 scale
-  tags            String    @default("") // Comma-separated tags
-  status          String    @default("draft") // draft, review, published, archived
-  createdBy       String
-  isPeopleQuestion Boolean  @default(false) // True if this is a people's question
-  usageCount      Int       @default(0)
-  lastUsedAt      DateTime?
-  isUsed          Boolean   @default(false) // Track if question has been used in a published quiz
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id               String    @id @default(cuid())
+  categoryId       String
+  text             String
+  answer           String
+  explanation      String?
+  difficulty       Float // 0-1 scale
+  tags             String    @default("") // Comma-separated tags
+  status           String    @default("draft") // draft, review, published, archived
+  createdBy        String
+  isPeopleQuestion Boolean   @default(false) // True if this is a people's question
+  usageCount       Int       @default(0)
+  lastUsedAt       DateTime?
+  isUsed           Boolean   @default(false) // Track if question has been used in a published quiz
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
-  category Category            @relation(fields: [categoryId], references: [id])
-  creator  Teacher             @relation(fields: [createdBy], references: [id])
-  rounds   QuizRoundQuestion[]
-  stats    RunQuestionStat[]
-  submission UserQuestionSubmission? // Link to user submission if created from one
+  category   Category                @relation(fields: [categoryId], references: [id])
+  creator    Teacher                 @relation(fields: [createdBy], references: [id])
+  rounds     QuizRoundQuestion[]
+  stats      RunQuestionStat[]
+  submission UserQuestionSubmission? @relation("QuestionSubmission") // Link to user submission if created from one
 
   @@index([status, updatedAt])
   @@index([categoryId])
@@ -93,6 +93,8 @@ model Question {
 model Quiz {
   id              String    @id @default(cuid())
   schoolId        String?
+  slug            String?   @unique // URL-friendly identifier (e.g., "quiz-12", "demo")
+  weekISO         String? // ISO week string (e.g., "2024-01-15") for weekly quiz scheduling
   title           String
   blurb           String?
   audience        String?
@@ -101,18 +103,19 @@ model Quiz {
   seasonalTag     String?
   publicationDate DateTime?
   status          String    @default("draft") // draft, scheduled, published
-  colorHex        String?   // Hex color for quiz card (e.g., "#FFE135")
+  colorHex        String? // Hex color for quiz card (e.g., "#FFE135")
   createdBy       String
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  school  School? @relation(fields: [schoolId], references: [id])
-  creator Teacher @relation(fields: [createdBy], references: [id])
-  rounds  Round[]
-  runs    Run[]
-  pdfUrl  String? // URL to generated PDF
+  school    School? @relation(fields: [schoolId], references: [id])
+  creator   Teacher @relation(fields: [createdBy], references: [id])
+  rounds    Round[]
+  runs      Run[]
+  pdfUrl    String? // URL to generated PDF
   pdfStatus String? // pending, generated, approved
 
+  @@index([slug])
   @@map("quizzes")
 }
 
@@ -745,24 +748,25 @@ model PrivateLeagueStats {
 // ============================================================================
 
 model UserQuestionSubmission {
-  id                String   @id @default(cuid())
-  userId            String
-  question          String   // The question text
-  answer            String   // The answer
-  explanation       String?  // Optional explanation
-  category          String?  // Suggested category
-  status            String   @default("PENDING") // PENDING, APPROVED, REJECTED
-  reviewedBy        String?  // Admin user who reviewed it
-  reviewedAt        DateTime?
-  notes             String?  // Admin notes
-  teacherName       String?  // Teacher name (e.g., "Mrs K")
-  schoolName        String?  // School name
-  consentForShoutout Boolean @default(false) // Consent to give shoutout to school/teacher
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id                 String    @id @default(cuid())
+  userId             String
+  approvedQuestionId String?   @unique // If approved and converted to a Question
+  question           String // The question text
+  answer             String // The answer
+  explanation        String? // Optional explanation
+  category           String? // Suggested category
+  status             String    @default("PENDING") // PENDING, APPROVED, REJECTED
+  reviewedBy         String? // Admin user who reviewed it
+  reviewedAt         DateTime?
+  notes              String? // Admin notes
+  teacherName        String? // Teacher name (e.g., "Mrs K")
+  schoolName         String? // School name
+  consentForShoutout Boolean   @default(false) // Consent to give shoutout to school/teacher
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  question Question? // If approved and converted to a Question
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  approvedQuestion Question? @relation("QuestionSubmission", fields: [approvedQuestionId], references: [id], onDelete: SetNull) // If approved and converted to a Question
 
   @@index([status, createdAt])
   @@index([userId])
@@ -774,19 +778,19 @@ model UserQuestionSubmission {
 // ============================================================================
 
 model OfferCode {
-  id              String   @id @default(cuid())
-  code            String   @unique
+  id              String    @id @default(cuid())
+  code            String    @unique
   description     String?
-  discountType    String   // PERCENTAGE, FIXED_AMOUNT, FREE_TRIAL_EXTENSION
-  discountValue   Float    // Percentage (0-100) or fixed amount in cents
-  maxUses         Int?     // Null = unlimited
-  currentUses     Int      @default(0)
+  discountType    String // PERCENTAGE, FIXED_AMOUNT, FREE_TRIAL_EXTENSION
+  discountValue   Float // Percentage (0-100) or fixed amount in cents
+  maxUses         Int? // Null = unlimited
+  currentUses     Int       @default(0)
   validFrom       DateTime
   validUntil      DateTime?
-  applicablePlans String?  // JSON array of plan types, null = all plans
-  isActive        Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  applicablePlans String? // JSON array of plan types, null = all plans
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   @@index([code, isActive])
   @@map("offer_codes")
@@ -815,34 +819,34 @@ enum ScheduledJobStatus {
 }
 
 model ScheduledJob {
-  id          String   @id @default(cuid())
+  id          String             @id @default(cuid())
   type        ScheduledJobType
   status      ScheduledJobStatus @default(PENDING)
   name        String // Human-readable name
   description String?
-  
+
   // Scheduling
   scheduledFor DateTime // When the job should run
   executedAt   DateTime? // When it actually ran
   nextRunAt    DateTime? // For recurring jobs
-  
+
   // Job configuration (JSON)
   config String @default("{}") // JSON string with job-specific parameters
-  
+
   // Execution tracking
-  attempts     Int      @default(0)
-  maxAttempts  Int      @default(3)
-  lastError    String? // Last error message if failed
-  result       String? // JSON string with execution result
-  
+  attempts    Int     @default(0)
+  maxAttempts Int     @default(3)
+  lastError   String? // Last error message if failed
+  result      String? // JSON string with execution result
+
   // Recurrence (optional)
-  isRecurring  Boolean  @default(false)
+  isRecurring       Boolean @default(false)
   recurrencePattern String? // e.g., "0 7 * * 1" for weekly Monday 7am
-  
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   createdBy String? // User ID who created this job
-  
+
   @@index([status, scheduledFor])
   @@index([type, status])
   @@index([scheduledFor])
