@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { SpellCheckInput } from "@/components/SpellCheckInput";
 import { QUIZ_CONSTANTS } from "@schoolquiz/db";
 
@@ -99,6 +99,10 @@ const TOTAL_QUESTIONS = QUIZ_CONSTANTS.TOTAL_QUESTIONS;
 
 export default function CreateQuiz() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editQuizId = searchParams.get('edit');
+  const isEditing = !!editQuizId;
+
   const [quiz, setQuiz] = useState<Quiz>({
     number: 0,
     title: '',
@@ -106,6 +110,8 @@ export default function CreateQuiz() {
     status: 'draft',
     rounds: []
   });
+  const [isLoadingQuiz, setIsLoadingQuiz] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Initialize dark mode from localStorage
   useEffect(() => {
@@ -116,6 +122,70 @@ export default function CreateQuiz() {
       document.documentElement.classList.remove('dark');
     }
   }, []);
+
+  // Load quiz data when editing
+  useEffect(() => {
+    if (isEditing && editQuizId) {
+      loadQuizForEditing(editQuizId);
+    }
+  }, [isEditing, editQuizId]);
+
+  const loadQuizForEditing = async (quizId: string) => {
+    setIsLoadingQuiz(true);
+    setLoadError(null);
+
+    try {
+      const response = await fetch(`/api/admin/quizzes/${quizId}`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to load quiz');
+      }
+
+      const quizData = data.quiz;
+
+      // Transform database format to component format
+      const transformedQuiz: Quiz = {
+        id: quizData.id,
+        number: quizData.slug && /^\d+$/.test(quizData.slug) ? parseInt(quizData.slug) : 0,
+        title: quizData.title,
+        description: quizData.blurb || '',
+        status: quizData.status,
+        scheduledDate: quizData.publicationDate ? new Date(quizData.publicationDate).toISOString().split('T')[0] : undefined,
+        rounds: (quizData.rounds || []).map((round: any, index: number) => {
+          const isPeoplesRound = round.isPeoplesRound || index === (quizData.rounds.length - 1);
+          return {
+            id: round.id,
+            category: round.category?.name || round.title || 'General Knowledge',
+            title: round.title || round.category?.name || `Round ${index + 1}`,
+            blurb: round.blurb || '',
+            color: roundColors[index % roundColors.length],
+            kind: isPeoplesRound ? 'finale' : 'standard',
+            questions: (round.questions || []).map((rq: any) => ({
+              id: rq.question?.id || '',
+              question: rq.question?.text || '',
+              answer: rq.question?.answer || '',
+              explanation: rq.question?.explanation || '',
+              category: round.category?.name || 'General Knowledge',
+            })),
+          };
+        }),
+      };
+
+      setQuiz(transformedQuiz);
+
+      // Set active round tab to first round if available
+      if (transformedQuiz.rounds.length > 0) {
+        setActiveRoundTab(transformedQuiz.rounds[0].id);
+      }
+    } catch (error: any) {
+      console.error('Error loading quiz:', error);
+      setLoadError(error.message || 'Failed to load quiz');
+      alert(`Error loading quiz: ${error.message || 'Failed to load quiz. Please try again.'}`);
+    } finally {
+      setIsLoadingQuiz(false);
+    }
+  };
 
   const [categorySearch, setCategorySearch] = useState('');
   const [showNewCategoryModal, setShowNewCategoryModal] = useState(false);
@@ -592,7 +662,10 @@ export default function CreateQuiz() {
     URL.revokeObjectURL(url);
   };
 
-  const saveQuiz = (asDraft = false, scheduleForLater = false) => {
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const saveQuiz = async (asDraft = false, scheduleForLater = false) => {
     if (!quiz.title.trim()) {
       alert('Please enter a quiz title.');
       return;
@@ -636,26 +709,55 @@ export default function CreateQuiz() {
       return;
     }
 
-    const quizToSave = {
-      ...quiz,
-      status: asDraft ? 'draft' : scheduleForLater ? 'scheduled' : 'published',
-      scheduledDate: scheduleForLater ? scheduledDate : undefined
-    };
+    setIsSaving(true);
+    setSaveError(null);
 
-    // Add the quiz number to used numbers if publishing or scheduling
-    if (!asDraft) {
-      setUsedQuizNumbers(prev => [...prev, quiz.number]);
-    }
+    try {
+      const quizToSave = {
+        ...quiz,
+        status: asDraft ? 'draft' : scheduleForLater ? 'scheduled' : 'published',
+        scheduledDate: scheduleForLater ? scheduledDate : undefined
+      };
 
-    console.log('Saving quiz:', quizToSave);
-    
-    if (scheduleForLater) {
-      alert(`Quiz #${quiz.number} scheduled for ${new Date(scheduledDate).toLocaleString()}!`);
-    } else {
-      alert(`Quiz #${quiz.number} ${asDraft ? 'saved as draft' : 'published'} successfully!`);
+      // Use PUT for editing, POST for creating
+      const url = isEditing && quiz.id 
+        ? `/api/admin/quizzes/${quiz.id}`
+        : '/api/admin/quizzes';
+      const method = isEditing && quiz.id ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(quizToSave),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || data.details || 'Failed to save quiz');
+      }
+
+      // Add the quiz number to used numbers if publishing or scheduling (only for new quizzes)
+      if (!asDraft && !isEditing) {
+        setUsedQuizNumbers(prev => [...prev, quiz.number]);
+      }
+
+      if (scheduleForLater) {
+        alert(`Quiz #${quiz.number} ${isEditing ? 'updated and' : ''} scheduled for ${new Date(scheduledDate).toLocaleString()}!`);
+      } else {
+        alert(`Quiz #${quiz.number} ${isEditing ? 'updated and ' : ''}${asDraft ? 'saved as draft' : 'published'} successfully!`);
+      }
+      
+      router.push('/dashboard');
+    } catch (error: any) {
+      console.error('Error saving quiz:', error);
+      setSaveError(error.message || 'Failed to save quiz');
+      alert(`Error: ${error.message || 'Failed to save quiz. Please try again.'}`);
+    } finally {
+      setIsSaving(false);
     }
-    
-    router.push('/dashboard');
   };
 
   const getSelectedCategories = () => {
@@ -707,16 +809,47 @@ export default function CreateQuiz() {
           </div>
         </header>
 
+        {/* Loading State */}
+        {isLoadingQuiz && (
+          <div className="min-h-screen flex items-center justify-center">
+            <div className="text-center">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white mb-4"></div>
+              <p className="text-gray-600 dark:text-gray-400">Loading quiz...</p>
+            </div>
+          </div>
+        )}
 
-             {/* Main Content */}
+        {/* Error State */}
+        {loadError && !isLoadingQuiz && (
+          <div className="min-h-screen flex items-center justify-center">
+            <div className="text-center">
+              <p className="text-red-600 dark:text-red-400 mb-4">Error: {loadError}</p>
+              <button
+                onClick={() => router.push('/admin/quizzes')}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Back to Quizzes
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Main Content */}
+        {!isLoadingQuiz && !loadError && (
              <main className="pt-20 pb-20">
                <div className="max-w-full mx-auto px-6">
                  {/* Page Header */}
                  <div className="mb-8">
                    <div className="flex items-center justify-between mb-6">
                      <div>
-                       <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">New Quiz</h1>
-                       <p className="text-gray-600 dark:text-gray-400">Build 4 rounds of 6 questions and finish with a People's Question finale</p>
+                       <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                         {isEditing ? 'Edit Quiz' : 'New Quiz'}
+                       </h1>
+                       <p className="text-gray-600 dark:text-gray-400">
+                         {isEditing 
+                           ? 'Update quiz details, rounds, and questions'
+                           : 'Build 4 rounds of 6 questions and finish with a People\'s Question finale'}
+                       </p>
                      </div>
                      <div className="flex items-center gap-3">
                        <button
@@ -1184,6 +1317,7 @@ export default function CreateQuiz() {
              </main>
 
              {/* Sticky Progress Bar */}
+             {!isLoadingQuiz && !loadError && (
              <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-[#0F1419] border-t border-gray-200 dark:border-gray-700 py-3 z-40">
                <div className="max-w-full mx-auto px-6 flex justify-between items-center">
                  <div className="flex items-center space-x-4">
@@ -1202,27 +1336,44 @@ export default function CreateQuiz() {
                      </span>
                    </div>
                  </div>
-                 <div className="flex gap-3">
+                 <div className="flex gap-3 items-center">
                    <button
                      onClick={() => window.open('/preview', '_blank')}
                      className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-full transition-colors font-medium text-sm"
                    >
                      Preview
                    </button>
+                   {saveError && (
+                     <span className="text-sm text-red-600 dark:text-red-400">
+                       {saveError}
+                     </span>
+                   )}
+                   <button
+                     onClick={() => saveQuiz(true)}
+                     disabled={isSaving || !quiz.title.trim()}
+                     className={`px-4 py-2 rounded-full font-medium transition-colors text-sm ${
+                       isSaving || !quiz.title.trim()
+                         ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                         : 'bg-gray-600 text-white hover:bg-gray-700'
+                     }`}
+                   >
+                     {isSaving ? 'Saving...' : 'Save Draft'}
+                   </button>
                    <button
                      onClick={() => setShowScheduleModal(true)}
-                    disabled={!canPublish}
+                    disabled={!canPublish || isSaving}
                      className={`px-4 py-2 rounded-full font-medium transition-colors text-sm ${
-                      canPublish
+                      canPublish && !isSaving
                          ? 'bg-orange-600 text-white hover:bg-orange-700'
                          : 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
                      }`}
                    >
-                     Publish Quiz #{quiz.number}
+                     {isSaving ? 'Saving...' : `Publish Quiz #${quiz.number}`}
                    </button>
                  </div>
                </div>
              </div>
+             )}
 
       {/* Hidden file input for importing drafts */}
       <input

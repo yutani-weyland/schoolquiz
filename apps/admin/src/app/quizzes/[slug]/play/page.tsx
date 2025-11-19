@@ -35,12 +35,20 @@ export default function QuizPlayPage() {
 	const quiz = DATA.find((q) => q.slug === slug);
 	const { data: quizData, loading, error, refetch } = useQuiz(slug);
 	
-	// Redirect if quiz metadata not found
+	// Special handling for demo quiz - redirect to /demo route
 	useEffect(() => {
-		if (!quiz) {
+		if (slug === "demo") {
+			router.replace("/demo");
+			return;
+		}
+	}, [slug, router]);
+	
+	// Redirect if quiz metadata not found (but not for demo, which is handled above)
+	useEffect(() => {
+		if (slug !== "demo" && !quiz) {
 			router.replace("/quizzes");
 		}
-	}, [quiz, router]);
+	}, [quiz, router, slug]);
 
 	// Show loading state
 	if (loading) {
@@ -52,9 +60,14 @@ export default function QuizPlayPage() {
 		return <QuizError error={error} onRetry={refetch} slug={slug} />;
 	}
 
-	// Show not found if no quiz data
-	if (!quiz || !quizData) {
+	// Show not found if no quiz data (but not for demo)
+	if (slug !== "demo" && (!quiz || !quizData)) {
 		return <QuizNotFound slug={slug} />;
+	}
+
+	// For demo quiz, show loading while redirecting
+	if (slug === "demo") {
+		return <QuizLoadingSkeleton />;
 	}
 
 	const isNewest = DATA[0].slug === quiz.slug;

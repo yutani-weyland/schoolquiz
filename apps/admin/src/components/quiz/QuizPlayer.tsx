@@ -337,8 +337,31 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 	
 	// Debug logging
 	React.useEffect(() => {
-		console.log('QuizPlayer mounted', { quizTitle, quizColor, quizSlug, questionsCount: finalQuestions?.length, roundsCount: finalRounds?.length, isDemo, isVisitor });
+		console.log('[QuizPlayer] Mounted', { 
+			quizTitle, 
+			quizColor, 
+			quizSlug, 
+			questionsCount: finalQuestions?.length, 
+			roundsCount: finalRounds?.length, 
+			isDemo, 
+			isVisitor,
+			hasQuestions: !!finalQuestions && finalQuestions.length > 0,
+			hasRounds: !!finalRounds && finalRounds.length > 0
+		});
 	}, [quizTitle, quizColor, quizSlug, finalQuestions?.length, finalRounds?.length, isDemo, isVisitor]);
+
+	// Early return if no questions (shouldn't happen, but safety check)
+	if (!finalQuestions || finalQuestions.length === 0) {
+		console.error('[QuizPlayer] No questions provided, cannot render');
+		return (
+			<div className="min-h-screen flex items-center justify-center">
+				<div className="text-center">
+					<h2 className="text-2xl font-bold mb-4">Quiz has no questions</h2>
+					<p className="text-gray-600">Please contact support.</p>
+				</div>
+			</div>
+		);
+	}
 
 	// Safeguard: Check authentication and quiz limits (skip for restricted quiz mode and visitors)
 	React.useEffect(() => {
@@ -541,7 +564,14 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 	const isNavigatingRef = useRef(false);
 	const [mounted, setMounted] = useState(false);
 	
-	// Use achievements hook
+	// Use timer hook FIRST (before achievements hook that depends on it)
+	const { timer, isRunning: isTimerRunning, start: startTimer, stop: stopTimer } = useQuizTimer({
+		quizSlug,
+		autoStart: viewMode === 'grid',
+		initialTime: 0,
+	});
+	
+	// Use achievements hook (depends on timer)
 	const { achievements, dismissAchievement } = useQuizAchievements({
 		quizSlug,
 		correctAnswers,
@@ -552,13 +582,6 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 		currentIndex,
 		rounds: finalRounds,
 		questions: finalQuestions,
-	});
-	
-	// Use timer hook
-	const { timer, isRunning: isTimerRunning, start: startTimer, stop: stopTimer } = useQuizTimer({
-		quizSlug,
-		autoStart: viewMode === 'grid',
-		initialTime: 0,
 	});
 
 	const [averageScoreData, setAverageScoreData] = useState<{ quizAverage?: number; userScore?: number; percentile?: number; privateLeagueAverage?: number; leagueName?: string; time?: number }>({
@@ -1452,7 +1475,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 					onClose={() => setShowIncompleteModal(false)}
 					onFinishAnyway={() => {
 						setShowIncompleteModal(false);
-						completeQuiz();
+						handleFinishQuiz();
 					}}
 					unansweredQuestions={finalQuestions.filter(q => 
 						!correctAnswers.has(q.id) && !incorrectAnswers.has(q.id)

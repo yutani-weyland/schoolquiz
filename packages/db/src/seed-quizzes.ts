@@ -1,0 +1,169 @@
+/**
+ * Seed script to populate database with quiz data from fixtures
+ * 
+ * Run with: cd packages/db && tsx src/seed-quizzes.ts
+ */
+
+import { prisma } from './client';
+// Import quiz fixtures - we'll need to copy the data or use a different approach
+// For now, we'll define a simplified version here
+
+// Helper to generate CUID-like IDs (simple version for seeding)
+function generateId(): string {
+  return `c${Date.now().toString(36)}${Math.random().toString(36).substr(2, 9)}`;
+}
+
+async function seedQuizzes() {
+  console.log('🌱 Starting quiz seeding...');
+
+  try {
+    // Get or create a default teacher (needed for quiz creation)
+    let teacher = await prisma.teacher.findFirst();
+    if (!teacher) {
+      // Create a default school first
+      const school = await prisma.school.create({
+        data: {
+          id: generateId(),
+          name: 'Default School',
+          region: 'NSW',
+        },
+      });
+
+      // Create a default teacher
+      teacher = await prisma.teacher.create({
+        data: {
+          id: generateId(),
+          schoolId: school.id,
+          email: 'admin@schoolquiz.com',
+          name: 'Admin Teacher',
+          role: 'admin',
+        },
+      });
+      console.log('✅ Created default school and teacher');
+    }
+
+    // Get or create default category
+    let category = await prisma.category.findFirst({
+      where: { name: 'General Knowledge' },
+    });
+    if (!category) {
+      category = await prisma.category.create({
+        data: {
+          id: generateId(),
+          name: 'General Knowledge',
+          description: 'General knowledge questions',
+          createdBy: teacher.id,
+        },
+      });
+      console.log('✅ Created default category');
+    }
+
+    // Process each quiz in the fixtures
+    for (const [slug, quizData] of Object.entries(MOCK_QUIZ_DATA)) {
+      console.log(`\n📝 Processing quiz: ${slug}`);
+
+      // Check if quiz already exists
+      const existingQuiz = await prisma.quiz.findUnique({
+        where: { slug },
+      });
+
+      if (existingQuiz) {
+        console.log(`  ⏭️  Quiz ${slug} already exists, skipping...`);
+        continue;
+      }
+
+      // Create quiz
+      const quiz = await prisma.quiz.create({
+        data: {
+          id: generateId(),
+          slug,
+          title: `Quiz ${slug}`,
+          blurb: `Quiz number ${slug}`,
+          status: 'published',
+          colorHex: '#FFE135', // Default yellow
+          createdBy: teacher.id,
+          weekISO: new Date().toISOString().split('T')[0], // Today's date as ISO
+        },
+      });
+      console.log(`  ✅ Created quiz: ${quiz.id}`);
+
+      // Create rounds
+      for (let i = 0; i < quizData.rounds.length; i++) {
+        const roundData = quizData.rounds[i];
+        const isPeoplesRound = i === quizData.rounds.length - 1; // Last round is people's round
+
+        const round = await prisma.round.create({
+          data: {
+            id: generateId(),
+            quizId: quiz.id,
+            index: i, // 0-indexed
+            categoryId: category.id,
+            title: roundData.title || null,
+            blurb: roundData.blurb || null,
+            isPeoplesRound,
+          },
+        });
+        console.log(`    ✅ Created round ${i + 1}: ${roundData.title || 'Untitled'}`);
+
+        // Get questions for this round
+        const roundQuestions = quizData.questions.filter(
+          (q) => q.roundNumber === i + 1
+        );
+
+        // Create questions and link them to the round
+        for (let j = 0; j < roundQuestions.length; j++) {
+          const questionData = roundQuestions[j];
+
+          // Create question
+          const question = await prisma.question.create({
+            data: {
+              id: generateId(),
+              categoryId: category.id,
+              text: questionData.question,
+              answer: questionData.answer,
+              explanation: questionData.explanation || null,
+              difficulty: 0.5, // Default difficulty
+              status: 'published',
+              createdBy: teacher.id,
+              isPeopleQuestion: isPeoplesRound,
+            },
+          });
+
+          // Link question to round
+          await prisma.quizRoundQuestion.create({
+            data: {
+              id: generateId(),
+              roundId: round.id,
+              questionId: question.id,
+              order: j, // 0-indexed
+            },
+          });
+        }
+        console.log(`      ✅ Created ${roundQuestions.length} questions for round ${i + 1}`);
+      }
+    }
+
+    console.log('\n🎉 Quiz seeding complete!');
+  } catch (error) {
+    console.error('❌ Error seeding quizzes:', error);
+    throw error;
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+// Run if called directly
+if (require.main === module) {
+  seedQuizzes()
+    .then(() => {
+      console.log('✅ Seeding completed successfully');
+      process.exit(0);
+    })
+    .catch((error) => {
+      console.error('❌ Seeding failed:', error);
+      process.exit(1);
+    });
+}
+
+export { seedQuizzes };
+

@@ -103,115 +103,78 @@ export default function ExploreQuizzes() {
     }
   }, []);
 
-  // Sample quiz data with enhanced metrics
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch quizzes from database
   useEffect(() => {
-    const sampleQuizzes: Quiz[] = [
-      {
-        id: 'quiz-25',
-        number: 25,
-        title: 'Weekly Quiz - Week 25',
-        description: 'This week\'s quiz covers Geography, Science, History, Math, and Literature',
-        status: 'published',
-        publishedDate: '2024-01-15T10:00:00Z',
-        rounds: [
-          { id: 'r1', category: 'Geography', title: 'Geography Round', blurb: 'Test your world knowledge', color: 'bg-blue-100 dark:bg-blue-900/30', questions: [] },
-          { id: 'r2', category: 'Science', title: 'Science Round', blurb: 'Explore scientific facts', color: 'bg-green-100 dark:bg-green-900/30', questions: [] },
-          { id: 'r3', category: 'History', title: 'History Round', blurb: 'Journey through time', color: 'bg-purple-100 dark:bg-purple-900/30', questions: [] },
-          { id: 'r4', category: 'Math', title: 'Math Round', blurb: 'Calculate your way to victory', color: 'bg-orange-100 dark:bg-orange-900/30', questions: [] },
-          { id: 'r5', category: 'Literature', title: 'Literature Round', blurb: 'Dive into classic and modern works', color: 'bg-pink-100 dark:bg-pink-900/30', questions: [] }
-        ],
-        submissions: 1247,
-        averageScore: 78.5,
-        averageTime: 12.3,
-        categories: ['Geography', 'Science', 'History', 'Math', 'Literature']
-      },
-      {
-        id: 'quiz-24',
-        number: 24,
-        title: 'Weekly Quiz - Week 24',
-        description: 'A challenging mix of Current Affairs, Pop Culture, Sports, Art, and Music',
-        status: 'published',
-        publishedDate: '2024-01-08T10:00:00Z',
-        rounds: [
-          { id: 'r1', category: 'Current Affairs', title: 'Current Affairs Round', blurb: 'Stay updated with world events', color: 'bg-blue-100 dark:bg-blue-900/30', questions: [] },
-          { id: 'r2', category: 'Pop Culture', title: 'Pop Culture Round', blurb: 'Test your entertainment knowledge', color: 'bg-green-100 dark:bg-green-900/30', questions: [] },
-          { id: 'r3', category: 'Sports', title: 'Sports Round', blurb: 'From football to tennis', color: 'bg-purple-100 dark:bg-purple-900/30', questions: [] },
-          { id: 'r4', category: 'Art', title: 'Art Round', blurb: 'Masterpieces and movements', color: 'bg-orange-100 dark:bg-orange-900/30', questions: [] },
-          { id: 'r5', category: 'Music', title: 'Music Round', blurb: 'Classical to contemporary', color: 'bg-pink-100 dark:bg-pink-900/30', questions: [] }
-        ],
-        submissions: 1156,
-        averageScore: 72.3,
-        averageTime: 14.7,
-        categories: ['Current Affairs', 'Pop Culture', 'Sports', 'Art', 'Music']
-      },
-      {
-        id: 'quiz-23',
-        number: 23,
-        title: 'Weekly Quiz - Week 23',
-        description: 'Film, Gaming, Technology, and Current Events',
-        status: 'published',
-        publishedDate: '2024-01-01T10:00:00Z',
-        rounds: [
-          { id: 'r1', category: 'Film', title: 'Film Round', blurb: 'Cinema classics and modern hits', color: 'bg-blue-100 dark:bg-blue-900/30', questions: [] },
-          { id: 'r2', category: 'Gaming', title: 'Gaming Round', blurb: 'Video games and esports', color: 'bg-green-100 dark:bg-green-900/30', questions: [] },
-          { id: 'r3', category: 'Technology', title: 'Technology Round', blurb: 'Latest tech trends', color: 'bg-purple-100 dark:bg-purple-900/30', questions: [] },
-          { id: 'r4', category: 'Current Affairs', title: 'Current Affairs Round', blurb: 'Recent world events', color: 'bg-orange-100 dark:bg-orange-900/30', questions: [] },
-          { id: 'r5', category: 'Science', title: 'Science Round', blurb: 'Scientific discoveries', color: 'bg-pink-100 dark:bg-pink-900/30', questions: [] }
-        ],
-        submissions: 892,
-        averageScore: 65.8,
-        averageTime: 16.2,
-        categories: ['Film', 'Gaming', 'Technology', 'Current Affairs', 'Science']
-      },
-      {
-        id: 'quiz-26',
-        number: 26,
-        title: 'Weekly Quiz - Week 26',
-        description: 'Scheduled for next week - Technology, Biology, Chemistry, Physics, Astronomy',
-        status: 'scheduled',
-        scheduledDate: '2024-01-22T10:00:00Z',
-        rounds: [
-          { id: 'r1', category: 'Technology', title: 'Technology Round', blurb: 'Latest in tech', color: 'bg-blue-100 dark:bg-blue-900/30', questions: [] },
-          { id: 'r2', category: 'Biology', title: 'Biology Round', blurb: 'Life sciences', color: 'bg-green-100 dark:bg-green-900/30', questions: [] },
-          { id: 'r3', category: 'Chemistry', title: 'Chemistry Round', blurb: 'Elements and compounds', color: 'bg-purple-100 dark:bg-purple-900/30', questions: [] },
-          { id: 'r4', category: 'Physics', title: 'Physics Round', blurb: 'Laws of nature', color: 'bg-orange-100 dark:bg-orange-900/30', questions: [] },
-          { id: 'r5', category: 'Astronomy', title: 'Astronomy Round', blurb: 'Stars and planets', color: 'bg-pink-100 dark:bg-pink-900/30', questions: [] }
-        ],
-        categories: ['Technology', 'Biology', 'Chemistry', 'Physics', 'Astronomy']
-      },
-      {
-        id: 'quiz-draft-1',
-        number: 27,
-        title: 'Weekly Quiz - Week 27 (Draft)',
-        description: 'Work in progress - Psychology, Sociology, Philosophy, Economics, Politics',
-        status: 'draft',
-        rounds: [
-          { id: 'r1', category: 'Psychology', title: 'Psychology Round', blurb: 'Mind and behavior', color: 'bg-blue-100 dark:bg-blue-900/30', questions: [] },
-          { id: 'r2', category: 'Sociology', title: 'Sociology Round', blurb: 'Society and culture', color: 'bg-green-100 dark:bg-green-900/30', questions: [] },
-          { id: 'r3', category: 'Philosophy', title: 'Philosophy Round', blurb: 'Big questions', color: 'bg-purple-100 dark:bg-purple-900/30', questions: [] },
-          { id: 'r4', category: 'Economics', title: 'Economics Round', blurb: 'Markets and money', color: 'bg-orange-100 dark:bg-orange-900/30', questions: [] },
-          { id: 'r5', category: 'Politics', title: 'Politics Round', blurb: 'Government and policy', color: 'bg-pink-100 dark:bg-pink-900/30', questions: [] }
-        ],
-        categories: ['Psychology', 'Sociology', 'Philosophy', 'Economics', 'Politics']
-      },
-      {
-        id: 'quiz-draft-2',
-        number: 28,
-        title: 'Weekly Quiz - Week 28 (Draft)',
-        description: 'Incomplete draft - missing questions in some rounds',
-        status: 'draft',
-        rounds: [
-          { id: 'r1', category: 'Literature', title: 'Literature Round', blurb: 'Classic and modern works', color: 'bg-blue-100 dark:bg-blue-900/30', questions: [] },
-          { id: 'r2', category: 'Art', title: 'Art Round', blurb: 'Visual arts and movements', color: 'bg-green-100 dark:bg-green-900/30', questions: [] },
-          { id: 'r3', category: 'Music', title: 'Music Round', blurb: 'Classical to contemporary', color: 'bg-purple-100 dark:bg-purple-900/30', questions: [] },
-          { id: 'r4', category: 'History', title: 'History Round', blurb: 'Historical events and figures', color: 'bg-orange-100 dark:bg-orange-900/30', questions: [] },
-          { id: 'r5', category: 'Geography', title: 'Geography Round', blurb: 'World geography and cultures', color: 'bg-pink-100 dark:bg-pink-900/30', questions: [] }
-        ],
-        categories: ['Literature', 'Art', 'Music', 'History', 'Geography']
+    fetchQuizzes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterStatus, sortBy, searchQuery]);
+
+  const fetchQuizzes = async () => {
+    try {
+      setIsLoading(true);
+      const params = new URLSearchParams();
+      if (filterStatus !== 'all') {
+        params.append('status', filterStatus);
       }
-    ];
-    setQuizzes(sampleQuizzes);
-  }, []);
+      if (searchQuery) {
+        params.append('search', searchQuery);
+      }
+
+      const response = await fetch(`/api/admin/quizzes?${params}`);
+      const data = await response.json();
+
+      if (response.ok) {
+        // Transform database quizzes to component format
+        const transformedQuizzes: Quiz[] = (data.quizzes || []).map((q: any) => {
+          // Extract categories from rounds
+          const categories = q.rounds?.map((r: any) => r.category?.name || r.title).filter(Boolean) || [];
+          
+          // Extract number from slug (if it's numeric)
+          const number = q.slug && /^\d+$/.test(q.slug) ? parseInt(q.slug) : 0;
+
+          return {
+            id: q.id,
+            number,
+            title: q.title,
+            description: q.blurb || '',
+            status: q.status,
+            publishedDate: q.publicationDate || null,
+            scheduledDate: q.publicationDate || null,
+            rounds: (q.rounds || []).map((r: any, idx: number) => ({
+              id: r.id,
+              category: r.category?.name || r.title || 'Unknown',
+              title: r.title || r.category?.name || 'Round',
+              blurb: r.blurb || '',
+              color: `bg-blue-${100 + idx * 100} dark:bg-blue-${900}/30`,
+              questions: (r.questions || []).map((rq: any) => ({
+                id: rq.question?.id || '',
+                question: rq.question?.text || '',
+                answer: rq.question?.answer || '',
+                explanation: rq.question?.explanation || '',
+                category: r.category?.name || '',
+              })),
+            })),
+            submissions: q._count?.runs || 0,
+            averageScore: 0, // TODO: Calculate from completion data
+            averageTime: 0, // TODO: Calculate from completion data
+            categories,
+          };
+        });
+
+        setQuizzes(transformedQuizzes);
+      } else {
+        console.error('Failed to fetch quizzes:', data);
+        setQuizzes([]);
+      }
+    } catch (error) {
+      console.error('Error fetching quizzes:', error);
+      setQuizzes([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const filteredAndSortedQuizzes = quizzes
     .filter(quiz => {
@@ -346,14 +309,54 @@ export default function ExploreQuizzes() {
     console.log('Schedule quiz:', quizId);
   };
 
-  const duplicateQuiz = (quizId: string) => {
-    // TODO: Implement duplication
-    console.log('Duplicate quiz:', quizId);
+  const duplicateQuiz = async (quizId: string) => {
+    if (!confirm('Are you sure you want to duplicate this quiz?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/admin/quizzes/${quizId}/duplicate`, {
+        method: 'POST',
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to duplicate quiz');
+      }
+
+      alert(`Quiz duplicated successfully! New quiz: ${data.quiz.title}`);
+      // Refresh the quiz list
+      window.location.reload();
+    } catch (error: any) {
+      console.error('Error duplicating quiz:', error);
+      alert(`Error: ${error.message || 'Failed to duplicate quiz'}`);
+    }
   };
 
-  const deleteQuiz = (quizId: string) => {
-    // TODO: Implement deletion with confirmation
-    console.log('Delete quiz:', quizId);
+  const deleteQuiz = async (quizId: string) => {
+    if (!confirm('Are you sure you want to delete this quiz? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/admin/quizzes/${quizId}`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete quiz');
+      }
+
+      alert('Quiz deleted successfully!');
+      // Refresh the quiz list
+      window.location.reload();
+    } catch (error: any) {
+      console.error('Error deleting quiz:', error);
+      alert(`Error: ${error.message || 'Failed to delete quiz'}`);
+    }
   };
 
   return (
@@ -513,6 +516,12 @@ export default function ExploreQuizzes() {
           </div>
 
           {/* Quiz Grid - Timeline Layout */}
+          {isLoading ? (
+            <div className="text-center py-12">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white"></div>
+              <p className="mt-4 text-sm text-gray-600 dark:text-gray-400">Loading quizzes...</p>
+            </div>
+          ) : (
           <div className="space-y-6">
             {Object.entries(groupedQuizzes).map(([month, quizzes]) => (
               <div key={month}>
@@ -668,9 +677,10 @@ export default function ExploreQuizzes() {
               </div>
             ))}
           </div>
+          )}
 
           {/* Empty State */}
-          {Object.keys(groupedQuizzes).length === 0 && (
+          {!isLoading && Object.keys(groupedQuizzes).length === 0 && (
             <div className="text-center py-12">
               <div className="text-gray-400 dark:text-gray-500 mb-4">
                 <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">

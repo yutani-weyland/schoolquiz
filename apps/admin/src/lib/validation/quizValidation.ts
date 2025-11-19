@@ -6,7 +6,24 @@
  */
 
 import { z } from 'zod';
-import { QUIZ_CONSTANTS } from '@schoolquiz/db';
+
+// Import constants with fallback
+let QUIZ_CONSTANTS: typeof import('@schoolquiz/db').QUIZ_CONSTANTS;
+try {
+	QUIZ_CONSTANTS = require('@schoolquiz/db').QUIZ_CONSTANTS;
+} catch (e) {
+	// Fallback constants if import fails
+	QUIZ_CONSTANTS = {
+		STANDARD_ROUND_COUNT: 4,
+		QUESTIONS_PER_STANDARD_ROUND: 6,
+		PEOPLE_ROUND_QUESTION_COUNT: 1,
+		TOTAL_ROUNDS: 5,
+		PEOPLES_ROUND_NUMBER: 5,
+		TOTAL_QUESTIONS: 25,
+		MAX_QUESTIONS_PER_STANDARD_ROUND: 6,
+		MIN_QUESTIONS_PER_STANDARD_ROUND: 6,
+	} as const;
+}
 
 /**
  * Question validation schema
