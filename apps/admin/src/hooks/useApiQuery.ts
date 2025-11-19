@@ -61,21 +61,13 @@ export function useApiQuery<T>({
 	onSuccess,
 	onError,
 }: UseApiQueryOptions<T>): UseApiQueryResult<T> {
+	// All hooks must be called unconditionally and in the same order every render
 	const [data, setData] = useState<T | null>(null);
-	const [loading, setLoading] = useState<boolean>(enabled);
+	const [loading, setLoading] = useState<boolean>(true);
 	const [error, setError] = useState<Error | null>(null);
 	const abortControllerRef = useRef<AbortController | null>(null);
 	const mountedRef = useRef(true);
-
-	// Cleanup on unmount
-	useEffect(() => {
-		return () => {
-			mountedRef.current = false;
-			if (abortControllerRef.current) {
-				abortControllerRef.current.abort();
-			}
-		};
-	}, []);
+	const initializedRef = useRef(false);
 
 	const performFetch = useCallback(async (isRetry = false): Promise<void> => {
 		// Check cache if cacheKey is provided
@@ -208,12 +200,26 @@ export function useApiQuery<T>({
 		}
 	}, [fetchFn, cacheKey, staleTime, retry, onSuccess, onError]);
 
-	// Auto-fetch on mount if enabled
+	// Initialize loading state and fetch on mount if enabled
 	useEffect(() => {
-		if (enabled) {
-			performFetch();
+		if (!initializedRef.current) {
+			setLoading(enabled);
+			initializedRef.current = true;
+			if (enabled) {
+				performFetch();
+			}
 		}
 	}, [enabled, performFetch]);
+
+	// Cleanup on unmount
+	useEffect(() => {
+		return () => {
+			mountedRef.current = false;
+			if (abortControllerRef.current) {
+				abortControllerRef.current.abort();
+			}
+		};
+	}, []);
 
 	const refetch = useCallback(async () => {
 		await performFetch(true);
