@@ -69,6 +69,22 @@ export function useApiQuery<T>({
 	const mountedRef = useRef(true);
 	const initializedRef = useRef(false);
 
+	// Store callbacks in refs to avoid dependency issues
+	const onSuccessRef = useRef(onSuccess);
+	const onErrorRef = useRef(onError);
+	const fetchFnRef = useRef(fetchFn);
+	const retryCountRef = useRef(retry.count ?? 0);
+	const retryDelayRef = useRef(retry.delay ?? 1000);
+
+	// Update refs when values change
+	useEffect(() => {
+		onSuccessRef.current = onSuccess;
+		onErrorRef.current = onError;
+		fetchFnRef.current = fetchFn;
+		retryCountRef.current = retry.count ?? 0;
+		retryDelayRef.current = retry.delay ?? 1000;
+	}, [fetchFn, onSuccess, onError, retry.count, retry.delay]);
+
 	const performFetch = useCallback(async (isRetry = false): Promise<void> => {
 		// Check cache if cacheKey is provided
 		if (cacheKey && !isRetry) {
@@ -81,7 +97,7 @@ export function useApiQuery<T>({
 						setData(cached.data);
 						setLoading(false);
 						setError(null);
-						onSuccess?.(cached.data);
+						onSuccessRef.current?.(cached.data);
 					}
 					return;
 				}
@@ -93,7 +109,7 @@ export function useApiQuery<T>({
 							setData(result);
 							setLoading(false);
 							setError(null);
-							onSuccess?.(result);
+							onSuccessRef.current?.(result);
 						}
 						return;
 					} catch (err) {
@@ -116,12 +132,11 @@ export function useApiQuery<T>({
 			setError(null);
 		}
 
-		let lastError: Error | null = null;
 		let retryCount = 0;
 
 		const attemptFetch = async (): Promise<T> => {
 			try {
-				const result = await fetchFn();
+				const result = await fetchFnRef.current();
 				
 				// Check if request was aborted
 				if (abortControllerRef.current?.signal.aborted) {
@@ -140,12 +155,11 @@ export function useApiQuery<T>({
 				return result;
 			} catch (err) {
 				const error = err instanceof Error ? err : new Error('Unknown error');
-				lastError = error;
 
 				// Retry logic
-				if (retryCount < (retry.count || 0)) {
+				if (retryCount < retryCountRef.current) {
 					retryCount++;
-					await new Promise(resolve => setTimeout(resolve, retry.delay || 1000));
+					await new Promise(resolve => setTimeout(resolve, retryDelayRef.current));
 					return attemptFetch();
 				}
 
@@ -175,7 +189,7 @@ export function useApiQuery<T>({
 				setData(result);
 				setLoading(false);
 				setError(null);
-				onSuccess?.(result);
+				onSuccessRef.current?.(result);
 			}
 		} catch (err) {
 			if (abortControllerRef.current?.signal.aborted) {
@@ -187,7 +201,7 @@ export function useApiQuery<T>({
 			if (mountedRef.current) {
 				setError(error);
 				setLoading(false);
-				onError?.(error);
+				onErrorRef.current?.(error);
 			}
 		} finally {
 			// Clear pending promise from cache
@@ -198,7 +212,7 @@ export function useApiQuery<T>({
 				}
 			}
 		}
-	}, [fetchFn, cacheKey, staleTime, retry, onSuccess, onError]);
+	}, [cacheKey, staleTime]);
 
 	// Initialize loading state and fetch on mount if enabled
 	useEffect(() => {
@@ -209,7 +223,17 @@ export function useApiQuery<T>({
 				performFetch();
 			}
 		}
-	}, [enabled, performFetch]);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []); // Only run once on mount
+
+	// Handle enabled changes after initialization
+	useEffect(() => {
+		if (initializedRef.current && enabled && !loading && !data && !error) {
+			// If enabled changes to true after initialization and we have no data, fetch
+			performFetch();
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [enabled]); // Only depend on enabled, not on performFetch to avoid loops
 
 	// Cleanup on unmount
 	useEffect(() => {

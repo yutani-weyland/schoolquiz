@@ -5,6 +5,7 @@
  * Handles caching and error recovery automatically.
  */
 
+import React from 'react';
 import { useApiQuery } from './useApiQuery';
 import { QuizData, QuizService } from '@/services/quizService';
 
@@ -28,18 +29,26 @@ export function useQuiz(
 	slug: string | null | undefined,
 	options?: { enabled?: boolean }
 ): UseQuizResult {
+	// Memoize fetchFn to avoid recreating on every render
+	const fetchFn = React.useCallback(async () => {
+		if (!slug) {
+			throw new Error('Quiz slug is required');
+		}
+		const quizData = await QuizService.getQuizBySlug(slug);
+		if (!quizData) {
+			throw new Error(`Quiz not found: ${slug}`);
+		}
+		return quizData;
+	}, [slug]);
+
+	const enabled = React.useMemo(
+		() => slug !== null && slug !== undefined && (options?.enabled !== false),
+		[slug, options?.enabled]
+	);
+
 	const result = useApiQuery<QuizData | null>({
-		fetchFn: async () => {
-			if (!slug) {
-				throw new Error('Quiz slug is required');
-			}
-			const quizData = await QuizService.getQuizBySlug(slug);
-			if (!quizData) {
-				throw new Error(`Quiz not found: ${slug}`);
-			}
-			return quizData;
-		},
-		enabled: slug !== null && slug !== undefined && (options?.enabled !== false),
+		fetchFn,
+		enabled,
 		cacheKey: slug ? `quiz-${slug}` : undefined,
 		staleTime: 5 * 60 * 1000, // 5 minutes
 		retry: {
