@@ -12,6 +12,10 @@ import { QUIZ_CONSTANTS } from '@schoolquiz/db';
 // Extended Prisma types with relations
 export type QuizWithRelations = Quiz & {
 	rounds: (Round & {
+		category: {
+			id: string;
+			name: string;
+		};
 		questions: (QuizRoundQuestion & {
 			question: Question;
 		})[];
@@ -41,6 +45,10 @@ export function transformQuestionToComponent(
  */
 export function transformRoundToComponent(
 	prismaRound: Round & {
+		category?: {
+			id: string;
+			name: string;
+		};
 		questions: (QuizRoundQuestion & {
 			question: Question;
 		})[];
@@ -51,7 +59,7 @@ export function transformRoundToComponent(
 	
 	return {
 		number: prismaRound.index + 1, // Prisma uses 0-indexed, component uses 1-indexed
-		title: prismaRound.category?.name || 'Untitled Round',
+		title: prismaRound.title || prismaRound.category?.name || 'Untitled Round',
 		blurb: prismaRound.blurb || '',
 		questions: sortedQuestions.map((qrq) =>
 			transformQuestionToComponent(qrq.question, prismaRound.index + 1)
