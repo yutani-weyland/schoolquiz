@@ -42,6 +42,7 @@ export interface UseQuizPlayResult {
 	// Actions
 	goToNext: () => void;
 	goToPrevious: () => void;
+	goToIndex: (index: number) => void;
 	revealAnswer: () => void;
 	hideAnswer: () => void;
 	markCorrect: (id: number) => void;
@@ -219,6 +220,16 @@ export function useQuizPlay({
 			setViewedQuestions((prev) => new Set([...prev, prevQuestion.id]));
 		}
 	}, [currentIndex, questions]);
+
+	const goToIndex = useCallback((index: number) => {
+		if (index >= 0 && index < questions.length) {
+			const question = questions[index];
+			setCurrentRound(question.roundNumber);
+			setCurrentScreen('question');
+			setCurrentIndex(index);
+			setViewedQuestions((prev) => new Set([...prev, question.id]));
+		}
+	}, [questions]);
 
 	const switchToGridView = useCallback(() => {
 		setViewMode('grid');
