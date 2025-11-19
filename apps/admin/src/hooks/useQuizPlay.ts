@@ -113,14 +113,19 @@ export function useQuizPlay({
 		QuizSessionService.saveProgress(quizSlug, progress);
 	}, [quizSlug, currentIndex, correctAnswers, incorrectAnswers, viewedQuestions]);
 
-	const currentQuestion = questions[currentIndex];
+	// Safety check - ensure questions array exists and has items
+	if (!questions || questions.length === 0) {
+		console.warn('[useQuizPlay] No questions provided');
+	}
+
+	const currentQuestion = questions && questions.length > 0 ? questions[currentIndex] : undefined;
 	const isAnswerRevealed = currentQuestion ? revealedAnswers.has(currentQuestion.id) : false;
 	const isMarkedCorrect = currentQuestion ? correctAnswers.has(currentQuestion.id) : false;
 	const isQuestionAnswered = currentQuestion
 		? correctAnswers.has(currentQuestion.id) || incorrectAnswers.has(currentQuestion.id)
 		: false;
 
-	const canGoNext = currentIndex < questions.length - 1;
+	const canGoNext = questions && questions.length > 0 ? currentIndex < questions.length - 1 : false;
 	const canGoPrevious = currentIndex > 0;
 
 	const revealAnswer = useCallback(() => {
