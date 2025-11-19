@@ -257,6 +257,17 @@ export function useQuizPlay({
 	);
 	const score = correctAnswers.size;
 
+	const reset = useCallback(() => {
+		setCurrentIndex(0);
+		setCurrentRound(1);
+		setCurrentScreen('round-intro');
+		setViewedQuestions(new Set());
+		setRevealedAnswers(new Set());
+		setCorrectAnswers(new Set());
+		setIncorrectAnswers(new Set());
+		QuizSessionService.clearProgress(quizSlug);
+	}, [quizSlug]);
+
 	return {
 		// State
 		currentIndex,
@@ -279,6 +290,7 @@ export function useQuizPlay({
 		// Actions
 		goToNext,
 		goToPrevious,
+		goToIndex,
 		revealAnswer,
 		hideAnswer,
 		markCorrect,
@@ -287,6 +299,7 @@ export function useQuizPlay({
 		switchToPresenterView,
 		startRound,
 		finishQuiz,
+		reset,
 
 		// Completion
 		isComplete,

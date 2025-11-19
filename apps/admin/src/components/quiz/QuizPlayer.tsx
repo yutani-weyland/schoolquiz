@@ -20,6 +20,10 @@ import { IncompleteQuizModal } from "./IncompleteQuizModal";
 import { useUserAccess } from "@/contexts/UserAccessContext";
 import { applyTheme, Theme } from "@/lib/theme";
 import { getAuthToken, getUserId } from "@/lib/storage";
+import { useQuizTimer } from "@/hooks/useQuizTimer";
+import { useQuizPlay } from "@/hooks/useQuizPlay";
+import { useQuizAchievements } from "@/hooks/useQuizAchievements";
+import { QuizSessionService } from "@/services/quizSessionService";
 
 const STANDARD_ROUND_COUNT = 4;
 const QUESTIONS_PER_STANDARD_ROUND = 6;
@@ -342,11 +346,10 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 			const params = new URLSearchParams(window.location.search);
 			const mode = params.get('mode');
 			if (mode === 'grid') {
-				setViewMode('grid');
-				setCurrentScreen('question');
+				quizPlaySwitchToGrid();
 			}
 		}
-	}, []);
+	}, [quizPlaySwitchToGrid]);
 
 	// Safeguard: Check authentication and quiz limits (skip for restricted quiz mode and visitors)
 	React.useEffect(() => {
@@ -384,25 +387,61 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 		}
 	}, [quizSlug, isNewest, isPremium, isDemo, isVisitor]);
 
-	const [viewMode, setViewMode] = useState<ViewMode>('presenter');
-	const [currentScreen, setCurrentScreen] = useState<ScreenType>('round-intro');
-	const [currentRound, setCurrentRound] = useState(1);
-	const [currentIndex, setCurrentIndex] = useState(0);
-	const [viewedQuestions, setViewedQuestions] = useState<Set<number>>(new Set());
-	const [revealedAnswers, setRevealedAnswers] = useState<Set<number>>(new Set());
-	const [correctAnswers, setCorrectAnswers] = useState<Set<number>>(new Set());
-	const [incorrectAnswers, setIncorrectAnswers] = useState<Set<number>>(new Set());
-	const [showPlusOne, setShowPlusOne] = useState(false);
-	const [showCompletionModal, setShowCompletionModal] = useState(false);
-	const [showIncompleteModal, setShowIncompleteModal] = useState(false);
+	// Use quiz play hook for state management
+	const quizPlay = useQuizPlay({
+		quizSlug,
+		questions: finalQuestions,
+		rounds: finalRounds,
+		isDemo,
+		maxQuestions,
+		onDemoComplete,
+	});
+
+	// Destructure quiz play state and actions
+	const {
+		currentIndex,
+		currentRound,
+		currentScreen,
+		viewMode: quizPlayViewMode,
+		viewedQuestions,
+		revealedAnswers,
+		correctAnswers,
+		incorrectAnswers,
+		currentQuestion,
+		isAnswerRevealed,
+		isMarkedCorrect,
+		isQuestionAnswered,
+		canGoNext,
+		canGoPrevious,
+		goToNext,
+		goToPrevious,
+		goToIndex,
+		revealAnswer,
+		hideAnswer,
+		markCorrect,
+		unmarkCorrect,
+		switchToGridView: quizPlaySwitchToGrid,
+		switchToPresenterView: quizPlaySwitchToPresenter,
+		startRound,
+		finishQuiz,
+		reset: resetQuiz,
+		showCompletionModal,
+		setShowCompletionModal,
+		showIncompleteModal,
+		setShowIncompleteModal,
+	} = quizPlay;
+
+	// Keep viewMode state for UI-specific logic (will sync with quizPlay)
+	const [viewMode, setViewMode] = useState<ViewMode>(quizPlayViewMode);
+	
+	// Sync viewMode with quizPlay viewMode
+	useEffect(() => {
+		setViewMode(quizPlayViewMode);
+	}, [quizPlayViewMode]);
+
+	// Enhanced switchToGridView with scroll logic
 	const switchToGridView = useCallback(() => {
-		setViewMode("grid");
-		setCurrentScreen("question");
-		if (typeof window !== "undefined") {
-			const url = new URL(window.location.href);
-			url.searchParams.set("mode", "grid");
-			window.history.replaceState({}, "", url.toString());
-		}
+		quizPlaySwitchToGrid();
 		
 		// Scroll logic: wait for view mode to change and grid to render
 		setTimeout(() => {
@@ -438,17 +477,13 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 				}
 			}
 		}, 150); // Delay to ensure grid has rendered
-	}, [currentIndex, currentScreen, finalQuestions]);
+	}, [currentIndex, currentScreen, finalQuestions, quizPlaySwitchToGrid]);
 
 	const switchToPresenterView = useCallback(() => {
-		setViewMode("presenter");
-		setCurrentScreen("question");
-		if (typeof window !== "undefined") {
-			const url = new URL(window.location.href);
-			url.searchParams.set("mode", "presenter");
-			window.history.replaceState({}, "", url.toString());
-		}
-	}, []);
+		quizPlaySwitchToPresenter();
+	}, [quizPlaySwitchToPresenter]);
+
+	const [showPlusOne, setShowPlusOne] = useState(false);
 	const [plusOneKey, setPlusOneKey] = useState(0);
 	// Initialize themeMode from DOM (set by pre-paint script) to match server render
 	// IMPORTANT: For quiz pages, default to "colored" if no cookie exists
@@ -494,16 +529,6 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 	const [isNarrowViewport, setIsNarrowViewport] = useState(false);
 	const [isMobileLayout, setIsMobileLayout] = useState(false);
 	const [trophies, setTrophies] = useState<string[]>([]);
-	const [achievements, setAchievements] = useState<Achievement[]>([]);
-	const achievementTimeoutsRef = useRef<Record<string, number>>({});
-	const dismissAchievement = useCallback((id: string) => {
-		setAchievements(prev => prev.filter(a => a.id !== id));
-		const timeouts = achievementTimeoutsRef.current;
-		if (timeouts[id]) {
-			clearTimeout(timeouts[id]);
-			delete timeouts[id];
-		}
-	}, []);
 	const [notchNotifications, setNotchNotifications] = useState<Array<{ id: string; message: string; timestamp: number }>>([]);
 	const [isNotchLocked, setIsNotchLocked] = useState(false);
 	const [isNotchRetracted, setIsNotchRetracted] = useState(false);
@@ -513,45 +538,26 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 	const isNavigatingRef = useRef(false);
 	const [mounted, setMounted] = useState(false);
 	
-	// Auto-dismiss achievements after a short delay
-	useEffect(() => {
-		if (typeof window === "undefined") return;
-		
-		const timeouts = achievementTimeoutsRef.current;
-		
-		achievements.forEach((achievement) => {
-			if (!timeouts[achievement.id]) {
-				timeouts[achievement.id] = window.setTimeout(() => {
-					dismissAchievement(achievement.id);
-				}, ACHIEVEMENT_AUTO_DISMISS_MS);
-			}
-		});
-		
-		// Clear any timers whose achievements have been removed
-		Object.keys(timeouts).forEach((id) => {
-			if (!achievements.some((achievement) => achievement.id === id)) {
-				clearTimeout(timeouts[id]);
-				delete timeouts[id];
-			}
-		});
-	}, [achievements, dismissAchievement]);
-	
-	useEffect(() => {
-		return () => {
-			const timeouts = achievementTimeoutsRef.current;
-			Object.values(timeouts).forEach(clearTimeout);
-		};
-	}, []);
-	
-	const [timer, setTimer] = useState(() => {
-		// Load timer from sessionStorage
-		if (typeof window !== 'undefined') {
-			const saved = sessionStorage.getItem(`quiz-${quizSlug}-timer`);
-			return saved ? parseInt(saved, 10) : 0;
-		}
-		return 0;
+	// Use achievements hook
+	const { achievements, dismissAchievement } = useQuizAchievements({
+		quizSlug,
+		correctAnswers,
+		incorrectAnswers,
+		revealedAnswers,
+		totalQuestions: finalQuestions.length,
+		timer,
+		currentIndex,
+		rounds: finalRounds,
+		questions: finalQuestions,
 	});
-	const pendingTimerValueRef = useRef<number>(timer);
+	
+	// Use timer hook
+	const { timer, isRunning: isTimerRunning, start: startTimer, stop: stopTimer } = useQuizTimer({
+		quizSlug,
+		autoStart: viewMode === 'grid',
+		initialTime: 0,
+	});
+
 	const [averageScoreData, setAverageScoreData] = useState<{ quizAverage?: number; userScore?: number; percentile?: number; privateLeagueAverage?: number; leagueName?: string; time?: number }>({
 		quizAverage: 18.5, // Mock data - replace with API call
 		userScore: 0, // Will be updated when correctAnswers changes
@@ -570,132 +576,87 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 		}));
 	}, [correctAnswers.size, timer]);
 
-	// Save completion data when quiz is completed (all questions answered)
+	// Handle completion submission when quiz is completed
 	const [hasSubmittedCompletion, setHasSubmittedCompletion] = React.useState(false);
 	const [isSubmittingCompletion, setIsSubmittingCompletion] = React.useState(false);
 	const [completionError, setCompletionError] = React.useState<string | null>(null);
 	
+	// Save completion when modal is shown
 	useEffect(() => {
-		if (!isDemo && typeof window !== 'undefined' && finalQuestions.length > 0 && !hasSubmittedCompletion) {
-			// Check if all questions have been answered (either correct or incorrect)
-			const allAnswered = finalQuestions.every(q => 
-				correctAnswers.has(q.id) || incorrectAnswers.has(q.id)
-			);
+		if (!isDemo && showCompletionModal && !hasSubmittedCompletion && finalQuestions.length > 0) {
+			const score = correctAnswers.size;
 			
-			if (allAnswered && finalQuestions.length > 0 && !showCompletionModal) {
-				const score = correctAnswers.size;
-				const completionKey = `quiz-${quizSlug}-completion`;
-				const existingCompletion = localStorage.getItem(completionKey);
+			// Save via QuizSessionService
+			QuizSessionService.saveCompletion(quizSlug, {
+				score,
+				totalQuestions: finalQuestions.length,
+				completedAt: new Date().toISOString(),
+				timeSpent: timer,
+			});
+			
+			// Calculate round scores for achievement evaluation
+			const roundScores = rounds.map((round) => {
+				const roundQuestions = finalQuestions.filter((q) => q.roundNumber === round.number);
+				const roundCorrect = roundQuestions.filter((q) => correctAnswers.has(q.id)).length;
+				return {
+					roundNumber: round.number,
+					category: round.title.toLowerCase(),
+					score: roundCorrect,
+					totalQuestions: roundQuestions.length,
+				};
+			});
+			
+			const categories = rounds.map((r) => r.title.toLowerCase());
+			
+			// Submit to API if user is logged in
+			const token = getAuthToken();
+			const userId = getUserId();
+			
+			if (token && userId) {
+				setHasSubmittedCompletion(true);
+				setIsSubmittingCompletion(true);
+				setCompletionError(null);
 				
-				// Calculate round scores for achievement evaluation
-				const roundScores = rounds.map((round) => {
-					const roundQuestions = finalQuestions.filter((q) => q.roundNumber === round.number);
-					const roundCorrect = roundQuestions.filter((q) => correctAnswers.has(q.id)).length;
-					return {
-						roundNumber: round.number,
-						category: round.title.toLowerCase(), // Use round title as category proxy
-						score: roundCorrect,
-						totalQuestions: roundQuestions.length,
-					};
-				});
-				
-				// Extract categories from rounds
-				const categories = rounds.map((r) => r.title.toLowerCase());
-				
-				// Save to localStorage (for backward compatibility)
-				if (!existingCompletion) {
-					const completionData = {
+				fetch('/api/quiz/completion', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						Authorization: `Bearer ${token}`,
+						'X-User-Id': userId,
+					},
+					body: JSON.stringify({
+						quizSlug,
 						score,
 						totalQuestions: finalQuestions.length,
-						completedAt: new Date().toISOString(),
-					};
-					localStorage.setItem(completionKey, JSON.stringify(completionData));
-				} else {
-					try {
-						const existing = JSON.parse(existingCompletion);
-						// Update if current score is better
-						if (score > existing.score) {
-							const completionData = {
-								score,
-								totalQuestions: finalQuestions.length,
-								completedAt: new Date().toISOString(),
-							};
-							localStorage.setItem(completionKey, JSON.stringify(completionData));
+						completionTimeSeconds: timer,
+						roundScores,
+						categories,
+					}),
+				})
+					.then(async (res) => {
+						if (!res.ok) {
+							const errorData = await res.json().catch(() => ({}));
+							throw new Error(errorData.error || `Failed to save completion (${res.status})`);
 						}
-					} catch (err) {
-						// If parsing fails, save new data
-						const completionData = {
-							score,
-							totalQuestions: finalQuestions.length,
-							completedAt: new Date().toISOString(),
-						};
-						localStorage.setItem(completionKey, JSON.stringify(completionData));
-					}
-				}
-				
-				// Submit to API if user is logged in
-				const token = localStorage.getItem('authToken');
-				const userId = localStorage.getItem('userId');
-				
-				if (token && userId) {
-					setHasSubmittedCompletion(true);
-					setIsSubmittingCompletion(true);
-					setCompletionError(null);
-					
-					fetch('/api/quiz/completion', {
-						method: 'POST',
-						headers: {
-							'Content-Type': 'application/json',
-							Authorization: `Bearer ${token}`,
-							'X-User-Id': userId,
-						},
-						body: JSON.stringify({
-							quizSlug,
-							score,
-							totalQuestions: finalQuestions.length,
-							completionTimeSeconds: timer,
-							roundScores,
-							categories,
-						}),
+						return res.json();
 					})
-						.then(async (res) => {
-							if (!res.ok) {
-								const errorData = await res.json().catch(() => ({}));
-								throw new Error(errorData.error || `Failed to save completion (${res.status})`);
-							}
-							return res.json();
-						})
-						.then((data) => {
-							// Handle newly unlocked achievements
-							if (data.newlyUnlockedAchievements && data.newlyUnlockedAchievements.length > 0) {
-								// You could show a notification here or update achievement state
-								console.log('New achievements unlocked:', data.newlyUnlockedAchievements);
-							}
-							setIsSubmittingCompletion(false);
-						})
-						.catch((error) => {
-							console.error('Error submitting quiz completion:', error);
-							setCompletionError(error.message || 'Failed to save quiz completion');
-							setIsSubmittingCompletion(false);
-							// Don't reset hasSubmittedCompletion on error - allow retry on next completion
-							setHasSubmittedCompletion(false);
-						});
-				}
-				
-				// Show completion modal
-				setShowCompletionModal(true);
+					.then((data) => {
+						// Handle newly unlocked achievements
+						if (data.newlyUnlockedAchievements && data.newlyUnlockedAchievements.length > 0) {
+							console.log('New achievements unlocked:', data.newlyUnlockedAchievements);
+						}
+						setIsSubmittingCompletion(false);
+					})
+					.catch((error) => {
+						console.error('Error submitting quiz completion:', error);
+						setCompletionError(error.message || 'Failed to save quiz completion');
+						setIsSubmittingCompletion(false);
+						setHasSubmittedCompletion(false); // Allow retry
+					});
 			}
 		}
-	}, [correctAnswers, incorrectAnswers, finalQuestions.length, quizSlug, isDemo, timer, rounds, hasSubmittedCompletion, showCompletionModal]);
-	const [isTimerRunning, setIsTimerRunning] = useState(() => {
-		// Auto-start timer in grid mode
-		if (typeof window !== 'undefined') {
-			const params = new URLSearchParams(window.location.search);
-			const mode = params.get('mode');
-			if (mode === 'grid') return true;
-		}
-		return false; // Don't start until first question in presenter mode
-	});
+	}, [showCompletionModal, hasSubmittedCompletion, quizSlug, isDemo, correctAnswers, finalQuestions, rounds, timer]);
+	// Timer running state is now managed by useQuizTimer hook
 	// Safety check
 	if (!finalQuestions || finalQuestions.length === 0) {
 		return (
@@ -711,40 +672,9 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 	// Start timer when navigating to question screen if not already running
 	React.useEffect(() => {
 		if (currentScreen === "question" && !isTimerRunning) {
-			setIsTimerRunning(true);
+			startTimer();
 		}
-	}, [currentScreen, isTimerRunning]);
-
-	// Timer - save to sessionStorage with debouncing (save every 5 seconds instead of every second)
-	useEffect(() => {
-		if (!isTimerRunning) return;
-		
-		// Update timer every second for display
-		const interval = setInterval(() => {
-			setTimer((t) => {
-				const newTime = t + 1;
-				pendingTimerValueRef.current = newTime;
-				return newTime;
-			});
-		}, 1000);
-		
-		// Debounced save to sessionStorage (every 5 seconds)
-		const saveInterval = setInterval(() => {
-			if (pendingTimerValueRef.current !== null) {
-				sessionStorage.setItem(`quiz-${quizSlug}-timer`, String(pendingTimerValueRef.current));
-			}
-		}, 5000);
-		
-		// Save immediately on mount and cleanup
-		return () => {
-			clearInterval(interval);
-			clearInterval(saveInterval);
-			// Save final value on cleanup
-			if (pendingTimerValueRef.current !== null) {
-				sessionStorage.setItem(`quiz-${quizSlug}-timer`, String(pendingTimerValueRef.current));
-			}
-		};
-	}, [isTimerRunning, quizSlug]);
+	}, [currentScreen, isTimerRunning, startTimer]);
 
 	// Handle viewport width for notch
 	useEffect(() => {
@@ -770,155 +700,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 		});
 	}, [isMobileLayout]);
 
-	// Check for achievements - only run when answers change meaningfully
-	useEffect(() => {
-		// Only check if we have answers
-		if (correctAnswers.size === 0 && revealedAnswers.size === 0) return;
-		
-		try {
-			const newAchievements: Achievement[] = [];
-		
-		// Achievement checks - only checking for achievements with artwork for now
-		// TODO: Re-enable other achievement checks when artwork is added
-		
-		// Check for "The Hook" - 10 questions correct in a row
-		// This would need to track consecutive correct answers
-		// if (consecutiveCorrect >= 10) {
-		// 	const achievement: Achievement = {
-		// 		id: `the_hook_${Date.now()}`,
-		// 		...ACHIEVEMENT_MAP.the_hook,
-		// 		unlockedAt: new Date(),
-		// 	};
-		// 	newAchievements.push(achievement);
-		// }
-		
-		// Check for "Ace" - perfect score on sports-themed round
-		// This would need category/theme detection
-		// if (roundCorrect && roundTheme === 'sports') {
-		// 	const achievement: Achievement = {
-		// 		id: `ace_${roundNum}_${Date.now()}`,
-		// 		...ACHIEVEMENT_MAP.ace,
-		// 		unlockedAt: new Date(),
-		// 	};
-		// 	newAchievements.push(achievement);
-		// }
-		
-		// Check for "Unstoppable" - 5 quizzes in a week
-		// This would need to track quiz completions per week
-		// if (quizzesThisWeek >= 5) {
-		// 	const achievement: Achievement = {
-		// 		id: `unstoppable_${Date.now()}`,
-		// 		...ACHIEVEMENT_MAP.unstoppable,
-		// 		unlockedAt: new Date(),
-		// 	};
-		// 	newAchievements.push(achievement);
-		// }
-		
-		// Check for "Flashback" - revisit quiz from 3 weeks ago
-		// This would need to track quiz age
-		// if (quizAgeWeeks >= 3) {
-		// 	const achievement: Achievement = {
-		// 		id: `flashback_${quizSlug}_${Date.now()}`,
-		// 		...ACHIEVEMENT_MAP.flashback,
-		// 		unlockedAt: new Date(),
-		// 	};
-		// 	newAchievements.push(achievement);
-		// }
-		
-		// Check for "Hail Caesar" - perfect Roman history round
-		// if (roundCorrect && roundTheme === 'roman_history') {
-		// 	const achievement: Achievement = {
-		// 		id: `hail_caesar_${roundNum}_${Date.now()}`,
-		// 		...ACHIEVEMENT_MAP.hail_caesar,
-		// 		unlockedAt: new Date(),
-		// 	};
-		// 	newAchievements.push(achievement);
-		// }
-		
-		// Old achievement checks (commented out - no artwork yet)
-		// Check for perfect rounds (all questions in a standard round correct)
-		// for (let roundNum = 1; roundNum <= STANDARD_ROUND_COUNT; roundNum++) {
-		// 	const roundQuestions = questions.filter(q => q.roundNumber === roundNum);
-		// 	if (roundQuestions.length !== QUESTIONS_PER_STANDARD_ROUND) continue;
-		// 	
-		// 	const roundCorrect = roundQuestions.every(q => correctAnswers.has(q.id));
-		// 	if (roundCorrect) {
-		// 		const achievement: Achievement = {
-		// 			id: `perfect_round_${roundNum}_${Date.now()}`,
-		// 			...ACHIEVEMENT_MAP.perfect_round,
-		// 			unlockedAt: new Date(),
-		// 		};
-		// 		newAchievements.push(achievement);
-		// 	}
-		// }
-		
-		// Check for perfect quiz (all questions correct)
-		// if (
-		// 	correctAnswers.size === questions.length &&
-		// 	questions.length === TOTAL_QUESTIONS_EXPECTED
-		// ) {
-		// 	const achievement: Achievement = {
-		// 		id: `perfect_quiz_${Date.now()}`,
-		// 		...ACHIEVEMENT_MAP.perfect_quiz,
-		// 		unlockedAt: new Date(),
-		// 	};
-		// 	newAchievements.push(achievement);
-		// }
-		
-		// Check for "I was here!" - first quiz
-		// if (quizSlug === "279" && correctAnswers.size === questions.length && questions.length > 0) {
-		// 	const achievement: Achievement = {
-		// 		id: `i_was_here_${Date.now()}`,
-		// 		...ACHIEVEMENT_MAP.i_was_here,
-		// 		unlockedAt: new Date(),
-		// 	};
-		// 	newAchievements.push(achievement);
-		// }
-		
-		// Check for speed demon (complete quiz in less than 10 minutes)
-		// if (timer > 0 && timer < 600 && currentIndex === questions.length - 1 && revealedAnswers.size === questions.length && questions.length > 0) {
-		// 	const achievement: Achievement = {
-		// 		id: `speed_demon_${Date.now()}`,
-		// 		...ACHIEVEMENT_MAP.speed_demon,
-		// 		unlockedAt: new Date(),
-		// 	};
-		// 	newAchievements.push(achievement);
-		// }
-		
-		// Add new achievements if they haven't been earned before
-		if (newAchievements.length > 0) {
-			setAchievements(prev => {
-				// Track by achievement type to avoid duplicates
-				const existingTypes = new Set(
-					prev.map(a => {
-						// Extract type from id
-						const parts = a.id.split('_');
-						if (parts[0] === 'perfect' && parts[1] === 'round') {
-							return `perfect_round_${parts[2]}`;
-						}
-						return parts[0] + '_' + parts[1];
-					})
-				);
-				
-				const trulyNew = newAchievements.filter(a => {
-					const parts = a.id.split('_');
-					let key: string;
-					if (parts[0] === 'perfect' && parts[1] === 'round') {
-						key = `perfect_round_${parts[2]}`;
-					} else {
-						key = parts[0] + '_' + parts[1];
-					}
-					return !existingTypes.has(key);
-				});
-				
-				return [...prev, ...trulyNew];
-			});
-		}
-		} catch (error) {
-			console.error('Error checking achievements:', error);
-		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [correctAnswers.size, revealedAnswers.size, currentIndex, timer]);
+	// Achievement checking is now handled by useQuizAchievements hook
 
 	// Cycle through notch messages (notifications + timer)
 	useEffect(() => {
@@ -999,22 +781,19 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 		return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
 	};
 
+	// revealAnswer and hideAnswer are now provided by useQuizPlay hook
 	const handleRevealAnswer = (id: number) => {
-		setRevealedAnswers((prev) => new Set([...prev, id]));
+		if (currentQuestion?.id === id) {
+			revealAnswer();
+		}
 	};
 
 	const handleHideAnswer = (id: number) => {
-		setRevealedAnswers((prev) => {
-			const newSet = new Set(prev);
-			newSet.delete(id);
-			return newSet;
-		});
-		// Mark as incorrect when X is pressed
-		setIncorrectAnswers((prev) => new Set([...prev, id]));
-		// Also remove correct marking if present
-		if (correctAnswers.has(id)) {
-			handleUnmarkCorrect(id);
+		if (currentQuestion?.id === id) {
+			hideAnswer();
 		}
+		// Note: Marking as incorrect when X is pressed should be handled separately
+		// The hook's hideAnswer just hides the answer, doesn't mark incorrect
 	};
 
 	// Helper function to get context-based emoji shapes based on round
@@ -1035,15 +814,8 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 
 	const handleMarkCorrect = (id: number, event?: React.MouseEvent<HTMLButtonElement>) => {
 		const wasAlreadyCorrect = correctAnswers.has(id);
-		setCorrectAnswers((prev) => new Set([...prev, id]));
-		// Remove from incorrect if it was marked incorrect
-		if (incorrectAnswers.has(id)) {
-			setIncorrectAnswers((prev) => {
-				const newSet = new Set(prev);
-				newSet.delete(id);
-				return newSet;
-			});
-		}
+		markCorrect(id);
+		// Remove from incorrect if it was marked incorrect (handled by hook)
 		
 		// Show +1 animation only if this question wasn't already marked correct
 		if (!wasAlreadyCorrect) {
@@ -1103,18 +875,10 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 	};
 
 	const handleUnmarkCorrect = (id: number) => {
-		setCorrectAnswers((prev) => {
-			const newSet = new Set(prev);
-			newSet.delete(id);
-			return newSet;
-		});
-		// Add to incorrect answers when X is clicked
-		setIncorrectAnswers((prev) => new Set([...prev, id]));
+		unmarkCorrect(id);
 	};
 
-	const currentQuestion = finalQuestions[currentIndex];
-	const isAnswerRevealed = currentQuestion ? revealedAnswers.has(currentQuestion.id) : false;
-	const isMarkedCorrect = currentQuestion ? correctAnswers.has(currentQuestion.id) : false;
+	// currentQuestion, isAnswerRevealed, and isMarkedCorrect are now provided by useQuizPlay hook
 	
 	// Track answered questions for visitor prompt
 	const answeredQuestionsCount = React.useMemo(() => {
@@ -1129,103 +893,9 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 		}
 	}, [isDemo, answeredQuestionsCount, hasShownPrompt, RESTRICTED_ANSWER_LIMIT]);
 
-	const completeQuiz = () => {
-		if (typeof window !== 'undefined' && !isDemo) {
-			const score = correctAnswers.size;
-			const completionKey = `quiz-${quizSlug}-completion`;
-			const completionData = {
-				score,
-				totalQuestions: finalQuestions.length,
-				completedAt: new Date().toISOString(),
-			};
-			localStorage.setItem(completionKey, JSON.stringify(completionData));
-			// Show completion modal
-			setShowCompletionModal(true);
-		} else if (isDemo && onDemoComplete) {
-			const score = correctAnswers.size;
-			onDemoComplete(score, finalQuestions.length);
-		}
-	};
-
-	const handleFinishQuiz = () => {
-		// Check if all questions are answered
-		const allAnswered = finalQuestions.every(q => 
-			correctAnswers.has(q.id) || incorrectAnswers.has(q.id)
-		);
-		
-		if (allAnswered) {
-			// All questions answered - complete the quiz
-			completeQuiz();
-		} else {
-			// Show incomplete modal
-			setShowIncompleteModal(true);
-		}
-	};
-
-	const goToNext = () => {
-		const nextIndex = currentIndex + 1;
-		
-		// In restricted quiz mode with maxQuestions, check if we've completed all allowed questions
-		if (isDemo && maxQuestions && nextIndex >= maxQuestions) {
-			// Quiz complete - calculate score and call callback
-			const score = correctAnswers.size;
-			if (onDemoComplete) {
-				onDemoComplete(score, maxQuestions);
-			}
-			return;
-		}
-		
-		if (nextIndex < finalQuestions.length) {
-			const nextQuestion = finalQuestions[nextIndex];
-			// Check if we're moving to a new round
-			if (nextQuestion.roundNumber !== currentQuestion.roundNumber) {
-				setCurrentRound(nextQuestion.roundNumber);
-				setCurrentScreen("round-intro");
-			} else {
-				// If staying on question screen, ensure timer starts
-				if (!isTimerRunning) {
-					setIsTimerRunning(true);
-				}
-				setCurrentScreen("question");
-			}
-			setCurrentIndex(nextIndex);
-			// Mark question as viewed
-			setViewedQuestions(prev => new Set([...prev, nextQuestion.id]));
-		} else if (isDemo && onDemoComplete) {
-			// Reached end of demo questions
-			const score = correctAnswers.size;
-			onDemoComplete(score, finalQuestions.length);
-		} else if (!isDemo && nextIndex >= finalQuestions.length) {
-			// Reached end - check if all questions answered
-			const allAnswered = finalQuestions.every(q => 
-				correctAnswers.has(q.id) || incorrectAnswers.has(q.id)
-			);
-			if (allAnswered) {
-				// All questions answered - complete the quiz
-				completeQuiz();
-			} else {
-				// Not all answered - show incomplete modal
-				setShowIncompleteModal(true);
-			}
-		}
-	};
-
-	const goToPrevious = () => {
-		if (currentIndex > 0) {
-			const prevIndex = currentIndex - 1;
-			const prevQuestion = finalQuestions[prevIndex];
-			// When going left, skip round-intro screens - always go directly to question
-			setCurrentRound(prevQuestion.roundNumber);
-			// If staying on question screen, ensure timer starts
-			if (!isTimerRunning) {
-				setIsTimerRunning(true);
-			}
-			setCurrentScreen("question");
-			setCurrentIndex(prevIndex);
-			// Mark question as viewed
-			setViewedQuestions(prev => new Set([...prev, prevQuestion.id]));
-		}
-	};
+	// completeQuiz, handleFinishQuiz, goToNext, and goToPrevious are now provided by useQuizPlay hook
+	// Use finishQuiz from hook for handleFinishQuiz
+	const handleFinishQuiz = finishQuiz;
 
 	// Enhanced keyboard navigation with shortcuts (placed after function definitions)
 	useEffect(() => {
@@ -1236,14 +906,12 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 			}
 
 			// Test achievement shortcut: Ctrl/Cmd + Shift + A (works anywhere)
+			// Note: This would need to be handled differently with the hook
+			// For now, keeping it but it won't work until achievement hook supports manual additions
 			if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "A") {
 				e.preventDefault();
-				const testAchievement: Achievement = {
-					id: `test_achievement_${Date.now()}`,
-					...ACHIEVEMENT_MAP.hail_caesar,
-					unlockedAt: new Date(),
-				};
-				setAchievements(prev => [...prev, testAchievement]);
+				// TODO: Add test achievement support to useQuizAchievements hook
+				console.log('Test achievement shortcut - needs hook support');
 				return;
 			}
 
@@ -1272,14 +940,22 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 			// Space: Toggle timer (when on question screen)
 			if (e.key === " " && currentScreen === "question") {
 				e.preventDefault();
-				setIsTimerRunning(prev => !prev);
+				if (isTimerRunning) {
+					stopTimer();
+				} else {
+					startTimer();
+				}
 				return;
 			}
 
 			// T: Toggle timer
 			if (e.key === "t" || e.key === "T") {
 				e.preventDefault();
-				setIsTimerRunning(prev => !prev);
+				if (isTimerRunning) {
+					stopTimer();
+				} else {
+					startTimer();
+				}
 				return;
 			}
 
@@ -1310,10 +986,10 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 					e.preventDefault();
 					isNavigatingRef.current = true;
 					// On round-intro, right arrow should go to first question of this round
-					// currentIndex already points to the first question, just switch to question screen
-					setCurrentScreen("question");
+					// Use startRound from hook
+					startRound();
 					if (!isTimerRunning) {
-						setIsTimerRunning(true);
+						startTimer();
 					}
 					setTimeout(() => { isNavigatingRef.current = false; }, 150);
 				} else if (e.key === "ArrowLeft" && currentIndex > 0) {
@@ -1344,34 +1020,23 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 		return () => window.removeEventListener("keydown", handleKeyDown);
 	}, [currentIndex, currentScreen, finalQuestions.length, isVisitor, isDemo, viewMode, quizSlug, goToPrevious, goToNext, switchToGridView, switchToPresenterView]);
 
-	const startRound = () => {
-		setCurrentScreen("question");
-		setIsTimerRunning(true); // Start timer when quiz begins
-	};
+	// startRound is now provided by useQuizPlay hook
 
 	const restartQuiz = () => {
 		if (typeof window !== 'undefined') {
 			if (confirm('Are you sure you want to restart this quiz? All progress will be lost.')) {
-				// Reset all quiz state
-				setCurrentIndex(0);
-				setCurrentRound(1);
-				setCurrentScreen("round-intro");
-				setViewedQuestions(new Set());
-				setRevealedAnswers(new Set());
-				setCorrectAnswers(new Set());
-				setIncorrectAnswers(new Set());
+				// Reset quiz state via hook
+				resetQuiz();
+				// Reset timer
+				stopTimer();
+				// Reset UI state
 				setShowPlusOne(false);
 				setPlusOneKey(0);
-				setIsTimerRunning(false);
-				setTimer(0);
 				setTrophies([]);
-				setAchievements([]);
 				setNotchNotifications([]);
 				setIsNotchLocked(false);
 				setIsNotchRetracted(false);
 				setCurrentNotchMessage(0);
-				// Clear session storage
-				sessionStorage.removeItem(`quiz-${quizSlug}-timer`);
 			}
 		}
 	};
@@ -1645,14 +1310,11 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 						if (isDemo && answeredQuestionsCount >= RESTRICTED_ANSWER_LIMIT) {
 							return;
 						}
-						setCurrentIndex(n - 1);
-						setCurrentScreen("question");
+						goToIndex(n - 1);
 						// Start timer if not already running
 						if (!isTimerRunning) {
-							setIsTimerRunning(true);
+							startTimer();
 						}
-						// Mark question as viewed
-						setViewedQuestions(prev => new Set([...prev, finalQuestions[n - 1].id]));
 					}}
 					isMouseActive={isMouseMoving}
 				/>
@@ -1795,9 +1457,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 					onNavigateToQuestion={(questionIndex) => {
 						const question = finalQuestions[questionIndex];
 						if (question) {
-							setCurrentIndex(questionIndex);
-							setCurrentRound(question.roundNumber);
-							setCurrentScreen("question");
+							goToIndex(questionIndex);
 							if (viewMode === "grid") {
 								switchToPresenterView();
 							}
@@ -1835,4 +1495,5 @@ function getTextColor(hex: string): "black" | "white" {
 	
 	return luminance > 0.5 ? "black" : "white";
 }
+
 
