@@ -29,16 +29,18 @@ export class QuizService {
 		}
 
 		// Try to fetch from API first (when DB is available)
-		try {
-			const response = await fetch(`/api/quizzes/${slug}/data`);
-			if (response.ok) {
-				const data = await response.json();
-				this.cache.set(slug, { data, timestamp: Date.now() });
-				return data;
-			}
-		} catch (error) {
-			console.warn(`Failed to fetch quiz ${slug} from API, falling back to mock data:`, error);
-		}
+		// Skip API call for now and use mock data directly to avoid hanging
+		// TODO: Re-enable API call when database is ready
+		// try {
+		// 	const response = await fetch(`/api/quizzes/${slug}/data`);
+		// 	if (response.ok) {
+		// 		const data = await response.json();
+		// 		this.cache.set(slug, { data, timestamp: Date.now() });
+		// 		return data;
+		// 	}
+		// } catch (error) {
+		// 	console.warn(`Failed to fetch quiz ${slug} from API, falling back to mock data:`, error);
+		// }
 
 		// Fallback to mock data (development/testing)
 		if (hasMockQuizData(slug)) {

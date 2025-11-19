@@ -189,6 +189,7 @@ export function useApiQuery<T>({
 			const result = await pendingPromise;
 
 			if (mountedRef.current) {
+				console.log('[useApiQuery] Fetch successful', { hasData: !!result });
 				setData(result);
 				setLoading(false);
 				setError(null);
@@ -198,10 +199,12 @@ export function useApiQuery<T>({
 		} catch (err) {
 			if (abortControllerRef.current?.signal.aborted) {
 				// Request was aborted, don't update state
+				console.log('[useApiQuery] Request aborted');
 				return;
 			}
 
 			const error = err instanceof Error ? err : new Error('Unknown error');
+			console.error('[useApiQuery] Fetch error', error);
 			if (mountedRef.current) {
 				setError(error);
 				setLoading(false);
