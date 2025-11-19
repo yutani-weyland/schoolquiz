@@ -339,18 +339,6 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 		console.log('QuizPlayer mounted', { quizTitle, quizColor, quizSlug, questionsCount: finalQuestions?.length, roundsCount: finalRounds?.length, isDemo, isVisitor });
 	}, [quizTitle, quizColor, quizSlug, finalQuestions?.length, finalRounds?.length, isDemo, isVisitor]);
 
-	// Initialize viewMode and currentScreen from URL params after mount to prevent hydration mismatch
-	useEffect(() => {
-		setMounted(true);
-		if (typeof window !== 'undefined') {
-			const params = new URLSearchParams(window.location.search);
-			const mode = params.get('mode');
-			if (mode === 'grid') {
-				quizPlaySwitchToGrid();
-			}
-		}
-	}, [quizPlaySwitchToGrid]);
-
 	// Safeguard: Check authentication and quiz limits (skip for restricted quiz mode and visitors)
 	React.useEffect(() => {
 		if (isDemo) return; // Restricted quiz mode bypasses auth checks
@@ -438,6 +426,19 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 	useEffect(() => {
 		setViewMode(quizPlayViewMode);
 	}, [quizPlayViewMode]);
+
+	// Initialize viewMode and currentScreen from URL params after mount to prevent hydration mismatch
+	// This must run after the hook is called and destructured
+	useEffect(() => {
+		setMounted(true);
+		if (typeof window !== 'undefined') {
+			const params = new URLSearchParams(window.location.search);
+			const mode = params.get('mode');
+			if (mode === 'grid') {
+				quizPlaySwitchToGrid();
+			}
+		}
+	}, [quizPlaySwitchToGrid]);
 
 	// Enhanced switchToGridView with scroll logic
 	const switchToGridView = useCallback(() => {
