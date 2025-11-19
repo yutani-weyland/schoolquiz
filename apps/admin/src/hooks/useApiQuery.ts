@@ -219,7 +219,8 @@ export function useApiQuery<T>({
 
 	// Initialize and fetch on mount if enabled
 	useEffect(() => {
-		if (enabledRef.current && !hasFetchedRef.current) {
+		const shouldFetch = enabledRef.current && !hasFetchedRef.current;
+		if (shouldFetch) {
 			setLoading(true);
 			hasFetchedRef.current = true;
 			performFetch();
@@ -231,9 +232,13 @@ export function useApiQuery<T>({
 
 	// Handle enabled changes after mount
 	useEffect(() => {
-		if (enabledRef.current && !hasFetchedRef.current && !loading && !data && !error) {
+		// Only fetch if enabled becomes true and we haven't fetched yet
+		if (enabled && !hasFetchedRef.current) {
 			hasFetchedRef.current = true;
+			setLoading(true);
 			performFetch();
+		} else if (!enabled && !hasFetchedRef.current) {
+			setLoading(false);
 		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [enabled]);
