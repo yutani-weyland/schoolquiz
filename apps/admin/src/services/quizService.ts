@@ -2,15 +2,52 @@
  * Quiz Service - Data access layer for quiz data
  * 
  * This service abstracts data fetching, allowing easy switch from mock to database.
- * Currently uses mock data, but can be updated to fetch from API/database.
+ * Supports both database queries and mock data fallback.
  */
 
 import { QuizQuestion, QuizRound } from '@/components/quiz/play/types';
 import { getMockQuizData, hasMockQuizData } from '@/lib/mock/quiz-fixtures';
+import { transformQuizToPlayFormat, QuizWithRelations } from '@/lib/transformers/quizTransformers';
 
 export interface QuizData {
 	questions: QuizQuestion[];
 	rounds: QuizRound[];
+}
+
+/**
+ * Check if database is available and should be used
+ */
+function shouldUseDatabase(): boolean {
+	// If USE_MOCK_DATA is explicitly set to 'true', skip database
+	if (process.env.USE_MOCK_DATA === 'true') {
+		return false;
+	}
+	
+	// Check if DATABASE_URL is set
+	const dbUrl = process.env.DATABASE_URL;
+	if (!dbUrl || dbUrl.trim() === '') {
+		return false;
+	}
+	
+	return true;
+}
+
+/**
+ * Get Prisma client (lazy import to avoid errors if DATABASE_URL not set)
+ */
+async function getPrismaClient() {
+	if (!shouldUseDatabase()) {
+		return null;
+	}
+	
+	try {
+		// Dynamic import to avoid loading Prisma if not needed
+		const { prisma } = await import('@schoolquiz/db');
+		return prisma;
+	} catch (error) {
+		console.warn('[QuizService] Failed to import Prisma client, falling back to mock data:', error);
+		return null;
+	}
 }
 
 export class QuizService {
@@ -19,7 +56,7 @@ export class QuizService {
 
 	/**
 	 * Get quiz data by slug
-	 * Uses cache if available, otherwise fetches from source
+	 * Tries database first, falls back to mock data if unavailable
 	 */
 	static async getQuizBySlug(slug: string): Promise<QuizData> {
 		// Check cache first
@@ -28,19 +65,44 @@ export class QuizService {
 			return cached.data;
 		}
 
-		// Try to fetch from API first (when DB is available)
-		// Skip API call for now and use mock data directly to avoid hanging
-		// TODO: Re-enable API call when database is ready
-		// try {
-		// 	const response = await fetch(`/api/quizzes/${slug}/data`);
-		// 	if (response.ok) {
-		// 		const data = await response.json();
-		// 		this.cache.set(slug, { data, timestamp: Date.now() });
-		// 		return data;
-		// 	}
-		// } catch (error) {
-		// 	console.warn(`Failed to fetch quiz ${slug} from API, falling back to mock data:`, error);
-		// }
+		// Try database first (if available)
+		if (shouldUseDatabase()) {
+			try {
+				const prisma = await getPrismaClient();
+				if (prisma) {
+					const quiz = await prisma.quiz.findUnique({
+						where: { slug },
+						include: {
+							rounds: {
+								include: {
+									category: true,
+									questions: {
+										include: {
+											question: true,
+										},
+										orderBy: {
+											order: 'asc',
+										},
+									},
+								},
+								orderBy: {
+									index: 'asc',
+								},
+							},
+						},
+					});
+
+					if (quiz) {
+						const transformed = transformQuizToPlayFormat(quiz as QuizWithRelations);
+						this.cache.set(slug, { data: transformed, timestamp: Date.now() });
+						return transformed;
+					}
+				}
+			} catch (error) {
+				// Log error but continue to fallback
+				console.warn(`[QuizService] Failed to fetch quiz ${slug} from database, falling back to mock data:`, error);
+			}
+		}
 
 		// Fallback to mock data (development/testing)
 		if (hasMockQuizData(slug)) {
