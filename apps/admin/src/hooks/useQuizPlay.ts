@@ -94,6 +94,9 @@ export function useQuizPlay({
 				setIncorrectAnswers(new Set(progress.incorrectAnswers));
 				setViewedQuestions(new Set(progress.viewedQuestions));
 			}
+		}).catch((error) => {
+			console.error('[useQuizPlay] Error loading progress:', error);
+			// Continue without progress - don't block rendering
 		});
 	}, [quizSlug]);
 

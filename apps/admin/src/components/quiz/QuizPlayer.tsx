@@ -438,7 +438,8 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 				quizPlaySwitchToGrid();
 			}
 		}
-	}, [quizPlaySwitchToGrid]);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []); // Only run once on mount - quizPlaySwitchToGrid is stable
 
 	// Enhanced switchToGridView with scroll logic
 	const switchToGridView = useCallback(() => {
@@ -1267,17 +1268,18 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 
 	// Don't render content until mounted to prevent hydration mismatch
 	// This ensures all theme-dependent styles are only applied client-side
-	if (!mounted) {
-		return (
-			<div
-				className="min-h-dvh flex flex-col"
-				suppressHydrationWarning
-				style={{
-					backgroundColor: "transparent",
-				}}
-			/>
-		);
-	}
+	// TEMPORARY: Always render to debug white screen issue
+	// if (!mounted) {
+	// 	return (
+	// 		<div
+	// 			className="min-h-dvh flex flex-col"
+	// 			suppressHydrationWarning
+	// 			style={{
+	// 				backgroundColor: "transparent",
+	// 			}}
+	// 		/>
+	// 	);
+	// }
 
 	return (
 		<div
