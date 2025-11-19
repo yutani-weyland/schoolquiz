@@ -88,6 +88,7 @@ export function useApiQuery<T>({
 	}, [fetchFn, onSuccess, onError, retry.count, retry.delay, enabled]);
 
 	const performFetch = useCallback(async (isRetry = false): Promise<void> => {
+		console.log('[useApiQuery] performFetch called', { cacheKey, isRetry, enabled: enabledRef.current });
 		// Check cache if cacheKey is provided
 		if (cacheKey && !isRetry) {
 			const cached = requestCache.get(cacheKey);
@@ -219,12 +220,15 @@ export function useApiQuery<T>({
 
 	// Initialize and fetch on mount if enabled
 	useEffect(() => {
-		const shouldFetch = enabledRef.current && !hasFetchedRef.current;
-		if (shouldFetch) {
+		console.log('[useApiQuery] Mount effect', { enabled, hasFetched: hasFetchedRef.current });
+		// Use the initial enabled value directly
+		if (enabled && !hasFetchedRef.current) {
+			console.log('[useApiQuery] Starting fetch on mount');
 			setLoading(true);
 			hasFetchedRef.current = true;
 			performFetch();
-		} else if (!enabledRef.current) {
+		} else if (!enabled) {
+			console.log('[useApiQuery] Disabled on mount, setting loading to false');
 			setLoading(false);
 		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
