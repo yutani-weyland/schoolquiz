@@ -65,25 +65,27 @@ export function useApiQuery<T>({
 	const [data, setData] = useState<T | null>(null);
 	const [loading, setLoading] = useState<boolean>(true);
 	const [error, setError] = useState<Error | null>(null);
+	
+	// Refs for stable references
 	const abortControllerRef = useRef<AbortController | null>(null);
 	const mountedRef = useRef(true);
-	const initializedRef = useRef(false);
-
-	// Store callbacks in refs to avoid dependency issues
 	const onSuccessRef = useRef(onSuccess);
 	const onErrorRef = useRef(onError);
 	const fetchFnRef = useRef(fetchFn);
 	const retryCountRef = useRef(retry.count ?? 0);
 	const retryDelayRef = useRef(retry.delay ?? 1000);
+	const enabledRef = useRef(enabled);
+	const hasFetchedRef = useRef(false);
 
-	// Update refs when values change
+	// Update refs when values change (but don't trigger re-renders)
 	useEffect(() => {
 		onSuccessRef.current = onSuccess;
 		onErrorRef.current = onError;
 		fetchFnRef.current = fetchFn;
 		retryCountRef.current = retry.count ?? 0;
 		retryDelayRef.current = retry.delay ?? 1000;
-	}, [fetchFn, onSuccess, onError, retry.count, retry.delay]);
+		enabledRef.current = enabled;
+	}, [fetchFn, onSuccess, onError, retry.count, retry.delay, enabled]);
 
 	const performFetch = useCallback(async (isRetry = false): Promise<void> => {
 		// Check cache if cacheKey is provided
@@ -189,6 +191,7 @@ export function useApiQuery<T>({
 				setData(result);
 				setLoading(false);
 				setError(null);
+				hasFetchedRef.current = true;
 				onSuccessRef.current?.(result);
 			}
 		} catch (err) {
@@ -214,30 +217,26 @@ export function useApiQuery<T>({
 		}
 	}, [cacheKey, staleTime]);
 
-	// Store initial enabled value
-	const initialEnabledRef = useRef(enabled);
-
-	// Initialize loading state and fetch on mount if enabled
+	// Initialize and fetch on mount if enabled
 	useEffect(() => {
-		if (!initializedRef.current) {
-			const shouldEnable = initialEnabledRef.current;
-			setLoading(shouldEnable);
-			initializedRef.current = true;
-			if (shouldEnable) {
-				performFetch();
-			}
+		if (enabledRef.current && !hasFetchedRef.current) {
+			setLoading(true);
+			hasFetchedRef.current = true;
+			performFetch();
+		} else if (!enabledRef.current) {
+			setLoading(false);
 		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []); // Only run once on mount
 
-	// Handle enabled changes after initialization
+	// Handle enabled changes after mount
 	useEffect(() => {
-		if (initializedRef.current && enabled && !loading && !data && !error) {
-			// If enabled changes to true after initialization and we have no data, fetch
+		if (enabledRef.current && !hasFetchedRef.current && !loading && !data && !error) {
+			hasFetchedRef.current = true;
 			performFetch();
 		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [enabled]); // Only depend on enabled, not on performFetch to avoid loops
+	}, [enabled]);
 
 	// Cleanup on unmount
 	useEffect(() => {
@@ -250,6 +249,7 @@ export function useApiQuery<T>({
 	}, []);
 
 	const refetch = useCallback(async () => {
+		hasFetchedRef.current = false;
 		await performFetch(true);
 	}, [performFetch]);
 
@@ -279,4 +279,3 @@ export function clearApiCache(cacheKey: string): void {
 export function clearAllApiCache(): void {
 	requestCache.clear();
 }
-
