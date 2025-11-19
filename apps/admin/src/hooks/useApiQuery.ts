@@ -214,12 +214,16 @@ export function useApiQuery<T>({
 		}
 	}, [cacheKey, staleTime]);
 
+	// Store initial enabled value
+	const initialEnabledRef = useRef(enabled);
+
 	// Initialize loading state and fetch on mount if enabled
 	useEffect(() => {
 		if (!initializedRef.current) {
-			setLoading(enabled);
+			const shouldEnable = initialEnabledRef.current;
+			setLoading(shouldEnable);
 			initializedRef.current = true;
-			if (enabled) {
+			if (shouldEnable) {
 				performFetch();
 			}
 		}
