@@ -66,6 +66,7 @@ function TimePeriodToggle({
 export default function AdminOverviewPage() {
   const [stats, setStats] = useState<PlatformStats | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [currentTime, setCurrentTime] = useState<string>('')
   const [timePeriods, setTimePeriods] = useState<Record<string, TimePeriod>>({
     'active-orgs': 'month',
     'active-users': 'month',
@@ -75,6 +76,16 @@ export default function AdminOverviewPage() {
 
   useEffect(() => {
     fetchStats()
+  }, [])
+
+  // Update time only on client side to prevent hydration mismatch
+  useEffect(() => {
+    const updateTime = () => {
+      setCurrentTime(new Date().toLocaleTimeString())
+    }
+    updateTime()
+    const interval = setInterval(updateTime, 1000)
+    return () => clearInterval(interval)
   }, [])
 
   const fetchStats = async () => {
@@ -224,7 +235,7 @@ export default function AdminOverviewPage() {
         </div>
         <div className="flex items-center gap-2 text-sm text-[hsl(var(--muted-foreground))]">
           <Clock className="w-4 h-4" />
-          <span>Last updated: {new Date().toLocaleTimeString()}</span>
+          <span>Last updated: {currentTime || '--:--:--'}</span>
         </div>
       </div>
 

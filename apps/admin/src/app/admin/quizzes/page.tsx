@@ -119,7 +119,16 @@ export default function AdminQuizzesPage() {
         setQuizzes(fetchedQuizzes)
         setPagination(data.pagination || pagination)
       } else {
-        console.error('API error:', data)
+        console.error('API error response:', {
+          status: response.status,
+          statusText: response.statusText,
+          data: data,
+          error: data.error,
+          details: data.details,
+          errorName: data.errorName,
+        })
+        // Show user-friendly error
+        alert(`Failed to load quizzes: ${data.details || data.error || 'Unknown error'}`)
       }
     } catch (error) {
       console.error('Failed to fetch quizzes:', error)
@@ -194,6 +203,49 @@ export default function AdminQuizzesPage() {
       month: '2-digit',
       year: 'numeric',
     })
+  }
+
+  const handleDelete = async (quizId: string, quizTitle: string) => {
+    if (!confirm(`Are you sure you want to delete "${quizTitle}"? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/admin/quizzes/${quizId}`, {
+        method: 'DELETE',
+      })
+
+      const data = await response.json()
+      if (response.ok) {
+        // Refresh the quiz list
+        await fetchQuizzes()
+      } else {
+        alert(data.error || 'Failed to delete quiz')
+      }
+    } catch (error) {
+      console.error('Failed to delete quiz:', error)
+      alert('Failed to delete quiz')
+    }
+  }
+
+  const handleDuplicate = async (quizId: string) => {
+    try {
+      const response = await fetch(`/api/admin/quizzes/${quizId}/duplicate`, {
+        method: 'POST',
+      })
+
+      const data = await response.json()
+      if (response.ok) {
+        // Refresh the quiz list
+        await fetchQuizzes()
+        alert(`Quiz duplicated successfully! New quiz: "${data.quiz.title}"`)
+      } else {
+        alert(data.error || 'Failed to duplicate quiz')
+      }
+    } catch (error) {
+      console.error('Failed to duplicate quiz:', error)
+      alert('Failed to duplicate quiz')
+    }
   }
 
   return (
@@ -389,6 +441,26 @@ export default function AdminQuizzesPage() {
                             className="px-3 py-1.5 text-xs font-medium text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/10 rounded-lg transition-colors whitespace-nowrap"
                           >
                             Edit
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDuplicate(quiz.id)
+                            }}
+                            className="px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors whitespace-nowrap"
+                            title="Duplicate quiz"
+                          >
+                            Duplicate
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDelete(quiz.id, quiz.title)
+                            }}
+                            className="px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors whitespace-nowrap"
+                            title="Delete quiz"
+                          >
+                            Delete
                           </button>
                           {quiz.pdfStatus === 'generated' && (
                             <button

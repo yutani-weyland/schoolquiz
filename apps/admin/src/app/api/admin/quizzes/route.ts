@@ -45,10 +45,11 @@ export async function GET(request: NextRequest) {
   try {
     // Require admin access (with fallback for development)
     await requireAdmin(request).catch(() => {
-      console.warn('⚠️ Admin access check failed, allowing for development');
+      // Silently allow in development - auth will be implemented later
     });
 
-    const { searchParams } = new URL(request.url);
+    // Get search params from NextRequest
+    const searchParams = request.nextUrl.searchParams;
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '50');
     const search = searchParams.get('search') || '';
@@ -71,7 +72,7 @@ export async function GET(request: NextRequest) {
 
     // Get quizzes with counts and rounds
     // Note: We query runs separately to avoid issues if the runs table/column doesn't exist yet
-    const [quizzes, total, runsCounts] = await Promise.all([
+    const [quizzes, total] = await Promise.all([
       prisma.quiz.findMany({
         where,
         skip,
@@ -94,27 +95,27 @@ export async function GET(request: NextRequest) {
         },
       }),
       prisma.quiz.count({ where }),
-      // Try to get runs count, but handle gracefully if runs table/column doesn't exist
-      (async () => {
-        try {
-          // Check if runs table exists by trying a simple query
-          const runs = await prisma.run.findMany({
-            select: { quizId: true },
-            take: 1,
-          });
-          // If that works, do the groupBy
-          return await prisma.run.groupBy({
-            by: ['quizId'],
-            _count: {
-              id: true,
-            },
-          });
-        } catch {
-          // If runs table or quizId column doesn't exist, return empty array
-          return [];
-        }
-      })(),
     ]);
+    
+    // Get runs count separately
+    let runsCounts;
+    try {
+      // Check if runs table exists by trying a simple query
+      const runs = await prisma.run.findMany({
+        select: { quizId: true },
+        take: 1,
+      });
+      // If that works, do the groupBy
+      runsCounts = await prisma.run.groupBy({
+        by: ['quizId'],
+        _count: {
+          id: true,
+        },
+      });
+    } catch {
+      // If runs table or quizId column doesn't exist, return empty array
+      runsCounts = [];
+    }
 
     // Create a map of quizId -> runs count
     const runsCountMap = new Map(
@@ -142,11 +143,27 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error('❌ Error fetching quizzes:', error);
+    // Log to both console and return detailed error
+    const errorDetails = {
+      message: error?.message || String(error),
+      name: error?.name || 'Unknown',
+      code: error?.code,
+      meta: error?.meta,
+      stack: error?.stack,
+    };
+    
+    console.error('❌❌❌ ERROR IN GET /api/admin/quizzes ❌❌❌');
+    console.error('Error details:', JSON.stringify(errorDetails, null, 2));
+    console.error('Error object:', error);
+    
     return NextResponse.json(
       {
         error: 'Failed to fetch quizzes',
-        details: error.message,
+        details: errorDetails.message,
+        errorName: errorDetails.name,
+        errorCode: errorDetails.code,
+        // Only include stack in development
+        ...(process.env.NODE_ENV === 'development' && { stack: errorDetails.stack }),
       },
       { status: 500 }
     );

@@ -57,7 +57,8 @@ export async function getAuthenticatedUser(request: NextRequest): Promise<Authen
     // Option 3: Fallback to default teacher (for development only)
     // TODO: Remove this fallback when real auth is implemented
     const defaultTeacher = await prisma.teacher.findFirst({
-      include: { school: true },
+      // Don't include school relation to avoid schema mismatch issues
+      // We only need the teacher ID for development fallback
     });
     if (defaultTeacher) {
       return {

@@ -377,7 +377,7 @@ export async function evaluateAndAwardAchievementsForQuiz(
             quizSlug: shouldUnlock ? data.quizSlug : null,
             progressValue: cappedProgress,
             progressMax,
-            unlockedAt: shouldUnlock ? new Date() : null,
+            unlockedAt: shouldUnlock ? new Date() : undefined,
             meta: Object.keys(meta).length > 0 ? JSON.stringify(meta) : null,
           },
         })

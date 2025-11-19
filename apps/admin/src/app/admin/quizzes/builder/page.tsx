@@ -84,19 +84,103 @@ export default function QuizBuilderPage() {
       const response = await fetch(`/api/admin/quizzes/${quizId}`)
       const data = await response.json()
       if (response.ok && data.quiz) {
-        // Transform quiz data to builder format
-        // TODO: Transform from API response format to builder format
-        console.log('Loading quiz:', data.quiz)
-        // For now, just set the ID and title
-        setQuiz(prev => ({
-          ...prev,
-          id: data.quiz.id,
-          title: data.quiz.title,
-          status: data.quiz.status,
-        }))
+        const quizData = data.quiz
+        
+        // Transform database format to builder format
+        const transformedRounds: Round[] = (quizData.rounds || []).map((round: any) => {
+          const isPeoplesRound = round.isPeoplesRound || false
+          
+          // Transform questions
+          const transformedQuestions: Question[] = (round.questions || []).map((rq: any) => ({
+            id: rq.question?.id || `q-${Date.now()}-${Math.random()}`,
+            text: rq.question?.text || '',
+            answer: rq.question?.answer || '',
+            explanation: rq.question?.explanation || '',
+            categoryId: round.categoryId || round.category?.id || '',
+            categoryName: round.category?.name || '',
+          }))
+          
+          // Ensure correct number of questions for each round
+          const expectedQuestionCount = isPeoplesRound ? 1 : QUESTIONS_PER_ROUND
+          while (transformedQuestions.length < expectedQuestionCount) {
+            transformedQuestions.push({
+              id: `q-${Date.now()}-${Math.random()}`,
+              text: '',
+              answer: '',
+              explanation: '',
+              categoryId: round.categoryId || round.category?.id || '',
+              categoryName: round.category?.name || '',
+            })
+          }
+          
+          return {
+            id: round.id || `round-${round.index}`,
+            index: round.index,
+            title: round.title || round.category?.name || `Round ${round.index + 1}`,
+            categoryId: round.categoryId || round.category?.id || '',
+            categoryName: round.category?.name || '',
+            blurb: round.blurb || '',
+            questions: transformedQuestions,
+            isPeoplesRound,
+          }
+        })
+        
+        // Ensure we have the correct number of rounds (4 standard + 1 peoples)
+        const standardRounds = transformedRounds.filter(r => !r.isPeoplesRound)
+        const peoplesRounds = transformedRounds.filter(r => r.isPeoplesRound)
+        
+        // Fill in missing standard rounds
+        while (standardRounds.length < STANDARD_ROUNDS) {
+          const nextIndex = standardRounds.length
+          standardRounds.push({
+            id: `round-${nextIndex}`,
+            index: nextIndex,
+            title: '',
+            categoryId: '',
+            blurb: '',
+            questions: Array.from({ length: QUESTIONS_PER_ROUND }, () => ({
+              id: `q-${Date.now()}-${Math.random()}`,
+              text: '',
+              answer: '',
+              explanation: '',
+              categoryId: '',
+            })),
+            isPeoplesRound: false,
+          })
+        }
+        
+        // Ensure we have exactly one peoples round
+        if (peoplesRounds.length === 0) {
+          peoplesRounds.push({
+            id: `round-${PEOPLE_ROUND_INDEX}`,
+            index: PEOPLE_ROUND_INDEX,
+            title: '',
+            categoryId: '',
+            blurb: '',
+            questions: [{
+              id: `q-${Date.now()}-${Math.random()}`,
+              text: '',
+              answer: '',
+              explanation: '',
+              categoryId: '',
+            }],
+            isPeoplesRound: true,
+          })
+        }
+        
+        // Combine rounds in correct order
+        const allRounds = [...standardRounds, ...peoplesRounds].sort((a, b) => a.index - b.index)
+        
+        setQuiz({
+          id: quizData.id,
+          title: quizData.title,
+          status: quizData.status,
+          rounds: allRounds,
+        })
       }
     } catch (error) {
       console.error('Failed to load quiz:', error)
+      alert('Failed to load quiz. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -214,19 +298,58 @@ export default function QuizBuilderPage() {
   const handleSave = async () => {
     setIsSaving(true)
     try {
-      const response = await fetch('/api/admin/quizzes/builder', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...quiz,
-          createdBy: 'user-1', // TODO: Get from auth
+      const isUpdate = !!quiz.id
+      const url = isUpdate 
+        ? `/api/admin/quizzes/${quiz.id}`
+        : '/api/admin/quizzes'
+      
+      // Transform builder format to API format
+      // API expects: round.category (string name), question.question (string), round.kind
+      const apiData = {
+        number: 0, // Will be auto-generated or use slug
+        title: quiz.title,
+        description: '', // Can be added later
+        status: quiz.status,
+        rounds: quiz.rounds.map(round => {
+          // Get category name from categoryId
+          const category = categories.find(c => c.id === round.categoryId)
+          const categoryName = category?.name || round.categoryName || 'General Knowledge'
+          
+          return {
+            id: round.id,
+            category: categoryName,
+            title: round.title || categoryName,
+            blurb: round.blurb || '',
+            kind: round.isPeoplesRound ? 'finale' : 'standard',
+            questions: round.questions
+              .filter(q => q.text && q.answer) // Only include filled questions
+              .map(q => ({
+                id: q.id,
+                question: q.text,
+                answer: q.answer,
+                explanation: q.explanation || '',
+                category: categoryName,
+              })),
+          }
         }),
+      }
+      
+      const response = await fetch(url, {
+        method: isUpdate ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(apiData),
       })
       
       const data = await response.json()
       if (response.ok) {
-        setQuiz(prev => ({ ...prev, id: data.quiz.id }))
-        alert('Quiz saved as draft!')
+        if (isUpdate) {
+          alert('Quiz updated successfully!')
+        } else {
+          setQuiz(prev => ({ ...prev, id: data.quiz?.id }))
+          alert('Quiz saved successfully!')
+        }
+        // Optionally redirect back to quizzes list
+        // router.push('/admin/quizzes')
       } else {
         alert(data.error || 'Failed to save quiz')
       }
@@ -398,7 +521,7 @@ export default function QuizBuilderPage() {
               title: roundData.title,
               categoryId: roundData.categoryId,
               categoryName: roundData.categoryName,
-              questions: roundData.questions.map((q: any) => ({
+              questions: (roundData.questions || []).map((q: any) => ({
                 ...q,
                 id: `q-${Date.now()}-${Math.random()}`,
                 isImported: true,

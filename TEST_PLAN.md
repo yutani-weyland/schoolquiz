@@ -1,196 +1,86 @@
-# Comprehensive Test Plan - The School Quiz Platform
+# Admin Quiz Management - Test Plan
 
-## Phase 1: Quiz Functionality Testing ✅
+## Test Environment
+- Base URL: `http://localhost:3001`
+- Database: Supabase (PostgreSQL)
 
-### 1.1 Quiz Loading & Questions
-- [ ] **Test**: Navigate to `/quizzes/12/intro` and start quiz
-- [ ] **Expected**: All questions load correctly
-- [ ] **Check**: Questions display properly, rounds are correct
-- [ ] **Status**: 
+## Test Cases
 
-### 1.2 Answer Tracking & Scoring
-- [ ] **Test**: Answer questions correctly/incorrectly
-- [ ] **Expected**: Answers tracked, score updates correctly
-- [ ] **Check**: Score increments on correct answers
-- [ ] **Status**: 
+### 1. View Quizzes List (`/admin/quizzes`)
+- [ ] Page loads without errors
+- [ ] All 5 seeded quizzes are displayed
+- [ ] Quiz data is correct (title, status, rounds count, runs count)
+- [ ] Search functionality works (search by title)
+- [ ] Status filter works (draft, scheduled, published)
+- [ ] Sorting works (title, status, runs, publication date, created date)
+- [ ] Pagination works (if more than 50 quizzes)
 
-### 1.3 Results Display
-- [ ] **Test**: Complete a quiz
-- [ ] **Expected**: Results screen shows accurate score, time, breakdown
-- [ ] **Check**: Score matches answers, time is accurate
-- [ ] **Status**: 
+### 2. Create New Quiz (`/create-quiz`)
+- [ ] Page loads without errors
+- [ ] Can fill in quiz metadata (title, description, status)
+- [ ] Can add 4 standard rounds with 6 questions each
+- [ ] Can add 1 peoples round with 1 question
+- [ ] Can save quiz successfully
+- [ ] New quiz appears in `/admin/quizzes` list
+- [ ] Quiz can be played at `/quizzes/[slug]/play`
 
-### 1.4 Timer Functionality
-- [ ] **Test**: Start quiz, check timer
-- [ ] **Expected**: Timer starts, increments correctly
-- [ ] **Check**: Timer persists on navigation, pauses/resumes correctly
-- [ ] **Status**: 
+### 3. Edit Existing Quiz (`/create-quiz?edit=quizId`)
+- [ ] Page loads with `?edit=quizId` parameter
+- [ ] Quiz data is loaded and displayed correctly
+- [ ] All rounds and questions are populated
+- [ ] Can modify quiz metadata
+- [ ] Can modify rounds and questions
+- [ ] Can save changes successfully
+- [ ] Changes are reflected in quiz list
+- [ ] Changes are reflected when playing the quiz
 
-### 1.5 Round Transitions
-- [ ] **Test**: Complete rounds, navigate between rounds
-- [ ] **Expected**: Smooth transitions, correct round numbers
-- [ ] **Check**: Round intro screens, question progression
-- [ ] **Status**: 
+### 4. Delete Quiz (`/admin/quizzes` or `/explore-quizzes`)
+- [ ] Delete button is visible
+- [ ] Confirmation dialog appears
+- [ ] Quiz is deleted from database
+- [ ] Quiz disappears from list
+- [ ] Quiz is no longer playable
 
-### 1.6 State Persistence (Refresh Test)
-- [ ] **Test**: Start quiz, answer some questions, refresh page
-- [ ] **Expected**: State persists or gracefully resets
-- [ ] **Check**: Timer, answers, progress saved in sessionStorage
-- [ ] **Status**: 
+### 5. Duplicate Quiz (`/explore-quizzes`)
+- [ ] Duplicate button is visible
+- [ ] Confirmation dialog appears
+- [ ] New quiz is created with "-copy" suffix
+- [ ] All rounds and questions are duplicated
+- [ ] New quiz appears in list
+- [ ] New quiz can be edited independently
 
-## Phase 2: API / Backend Integration Testing 🔄
+### 6. Explore Quizzes Page (`/explore-quizzes`)
+- [ ] Page loads without errors
+- [ ] All quizzes are displayed in grid layout
+- [ ] Search functionality works
+- [ ] Filter by status works
+- [ ] Sort by date/number/submissions/score works
+- [ ] Edit button navigates to edit page
+- [ ] Delete button works
+- [ ] Duplicate button works
 
-### 2.1 Quiz Endpoints
-- [ ] **GET /api/quizzes**
-  - [ ] Returns list of quizzes
-  - [ ] Proper pagination
-  - [ ] Error handling (500)
-- [ ] **Status**: 
+### 7. Quiz Play Page (`/quizzes/[slug]/play`)
+- [ ] Quiz loads from database
+- [ ] All rounds and questions are displayed
+- [ ] Navigation works (next/previous)
+- [ ] Timer works
+- [ ] Answers can be submitted
+- [ ] Quiz completion saves to database
+- [ ] Score is calculated correctly
 
-### 2.2 Quiz Completion Endpoint
-- [ ] **POST /api/quiz/completion**
-  - [ ] Valid payload saves correctly
-  - [ ] Invalid payload returns 400
-  - [ ] Unauthorized returns 401
-  - [ ] Achievements awarded correctly
-- [ ] **Status**: 
+### 8. Error Handling
+- [ ] Invalid quiz ID shows appropriate error
+- [ ] Network errors are handled gracefully
+- [ ] Validation errors are displayed
+- [ ] Loading states are shown during API calls
 
-### 2.3 Profile Endpoints
-- [ ] **GET /api/profile/[userId]**
-  - [ ] Returns user profile data
-  - [ ] Includes achievements, streaks, completions
-  - [ ] Proper error handling
-- [ ] **PATCH /api/profile/[userId]**
-  - [ ] Updates profile correctly
-  - [ ] Validates input
-  - [ ] Returns 400 for invalid data
-- [ ] **Status**: 
+## Quick Test Checklist
 
-### 2.4 Authentication Gating
-- [ ] **Test**: Access protected endpoints without auth
-- [ ] **Expected**: Returns 401 Unauthorized
-- [ ] **Check**: All protected routes check auth
-- [ ] **Status**: 
-
-### 2.5 Caching
-- [ ] **Test**: Check if React Query/SWR caching works
-- [ ] **Expected**: Reduces API calls, improves performance
-- [ ] **Check**: Network tab shows cached responses
-- [ ] **Status**: 
-
-### 2.6 Error Handling
-- [ ] **Test**: Send invalid payloads to endpoints
-- [ ] **Expected**: Proper 400/500 responses with error messages
-- [ ] **Check**: Error messages are user-friendly
-- [ ] **Status**: 
-
-### 2.7 Performance Testing
-- [ ] **Test**: Load test API endpoints (local stress test)
-- [ ] **Expected**: Response times < 500ms under normal load
-- [ ] **Check**: No memory leaks, proper cleanup
-- [ ] **Status**: 
-
-## Phase 3: Responsive Design Testing 📱
-
-### 3.1 Breakpoints
-- [ ] **Mobile** (< 640px)
-  - [ ] Quiz cards stack vertically
-  - [ ] Buttons are tappable (min 44x44px)
-  - [ ] Text is readable
-- [ ] **Tablet** (640px - 1024px)
-  - [ ] Grid layout adapts
-  - [ ] Navigation works
-- [ ] **Desktop** (1024px - 1440px)
-  - [ ] Full layout displays
-  - [ ] All features accessible
-- [ ] **Large Screens** (> 1440px)
-  - [ ] Content doesn't stretch too wide
-  - [ ] Max-width constraints work
-- [ ] **Status**: 
-
-### 3.2 Component Scaling
-- [ ] **Quiz Cards**: Resize gracefully
-- [ ] **Buttons**: Maintain proper size
-- [ ] **Timers**: Readable at all sizes
-- [ ] **Achievements**: Grid adapts
-- [ ] **Status**: 
-
-### 3.3 View Modes
-- [ ] **Grid View**: Works on all breakpoints
-- [ ] **Presenter View**: Responsive
-- [ ] **Mobile Grid Layout**: Functions correctly
-- [ ] **Status**: 
-
-### 3.4 Dark Mode
-- [ ] **Test**: Toggle dark mode
-- [ ] **Expected**: All components render cleanly
-- [ ] **Check**: No contrast issues, readable text
-- [ ] **Status**: 
-
-### 3.5 Accessibility
-- [ ] **Keyboard Navigation**: Tab through all interactive elements
-- [ ] **Focus Rings**: Visible on all focusable elements
-- [ ] **ARIA Labels**: Present on interactive elements
-- [ ] **Screen Reader**: Test with screen reader
-- [ ] **Status**: 
-
-## Phase 4: Mobile & Performance Testing ⚡
-
-### 4.1 Lighthouse Metrics
-- [ ] **TTFB** (Time to First Byte): < 600ms
-- [ ] **LCP** (Largest Contentful Paint): < 2.5s
-- [ ] **CLS** (Cumulative Layout Shift): < 0.1
-- [ ] **FID** (First Input Delay): < 100ms
-- [ ] **Status**: 
-
-### 4.2 Lazy Loading
-- [ ] **Images**: Lazy load correctly
-- [ ] **Components**: Code splitting works
-- [ ] **Routes**: Dynamic imports function
-- [ ] **Status**: 
-
-### 4.3 Animations Performance
-- [ ] **Framer Motion**: Maintains 60fps
-- [ ] **No Jank**: Smooth transitions
-- [ ] **Reduced Motion**: Respects prefers-reduced-motion
-- [ ] **Status**: 
-
-### 4.4 Mobile UX
-- [ ] **Tapping Accuracy**: Buttons easy to tap
-- [ ] **Scrolling**: Smooth, no lag
-- [ ] **Viewport Scaling**: Proper meta tags
-- [ ] **Touch Gestures**: Swipe navigation works
-- [ ] **Status**: 
-
-### 4.5 Offline Behavior
-- [ ] **PWA Features**: Service worker if implemented
-- [ ] **Offline Fallback**: Graceful degradation
-- [ ] **Status**: 
-
-## Test Results Summary
-
-### Critical Issues Found:
-1. 
-2. 
-3. 
-
-### Minor Issues Found:
-1. 
-2. 
-3. 
-
-### Performance Improvements Needed:
-1. 
-2. 
-3. 
-
-### Next Steps:
-1. 
-2. 
-3. 
-
----
-**Last Updated**: [Date]
-**Tested By**: [Tester]
-**Environment**: [Dev/Staging/Production]
-
+1. **View List**: Navigate to `/admin/quizzes` - should see 5 quizzes
+2. **Search**: Type "demo" in search - should filter to demo quiz
+3. **Edit**: Click "Edit" on any quiz - should load in create-quiz page
+4. **Save Edit**: Make a change and save - should update successfully
+5. **Delete**: Delete a quiz - should remove from list
+6. **Duplicate**: Duplicate a quiz - should create new quiz with "-copy"
+7. **Create New**: Create a new quiz - should appear in list
+8. **Play Quiz**: Play a quiz - should work with database data
