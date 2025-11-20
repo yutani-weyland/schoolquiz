@@ -1,14 +1,18 @@
 import { createClient } from '@supabase/supabase-js'
 import { unstable_cache, revalidateTag } from 'next/cache'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-export const supabase = createClient(supabaseUrl, supabaseKey)
+// Only create Supabase client if environment variables are available
+// This prevents errors during static generation when env vars might not be set
+export const supabase = supabaseUrl && supabaseKey
+  ? createClient(supabaseUrl, supabaseKey)
+  : null
 
 // Server-side Supabase client with service role key for admin operations
-export const supabaseAdmin = supabaseServiceKey
+export const supabaseAdmin = supabaseUrl && supabaseServiceKey
   ? createClient(supabaseUrl, supabaseServiceKey, {
       auth: {
         autoRefreshToken: false,
@@ -19,6 +23,11 @@ export const supabaseAdmin = supabaseServiceKey
 
 // Internal function to fetch questions (not cached)
 async function _getQuestionsUncached() {
+  if (!supabase) {
+    console.warn('Supabase client not available, returning empty questions array')
+    return []
+  }
+  
   const { data, error } = await supabase
     .from('questions')
     .select(`
@@ -55,6 +64,10 @@ export async function getQuestions() {
 }
 
 export async function createQuestion(questionData: any) {
+  if (!supabase) {
+    throw new Error('Supabase client not available')
+  }
+  
   const { data, error } = await supabase
     .from('questions')
     .insert(questionData)
@@ -71,6 +84,11 @@ export async function createQuestion(questionData: any) {
 
 // Internal function to fetch quizzes (not cached)
 async function _getQuizzesUncached() {
+  if (!supabase) {
+    console.warn('Supabase client not available, returning empty quizzes array')
+    return []
+  }
+  
   const { data, error } = await supabase
     .from('quizzes')
     .select(`
@@ -103,6 +121,10 @@ export async function getQuizzes() {
 }
 
 export async function createQuiz(quizData: any) {
+  if (!supabase) {
+    throw new Error('Supabase client not available')
+  }
+  
   const { data, error } = await supabase
     .from('quizzes')
     .insert(quizData)
@@ -119,6 +141,11 @@ export async function createQuiz(quizData: any) {
 
 // Get quiz by slug (for static generation)
 async function _getQuizBySlugUncached(slug: string) {
+  if (!supabase) {
+    console.warn('Supabase client not available, returning null for quiz by slug')
+    return null
+  }
+  
   const { data, error } = await supabase
     .from('quizzes')
     .select(`

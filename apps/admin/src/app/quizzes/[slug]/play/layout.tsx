@@ -5,7 +5,7 @@ async function getAllQuizSlugs(): Promise<string[]> {
 	// Try to fetch from database first (if available)
 	try {
 		const quizzes = await getQuizzes();
-		if (quizzes && Array.isArray(quizzes)) {
+		if (quizzes && Array.isArray(quizzes) && quizzes.length > 0) {
 			const slugs = quizzes
 				.filter((q: any) => q.slug && (q.status === 'published' || q.status === 'available'))
 				.map((q: any) => q.slug)
@@ -16,6 +16,7 @@ async function getAllQuizSlugs(): Promise<string[]> {
 		}
 	} catch (error) {
 		// Fallback to hardcoded data if database unavailable
+		// This is expected during build if Supabase env vars aren't set
 		console.warn('Could not fetch quizzes from database for static generation:', error);
 	}
 	

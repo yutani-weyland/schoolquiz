@@ -62,47 +62,23 @@ const getUserFromToken = cache(async (request: NextRequest) => {
   }
 })
 
-// Cached function to fetch achievements data
+// Cached function to fetch achievements data (uncached version)
 async function getAchievementsDataUncached(userId: string | null, tier: 'visitor' | 'free' | 'premium') {
-  // Get all achievements - handle case where table doesn't exist yet
-  let allAchievements: any[] = []
   try {
-    allAchievements = await (prisma as any).achievement.findMany({
-      orderBy: [
-        { rarity: 'asc' }, // Legendary first
-        { name: 'asc' },
-      ],
-    })
+    // Get all achievements - use cached version
+    const { getAllAchievements } = await import('@/lib/cache-helpers')
+    const allAchievements = await getAllAchievements()
     console.log('[Achievements API] Found achievements:', allAchievements.length)
-    } catch (error: any) {
-      // If achievements table doesn't exist yet, return empty array
-      const errorMsg = error.message || String(error)
-      if (
-        errorMsg.includes('does not exist') ||
-        errorMsg.includes('Unknown model') ||
-        errorMsg.includes('Unknown arg') ||
-        errorMsg.includes('Cannot find') ||
-        errorMsg.includes('is not a function')
-      ) {
-        console.warn('Achievements table not found - migrations may need to be run:', errorMsg)
-        return {
-          achievements: [],
-          tier,
-          message: 'Achievements table not initialized. Please run database migrations.',
-        }
-      }
-      throw error
-    }
     
     // Get user's unlocked achievements and progress if logged in
     let userAchievements: Array<{ achievementId: string; unlockedAt: Date; progressValue?: number; progressMax?: number }> = []
     let userProgress: Map<string, { progressValue: number; progressMax: number }> = new Map()
     
-    if (user) {
+    if (userId) {
       try {
         // Check if UserAchievement model exists and has achievementId field
         const unlocked = await prisma.userAchievement.findMany({
-          where: { userId: user.id },
+          where: { userId: userId },
         })
         
         // Map to the format we need, handling both old (achievementKey) and new (achievementId) schemas
@@ -153,7 +129,7 @@ async function getAchievementsDataUncached(userId: string | null, tier: 'visitor
         let quizCompletions: any[] = []
         try {
           quizCompletions = await prisma.quizCompletion.findMany({
-            where: { userId: user.id },
+            where: { userId: userId },
             orderBy: { completedAt: 'desc' },
           })
         } catch (e) {

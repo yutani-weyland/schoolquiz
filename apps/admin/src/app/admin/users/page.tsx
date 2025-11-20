@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Users, Search, Filter, Building2, Trophy, BookOpen, ArrowUpDown, ArrowUp, ArrowDown, Edit2, X, KeyRound } from 'lucide-react'
+import { Users, Search, Filter, Building2, Trophy, BookOpen, Edit2, X, KeyRound } from 'lucide-react'
+import { PageHeader, Card, Input, Select, DataTable, DataTableHeader, DataTableHeaderCell, DataTableBody, DataTableRow, DataTableCell, DataTableEmpty, Badge, Button } from '@/components/admin/ui'
 
 interface User {
   id: string
@@ -86,61 +87,23 @@ export default function AdminUsersPage() {
     setPage(1)
   }
 
-  const SortableHeader = ({ column, label }: { column: string; label: string }) => {
-    const isSorted = sortBy === column
-    return (
-      <th
-        className="px-6 py-3 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider cursor-pointer hover:bg-[hsl(var(--muted))] transition-colors"
-        onClick={() => handleSort(column)}
-      >
-        <div className="flex items-center gap-2">
-          <span>{label}</span>
-          {isSorted ? (
-            sortOrder === 'asc' ? (
-              <ArrowUp className="w-4 h-4" />
-            ) : (
-              <ArrowDown className="w-4 h-4" />
-            )
-          ) : (
-            <ArrowUpDown className="w-4 h-4 opacity-50" />
-          )}
-        </div>
-      </th>
-    )
-  }
-
   const getTierBadge = (tier: string) => {
-    return tier === 'premium' ? (
-      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
-        Premium
-      </span>
-    ) : (
-      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[hsl(var(--muted))] text-[hsl(var(--foreground))]">
-        Basic
-      </span>
-    )
+    return tier === 'premium' ? 'info' : 'default'
   }
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-[hsl(var(--foreground))] tracking-tight">
-            Users
-          </h1>
-          <p className="mt-2 text-sm text-[hsl(var(--muted-foreground))]">
-            Manage users and their accounts
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title="Users"
+        description="Manage users and their accounts"
+      />
 
       {/* Filters */}
-      <div className="bg-[hsl(var(--card))] rounded-2xl border border-[hsl(var(--border))] p-4">
+      <Card padding="sm">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[hsl(var(--muted-foreground))] z-10" />
-            <input
+            <Input
               type="text"
               placeholder="Search users..."
               value={searchQuery}
@@ -148,67 +111,78 @@ export default function AdminUsersPage() {
                 setSearchQuery(e.target.value)
                 setPage(1)
               }}
-              className="w-full pl-10 pr-4 py-2 border border-[hsl(var(--border))] rounded-xl bg-[hsl(var(--input))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] placeholder:text-[hsl(var(--muted-foreground))]"
+              className="pl-10"
             />
           </div>
           <div className="relative">
             <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[hsl(var(--muted-foreground))] z-10" />
-            <select
+            <Select
               value={tierFilter}
               onChange={(e) => {
                 setTierFilter(e.target.value)
                 setPage(1)
               }}
-              className="pl-10 pr-8 py-2 border border-[hsl(var(--border))] rounded-xl bg-[hsl(var(--input))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
+              className="pl-10"
             >
               <option value="">All Tiers</option>
               <option value="basic">Basic</option>
               <option value="premium">Premium</option>
-            </select>
+            </Select>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Table */}
-      <div className="bg-[hsl(var(--card))] rounded-2xl border border-[hsl(var(--border))] overflow-hidden">
-        {isLoading ? (
-          <div className="p-12 text-center">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[hsl(var(--primary))]"></div>
-            <p className="mt-4 text-sm text-[hsl(var(--muted-foreground))]">Loading users...</p>
-          </div>
-        ) : users.length === 0 ? (
-          <div className="p-12 text-center">
-            <Users className="mx-auto h-12 w-12 text-[hsl(var(--muted-foreground))]" />
-            <p className="mt-4 text-sm text-[hsl(var(--muted-foreground))]">No users found</p>
-          </div>
-        ) : (
+      <DataTable
+        isLoading={isLoading}
+        emptyState={{
+          icon: <Users className="mx-auto h-12 w-12 text-[hsl(var(--muted-foreground))]" />,
+          message: 'No users found'
+        }}
+      >
+        {users.length > 0 && (
           <>
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-[hsl(var(--muted))] border-b border-[hsl(var(--border))]">
+                <DataTableHeader>
                   <tr>
-                    <SortableHeader column="name" label="User" />
-                    <SortableHeader column="tier" label="Tier" />
-                    <th className="px-6 py-3 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
-                      Organisations
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
-                      Activity
-                    </th>
-                    <SortableHeader column="lastLoginAt" label="Last Login" />
-                    <SortableHeader column="createdAt" label="Joined" />
-                    <th className="px-6 py-3 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider w-20">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-[hsl(var(--card))]/50 divide-y divide-[hsl(var(--border))]">
-                  {users.map((user) => (
-                    <tr
-                      key={user.id}
-                      className="hover:bg-[hsl(var(--muted))] transition-colors"
+                    <DataTableHeaderCell
+                      sortable
+                      sorted={sortBy === 'name' ? sortOrder : false}
+                      onSort={() => handleSort('name')}
                     >
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      User
+                    </DataTableHeaderCell>
+                    <DataTableHeaderCell
+                      sortable
+                      sorted={sortBy === 'tier' ? sortOrder : false}
+                      onSort={() => handleSort('tier')}
+                    >
+                      Tier
+                    </DataTableHeaderCell>
+                    <DataTableHeaderCell>Organisations</DataTableHeaderCell>
+                    <DataTableHeaderCell>Activity</DataTableHeaderCell>
+                    <DataTableHeaderCell
+                      sortable
+                      sorted={sortBy === 'lastLoginAt' ? sortOrder : false}
+                      onSort={() => handleSort('lastLoginAt')}
+                    >
+                      Last Login
+                    </DataTableHeaderCell>
+                    <DataTableHeaderCell
+                      sortable
+                      sorted={sortBy === 'createdAt' ? sortOrder : false}
+                      onSort={() => handleSort('createdAt')}
+                    >
+                      Joined
+                    </DataTableHeaderCell>
+                    <DataTableHeaderCell className="w-20">Actions</DataTableHeaderCell>
+                  </tr>
+                </DataTableHeader>
+                <DataTableBody>
+                  {users.map((user) => (
+                    <DataTableRow key={user.id}>
+                      <DataTableCell>
                         <div className="flex items-center">
                           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-semibold">
                             {(user.name || user.email)[0].toUpperCase()}
@@ -222,11 +196,13 @@ export default function AdminUsersPage() {
                             </div>
                           </div>
                         </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {getTierBadge(user.tier)}
-                      </td>
-                      <td className="px-6 py-4">
+                      </DataTableCell>
+                      <DataTableCell>
+                        <Badge variant={getTierBadge(user.tier)}>
+                          {user.tier === 'premium' ? 'Premium' : 'Basic'}
+                        </Badge>
+                      </DataTableCell>
+                      <DataTableCell>
                         <div className="flex items-center text-sm text-[hsl(var(--foreground))]">
                           <Building2 className="w-4 h-4 mr-1 text-[hsl(var(--muted-foreground))]" />
                           {user._count.organisationMembers}
@@ -237,8 +213,8 @@ export default function AdminUsersPage() {
                             {user.organisationMembers.length > 1 && ` +${user.organisationMembers.length - 1}`}
                           </div>
                         )}
-                      </td>
-                      <td className="px-6 py-4">
+                      </DataTableCell>
+                      <DataTableCell>
                         <div className="flex items-center gap-4 text-sm text-[hsl(var(--foreground))]">
                           <div className="flex items-center">
                             <BookOpen className="w-4 h-4 mr-1 text-[hsl(var(--muted-foreground))]" />
@@ -249,32 +225,31 @@ export default function AdminUsersPage() {
                             {user._count.achievements}
                           </div>
                         </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[hsl(var(--muted-foreground))]">
+                      </DataTableCell>
+                      <DataTableCell className="text-sm text-[hsl(var(--muted-foreground))]">
                         {user.lastLoginAt
                           ? new Date(user.lastLoginAt).toLocaleDateString()
                           : 'Never'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[hsl(var(--muted-foreground))]">
+                      </DataTableCell>
+                      <DataTableCell className="text-sm text-[hsl(var(--muted-foreground))]">
                         {new Date(user.createdAt).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setEditingUser(user)
-                            }}
-                            className="p-2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg transition-colors"
-                            title="Edit user"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                      </DataTableCell>
+                      <DataTableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setEditingUser(user)
+                          }}
+                          title="Edit user"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </Button>
+                      </DataTableCell>
+                    </DataTableRow>
                   ))}
-                </tbody>
+                </DataTableBody>
               </table>
             </div>
 
@@ -286,26 +261,26 @@ export default function AdminUsersPage() {
                   {Math.min(page * pagination.limit, pagination.total)} of {pagination.total} results
                 </div>
                 <div className="flex gap-2">
-                  <button
+                  <Button
+                    variant="secondary"
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                     disabled={page === 1}
-                    className="px-4 py-2 text-sm font-medium text-[hsl(var(--foreground))] bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl hover:bg-[hsl(var(--muted))] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     Previous
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="secondary"
                     onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
                     disabled={page === pagination.totalPages}
-                    className="px-4 py-2 text-sm font-medium text-[hsl(var(--foreground))] bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl hover:bg-[hsl(var(--muted))] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     Next
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
           </>
         )}
-      </div>
+      </DataTable>
 
       {/* Edit User Modal */}
       <AnimatePresence>
@@ -425,60 +400,40 @@ function EditUserModal({ user, onClose, onSave }: { user: User; onClose: () => v
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-2">
-                Name
-              </label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-3 py-2 border border-[hsl(var(--border))] rounded-xl bg-[hsl(var(--input))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] placeholder:text-[hsl(var(--muted-foreground))]"
-              />
-            </div>
+            <Input
+              label="Name"
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            />
 
-            <div>
-              <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-2">
-                Email
-              </label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full px-3 py-2 border border-[hsl(var(--border))] rounded-xl bg-[hsl(var(--input))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] placeholder:text-[hsl(var(--muted-foreground))]"
-                required
-              />
-            </div>
+            <Input
+              label="Email"
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              required
+            />
 
-            <div>
-              <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-2">
-                Tier
-              </label>
-              <select
-                value={formData.tier}
-                onChange={(e) => setFormData({ ...formData, tier: e.target.value })}
-                className="w-full px-3 py-2 border border-[hsl(var(--border))] rounded-xl bg-[hsl(var(--input))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] placeholder:text-[hsl(var(--muted-foreground))]"
-              >
-                <option value="basic">Basic</option>
-                <option value="premium">Premium</option>
-              </select>
-            </div>
+            <Select
+              label="Tier"
+              value={formData.tier}
+              onChange={(e) => setFormData({ ...formData, tier: e.target.value })}
+            >
+              <option value="basic">Basic</option>
+              <option value="premium">Premium</option>
+            </Select>
 
-            <div>
-              <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-2">
-                Subscription Status
-              </label>
-              <select
-                value={formData.subscriptionStatus}
-                onChange={(e) => setFormData({ ...formData, subscriptionStatus: e.target.value })}
-                className="w-full px-3 py-2 border border-[hsl(var(--border))] rounded-xl bg-[hsl(var(--input))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] placeholder:text-[hsl(var(--muted-foreground))]"
-              >
-                <option value="FREE_TRIAL">Free Trial</option>
-                <option value="ACTIVE">Active</option>
-                <option value="EXPIRED">Expired</option>
-                <option value="CANCELLED">Cancelled</option>
-              </select>
-            </div>
+            <Select
+              label="Subscription Status"
+              value={formData.subscriptionStatus}
+              onChange={(e) => setFormData({ ...formData, subscriptionStatus: e.target.value })}
+            >
+              <option value="FREE_TRIAL">Free Trial</option>
+              <option value="ACTIVE">Active</option>
+              <option value="EXPIRED">Expired</option>
+              <option value="CANCELLED">Cancelled</option>
+            </Select>
 
             {error && (
               <div className="p-3 bg-[hsl(var(--destructive))]/10 border border-[hsl(var(--destructive))]/30 rounded-lg text-sm text-[hsl(var(--destructive))]">
@@ -493,30 +448,29 @@ function EditUserModal({ user, onClose, onSave }: { user: User; onClose: () => v
             )}
 
             <div className="flex items-center gap-3 pt-4 border-t border-[hsl(var(--border))]">
-              <button
+              <Button
                 type="button"
+                variant="secondary"
                 onClick={handleResetPassword}
                 disabled={isResettingPassword}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-[hsl(var(--foreground))] bg-[hsl(var(--muted))] hover:bg-[hsl(var(--muted))]/80 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <KeyRound className="w-4 h-4" />
                 {isResettingPassword ? 'Sending...' : 'Reset Password'}
-              </button>
+              </Button>
               <div className="flex-1" />
-              <button
+              <Button
                 type="button"
+                variant="ghost"
                 onClick={onClose}
-                className="px-4 py-2 text-sm font-medium text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors"
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 type="submit"
                 disabled={isLoading}
-                className="px-4 py-2 text-sm font-medium text-white bg-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/90 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? 'Saving...' : 'Save Changes'}
-              </button>
+              </Button>
             </div>
           </form>
         </div>

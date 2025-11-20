@@ -224,12 +224,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Get or create categories for each round
+    // Use cached category lookup to avoid N+1 queries
+    const { getCategoryByName } = await import('@/lib/cache-helpers')
     const categoryMap = new Map<string, string>();
     for (const round of body.rounds) {
       if (!categoryMap.has(round.category)) {
-        let category = await prisma.category.findFirst({
-          where: { name: round.category },
-        });
+        let category = await getCategoryByName(round.category);
 
         if (!category) {
           category = await prisma.category.create({

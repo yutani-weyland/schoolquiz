@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { Calendar, Clock, Filter, Plus, CheckCircle2, XCircle, AlertCircle, Play } from 'lucide-react'
+import { CreateJobModal } from '@/components/admin/scheduling/CreateJobModal'
+import { PageHeader, Card, Select, Button, Badge, DataTable, DataTableHeader, DataTableHeaderCell, DataTableBody, DataTableRow, DataTableCell, DataTableEmpty } from '@/components/admin/ui'
 
 interface ScheduledJob {
   id: string
@@ -29,6 +31,7 @@ export default function AdminSchedulingPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [typeFilter, setTypeFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
 
   useEffect(() => {
     fetchJobs()
@@ -43,30 +46,44 @@ export default function AdminSchedulingPage() {
 
       const response = await fetch(`/api/admin/scheduling/jobs?${params}`)
       const data = await response.json()
-      console.log('Scheduled jobs API response:', data)
       
       if (response.ok) {
         setJobs(data.jobs || [])
       } else {
         console.error('API error:', data)
+        // Set empty array on error
+        setJobs([])
       }
     } catch (error) {
       console.error('Failed to fetch scheduled jobs:', error)
+      setJobs([])
     } finally {
       setIsLoading(false)
     }
   }
 
   const getStatusBadge = (status: string) => {
-    const badges = {
-      PENDING: { label: 'Pending', className: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300', icon: Clock },
-      SCHEDULED: { label: 'Scheduled', className: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300', icon: Calendar },
-      RUNNING: { label: 'Running', className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300', icon: Play },
-      COMPLETED: { label: 'Completed', className: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300', icon: CheckCircle2 },
-      FAILED: { label: 'Failed', className: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300', icon: XCircle },
-      CANCELLED: { label: 'Cancelled', className: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300', icon: XCircle },
+    const statusMap: Record<string, 'default' | 'info' | 'warning' | 'success' | 'danger'> = {
+      PENDING: 'default',
+      SCHEDULED: 'info',
+      RUNNING: 'warning',
+      COMPLETED: 'success',
+      FAILED: 'danger',
+      CANCELLED: 'default',
     }
-    return badges[status as keyof typeof badges] || badges.PENDING
+    const iconMap: Record<string, typeof Clock> = {
+      PENDING: Clock,
+      SCHEDULED: Calendar,
+      RUNNING: Play,
+      COMPLETED: CheckCircle2,
+      FAILED: XCircle,
+      CANCELLED: XCircle,
+    }
+    return {
+      variant: statusMap[status] || 'default',
+      icon: iconMap[status] || Clock,
+      label: status.charAt(0) + status.slice(1).toLowerCase(),
+    }
   }
 
   const getTypeLabel = (type: string) => {
@@ -94,33 +111,26 @@ export default function AdminSchedulingPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
-            Scheduling
-          </h1>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            Manage scheduled jobs, quiz publications, and maintenance windows
-          </p>
-        </div>
-        <button className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl font-medium hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-[0_2px_8px_rgba(59,130,246,0.3),inset_0_1px_0_0_rgba(255,255,255,0.2)] hover:shadow-[0_4px_12px_rgba(59,130,246,0.4),inset_0_1px_0_0_rgba(255,255,255,0.2)]">
-          <Plus className="w-4 h-4" />
-          Create Job
-        </button>
-      </div>
+      <PageHeader
+        title="Scheduling"
+        description="Manage scheduled jobs, quiz publications, and maintenance windows"
+        actions={
+          <Button onClick={() => setIsCreateModalOpen(true)}>
+            <Plus className="w-4 h-4" />
+            Create Job
+          </Button>
+        }
+      />
 
       {/* Filters */}
-      <div className="bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/50 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 p-4 shadow-[0_1px_3px_rgba(0,0,0,0.08),inset_0_1px_0_0_rgba(255,255,255,0.9)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.3),inset_0_1px_0_0_rgba(255,255,255,0.05)]">
+      <Card>
         <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative">
-            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 dark:text-gray-400 z-10" />
-            <select
+          <div className="relative flex-1">
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[hsl(var(--muted-foreground))] z-10" />
+            <Select
               value={typeFilter}
-              onChange={(e) => {
-                setTypeFilter(e.target.value)
-              }}
-              className="pl-10 pr-8 py-2 border border-gray-300/50 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-800 backdrop-blur-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] shadow-[inset_0_1px_2px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)]"
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="pl-10"
             >
               <option value="">All Types</option>
               <option value="PUBLISH_QUIZ">Publish Quiz</option>
@@ -129,16 +139,14 @@ export default function AdminSchedulingPage() {
               <option value="MAINTENANCE_WINDOW">Maintenance Window</option>
               <option value="SEND_NOTIFICATION">Send Notification</option>
               <option value="CUSTOM">Custom</option>
-            </select>
+            </Select>
           </div>
-          <div className="relative">
-            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 dark:text-gray-400 z-10" />
-            <select
+          <div className="relative flex-1">
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[hsl(var(--muted-foreground))] z-10" />
+            <Select
               value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value)
-              }}
-              className="pl-10 pr-8 py-2 border border-gray-300/50 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-800 backdrop-blur-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] shadow-[inset_0_1px_2px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)]"
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="pl-10"
             >
               <option value="">All Statuses</option>
               <option value="PENDING">Pending</option>
@@ -147,106 +155,147 @@ export default function AdminSchedulingPage() {
               <option value="COMPLETED">Completed</option>
               <option value="FAILED">Failed</option>
               <option value="CANCELLED">Cancelled</option>
-            </select>
+            </Select>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Jobs Table */}
-      <div className="bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/50 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.08),inset_0_1px_0_0_rgba(255,255,255,0.9)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.3),inset_0_1px_0_0_rgba(255,255,255,0.05)]">
-        {isLoading ? (
-          <div className="p-12 text-center">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-            <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">Loading scheduled jobs...</p>
-          </div>
-        ) : jobs.length === 0 ? (
-          <div className="p-12 text-center">
-            <Calendar className="mx-auto h-12 w-12 text-gray-400" />
-            <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">No scheduled jobs found</p>
-          </div>
-        ) : (
-          <>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gradient-to-br from-gray-50 to-gray-100/50 dark:from-gray-900 dark:to-gray-900/50 border-b border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Job
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Type
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Scheduled For
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Next Run
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Recurring
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white/50 dark:bg-gray-800/50 divide-y divide-gray-200/50 dark:divide-gray-700/50">
-                  {jobs.map((job) => {
-                    const statusBadge = getStatusBadge(job.status)
-                    const StatusIcon = statusBadge.icon
-                    return (
-                      <tr
-                        key={job.id}
-                        className="hover:bg-gradient-to-r hover:from-gray-50/80 hover:to-gray-100/40 dark:hover:from-gray-700/30 dark:hover:to-gray-700/20 transition-all duration-200 hover:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.9)] dark:hover:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)]"
-                      >
-                        <td className="px-6 py-4">
-                          <div>
-                            <div className="text-sm font-medium text-gray-900 dark:text-white">
-                              {job.name}
-                            </div>
-                            {job.description && (
-                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                {job.description}
-                              </div>
-                            )}
+      <DataTable isLoading={isLoading} emptyMessage="No scheduled jobs found">
+        {!isLoading && jobs.length > 0 && (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <DataTableHeader>
+                <DataTableHeaderCell>Job</DataTableHeaderCell>
+                <DataTableHeaderCell>Type</DataTableHeaderCell>
+                <DataTableHeaderCell>Status</DataTableHeaderCell>
+                <DataTableHeaderCell>Scheduled For</DataTableHeaderCell>
+                <DataTableHeaderCell>Next Run</DataTableHeaderCell>
+                <DataTableHeaderCell>Recurring</DataTableHeaderCell>
+                <DataTableHeaderCell>Actions</DataTableHeaderCell>
+              </DataTableHeader>
+              <DataTableBody>
+                {jobs.map((job) => {
+                  const statusBadge = getStatusBadge(job.status)
+                  const StatusIcon = statusBadge.icon
+                  return (
+                    <DataTableRow key={job.id}>
+                      <DataTableCell>
+                        <div>
+                          <div className="text-sm font-medium text-[hsl(var(--foreground))]">
+                            {job.name}
                           </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                          {getTypeLabel(job.type)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${statusBadge.className}`}>
-                            <StatusIcon className="w-3 h-3" />
-                            {statusBadge.label}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                          {formatDate(job.scheduledFor)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                          {job.nextRunAt ? formatDate(job.nextRunAt) : '—'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                          {job.isRecurring ? (
-                            <span className="inline-flex items-center gap-1">
-                              <span>Yes</span>
-                              {job.recurrencePattern && (
-                                <span className="text-xs text-gray-400">({job.recurrencePattern})</span>
-                              )}
-                            </span>
-                          ) : (
-                            'No'
+                          {job.description && (
+                            <div className="text-xs text-[hsl(var(--muted-foreground))] mt-1">
+                              {job.description}
+                            </div>
                           )}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </>
+                        </div>
+                      </DataTableCell>
+                      <DataTableCell className="text-sm text-[hsl(var(--muted-foreground))]">
+                        {getTypeLabel(job.type)}
+                      </DataTableCell>
+                      <DataTableCell>
+                        <Badge variant={statusBadge.variant} icon={StatusIcon}>
+                          {statusBadge.label}
+                        </Badge>
+                      </DataTableCell>
+                      <DataTableCell className="text-sm text-[hsl(var(--muted-foreground))]">
+                        {formatDate(job.scheduledFor)}
+                      </DataTableCell>
+                      <DataTableCell className="text-sm text-[hsl(var(--muted-foreground))]">
+                        {job.nextRunAt ? formatDate(job.nextRunAt) : '—'}
+                      </DataTableCell>
+                      <DataTableCell className="text-sm text-[hsl(var(--muted-foreground))]">
+                        {job.isRecurring ? (
+                          <span className="inline-flex items-center gap-1">
+                            <span>Yes</span>
+                            {job.recurrencePattern && (
+                              <span className="text-xs text-[hsl(var(--muted-foreground))]">({job.recurrencePattern})</span>
+                            )}
+                          </span>
+                        ) : (
+                          'No'
+                        )}
+                      </DataTableCell>
+                      <DataTableCell>
+                        <div className="flex items-center gap-2">
+                          {(job.status === 'PENDING' || job.status === 'SCHEDULED') && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={async () => {
+                                if (confirm(`Execute job "${job.name}" now?`)) {
+                                  try {
+                                    const response = await fetch(`/api/admin/scheduling/jobs/${job.id}/execute`, {
+                                      method: 'POST',
+                                    })
+                                    const data = await response.json()
+                                    if (response.ok) {
+                                      alert('Job executed successfully!')
+                                      fetchJobs()
+                                    } else {
+                                      alert(data.error || 'Failed to execute job')
+                                    }
+                                  } catch (error) {
+                                    console.error('Failed to execute job:', error)
+                                    alert('Failed to execute job')
+                                  }
+                                }
+                              }}
+                              title="Execute now"
+                            >
+                              <Play className="w-4 h-4" />
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={async () => {
+                              if (confirm(`Delete job "${job.name}"? This action cannot be undone.`)) {
+                                try {
+                                  const response = await fetch(`/api/admin/scheduling/jobs/${job.id}`, {
+                                    method: 'DELETE',
+                                  })
+                                  const data = await response.json()
+                                  if (response.ok) {
+                                    fetchJobs()
+                                  } else {
+                                    alert(data.error || 'Failed to delete job')
+                                  }
+                                } catch (error) {
+                                  console.error('Failed to delete job:', error)
+                                  alert('Failed to delete job')
+                                }
+                              }
+                            }}
+                            title="Delete job"
+                            className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+                          >
+                            <XCircle className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </DataTableCell>
+                    </DataTableRow>
+                  )
+                })}
+              </DataTableBody>
+            </table>
+          </div>
         )}
-      </div>
+        {!isLoading && jobs.length === 0 && (
+          <DataTableEmpty colSpan={7} message="No scheduled jobs found" icon={Calendar} />
+        )}
+      </DataTable>
+
+      {/* Create Job Modal */}
+      <CreateJobModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={() => {
+          fetchJobs()
+        }}
+      />
     </div>
   )
 }

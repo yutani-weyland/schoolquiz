@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Building2, Search, Filter, Users, Calendar, ArrowUpDown, ArrowUp, ArrowDown, Edit2, X } from 'lucide-react'
+import { Building2, Search, Filter, Users, Calendar, Edit2, X } from 'lucide-react'
+import { PageHeader, Card, Input, Select, DataTable, DataTableHeader, DataTableHeaderCell, DataTableBody, DataTableRow, DataTableCell, DataTableEmpty, Badge, Button } from '@/components/admin/ui'
 
 interface Organisation {
   id: string
@@ -85,68 +86,30 @@ export default function AdminOrganisationsPage() {
     setPage(1)
   }
 
-  const SortableHeader = ({ column, label }: { column: string; label: string }) => {
-    const isSorted = sortBy === column
-    return (
-      <th
-        className="px-6 py-3 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider cursor-pointer hover:bg-[hsl(var(--muted))] transition-colors"
-        onClick={() => handleSort(column)}
-      >
-        <div className="flex items-center gap-2">
-          <span>{label}</span>
-          {isSorted ? (
-            sortOrder === 'asc' ? (
-              <ArrowUp className="w-4 h-4" />
-            ) : (
-              <ArrowDown className="w-4 h-4" />
-            )
-          ) : (
-            <ArrowUpDown className="w-4 h-4 opacity-50" />
-          )}
-        </div>
-      </th>
-    )
-  }
-
   const getStatusBadge = (status: string) => {
-    const styles = {
-      TRIALING: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-      ACTIVE: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-      PAST_DUE: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
-      CANCELLED: 'bg-[hsl(var(--muted))] text-[hsl(var(--foreground))]',
-      EXPIRED: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+    const statusMap: Record<string, 'info' | 'success' | 'warning' | 'error' | 'default'> = {
+      TRIALING: 'info',
+      ACTIVE: 'success',
+      PAST_DUE: 'warning',
+      CANCELLED: 'default',
+      EXPIRED: 'error',
     }
-    return (
-      <span
-        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-          styles[status as keyof typeof styles] || styles.CANCELLED
-        }`}
-      >
-        {status}
-      </span>
-    )
+    return statusMap[status] || 'default'
   }
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-[hsl(var(--foreground))] tracking-tight">
-            Organisations
-          </h1>
-          <p className="mt-2 text-sm text-[hsl(var(--muted-foreground))]">
-            Manage organisations and their members
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title="Organisations"
+        description="Manage organisations and their members"
+      />
 
       {/* Filters */}
-      <div className="bg-[hsl(var(--card))] rounded-2xl border border-[hsl(var(--border))] p-4">
+      <Card padding="sm">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[hsl(var(--muted-foreground))] z-10" />
-            <input
+            <Input
               type="text"
               placeholder="Search organisations..."
               value={searchQuery}
@@ -154,18 +117,18 @@ export default function AdminOrganisationsPage() {
                 setSearchQuery(e.target.value)
                 setPage(1)
               }}
-              className="w-full pl-10 pr-4 py-2 border border-[hsl(var(--border))] rounded-xl bg-[hsl(var(--input))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] placeholder:text-[hsl(var(--muted-foreground))]"
+              className="pl-10"
             />
           </div>
           <div className="relative">
             <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[hsl(var(--muted-foreground))] z-10" />
-            <select
+            <Select
               value={statusFilter}
               onChange={(e) => {
                 setStatusFilter(e.target.value)
                 setPage(1)
               }}
-              className="pl-10 pr-8 py-2 border border-[hsl(var(--border))] rounded-xl bg-[hsl(var(--input))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
+              className="pl-10"
             >
               <option value="">All Statuses</option>
               <option value="TRIALING">Trial</option>
@@ -173,49 +136,69 @@ export default function AdminOrganisationsPage() {
               <option value="PAST_DUE">Past Due</option>
               <option value="CANCELLED">Cancelled</option>
               <option value="EXPIRED">Expired</option>
-            </select>
+            </Select>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Table */}
-      <div className="bg-[hsl(var(--card))] rounded-2xl border border-[hsl(var(--border))] overflow-hidden">
-        {isLoading ? (
-          <div className="p-12 text-center">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[hsl(var(--primary))]"></div>
-            <p className="mt-4 text-sm text-[hsl(var(--muted-foreground))]">Loading organisations...</p>
-          </div>
-        ) : organisations.length === 0 ? (
-          <div className="p-12 text-center">
-            <Building2 className="mx-auto h-12 w-12 text-[hsl(var(--muted-foreground))]" />
-            <p className="mt-4 text-sm text-[hsl(var(--muted-foreground))]">No organisations found</p>
-          </div>
-        ) : (
+      <DataTable
+        isLoading={isLoading}
+        emptyState={{
+          icon: <Building2 className="mx-auto h-12 w-12 text-[hsl(var(--muted-foreground))]" />,
+          message: 'No organisations found'
+        }}
+      >
+        {organisations.length > 0 && (
           <>
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-[hsl(var(--muted))] border-b border-[hsl(var(--border))]">
+                <DataTableHeader>
                   <tr>
-                    <SortableHeader column="name" label="Organisation" />
-                    <th className="px-6 py-3 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
-                      Owner
-                    </th>
-                    <SortableHeader column="status" label="Status" />
-                    <SortableHeader column="members" label="Members" />
-                    <SortableHeader column="plan" label="Plan" />
-                    <SortableHeader column="createdAt" label="Created" />
-                    <th className="px-6 py-3 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider w-20">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-[hsl(var(--card))]/50 divide-y divide-[hsl(var(--border))]">
-                  {organisations.map((org) => (
-                    <tr
-                      key={org.id}
-                      className="hover:bg-[hsl(var(--muted))] transition-colors"
+                    <DataTableHeaderCell
+                      column="name"
+                      sortable
+                      sorted={sortBy === 'name' ? sortOrder : false}
+                      onSort={() => handleSort('name')}
                     >
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      Organisation
+                    </DataTableHeaderCell>
+                    <DataTableHeaderCell>Owner</DataTableHeaderCell>
+                    <DataTableHeaderCell
+                      sortable
+                      sorted={sortBy === 'status' ? sortOrder : false}
+                      onSort={() => handleSort('status')}
+                    >
+                      Status
+                    </DataTableHeaderCell>
+                    <DataTableHeaderCell
+                      sortable
+                      sorted={sortBy === 'members' ? sortOrder : false}
+                      onSort={() => handleSort('members')}
+                    >
+                      Members
+                    </DataTableHeaderCell>
+                    <DataTableHeaderCell
+                      sortable
+                      sorted={sortBy === 'plan' ? sortOrder : false}
+                      onSort={() => handleSort('plan')}
+                    >
+                      Plan
+                    </DataTableHeaderCell>
+                    <DataTableHeaderCell
+                      sortable
+                      sorted={sortBy === 'createdAt' ? sortOrder : false}
+                      onSort={() => handleSort('createdAt')}
+                    >
+                      Created
+                    </DataTableHeaderCell>
+                    <DataTableHeaderCell className="w-20">Actions</DataTableHeaderCell>
+                  </tr>
+                </DataTableHeader>
+                <DataTableBody>
+                  {organisations.map((org) => (
+                    <DataTableRow key={org.id}>
+                      <DataTableCell>
                         <div className="flex items-center">
                           <Building2 className="w-5 h-5 text-[hsl(var(--muted-foreground))] mr-3" />
                           <div>
@@ -229,19 +212,21 @@ export default function AdminOrganisationsPage() {
                             )}
                           </div>
                         </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      </DataTableCell>
+                      <DataTableCell>
                         <div className="text-sm text-[hsl(var(--foreground))]">
                           {org.owner.name || 'N/A'}
                         </div>
                         <div className="text-sm text-[hsl(var(--muted-foreground))]">
                           {org.owner.email}
                         </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {getStatusBadge(org.status)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      </DataTableCell>
+                      <DataTableCell>
+                        <Badge variant={getStatusBadge(org.status)}>
+                          {org.status}
+                        </Badge>
+                      </DataTableCell>
+                      <DataTableCell>
                         <div className="flex items-center text-sm text-[hsl(var(--foreground))]">
                           <Users className="w-4 h-4 mr-1 text-[hsl(var(--muted-foreground))]" />
                           {org._count.members} / {org.maxSeats || '∞'}
@@ -249,30 +234,29 @@ export default function AdminOrganisationsPage() {
                         <div className="text-xs text-[hsl(var(--muted-foreground))]">
                           {org._count.groups} groups
                         </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[hsl(var(--foreground))]">
+                      </DataTableCell>
+                      <DataTableCell className="text-sm text-[hsl(var(--foreground))]">
                         {org.plan}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[hsl(var(--muted-foreground))]">
+                      </DataTableCell>
+                      <DataTableCell className="text-sm text-[hsl(var(--muted-foreground))]">
                         {new Date(org.createdAt).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setEditingOrg(org)
-                            }}
-                            className="p-2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg transition-colors"
-                            title="Edit organisation"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                      </DataTableCell>
+                      <DataTableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setEditingOrg(org)
+                          }}
+                          title="Edit organisation"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </Button>
+                      </DataTableCell>
+                    </DataTableRow>
                   ))}
-                </tbody>
+                </DataTableBody>
               </table>
             </div>
 
@@ -284,26 +268,26 @@ export default function AdminOrganisationsPage() {
                   {Math.min(page * pagination.limit, pagination.total)} of {pagination.total} results
                 </div>
                 <div className="flex gap-2">
-                  <button
+                  <Button
+                    variant="secondary"
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                     disabled={page === 1}
-                    className="px-4 py-2 text-sm font-medium text-[hsl(var(--foreground))] bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl hover:bg-[hsl(var(--muted))] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     Previous
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="secondary"
                     onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
                     disabled={page === pagination.totalPages}
-                    className="px-4 py-2 text-sm font-medium text-[hsl(var(--foreground))] bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl hover:bg-[hsl(var(--muted))] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     Next
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
           </>
         )}
-      </div>
+      </DataTable>
 
       {/* Edit Organisation Modal */}
       <AnimatePresence>
@@ -398,76 +382,51 @@ function EditOrganisationModal({ organisation, onClose, onSave }: { organisation
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-2">
-                Name
-              </label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-3 py-2 border border-[hsl(var(--border))] rounded-xl bg-[hsl(var(--input))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] placeholder:text-[hsl(var(--muted-foreground))]"
-                required
-              />
-            </div>
+            <Input
+              label="Name"
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              required
+            />
 
-            <div>
-              <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-2">
-                Email Domain
-              </label>
-              <input
-                type="text"
-                value={formData.emailDomain}
-                onChange={(e) => setFormData({ ...formData, emailDomain: e.target.value })}
-                placeholder="example.com"
-                className="w-full px-3 py-2 border border-[hsl(var(--border))] rounded-xl bg-[hsl(var(--input))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] placeholder:text-[hsl(var(--muted-foreground))]"
-              />
-            </div>
+            <Input
+              label="Email Domain"
+              type="text"
+              value={formData.emailDomain}
+              onChange={(e) => setFormData({ ...formData, emailDomain: e.target.value })}
+              placeholder="example.com"
+            />
 
-            <div>
-              <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-2">
-                Status
-              </label>
-              <select
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                className="w-full px-3 py-2 border border-[hsl(var(--border))] rounded-xl bg-[hsl(var(--input))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
-              >
-                <option value="TRIALING">Trial</option>
-                <option value="ACTIVE">Active</option>
-                <option value="PAST_DUE">Past Due</option>
-                <option value="CANCELLED">Cancelled</option>
-                <option value="EXPIRED">Expired</option>
-              </select>
-            </div>
+            <Select
+              label="Status"
+              value={formData.status}
+              onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+            >
+              <option value="TRIALING">Trial</option>
+              <option value="ACTIVE">Active</option>
+              <option value="PAST_DUE">Past Due</option>
+              <option value="CANCELLED">Cancelled</option>
+              <option value="EXPIRED">Expired</option>
+            </Select>
 
-            <div>
-              <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-2">
-                Plan
-              </label>
-              <select
-                value={formData.plan}
-                onChange={(e) => setFormData({ ...formData, plan: e.target.value })}
-                className="w-full px-3 py-2 border border-[hsl(var(--border))] rounded-xl bg-[hsl(var(--input))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
-              >
-                <option value="INDIVIDUAL">Individual</option>
-                <option value="ORG_MONTHLY">Organisation Monthly</option>
-                <option value="ORG_ANNUAL">Organisation Annual</option>
-              </select>
-            </div>
+            <Select
+              label="Plan"
+              value={formData.plan}
+              onChange={(e) => setFormData({ ...formData, plan: e.target.value })}
+            >
+              <option value="INDIVIDUAL">Individual</option>
+              <option value="ORG_MONTHLY">Organisation Monthly</option>
+              <option value="ORG_ANNUAL">Organisation Annual</option>
+            </Select>
 
-            <div>
-              <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-2">
-                Max Seats
-              </label>
-              <input
-                type="number"
-                value={formData.maxSeats}
-                onChange={(e) => setFormData({ ...formData, maxSeats: e.target.value })}
-                min="0"
-                className="w-full px-3 py-2 border border-[hsl(var(--border))] rounded-xl bg-[hsl(var(--input))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] placeholder:text-[hsl(var(--muted-foreground))]"
-              />
-            </div>
+            <Input
+              label="Max Seats"
+              type="number"
+              value={formData.maxSeats}
+              onChange={(e) => setFormData({ ...formData, maxSeats: e.target.value })}
+              min="0"
+            />
 
             {error && (
               <div className="p-3 bg-[hsl(var(--destructive))]/10 border border-[hsl(var(--destructive))]/30 rounded-lg text-sm text-[hsl(var(--destructive))]">
@@ -483,20 +442,19 @@ function EditOrganisationModal({ organisation, onClose, onSave }: { organisation
 
             <div className="flex items-center gap-3 pt-4 border-t border-[hsl(var(--border))]">
               <div className="flex-1" />
-              <button
+              <Button
                 type="button"
+                variant="ghost"
                 onClick={onClose}
-                className="px-4 py-2 text-sm font-medium text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors"
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 type="submit"
                 disabled={isLoading}
-                className="px-4 py-2 text-sm font-medium text-[hsl(var(--primary-foreground))] bg-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/90 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? 'Saving...' : 'Save Changes'}
-              </button>
+              </Button>
             </div>
           </form>
         </div>

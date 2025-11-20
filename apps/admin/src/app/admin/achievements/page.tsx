@@ -1,13 +1,15 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Trophy, Plus, Edit2, Copy, Trash2, Eye } from 'lucide-react'
+import { Trophy, Plus, Edit2, Copy, Trash2, Eye, Archive, Upload, Loader2 } from 'lucide-react'
 import { AdminAchievementEditor } from '@/components/admin/achievements/AdminAchievementEditor'
 import { AchievementPreviewPane } from '@/components/admin/achievements/AchievementPreviewPane'
 import { AchievementFormProvider } from '@/components/admin/achievements/AchievementFormContext'
 import { useAchievementForm } from '@/components/admin/achievements/useAchievementForm'
-import { DataTable, Column } from '@/components/admin/DataTable'
 import { AchievementCard } from '@/components/achievements/AchievementCard'
+import { useAutosave } from '@/hooks/useAutosave'
+import { useUnsavedChangesWarning } from '@/hooks/useUnsavedChangesWarning'
+import { SaveIndicator } from '@/components/admin/SaveIndicator'
 
 interface Achievement {
   id: string
@@ -48,6 +50,8 @@ export default function AdminAchievementsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [hoveredAchievementId, setHoveredAchievementId] = useState<string | null>(null)
+  const [selectedAchievementIds, setSelectedAchievementIds] = useState<Set<string>>(new Set())
+  const [isBulkOperating, setIsBulkOperating] = useState(false)
 
   useEffect(() => {
     fetchAchievements()
@@ -323,6 +327,142 @@ export default function AdminAchievementsPage() {
     }
   }
 
+  // Selection handlers
+  const toggleSelectAchievement = (id: string) => {
+    setSelectedAchievementIds(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(id)) {
+        newSet.delete(id)
+      } else {
+        newSet.add(id)
+      }
+      return newSet
+    })
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedAchievementIds.size === achievements.length) {
+      setSelectedAchievementIds(new Set())
+    } else {
+      setSelectedAchievementIds(new Set(achievements.map(a => a.id)))
+    }
+  }
+
+  const isAllSelected = achievements.length > 0 && selectedAchievementIds.size === achievements.length
+  const isIndeterminate = selectedAchievementIds.size > 0 && selectedAchievementIds.size < achievements.length
+
+  // Bulk operations
+  const handleBulkActivate = async () => {
+    const ids = Array.from(selectedAchievementIds)
+    if (ids.length === 0) return
+
+    setIsBulkOperating(true)
+    try {
+      const response = await fetch('/api/admin/achievements/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'activate', ids }),
+      })
+
+      const data = await response.json()
+      if (response.ok) {
+        setSelectedAchievementIds(new Set())
+        await fetchAchievements()
+        alert(`Successfully activated ${data.succeeded || ids.length} achievement${ids.length > 1 ? 's' : ''}`)
+      } else {
+        alert(data.error || 'Failed to activate achievements')
+      }
+    } catch (error) {
+      console.error('Failed to activate achievements:', error)
+      alert('Failed to activate achievements')
+    } finally {
+      setIsBulkOperating(false)
+    }
+  }
+
+  const handleBulkDeactivate = async () => {
+    const ids = Array.from(selectedAchievementIds)
+    if (ids.length === 0) return
+
+    setIsBulkOperating(true)
+    try {
+      const response = await fetch('/api/admin/achievements/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'deactivate', ids }),
+      })
+
+      const data = await response.json()
+      if (response.ok) {
+        setSelectedAchievementIds(new Set())
+        await fetchAchievements()
+        alert(`Successfully deactivated ${data.succeeded || ids.length} achievement${ids.length > 1 ? 's' : ''}`)
+      } else {
+        alert(data.error || 'Failed to deactivate achievements')
+      }
+    } catch (error) {
+      console.error('Failed to deactivate achievements:', error)
+      alert('Failed to deactivate achievements')
+    } finally {
+      setIsBulkOperating(false)
+    }
+  }
+
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedAchievementIds)
+    if (ids.length === 0) return
+
+    if (!confirm(`Delete ${ids.length} achievement${ids.length > 1 ? 's' : ''}? This action cannot be undone.`)) return
+
+    setIsBulkOperating(true)
+    try {
+      const response = await fetch('/api/admin/achievements/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete', ids }),
+      })
+
+      const data = await response.json()
+      if (response.ok) {
+        setSelectedAchievementIds(new Set())
+        await fetchAchievements()
+        if (selectedAchievement && ids.includes(selectedAchievement.id)) {
+          setSelectedAchievement(null)
+          setIsCreating(false)
+        }
+        alert(`Successfully deleted ${data.succeeded || ids.length} achievement${ids.length > 1 ? 's' : ''}`)
+      } else {
+        alert(data.error || 'Failed to delete achievements')
+      }
+    } catch (error) {
+      console.error('Failed to delete achievements:', error)
+      alert('Failed to delete achievements')
+    } finally {
+      setIsBulkOperating(false)
+    }
+  }
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+        return
+      }
+
+      if ((e.metaKey || e.ctrlKey) && e.key === 'a') {
+        e.preventDefault()
+        toggleSelectAll()
+      }
+      if (e.key === 'Escape') {
+        setSelectedAchievementIds(new Set())
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [achievements, selectedAchievementIds.size])
+
   const handleSave = async () => {
     await fetchAchievements()
     setIsCreating(false)
@@ -331,12 +471,44 @@ export default function AdminAchievementsPage() {
 
   // Create form hook at the top level to avoid conditional hook calls
   const formHook = useAchievementForm(selectedAchievement)
-  const { formData, updateField, updateAppearance, isSaving, saveAchievement } = formHook
+  const { formData, updateField, updateAppearance, saveAchievement } = formHook
+  
+  // Autosave hook
+  // Note: saveAchievement doesn't take data param, it uses formData from the hook's closure
+  const {
+    isSaving: isAutosaving,
+    hasUnsavedChanges,
+    lastSaved,
+    save: triggerAutosave,
+  } = useAutosave({
+    data: formData,
+    onSave: async () => {
+      // saveAchievement uses formData from the hook's closure, so we don't pass data
+      const success = await saveAchievement()
+      if (!success) {
+        throw new Error('Failed to save achievement')
+      }
+      return success
+    },
+    delay: 10000, // 10 seconds
+    enabled: (isCreating || !!selectedAchievement) && !!formData.name, // Only autosave if editing/creating and has name
+    onSaveError: (error) => {
+      console.error('Autosave failed:', error)
+    },
+  })
+
+  // Warn before leaving with unsaved changes
+  useUnsavedChangesWarning(hasUnsavedChanges)
+  
+  // Combine autosave state with manual save state from formHook
+  const isSaving = isAutosaving || formHook.isSaving
 
   const handleSaveClick = async () => {
     const success = await saveAchievement()
     if (success) {
       await handleSave()
+      // Clear unsaved changes after successful save
+      triggerAutosave().catch(() => {})
     }
   }
 
@@ -372,6 +544,12 @@ export default function AdminAchievementsPage() {
                 {selectedAchievement ? 'Update achievement details' : 'Create a new achievement card'}
               </p>
             </div>
+            {/* Save Indicator */}
+            <SaveIndicator
+              isSaving={isSaving}
+              hasUnsavedChanges={hasUnsavedChanges}
+              lastSaved={lastSaved}
+            />
           </div>
 
           {/* Preview at Top - Editable Card */}
@@ -417,6 +595,61 @@ export default function AdminAchievementsPage() {
         </button>
       </div>
 
+      {/* Bulk Actions Bar */}
+      {selectedAchievementIds.size > 0 && (
+        <div className="bg-[hsl(var(--primary))]/10 border border-[hsl(var(--primary))]/20 rounded-xl p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium text-[hsl(var(--foreground))]">
+              {selectedAchievementIds.size} achievement{selectedAchievementIds.size > 1 ? 's' : ''} selected
+            </span>
+            <button
+              onClick={() => setSelectedAchievementIds(new Set())}
+              className="text-xs text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] underline"
+            >
+              Clear selection
+            </button>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleBulkActivate}
+              disabled={isBulkOperating}
+              className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {isBulkOperating ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <Upload className="w-3 h-3" />
+              )}
+              Activate
+            </button>
+            <button
+              onClick={handleBulkDeactivate}
+              disabled={isBulkOperating}
+              className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {isBulkOperating ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <Archive className="w-3 h-3" />
+              )}
+              Deactivate
+            </button>
+            <button
+              onClick={handleBulkDelete}
+              disabled={isBulkOperating}
+              className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {isBulkOperating ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <Trash2 className="w-3 h-3" />
+              )}
+              Delete
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Table */}
       <div className="flex-1 min-h-0 bg-[hsl(var(--card))] rounded-2xl border border-[hsl(var(--border))] overflow-hidden shadow-sm">
         {isLoading ? (
@@ -438,14 +671,53 @@ export default function AdminAchievementsPage() {
           </div>
         ) : (
           <div className="relative">
-            <DataTable
-              data={achievements}
-              columns={[
-                {
-                  key: 'preview',
-                  label: 'Preview',
-                  sortable: false,
-                  render: (_, achievement: Achievement) => {
+            {/* Custom table with checkboxes since DataTable doesn't support it natively */}
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead className="bg-[hsl(var(--muted))]">
+                  <tr>
+                    <th className="px-6 py-3 text-left w-12">
+                      <input
+                        type="checkbox"
+                        checked={isAllSelected}
+                        ref={(input) => {
+                          if (input) input.indeterminate = isIndeterminate
+                        }}
+                        onChange={toggleSelectAll}
+                        className="w-4 h-4 rounded border-[hsl(var(--border))] text-[hsl(var(--primary))] focus:ring-2 focus:ring-[hsl(var(--ring))] cursor-pointer"
+                        title="Select all"
+                      />
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
+                      Preview
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
+                      Name
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
+                      Slug
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
+                      Category
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
+                      Rarity
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
+                      Created
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-[hsl(var(--card))]/50 divide-y divide-[hsl(var(--border))]">
+                  {achievements.map((achievement) => {
+                    const isSelected = selectedAchievementIds.has(achievement.id)
+                    const achievementStats = stats[achievement.id]
                     const appearance = achievement.appearance
                       ? typeof achievement.appearance === 'string'
                         ? JSON.parse(achievement.appearance)
@@ -469,211 +741,131 @@ export default function AdminAchievementsPage() {
                     }
 
                     return (
-                      <div className="relative">
-                        <button
-                          onMouseEnter={() => setHoveredAchievementId(achievement.id)}
-                          onMouseLeave={() => setHoveredAchievementId(null)}
-                          className="p-2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--primary))] hover:bg-[hsl(var(--accent))] rounded-lg transition-colors"
-                          title="Preview achievement"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        {hoveredAchievementId === achievement.id && (
-                          <div className="absolute left-full top-0 ml-2 z-[9999] pointer-events-none">
-                            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-[hsl(var(--border))] p-4 w-64">
-                              <AchievementCard
-                                achievement={achievementForCard}
-                                status="unlocked"
-                                tier="premium"
-                                unlockedAt={new Date().toISOString()}
-                              />
-                            </div>
+                      <tr
+                        key={achievement.id}
+                        className={`hover:bg-[hsl(var(--muted))] transition-colors ${
+                          isSelected ? 'bg-[hsl(var(--primary))]/5' : ''
+                        }`}
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSelectAchievement(achievement.id)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-4 h-4 rounded border-[hsl(var(--border))] text-[hsl(var(--primary))] focus:ring-2 focus:ring-[hsl(var(--ring))] cursor-pointer"
+                          />
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="relative">
+                            <button
+                              onMouseEnter={() => setHoveredAchievementId(achievement.id)}
+                              onMouseLeave={() => setHoveredAchievementId(null)}
+                              className="p-2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--primary))] hover:bg-[hsl(var(--accent))] rounded-lg transition-colors"
+                              title="Preview achievement"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            {hoveredAchievementId === achievement.id && (
+                              <div className="absolute left-full top-0 ml-2 z-[9999] pointer-events-none">
+                                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-[hsl(var(--border))] p-4 w-64">
+                                  <AchievementCard
+                                    achievement={achievementForCard}
+                                    status="unlocked"
+                                    tier="premium"
+                                    unlockedAt={new Date().toISOString()}
+                                  />
+                                </div>
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[hsl(var(--foreground))]">
+                          {achievement.name}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <code className="text-xs text-[hsl(var(--muted-foreground))] bg-[hsl(var(--muted))] px-2 py-1 rounded">
+                            {achievement.slug}
+                          </code>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-[hsl(var(--muted-foreground))]">
+                          {achievement.category}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              achievement.rarity === 'legendary'
+                                ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
+                                : achievement.rarity === 'epic'
+                                ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
+                                : achievement.rarity === 'rare'
+                                ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
+                                : achievement.rarity === 'uncommon'
+                                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                                : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                            }`}
+                          >
+                            {achievement.rarity}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              achievement.isActive
+                                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                                : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                            }`}
+                          >
+                            {achievement.isActive ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-[hsl(var(--muted-foreground))]">
+                          {new Date(achievement.createdAt).toLocaleDateString('en-AU', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                          })}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleEdit(achievement)
+                              }}
+                              className="p-2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--primary))] hover:bg-[hsl(var(--accent))] rounded-lg transition-colors"
+                              title="Edit"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleDuplicate(achievement)
+                              }}
+                              className="p-2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--primary))] hover:bg-[hsl(var(--accent))] rounded-lg transition-colors"
+                              title="Duplicate"
+                            >
+                              <Copy className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleDelete(achievement.id)
+                              }}
+                              className="p-2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive)/0.1)] rounded-lg transition-colors"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
                     )
-                  },
-                },
-                {
-                  key: 'name',
-                  label: 'Name',
-                  sortable: true,
-                  filterable: true,
-                  render: (name) => (
-                    <span className="text-sm font-medium text-[hsl(var(--foreground))]">{name}</span>
-                  ),
-                },
-              {
-                key: 'slug',
-                label: 'Slug',
-                sortable: true,
-                filterable: true,
-                render: (slug) => (
-                  <code className="text-xs text-[hsl(var(--muted-foreground))] bg-[hsl(var(--muted))] px-2 py-1 rounded">
-                    {slug}
-                  </code>
-                ),
-              },
-              {
-                key: 'category',
-                label: 'Category',
-                sortable: true,
-                filterable: true,
-                filterType: 'select',
-                filterOptions: [
-                  { label: 'All Categories', value: '' },
-                  ...Array.from(new Set(achievements.map(a => a.category))).map(cat => ({
-                    label: cat,
-                    value: cat,
-                  })),
-                ],
-                render: (category) => (
-                  <span className="text-sm text-[hsl(var(--muted-foreground))]">{category}</span>
-                ),
-              },
-              {
-                key: 'rarity',
-                label: 'Rarity',
-                sortable: true,
-                filterable: true,
-                filterType: 'select',
-                filterOptions: [
-                  { label: 'All Rarities', value: '' },
-                  { label: 'Common', value: 'common' },
-                  { label: 'Uncommon', value: 'uncommon' },
-                  { label: 'Rare', value: 'rare' },
-                  { label: 'Epic', value: 'epic' },
-                  { label: 'Legendary', value: 'legendary' },
-                ],
-                render: (rarity) => (
-                  <span
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      rarity === 'legendary'
-                        ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
-                        : rarity === 'epic'
-                        ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
-                        : rarity === 'rare'
-                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
-                        : rarity === 'uncommon'
-                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                        : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-                    }`}
-                  >
-                    {rarity}
-                  </span>
-                ),
-              },
-              {
-                key: 'stats',
-                label: 'Stats',
-                sortable: false,
-                render: (_, achievement: Achievement) => {
-                  const achievementStats = stats[achievement.id]
-                  if (!achievementStats) {
-                    return <span className="text-xs text-[hsl(var(--muted-foreground))]">-</span>
-                  }
-
-                  return (
-                    <div className="flex flex-col gap-1 text-xs">
-                      <div className="text-[hsl(var(--foreground))] font-medium">
-                        {achievementStats.percentOfUsers.toFixed(1)}% of users
-                      </div>
-                      <div className="text-[hsl(var(--muted-foreground))]">
-                        {achievementStats.totalUnlocked} unlocked
-                      </div>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-blue-600 dark:text-blue-400">
-                          {achievementStats.freePercent.toFixed(0)}% free
-                        </span>
-                        <span className="text-purple-600 dark:text-purple-400">
-                          {achievementStats.premiumPercent.toFixed(0)}% premium
-                        </span>
-                      </div>
-                    </div>
-                  )
-                },
-              },
-              {
-                key: 'isActive',
-                label: 'Status',
-                sortable: true,
-                filterable: true,
-                filterType: 'select',
-                filterOptions: [
-                  { label: 'All Statuses', value: '' },
-                  { label: 'Active', value: 'true' },
-                  { label: 'Inactive', value: 'false' },
-                ],
-                render: (isActive) => (
-                  <span
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      isActive
-                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                        : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-                    }`}
-                  >
-                    {isActive ? 'Active' : 'Inactive'}
-                  </span>
-                ),
-              },
-              {
-                key: 'createdAt',
-                label: 'Created',
-                sortable: true,
-                filterable: true,
-                filterType: 'date',
-                render: (date) => (
-                  <span className="text-sm text-[hsl(var(--muted-foreground))]">
-                    {new Date(date).toLocaleDateString('en-AU', {
-                      day: '2-digit',
-                      month: '2-digit',
-                      year: 'numeric',
-                    })}
-                  </span>
-                ),
-              },
-              {
-                key: 'actions',
-                label: 'Actions',
-                sortable: false,
-                render: (_, achievement) => (
-                  <div className="flex items-center justify-end gap-2">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleEdit(achievement)
-                      }}
-                      className="p-2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--primary))] hover:bg-[hsl(var(--accent))] rounded-lg transition-colors"
-                      title="Edit"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleDuplicate(achievement)
-                      }}
-                      className="p-2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--primary))] hover:bg-[hsl(var(--accent))] rounded-lg transition-colors"
-                      title="Duplicate"
-                    >
-                      <Copy className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleDelete(achievement.id)
-                      }}
-                      className="p-2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive)/0.1)] rounded-lg transition-colors"
-                      title="Delete"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                ),
-              },
-            ]}
-            defaultSort={{ key: 'createdAt', direction: 'desc' }}
-          />
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>

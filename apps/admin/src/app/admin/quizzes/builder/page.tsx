@@ -2,8 +2,17 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { BookOpen, Plus, Save, Eye, FileDown, ArrowLeft, Import, CheckCircle2, XCircle } from 'lucide-react'
+import { BookOpen, Plus, Save, Eye, FileDown, ArrowLeft, Import, CheckCircle2, XCircle, Sparkles, Upload } from 'lucide-react'
 import Link from 'next/link'
+import { useAutosave } from '@/hooks/useAutosave'
+import { useUnsavedChangesWarning } from '@/hooks/useUnsavedChangesWarning'
+import { SaveIndicator } from '@/components/admin/SaveIndicator'
+import { useDraft } from '@/hooks/useDraft'
+import { DraftRecoveryModal } from '@/components/admin/DraftRecoveryModal'
+import { QuestionTemplateModal } from '@/components/admin/questions/QuestionTemplateModal'
+import { BulkImportModal } from '@/components/admin/questions/BulkImportModal'
+import { QuestionPreview } from '@/components/admin/questions/QuestionPreview'
+import { validateQuestion, normalizeQuestion, type Question as QuestionValidation } from '@/lib/question-validation'
 
 interface Question {
   id: string
@@ -64,16 +73,30 @@ export default function QuizBuilderPage() {
   })
 
   const [categories, setCategories] = useState<Array<{ id: string; name: string; parentId?: string | null }>>([])
-  const [isSaving, setIsSaving] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [activeRound, setActiveRound] = useState(0)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [showDraftModal, setShowDraftModal] = useState(false)
+  const [draftChecked, setDraftChecked] = useState(false)
 
   useEffect(() => {
     fetchCategories()
   }, [])
 
   useEffect(() => {
-    if (editQuizId) {
+    // Check for draft to restore from sessionStorage (from drafts page)
+    const restoreDraftStr = sessionStorage.getItem('restore_draft')
+    if (restoreDraftStr) {
+      try {
+        const savedDraft = JSON.parse(restoreDraftStr)
+        if (savedDraft && savedDraft.type === 'quiz') {
+          setQuiz(savedDraft.data)
+          sessionStorage.removeItem('restore_draft')
+        }
+      } catch (error) {
+        console.error('Error restoring draft:', error)
+      }
+    } else if (editQuizId) {
       loadQuiz(editQuizId)
     }
   }, [editQuizId])
@@ -295,8 +318,165 @@ export default function QuizBuilderPage() {
     }))
   }
 
-  const handleSave = async () => {
-    setIsSaving(true)
+  // Save function for autosave
+  const performSave = useCallback(async (data: QuizBuilderData) => {
+    // Skip autosave for new quizzes without title - they need manual save first
+    if (!data.id && !data.title?.trim()) {
+      throw new Error('Cannot autosave: Quiz needs a title first')
+    }
+    
+    // For new quizzes, skip autosave - require manual save first to get an ID
+    // This prevents issues with quiz number conflicts
+    if (!data.id) {
+      // Silently skip autosave for new quizzes
+      return { skipped: true, reason: 'New quiz needs manual save first' }
+    }
+    
+    const isUpdate = !!data.id
+    const url = `/api/admin/quizzes/${data.id}`
+    
+    // For updates, use PATCH instead of PUT to avoid recreating rounds
+    // Transform builder format to API format
+    const apiData = {
+      title: data.title || '',
+      blurb: data.title || '', // Use title as blurb for now
+      status: data.status,
+      // Only include rounds if they have valid data
+      rounds: data.rounds
+        .filter(round => {
+          // Include round if it has a category and at least one valid question
+          const hasCategory = round.categoryId || round.categoryName
+          const hasValidQuestions = round.questions.some(q => q.text?.trim() && q.answer?.trim())
+          return hasCategory && hasValidQuestions
+        })
+        .map(round => {
+          // Get category name from categoryId
+          const category = categories.find(c => c.id === round.categoryId)
+          const categoryName = category?.name || round.categoryName || 'General Knowledge'
+          
+          return {
+            id: round.id,
+            category: categoryName,
+            title: round.title || categoryName,
+            blurb: round.blurb || '',
+            kind: round.isPeoplesRound ? 'finale' : 'standard',
+            questions: round.questions
+              .filter(q => q.text?.trim() && q.answer?.trim()) // Only include filled questions
+              .map(q => ({
+                id: q.id,
+                question: q.text,
+                answer: q.answer,
+                explanation: q.explanation || '',
+                category: categoryName,
+              })),
+          }
+        }),
+    }
+    
+    // Use PUT for full update (includes rounds)
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(apiData),
+    })
+    
+    const responseData = await response.json()
+    if (!response.ok) {
+      // Log the error for debugging
+      console.error('Autosave failed:', {
+        status: response.status,
+        error: responseData.error,
+        details: responseData.details,
+      })
+      throw new Error(responseData.error || responseData.details || 'Failed to save quiz')
+    }
+    
+    return responseData
+  }, [categories])
+
+  // Draft management
+  const {
+    hasDraft,
+    draft,
+    loadDraft,
+    clearDraft,
+    checkDraft,
+  } = useDraft({
+    type: 'quiz',
+    id: quiz.id || null,
+    data: quiz,
+    getTitle: (data) => data.title || 'Untitled Quiz',
+    getPreview: (data) => {
+      const roundCount = data.rounds?.length || 0
+      const questionCount = data.rounds?.reduce((sum, r) => sum + (r.questions?.length || 0), 0) || 0
+      return `${roundCount} rounds, ${questionCount} questions`
+    },
+    enabled: !isLoading, // Only save drafts when not loading
+  })
+
+  // Check for draft on mount
+  useEffect(() => {
+    if (!draftChecked && !editQuizId) {
+      const hasExistingDraft = checkDraft()
+      if (hasExistingDraft) {
+        setShowDraftModal(true)
+      }
+      setDraftChecked(true)
+    }
+  }, [checkDraft, draftChecked, editQuizId])
+
+  // Autosave hook
+  // Only enable autosave for existing quizzes (with ID) and when there's content
+  const {
+    isSaving,
+    hasUnsavedChanges,
+    lastSaved,
+    save: triggerSave,
+    clearUnsavedChanges,
+  } = useAutosave({
+    data: quiz,
+    onSave: performSave,
+    delay: 10000, // 10 seconds
+    enabled: !!quiz.id && (!!quiz.title || quiz.rounds.some(r => r.title || r.questions.some(q => q.text))),
+    onSaveError: (error) => {
+      // Only show error if it's not a "skip" error
+      if (!error.message.includes('skipped') && !error.message.includes('manual save first')) {
+        setSaveError(error.message)
+        console.error('Autosave failed:', error)
+      }
+    },
+    onSaveComplete: () => {
+      setSaveError(null)
+    },
+  })
+
+  // Clear draft after successful save
+  useEffect(() => {
+    if (lastSaved && !hasUnsavedChanges) {
+      clearDraft()
+    }
+  }, [lastSaved, hasUnsavedChanges, clearDraft])
+
+  // Warn before leaving with unsaved changes
+  useUnsavedChangesWarning(hasUnsavedChanges)
+
+  // Handle draft recovery
+  const handleRestoreDraft = useCallback(() => {
+    const savedDraft = loadDraft()
+    if (savedDraft) {
+      setQuiz(savedDraft.data)
+      clearDraft() // Clear after loading to avoid showing modal again
+    }
+    setShowDraftModal(false)
+  }, [loadDraft, clearDraft])
+
+  const handleDiscardDraft = useCallback(() => {
+    clearDraft()
+    setShowDraftModal(false)
+  }, [clearDraft])
+
+  // Manual save handler - works for both new and existing quizzes
+  const handleSave = useCallback(async () => {
     try {
       const isUpdate = !!quiz.id
       const url = isUpdate 
@@ -304,10 +484,9 @@ export default function QuizBuilderPage() {
         : '/api/admin/quizzes'
       
       // Transform builder format to API format
-      // API expects: round.category (string name), question.question (string), round.kind
       const apiData = {
-        number: 0, // Will be auto-generated or use slug
-        title: quiz.title,
+        number: isUpdate ? undefined : 0, // For new quizzes, use 0 (will be auto-generated)
+        title: quiz.title || 'Untitled Quiz',
         description: '', // Can be added later
         status: quiz.status,
         rounds: quiz.rounds.map(round => {
@@ -341,25 +520,28 @@ export default function QuizBuilderPage() {
       })
       
       const data = await response.json()
-      if (response.ok) {
-        if (isUpdate) {
-          alert('Quiz updated successfully!')
-        } else {
-          setQuiz(prev => ({ ...prev, id: data.quiz?.id }))
-          alert('Quiz saved successfully!')
-        }
-        // Optionally redirect back to quizzes list
-        // router.push('/admin/quizzes')
-      } else {
-        alert(data.error || 'Failed to save quiz')
+      if (!response.ok) {
+        throw new Error(data.error || data.details || 'Failed to save quiz')
       }
-    } catch (error) {
-      console.error('Failed to save quiz:', error)
-      alert('Failed to save quiz')
-    } finally {
-      setIsSaving(false)
+      
+      // Update quiz ID if this is a new quiz
+      if (!isUpdate && data.quiz?.id) {
+        setQuiz(prev => ({ ...prev, id: data.quiz.id }))
+        // Clear unsaved changes after successful save
+        clearUnsavedChanges()
+      } else if (isUpdate) {
+        // Clear unsaved changes after successful update
+        clearUnsavedChanges()
+      }
+      
+      // Show success message (but not via alert - use a toast or notification system if available)
+      console.log('Quiz saved successfully')
+    } catch (error: any) {
+      setSaveError(error.message || 'Failed to save quiz')
+      console.error('Manual save failed:', error)
+      throw error // Re-throw so caller can handle it
     }
-  }
+  }, [quiz, categories, clearUnsavedChanges])
 
   const handlePreview = () => {
     // TODO: Open preview in presenter view
@@ -398,6 +580,17 @@ export default function QuizBuilderPage() {
 
   return (
     <div className="space-y-6">
+      {/* Draft Recovery Modal */}
+      {showDraftModal && draft && (
+        <DraftRecoveryModal
+          draft={draft}
+          onRestore={handleRestoreDraft}
+          onDiscard={handleDiscardDraft}
+          open={showDraftModal}
+          onClose={() => setShowDraftModal(false)}
+        />
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -417,6 +610,14 @@ export default function QuizBuilderPage() {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          {/* Save Indicator */}
+          <SaveIndicator
+            isSaving={isSaving}
+            hasUnsavedChanges={hasUnsavedChanges}
+            lastSaved={lastSaved}
+            error={saveError}
+          />
+          
           <button
             onClick={handlePreview}
             disabled={!canSave}
@@ -439,7 +640,7 @@ export default function QuizBuilderPage() {
             className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_2px_8px_rgba(59,130,246,0.3),inset_0_1px_0_0_rgba(255,255,255,0.2)]"
           >
             <Save className="w-4 h-4" />
-            {isSaving ? 'Saving...' : 'Save Draft'}
+            {isSaving ? 'Saving...' : 'Save Now'}
           </button>
         </div>
       </div>
@@ -563,6 +764,10 @@ function RoundEditor({
   const subCategories = categories.filter(c => c.parentId)
   const [showImportQuestionModal, setShowImportQuestionModal] = useState(false)
   const [showImportRoundModal, setShowImportRoundModal] = useState(false)
+  const [showTemplateModal, setShowTemplateModal] = useState(false)
+  const [showBulkImportModal, setShowBulkImportModal] = useState(false)
+  const [previewQuestion, setPreviewQuestion] = useState<QuestionValidation | null>(null)
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null)
   const [availableQuestions, setAvailableQuestions] = useState<Question[]>([])
   const [isLoadingQuestions, setIsLoadingQuestions] = useState(false)
   const [importSearch, setImportSearch] = useState('')
@@ -651,13 +856,40 @@ function RoundEditor({
               Questions ({round.questions.length}/{round.isPeoplesRound ? 1 : QUESTIONS_PER_ROUND})
             </h3>
             {!round.isPeoplesRound && round.questions.length < QUESTIONS_PER_ROUND && (
-              <button
-                onClick={onAddQuestion}
-                className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                Add Question
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowTemplateModal(true)}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors"
+                  title="Use question template"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  Template
+                </button>
+                <button
+                  onClick={() => setShowBulkImportModal(true)}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
+                  title="Bulk import from CSV/JSON"
+                >
+                  <Upload className="w-4 h-4" />
+                  Import
+                </button>
+                <button
+                  onClick={() => setShowImportQuestionModal(true)}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                  title="Import from question bank"
+                >
+                  <Import className="w-4 h-4" />
+                  From Bank
+                </button>
+                <button
+                  onClick={onAddQuestion}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                  title="Add empty question"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Question
+                </button>
+              </div>
             )}
           </div>
 
@@ -691,6 +923,50 @@ function RoundEditor({
                 )}
               </div>
               <div className="space-y-3">
+                {/* Validation & Preview */}
+                {(() => {
+                  const validation = validateQuestion(normalizeQuestion({
+                    text: question.text,
+                    answer: question.answer,
+                    explanation: question.explanation,
+                  }))
+                  
+                  return (
+                    <>
+                      {!validation.valid && validation.errors.length > 0 && (
+                        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/30 rounded-lg p-2 text-xs text-red-700 dark:text-red-400">
+                          {validation.errors.map((err, i) => (
+                            <div key={i}>• {err.message}</div>
+                          ))}
+                        </div>
+                      )}
+                      {validation.warnings.length > 0 && (
+                        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/30 rounded-lg p-2 text-xs text-amber-700 dark:text-amber-400">
+                          {validation.warnings.map((warn, i) => (
+                            <div key={i}>⚠ {warn}</div>
+                          ))}
+                        </div>
+                      )}
+                      {validation.valid && question.text && question.answer && (
+                        <button
+                          onClick={() => {
+                            setPreviewQuestion({
+                              text: question.text,
+                              answer: question.answer,
+                              explanation: question.explanation,
+                            })
+                            setPreviewIndex(qIndex)
+                          }}
+                          className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                        >
+                          <Eye className="w-3 h-3" />
+                          Preview
+                        </button>
+                      )}
+                    </>
+                  )
+                })()}
+                
                 <div>
                   <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
                     Question
@@ -732,6 +1008,119 @@ function RoundEditor({
           ))}
         </div>
       </div>
+
+      {/* Question Template Modal */}
+      {showTemplateModal && (
+        <QuestionTemplateModal
+          onSelect={(question) => {
+            const normalized = normalizeQuestion(question)
+            const validation = validateQuestion(normalized)
+            
+            if (validation.valid) {
+              const emptySlot = round.questions.findIndex(q => !q.text)
+              if (emptySlot >= 0) {
+                onQuestionUpdate(emptySlot, {
+                  text: normalized.text,
+                  answer: normalized.answer,
+                  explanation: normalized.explanation,
+                })
+              } else {
+                onImportQuestion({
+                  id: `q-${Date.now()}-${Math.random()}`,
+                  text: normalized.text,
+                  answer: normalized.answer,
+                  explanation: normalized.explanation,
+                  categoryId: round.categoryId,
+                })
+              }
+            } else {
+              alert(`Question has validation errors:\n${validation.errors.map(e => e.message).join('\n')}`)
+              return
+            }
+            
+            setShowTemplateModal(false)
+          }}
+          onClose={() => setShowTemplateModal(false)}
+        />
+      )}
+
+      {/* Bulk Import Modal */}
+      {showBulkImportModal && (
+        <BulkImportModal
+          onImport={(questions) => {
+            const normalized = questions.map(normalizeQuestion)
+            const validated = normalized.filter(q => validateQuestion(q).valid)
+            
+            if (validated.length === 0) {
+              alert('No valid questions to import')
+              return
+            }
+            
+            // Add all validated questions
+            validated.forEach((question) => {
+              const emptySlot = round.questions.findIndex(q => !q.text)
+              if (emptySlot >= 0) {
+                onQuestionUpdate(emptySlot, {
+                  text: question.text,
+                  answer: question.answer,
+                  explanation: question.explanation,
+                })
+              } else if (round.questions.length < (round.isPeoplesRound ? 1 : QUESTIONS_PER_ROUND)) {
+                onImportQuestion({
+                  id: `q-${Date.now()}-${Math.random()}`,
+                  text: question.text,
+                  answer: question.answer,
+                  explanation: question.explanation,
+                  categoryId: round.categoryId,
+                })
+              }
+            })
+            
+            setShowBulkImportModal(false)
+            alert(`Imported ${validated.length} question${validated.length > 1 ? 's' : ''}`)
+          }}
+          onClose={() => setShowBulkImportModal(false)}
+        />
+      )}
+
+      {/* Question Preview Modal */}
+      {previewQuestion && previewIndex !== null && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[hsl(var(--card))] rounded-2xl border border-[hsl(var(--border))] shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-[hsl(var(--foreground))]">
+                  Question Preview
+                </h2>
+                <button
+                  onClick={() => {
+                    setPreviewQuestion(null)
+                    setPreviewIndex(null)
+                  }}
+                  className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              <QuestionPreview
+                question={previewQuestion}
+                showActions={false}
+              />
+              <div className="mt-6 flex justify-end">
+                <button
+                  onClick={() => {
+                    setPreviewQuestion(null)
+                    setPreviewIndex(null)
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-[hsl(var(--foreground))] bg-[hsl(var(--muted))] hover:bg-[hsl(var(--muted))]/80 rounded-lg transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Import Question Modal */}
       {showImportQuestionModal && (

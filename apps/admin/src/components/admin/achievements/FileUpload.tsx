@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { Upload, X, Image as ImageIcon, Loader2 } from 'lucide-react'
+import { optimizeImage, validateImageFile, type OptimizedImage } from '@/lib/image-optimization'
 
 interface FileUploadProps {
   label: string
@@ -23,30 +24,84 @@ export function FileUpload({
   compact = false,
 }: FileUploadProps) {
   const [isUploading, setIsUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
   const [preview, setPreview] = useState<string | null>(value || null)
+  const [optimizationInfo, setOptimizationInfo] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
 
-    // For now, use local blob URL - no server upload needed
     setIsUploading(true)
+    setUploadProgress(0)
+
     try {
-      // Create a blob URL for local use
-      const blobUrl = URL.createObjectURL(file)
-      setPreview(blobUrl)
+      // Validate file
+      const validation = validateImageFile(file)
+      if (!validation.valid) {
+        alert(validation.error || 'Invalid file')
+        return
+      }
+
+      setUploadProgress(10)
+
+      // Optimize image based on type
+      const options = {
+        maxWidth: type === 'background' ? 1920 : 512, // Backgrounds larger, stickers smaller
+        maxHeight: type === 'background' ? 1920 : 512,
+        maxSizeMB: 2,
+        quality: 0.85,
+        format: 'webp' as const,
+      }
+
+      setUploadProgress(20)
+      const optimized: OptimizedImage = await optimizeImage(file, options)
       
-      // Use the blob URL as the value
-      // Note: blob URLs are temporary and only work in the current browser session
-      // For production, you'll want to upload to a server and get a permanent URL
-      onChange(blobUrl)
+      // Show optimization info
+      const sizeReduction = ((1 - optimized.optimizedSize / optimized.originalSize) * 100).toFixed(0)
+      setOptimizationInfo(
+        `Optimized: ${(optimized.originalSize / 1024 / 1024).toFixed(1)}MB → ${(optimized.optimizedSize / 1024 / 1024).toFixed(1)}MB (${sizeReduction}% smaller)`
+      )
+
+      setPreview(optimized.preview)
+      setUploadProgress(50)
+
+      // Upload to server
+      const formData = new FormData()
+      formData.append('file', optimized.file)
+      formData.append('folder', type === 'background' ? 'backgrounds' : 'stickers')
+
+      setUploadProgress(60)
+      const response = await fetch('/api/admin/images/upload', {
+        method: 'POST',
+        body: formData,
+      })
+
+      setUploadProgress(80)
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to upload image')
+      }
+
+      const data = await response.json()
+      setUploadProgress(100)
+
+      // Use the uploaded URL
+      setPreview(data.url)
+      onChange(data.url)
+
+      // Clear optimization info after a moment
+      setTimeout(() => setOptimizationInfo(null), 3000)
     } catch (error: any) {
-      console.error('File selection error:', error)
-      alert(`Failed to load file: ${error.message || 'Unknown error'}`)
+      console.error('File upload error:', error)
+      alert(`Failed to upload image: ${error.message || 'Unknown error'}`)
       setPreview(value || null)
+      setOptimizationInfo(null)
     } finally {
       setIsUploading(false)
+      setUploadProgress(0)
     }
   }
 
@@ -82,25 +137,40 @@ export function FileUpload({
               src={preview}
               alt="Preview"
               className="w-full h-full object-contain"
+              loading="lazy"
             />
             {isUploading && (
-              <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                <Loader2 className={`${iconSize} text-white animate-spin`} />
+              <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center">
+                <Loader2 className={`${iconSize} text-white animate-spin mb-2`} />
+                <div className="w-32 h-1.5 bg-white/20 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-white transition-all duration-300"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+                <p className="mt-2 text-xs text-white">{uploadProgress}%</p>
               </div>
             )}
             <button
               type="button"
               onClick={handleRemove}
               disabled={isUploading}
-              className={`absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed`}
+              className={`absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors`}
             >
               <X className={iconSizeSmall} />
             </button>
           </div>
           {!compact && (
-            <p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">
-              {value || 'Uploaded'}
-            </p>
+            <div className="mt-1 space-y-1">
+              {optimizationInfo && (
+                <p className="text-xs text-green-600 dark:text-green-400">
+                  {optimizationInfo}
+                </p>
+              )}
+              <p className="text-xs text-[hsl(var(--muted-foreground))]">
+                {value || 'Uploaded'}
+              </p>
+            </div>
           )}
         </div>
       ) : (
@@ -138,7 +208,7 @@ export function FileUpload({
               </p>
               {!compact && (
                 <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1">
-                  PNG, JPG, or WebP (max 5MB)
+                  PNG, JPG, or WebP (max 10MB, auto-optimized)
                 </p>
               )}
             </>

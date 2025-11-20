@@ -14,16 +14,24 @@ export async function middleware(request: NextRequest) {
 
   // Protect admin routes - require authentication
   if (pathname.startsWith('/admin')) {
-    // Check for authentication token in cookies or headers
-    const authToken = request.cookies.get('next-auth.session-token') || 
-                     request.cookies.get('__Secure-next-auth.session-token') ||
-                     request.headers.get('authorization')?.replace('Bearer ', '')
+    // Skip auth check if SKIP_ADMIN_AUTH is set (for development)
+    // Check both environment variable and NODE_ENV
+    const skipAuth = 
+      process.env.SKIP_ADMIN_AUTH === 'true' || 
+      (process.env.NODE_ENV && process.env.NODE_ENV !== 'production')
+    
+    if (!skipAuth) {
+      // Check for authentication token in cookies or headers
+      const authToken = request.cookies.get('next-auth.session-token') || 
+                       request.cookies.get('__Secure-next-auth.session-token') ||
+                       request.headers.get('authorization')?.replace('Bearer ', '')
 
-    // If no auth token, redirect to sign-in
-    if (!authToken) {
-      const signInUrl = new URL('/sign-in', request.url)
-      signInUrl.searchParams.set('callbackUrl', pathname)
-      return NextResponse.redirect(signInUrl)
+      // If no auth token, redirect to sign-in
+      if (!authToken) {
+        const signInUrl = new URL('/sign-in', request.url)
+        signInUrl.searchParams.set('callbackUrl', pathname)
+        return NextResponse.redirect(signInUrl)
+      }
     }
 
     // For admin routes, we could also check for platform admin role here

@@ -1,19 +1,34 @@
-"use client";
+/**
+ * Server Component for Quiz Play Page
+ * 
+ * This version fetches data on the server for better performance.
+ * The QuizPlayer component remains a client component for interactivity.
+ */
 
-import React, { useEffect, lazy, Suspense } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { Quiz } from "@/components/quiz/QuizCard";
+import { notFound, redirect } from 'next/navigation';
+import { prisma } from '@schoolquiz/db';
+import { transformQuizToPlayFormat, QuizWithRelations } from '@/lib/transformers/quizTransformers';
+import { getMockQuizData, hasMockQuizData } from '@/lib/mock/quiz-fixtures';
+import { QuizPlayerWrapper } from '@/components/quiz/QuizPlayerWrapper';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { getQuizColor } from '@/lib/colors';
-import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { useQuiz } from "@/hooks/useQuiz";
-import { QuizLoadingSkeleton } from "@/components/quiz/QuizLoadingSkeleton";
-import { QuizError } from "@/components/quiz/QuizError";
-import { QuizNotFound } from "@/components/quiz/QuizNotFound";
 
-// Lazy load QuizPlayer to reduce initial bundle size (~200-300KB saved)
-const QuizPlayer = lazy(() => import("@/components/quiz/QuizPlayer").then(module => ({ default: module.QuizPlayer })));
+// Static generation with ISR - QuizPlayerWrapper handles client-side hydration
+export const dynamic = 'force-static';
+export const revalidate = 3600; // 1 hour
 
-const DATA: Quiz[] = [
+interface QuizMetadata {
+	id: number;
+	slug: string;
+	title: string;
+	blurb: string;
+	weekISO: string;
+	colorHex: string;
+	status: string;
+}
+
+// Hardcoded quiz metadata (fallback)
+const QUIZ_METADATA: QuizMetadata[] = [
 	{ id: 12, slug: "12", title: "Shape Up, Pumpkins, Famous First Words, Crazes, and Next In Sequence.", blurb: "A weekly selection mixing patterns, pop culture and logic.", weekISO: "2024-01-15", colorHex: getQuizColor(12), status: "available" },
 	{ id: 11, slug: "11", title: "Opposite Day, Lights, Common Ground, Robots Etc, and First Ladies.", blurb: "Wordplay meets trivia.", weekISO: "2024-01-08", colorHex: getQuizColor(11), status: "available" },
 	{ id: 10, slug: "10", title: "Back to the Past, Name That Nation, Name the Other, Analog Games, and What Does It Stand For?", blurb: "History, geography and acronyms.", weekISO: "2024-01-01", colorHex: getQuizColor(10), status: "available" },
@@ -25,74 +40,104 @@ const DATA: Quiz[] = [
 	{ id: 4, slug: "4", title: "Food & Drink, Cooking Techniques, World Cuisines, and Culinary History.", blurb: "A feast for the mind.", weekISO: "2023-11-20", colorHex: getQuizColor(4), status: "available" },
 	{ id: 3, slug: "3", title: "Sports Legends, Olympic Moments, World Records, and Athletic Achievements.", blurb: "Celebrate sporting excellence.", weekISO: "2023-11-13", colorHex: getQuizColor(3), status: "available" },
 	{ id: 2, slug: "2", title: "Mathematics Puzzles, Logic Problems, Number Patterns, and Brain Teasers.", blurb: "Exercise your logical mind.", weekISO: "2023-11-06", colorHex: getQuizColor(2), status: "available" },
-	{ id: 1, slug: "1", title: "Famous Inventions, Scientific Discoveries, Medical Breakthroughs, and Innovation.", blurb: "Celebrate human ingenuity.", weekISO: "2023-10-30", colorHex: getQuizColor(1), status: "available" }
+	{ id: 1, slug: "1", title: "Famous Inventions, Scientific Discoveries, Medical Breakthroughs, and Innovation.", blurb: "Celebrate human ingenuity.", weekISO: "2023-10-30", colorHex: getQuizColor(1), status: "available" },
 ];
 
-// Quiz data is now fetched via useQuiz hook from centralized fixtures
-// Static generation is handled in layout.tsx
-
-export default function QuizPlayPage() {
-	const params = useParams();
-	const router = useRouter();
-	const slug = String(params?.slug ?? "");
-	const quiz = DATA.find((q) => q.slug === slug);
-	const { data: quizData, loading, error, refetch } = useQuiz(slug);
-	
+/**
+ * Fetch quiz data from database or fallback to mock data
+ */
+async function getQuizData(slug: string) {
 	// Special handling for demo quiz - redirect to /demo route
-	useEffect(() => {
-		if (slug === "demo") {
-			router.replace("/demo");
-			return;
-		}
-	}, [slug, router]);
-	
-	// Redirect if quiz metadata not found (but not for demo, which is handled above)
-	useEffect(() => {
-		if (slug !== "demo" && !quiz) {
-			router.replace("/quizzes");
-		}
-	}, [quiz, router, slug]);
-
-	// Show loading state
-	if (loading) {
-		return <QuizLoadingSkeleton />;
-	}
-
-	// Show error state
-	if (error) {
-		return <QuizError error={error} onRetry={refetch} slug={slug} />;
-	}
-
-	// Show not found if no quiz data (but not for demo)
-	if (slug !== "demo" && (!quiz || !quizData)) {
-		return <QuizNotFound slug={slug} />;
-	}
-
-	// For demo quiz, show loading while redirecting
 	if (slug === "demo") {
-		return <QuizLoadingSkeleton />;
+		redirect("/demo");
 	}
 
-	// Ensure quiz and quizData exist before accessing their properties
-	if (!quiz || !quizData) {
-		return <QuizNotFound slug={slug} />;
+	// Try database first (if available)
+	try {
+		// Check if Prisma is available
+		if (!prisma) {
+			throw new Error('Prisma client not available');
+		}
+		
+		const quiz = await prisma.quiz.findUnique({
+			where: { slug },
+			include: {
+				rounds: {
+					include: {
+						category: true,
+						questions: {
+							include: {
+								question: true,
+							},
+							orderBy: {
+								order: 'asc',
+							},
+						},
+					},
+					orderBy: {
+						index: 'asc',
+					},
+				},
+			},
+		}) as QuizWithRelations | null;
+
+		if (quiz) {
+			const quizData = transformQuizToPlayFormat(quiz);
+			const metadata = QUIZ_METADATA.find(q => q.slug === slug) || {
+				id: 0,
+				slug: quiz.slug || slug,
+				title: quiz.title,
+				blurb: quiz.blurb || '',
+				weekISO: quiz.weekISO || '',
+				colorHex: quiz.colorHex || getQuizColor(0),
+				status: quiz.status,
+			};
+			return { quizData, metadata };
+		}
+	} catch (error) {
+		// Database not available or error - fall back to mock data
+		console.warn(`[Quiz Play Page] Database fetch failed for ${slug}, using mock data:`, error);
 	}
 
-	const isNewest = DATA[0].slug === quiz.slug;
+	// Fallback to mock data
+	if (hasMockQuizData(slug)) {
+		const quizData = getMockQuizData(slug);
+		const metadata = QUIZ_METADATA.find(q => q.slug === slug);
+		
+		if (quizData && metadata) {
+			return { quizData, metadata };
+		}
+	}
+
+	return null;
+}
+
+export default async function QuizPlayPage({
+	params,
+}: {
+	params: Promise<{ slug: string }>;
+}) {
+	const { slug } = await params;
+	const { quizData, metadata } = await getQuizData(slug) || {};
+
+	if (!quizData || !metadata) {
+		notFound();
+	}
+
+	const isNewest = QUIZ_METADATA[0]?.slug === metadata.slug;
 
 	return (
 		<ErrorBoundary>
-			<Suspense fallback={<QuizLoadingSkeleton />}>
-				<QuizPlayer
-					quizTitle={quiz.title}
-					quizColor={quiz.colorHex}
-					quizSlug={quiz.slug}
-					questions={quizData.questions}
-					rounds={quizData.rounds}
-					weekISO={quiz.weekISO}
-					isNewest={isNewest}
-				/>
-			</Suspense>
+			<QuizPlayerWrapper
+				quizTitle={metadata.title}
+				quizColor={metadata.colorHex}
+				quizSlug={metadata.slug}
+				questions={quizData.questions}
+				rounds={quizData.rounds}
+				weekISO={metadata.weekISO}
+				isNewest={isNewest}
+			/>
 		</ErrorBoundary>
 	);
 }
+

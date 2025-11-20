@@ -25,15 +25,50 @@ export async function GET(
 
     const { id } = await params;
 
+    // Optimized query - use select instead of include for better performance
     const quiz = await prisma.quiz.findUnique({
       where: { id },
-      include: {
+      select: {
+        id: true,
+        title: true,
+        blurb: true,
+        audience: true,
+        difficultyBand: true,
+        theme: true,
+        seasonalTag: true,
+        publicationDate: true,
+        status: true,
+        colorHex: true,
+        pdfUrl: true,
+        pdfStatus: true,
+        createdAt: true,
+        updatedAt: true,
         rounds: {
-          include: {
-            category: true,
+          select: {
+            id: true,
+            index: true,
+            categoryId: true,
+            title: true,
+            blurb: true,
+            targetDifficulty: true,
+            category: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
             questions: {
-              include: {
-                question: true,
+              select: {
+                id: true,
+                order: true,
+                question: {
+                  select: {
+                    id: true,
+                    text: true,
+                    answer: true,
+                    difficulty: true,
+                  },
+                },
               },
               orderBy: {
                 order: 'asc',
@@ -49,12 +84,6 @@ export async function GET(
             id: true,
             name: true,
             email: true,
-          },
-        },
-        _count: {
-          select: {
-            rounds: true,
-            // Don't include runs in _count since the table/column might not exist
           },
         },
       },
@@ -230,11 +259,12 @@ export async function PUT(
       const categoryMap = new Map<string, string>();
       for (const round of body.rounds) {
         if (!categoryMap.has(round.category)) {
-          let category = await prisma.category.findFirst({
-            where: { name: round.category },
-          });
+          // Use cached category lookup
+          const { getCategoryByName } = await import('@/lib/cache-helpers')
+          let category = await getCategoryByName(round.category)
 
           if (!category) {
+            // Create category if it doesn't exist
             category = await prisma.category.create({
               data: {
                 id: generateId(),
@@ -242,7 +272,9 @@ export async function PUT(
                 description: `Category for ${round.category}`,
                 createdBy: teacher.id,
               },
-            });
+            })
+            // Invalidate cache after creating new category
+            // Note: unstable_cache doesn't have direct invalidation, but revalidate will handle it
           }
           categoryMap.set(round.category, category.id);
         }

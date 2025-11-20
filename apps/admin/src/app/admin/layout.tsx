@@ -1,6 +1,7 @@
 import { AdminSidebar } from '@/components/admin/AdminSidebar'
 import { AdminTopbar } from '@/components/admin/AdminTopbar'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { CommandPalette } from '@/components/admin/CommandPalette'
 
 interface AdminLayoutProps {
   children: React.ReactNode
@@ -62,6 +63,9 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
           </main>
         </ScrollArea>
       </div>
+
+      {/* Command Palette */}
+      <CommandPalette />
     </div>
   )
 }

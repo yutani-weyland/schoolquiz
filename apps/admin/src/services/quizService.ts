@@ -90,7 +90,7 @@ export class QuizService {
 								},
 							},
 						},
-					});
+					}) as QuizWithRelations | null;
 
 					if (quiz) {
 						const transformed = transformQuizToPlayFormat(quiz as QuizWithRelations);

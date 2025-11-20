@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Eye, EyeOff, Monitor, Moon, Sun, Maximize2, X, Sparkles, Type, Image as ImageIcon, BarChart3, Lock as LockIcon, Unlock, Zap, Layers, Sliders, Save } from 'lucide-react'
+import { Eye, EyeOff, Monitor, Moon, Sun, Maximize2, X, Sparkles, Type, Image as ImageIcon, BarChart3, Lock as LockIcon, Unlock, Zap, Layers, Sliders, Save, ChevronDown, ChevronUp } from 'lucide-react'
 import { AchievementCard } from '@/components/achievements/AchievementCard'
 import { useAchievementFormContext } from './AchievementFormContext'
 import { FileUpload } from './FileUpload'
@@ -40,19 +40,15 @@ export function AchievementPreviewPane() {
   const currentTitleFont = appearance.titleFontFamily || 'system-ui'
   const currentBodyFont = appearance.bodyFontFamily || 'system-ui'
 
-  // Special effects (card variants) options
+  // Simplified card variants - only the most common ones
   const specialEffectsOptions = [
     { value: 'standard', label: 'Standard', icon: '🎴' },
     { value: 'foil', label: 'Foil', icon: '✨' },
     { value: 'foilGold', label: 'Gold Foil', icon: '🥇' },
-    { value: 'foilSilver', label: 'Silver Foil', icon: '🥈' },
-    { value: 'prismatic', label: 'Prismatic', icon: '🌈' },
-    { value: 'neon', label: 'Neon', icon: '💡' },
-    { value: 'shiny', label: 'Shiny', icon: '💎' },
     { value: 'fullArt', label: 'Full Art', icon: '🖼️' },
   ]
 
-  // Material options
+  // Advanced options (materials) - hidden by default
   const materialOptions = [
     { value: 'standard', label: 'Standard', icon: '🎨' },
     { value: 'wood', label: 'Wood', icon: '🪵' },
@@ -62,6 +58,8 @@ export function AchievementPreviewPane() {
     { value: 'paper', label: 'Paper', icon: '📄' },
     { value: 'parchment', label: 'Parchment', icon: '📜' },
   ]
+
+  const [showAdvanced, setShowAdvanced] = useState(false)
 
   // Format date in Australian format
   const formatDate = (date: Date) => {
@@ -172,9 +170,10 @@ export function AchievementPreviewPane() {
               onClick={onSave}
               disabled={isSaving}
               className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl text-sm font-medium hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-[0_2px_8px_rgba(59,130,246,0.3),inset_0_1px_0_0_rgba(255,255,255,0.2)] hover:shadow-[0_4px_12px_rgba(59,130,246,0.4),inset_0_1px_0_0_rgba(255,255,255,0.2)]"
+              title={isSaving ? 'Saving...' : 'Save now (autosave is enabled)'}
             >
               <Save className="w-4 h-4" />
-              {isSaving ? 'Saving...' : 'Save'}
+              {isSaving ? 'Saving...' : 'Save Now'}
             </button>
           )}
         </div>
@@ -207,14 +206,14 @@ export function AchievementPreviewPane() {
 
         {/* Floating Toggles - Left Side */}
         <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10">
-          {/* Filter Group - Combined Effects and Materials */}
-          <div className="bg-[hsl(var(--card))]/95 backdrop-blur-sm rounded-xl border border-[hsl(var(--border))] shadow-lg p-3 flex flex-col gap-2 max-w-[200px]">
+          {/* Card Variants - Simplified */}
+          <div className="bg-[hsl(var(--card))]/95 backdrop-blur-sm rounded-xl border border-[hsl(var(--border))] shadow-lg p-3 flex flex-col gap-2">
             <div className="flex items-center gap-1.5 px-1 pb-2 border-b border-[hsl(var(--border))]">
-              <Sliders className="w-4 h-4 text-[hsl(var(--muted-foreground))]" />
-              <span className="text-sm font-medium text-[hsl(var(--muted-foreground))]">Filter</span>
+              <Sparkles className="w-4 h-4 text-[hsl(var(--muted-foreground))]" />
+              <span className="text-sm font-medium text-[hsl(var(--muted-foreground))]">Card Style</span>
             </div>
             
-            {/* Combined Effects and Materials - Wrapping Grid */}
+            {/* Simplified Variants - Only 4 options */}
             <div className="flex flex-wrap gap-1.5">
               {specialEffectsOptions.map((effect) => {
                 const isSelected = (data.cardVariant || 'standard') === effect.value
@@ -236,60 +235,64 @@ export function AchievementPreviewPane() {
                   </button>
                 )
               })}
-              {materialOptions.map((material) => {
-                const isSelected = (appearance.material || 'standard') === material.value
-                return (
-                  <button
-                    key={material.value}
-                    type="button"
-                    onClick={() => updateAppearance?.('material', material.value)}
-                    className={`
-                      w-10 h-10 rounded-lg text-sm transition-all flex items-center justify-center
-                      ${isSelected
-                        ? 'bg-[hsl(var(--primary))] text-white shadow-sm scale-105'
-                        : 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--accent))] hover:scale-105'
-                      }
-                    `}
-                    title={material.label}
-                  >
-                    <span>{material.icon}</span>
-                  </button>
-                )
-              })}
+            </div>
+
+            {/* Advanced Options - Collapsible */}
+            <div className="mt-2 pt-2 border-t border-[hsl(var(--border))]">
+              <button
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className="w-full flex items-center justify-between px-1 py-1.5 text-xs text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--accent))] rounded-lg transition-colors"
+                type="button"
+              >
+                <span className="flex items-center gap-1.5">
+                  <Sliders className="w-3 h-3" />
+                  Advanced
+                </span>
+                {showAdvanced ? (
+                  <ChevronUp className="w-3 h-3" />
+                ) : (
+                  <ChevronDown className="w-3 h-3" />
+                )}
+              </button>
+              
+              {showAdvanced && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {materialOptions.map((material) => {
+                    const isSelected = (appearance.material || 'standard') === material.value
+                    return (
+                      <button
+                        key={material.value}
+                        type="button"
+                        onClick={() => updateAppearance?.('material', material.value)}
+                        className={`
+                          w-8 h-8 rounded-lg text-xs transition-all flex items-center justify-center
+                          ${isSelected
+                            ? 'bg-[hsl(var(--primary))] text-white shadow-sm'
+                            : 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--accent))]'
+                          }
+                        `}
+                        title={material.label}
+                      >
+                        <span>{material.icon}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Floating Toggles - Right Side */}
+        {/* Floating Toggles - Right Side - Simplified */}
         <div className="absolute right-4 top-1/2 -translate-y-1/2 z-10 flex flex-col gap-2">
-          {/* Fonts Toggle Group */}
-          <div className="bg-[hsl(var(--card))]/95 backdrop-blur-sm rounded-xl border border-[hsl(var(--border))] shadow-lg p-2 flex flex-col gap-2">
-            <div className="flex items-center gap-1.5 px-1 pb-1 border-b border-[hsl(var(--border))]">
-              <Type className="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))]" />
-              <span className="text-xs font-medium text-[hsl(var(--muted-foreground))]">Fonts</span>
-            </div>
-            <FontSelect
-              value={currentTitleFont}
-              onChange={(font) => updateAppearance?.('titleFontFamily', font)}
-              label="Title"
-              className="w-40"
-            />
-            <FontSelect
-              value={currentBodyFont}
-              onChange={(font) => updateAppearance?.('bodyFontFamily', font)}
-              label="Body"
-              className="w-40"
-            />
-          </div>
-
-          {/* Images Toggle Group */}
+          {/* Images Toggle Group - Most Common */}
           <div className="bg-[hsl(var(--card))]/95 backdrop-blur-sm rounded-xl border border-[hsl(var(--border))] shadow-lg p-2 flex flex-col gap-2">
             <div className="flex items-center gap-1.5 px-1 pb-1 border-b border-[hsl(var(--border))]">
               <ImageIcon className="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))]" />
               <span className="text-xs font-medium text-[hsl(var(--muted-foreground))]">Images</span>
             </div>
             <FileUpload
-              label="Sticker"
+              label="Icon"
               value={data.iconKey || ''}
               onChange={(url) => updateField?.('iconKey', url)}
               type="sticker"
@@ -304,50 +307,93 @@ export function AchievementPreviewPane() {
             />
           </div>
 
-          {/* Progress Toggle Group */}
+          {/* Advanced Options - Collapsible */}
           <div className="bg-[hsl(var(--card))]/95 backdrop-blur-sm rounded-xl border border-[hsl(var(--border))] shadow-lg p-2 flex flex-col gap-2">
-            <div className="flex items-center gap-1.5 px-1 pb-1 border-b border-[hsl(var(--border))]">
-              <BarChart3 className="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))]" />
-              <span className="text-xs font-medium text-[hsl(var(--muted-foreground))]">Progress</span>
-            </div>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={showProgressBar}
-                onChange={(e) => {
-                  setShowProgressBar(e.target.checked)
-                  if (!e.target.checked) {
-                    setProgressValue(0)
-                  } else {
-                    setProgressValue(progressValue > 0 ? Math.min(progressValue, progressMax) : 1)
-                  }
-                }}
-                className="w-4 h-4 rounded border-[hsl(var(--border))] text-[hsl(var(--primary))] focus:ring-1 focus:ring-[hsl(var(--ring))]"
-              />
-              <span className="text-xs text-[hsl(var(--muted-foreground))]">Show Progress</span>
-            </label>
-            {showProgressBar && (
-              <div className="flex items-center gap-1">
-                <input
-                  type="number"
-                  min="0"
-                  max={progressMax}
-                  value={progressValue}
-                  onChange={(e) => setProgressValue(Math.max(0, Math.min(Number(e.target.value), progressMax)))}
-                  className="w-16 px-2 py-1 text-xs border border-[hsl(var(--border))] rounded bg-[hsl(var(--background))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--ring))]"
-                />
-                <span className="text-xs text-[hsl(var(--muted-foreground))]">/</span>
-                <input
-                  type="number"
-                  min="1"
-                  value={progressMax}
-                  onChange={(e) => {
-                    const newMax = Math.max(1, Number(e.target.value))
-                    setProgressMax(newMax)
-                    setProgressValue(Math.min(progressValue, newMax))
-                  }}
-                  className="w-16 px-2 py-1 text-xs border border-[hsl(var(--border))] rounded bg-[hsl(var(--background))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--ring))]"
-                />
+            <button
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="flex items-center justify-between px-1 py-1.5 text-xs text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--accent))] rounded-lg transition-colors"
+              type="button"
+            >
+              <span className="flex items-center gap-1.5">
+                <Sliders className="w-3 h-3" />
+                More Options
+              </span>
+              {showAdvanced ? (
+                <ChevronUp className="w-3 h-3" />
+              ) : (
+                <ChevronDown className="w-3 h-3" />
+              )}
+            </button>
+            
+            {showAdvanced && (
+              <div className="flex flex-col gap-3 pt-2 border-t border-[hsl(var(--border))]">
+                {/* Fonts */}
+                <div>
+                  <div className="flex items-center gap-1.5 px-1 pb-1 mb-1">
+                    <Type className="w-3 h-3 text-[hsl(var(--muted-foreground))]" />
+                    <span className="text-xs font-medium text-[hsl(var(--muted-foreground))]">Fonts</span>
+                  </div>
+                  <FontSelect
+                    value={currentTitleFont}
+                    onChange={(font) => updateAppearance?.('titleFontFamily', font)}
+                    label="Title"
+                    className="w-full mb-1"
+                  />
+                  <FontSelect
+                    value={currentBodyFont}
+                    onChange={(font) => updateAppearance?.('bodyFontFamily', font)}
+                    label="Body"
+                    className="w-full"
+                  />
+                </div>
+
+                {/* Progress */}
+                <div>
+                  <div className="flex items-center gap-1.5 px-1 pb-1 mb-1">
+                    <BarChart3 className="w-3 h-3 text-[hsl(var(--muted-foreground))]" />
+                    <span className="text-xs font-medium text-[hsl(var(--muted-foreground))]">Progress</span>
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer mb-1">
+                    <input
+                      type="checkbox"
+                      checked={showProgressBar}
+                      onChange={(e) => {
+                        setShowProgressBar(e.target.checked)
+                        if (!e.target.checked) {
+                          setProgressValue(0)
+                        } else {
+                          setProgressValue(progressValue > 0 ? Math.min(progressValue, progressMax) : 1)
+                        }
+                      }}
+                      className="w-4 h-4 rounded border-[hsl(var(--border))] text-[hsl(var(--primary))] focus:ring-1 focus:ring-[hsl(var(--ring))]"
+                    />
+                    <span className="text-xs text-[hsl(var(--muted-foreground))]">Show Progress</span>
+                  </label>
+                  {showProgressBar && (
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min="0"
+                        max={progressMax}
+                        value={progressValue}
+                        onChange={(e) => setProgressValue(Math.max(0, Math.min(Number(e.target.value), progressMax)))}
+                        className="w-16 px-2 py-1 text-xs border border-[hsl(var(--border))] rounded bg-[hsl(var(--background))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--ring))]"
+                      />
+                      <span className="text-xs text-[hsl(var(--muted-foreground))]">/</span>
+                      <input
+                        type="number"
+                        min="1"
+                        value={progressMax}
+                        onChange={(e) => {
+                          const newMax = Math.max(1, Number(e.target.value))
+                          setProgressMax(newMax)
+                          setProgressValue(Math.min(progressValue, newMax))
+                        }}
+                        className="w-16 px-2 py-1 text-xs border border-[hsl(var(--border))] rounded bg-[hsl(var(--background))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--ring))]"
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>

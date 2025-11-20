@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { CreditCard, DollarSign, TrendingUp, FileText, ExternalLink, AlertCircle, CheckCircle2, Clock, Plus, XCircle } from 'lucide-react'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Card, PageHeader, Badge, Button } from '@/components/admin/ui'
 
 interface Subscription {
   id: string
@@ -107,12 +108,12 @@ export default function BillingPage() {
 
   const getStatusBadge = (status: string) => {
     const badges = {
-      ACTIVE: { label: 'Active', className: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300', icon: CheckCircle2 },
-      TRIALING: { label: 'Trial', className: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300', icon: Clock },
-      PAST_DUE: { label: 'Past Due', className: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300', icon: AlertCircle },
-      CANCELLED: { label: 'Cancelled', className: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300', icon: AlertCircle },
-      PAID: { label: 'Paid', className: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300', icon: CheckCircle2 },
-      OVERDUE: { label: 'Overdue', className: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300', icon: AlertCircle },
+      ACTIVE: { label: 'Active', variant: 'success' as const, icon: CheckCircle2 },
+      TRIALING: { label: 'Trial', variant: 'info' as const, icon: Clock },
+      PAST_DUE: { label: 'Past Due', variant: 'error' as const, icon: AlertCircle },
+      CANCELLED: { label: 'Cancelled', variant: 'default' as const, icon: AlertCircle },
+      PAID: { label: 'Paid', variant: 'success' as const, icon: CheckCircle2 },
+      OVERDUE: { label: 'Overdue', variant: 'error' as const, icon: AlertCircle },
     }
     return badges[status as keyof typeof badges] || badges.ACTIVE
   }
@@ -120,31 +121,26 @@ export default function BillingPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[hsl(var(--primary))]"></div>
       </div>
     )
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
-          Billing
-        </h1>
-        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-          Manage subscriptions, invoices, and payment information
-        </p>
-      </div>
+      <PageHeader
+        title="Billing"
+        description="Manage subscriptions, invoices, and payment information"
+      />
 
       {/* Revenue Stats */}
       {revenue && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/50 rounded-2xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.08),inset_0_1px_0_0_rgba(255,255,255,0.9)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.3),inset_0_1px_0_0_rgba(255,255,255,0.05)]">
+          <Card>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">This Month</p>
-                <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
+                <p className="text-sm text-[hsl(var(--muted-foreground))]">This Month</p>
+                <p className="text-3xl font-bold text-[hsl(var(--foreground))] mt-2">
                   {formatCurrency(revenue.thisMonth)}
                 </p>
                 <div className="flex items-center gap-1 mt-2">
@@ -158,12 +154,12 @@ export default function BillingPage() {
                 <DollarSign className="w-8 h-8 text-blue-600 dark:text-blue-400" />
               </div>
             </div>
-          </div>
-          <div className="bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/50 rounded-2xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.08),inset_0_1px_0_0_rgba(255,255,255,0.9)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.3),inset_0_1px_0_0_rgba(255,255,255,0.05)]">
+          </Card>
+          <Card>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Last Month</p>
-                <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
+                <p className="text-sm text-[hsl(var(--muted-foreground))]">Last Month</p>
+                <p className="text-3xl font-bold text-[hsl(var(--foreground))] mt-2">
                   {formatCurrency(revenue.lastMonth)}
                 </p>
               </div>
@@ -171,12 +167,12 @@ export default function BillingPage() {
                 <FileText className="w-8 h-8 text-purple-600 dark:text-purple-400" />
               </div>
             </div>
-          </div>
-          <div className="bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/50 rounded-2xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.08),inset_0_1px_0_0_rgba(255,255,255,0.9)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.3),inset_0_1px_0_0_rgba(255,255,255,0.05)]">
+          </Card>
+          <Card>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">This Year</p>
-                <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
+                <p className="text-sm text-[hsl(var(--muted-foreground))]">This Year</p>
+                <p className="text-3xl font-bold text-[hsl(var(--foreground))] mt-2">
                   {formatCurrency(revenue.thisYear)}
                 </p>
               </div>
@@ -184,7 +180,7 @@ export default function BillingPage() {
                 <TrendingUp className="w-8 h-8 text-green-600 dark:text-green-400" />
               </div>
             </div>
-          </div>
+          </Card>
         </div>
       )}
 
@@ -219,7 +215,7 @@ export default function BillingPage() {
 
         {/* Subscriptions Tab */}
         <TabsContent value="subscriptions" className="mt-0">
-          <div className="bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/50 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.08),inset_0_1px_0_0_rgba(255,255,255,0.9)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.3),inset_0_1px_0_0_rgba(255,255,255,0.05)]">
+          <Card className="overflow-hidden p-0">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gradient-to-br from-gray-50 to-gray-100/50 dark:from-gray-900 dark:to-gray-900/50 border-b border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm">
@@ -251,24 +247,23 @@ export default function BillingPage() {
                     return (
                       <tr
                         key={sub.id}
-                        className="hover:bg-gradient-to-r hover:from-gray-50/80 hover:to-gray-100/40 dark:hover:from-gray-700/30 dark:hover:to-gray-700/20 transition-all duration-200"
+                        className="hover:bg-[hsl(var(--muted))] transition-colors"
                       >
                         <td className="px-6 py-4 whitespace-nowrap">
                           <Link
                             href={`/admin/organisations/${sub.organisationId}`}
-                            className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline"
+                            className="text-sm font-medium text-[hsl(var(--primary))] hover:underline"
                           >
                             {sub.organisationName}
                           </Link>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-[hsl(var(--muted-foreground))]">
                           {sub.plan.replace('_', ' ')}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${statusBadge.className}`}>
-                            <StatusIcon className="w-3 h-3" />
+                          <Badge variant={statusBadge.variant} icon={statusBadge.icon}>
                             {statusBadge.label}
-                          </span>
+                          </Badge>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <button
@@ -294,16 +289,16 @@ export default function BillingPage() {
                                 }
                               }
                             }}
-                            className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                            className="text-sm font-medium text-[hsl(var(--primary))] hover:underline cursor-pointer"
                             title="Click to modify cost"
                           >
                             {formatCurrency(sub.amount, sub.currency)}
                           </button>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-[hsl(var(--muted-foreground))]">
                           {sub.seats} / {sub.maxSeats || '∞'}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-[hsl(var(--muted-foreground))]">
                           {formatDate(sub.currentPeriodStart)} - {formatDate(sub.currentPeriodEnd)}
                         </td>
                       </tr>
@@ -317,61 +312,60 @@ export default function BillingPage() {
 
         {/* Invoices Tab */}
         <TabsContent value="invoices" className="mt-0">
-          <div className="bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/50 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.08),inset_0_1px_0_0_rgba(255,255,255,0.9)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.3),inset_0_1px_0_0_rgba(255,255,255,0.05)]">
+          <Card className="overflow-hidden p-0">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gradient-to-br from-gray-50 to-gray-100/50 dark:from-gray-900 dark:to-gray-900/50 border-b border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm">
+                <thead className="bg-[hsl(var(--muted))] border-b border-[hsl(var(--border))]">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
                       Invoice
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
                       Organisation
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
                       Amount
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
                       Date
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white/50 dark:bg-gray-800/50 divide-y divide-gray-200/50 dark:divide-gray-700/50">
+                <tbody className="bg-[hsl(var(--card))]/50 divide-y divide-[hsl(var(--border))]">
                   {invoices.map((invoice) => {
                     const statusBadge = getStatusBadge(invoice.status)
                     const StatusIcon = statusBadge.icon
                     return (
                       <tr
                         key={invoice.id}
-                        className="hover:bg-gradient-to-r hover:from-gray-50/80 hover:to-gray-100/40 dark:hover:from-gray-700/30 dark:hover:to-gray-700/20 transition-all duration-200"
+                        className="hover:bg-[hsl(var(--muted))] transition-colors"
                       >
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[hsl(var(--foreground))]">
                           {invoice.stripeInvoiceId}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <Link
                             href={`/admin/organisations/${invoice.organisationId}`}
-                            className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                            className="text-sm text-[hsl(var(--primary))] hover:underline"
                           >
                             {invoice.organisationName}
                           </Link>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[hsl(var(--foreground))]">
                           {formatCurrency(invoice.amount, invoice.currency)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${statusBadge.className}`}>
-                            <StatusIcon className="w-3 h-3" />
+                          <Badge variant={statusBadge.variant} icon={statusBadge.icon}>
                             {statusBadge.label}
-                          </span>
+                          </Badge>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-[hsl(var(--muted-foreground))]">
                           {formatDate(invoice.invoiceDate)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -379,7 +373,7 @@ export default function BillingPage() {
                             href={invoice.pdfUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1"
+                            className="text-[hsl(var(--primary))] hover:underline inline-flex items-center gap-1"
                           >
                             View <ExternalLink className="w-3 h-3" />
                           </a>
@@ -395,23 +389,23 @@ export default function BillingPage() {
 
         {/* Webhooks Tab */}
         <TabsContent value="webhooks" className="mt-0">
-          <div className="bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/50 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 p-6 shadow-[0_1px_3px_rgba(0,0,0,0.08),inset_0_1px_0_0_rgba(255,255,255,0.9)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.3),inset_0_1px_0_0_rgba(255,255,255,0.05)]">
+          <Card>
             <div className="mb-4">
               <Link
                 href="/admin/billing/webhooks"
-                className="text-sm text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1"
+                className="text-sm text-[hsl(var(--primary))] hover:underline inline-flex items-center gap-1"
               >
                 View all webhook events <ExternalLink className="w-3 h-3" />
               </Link>
             </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="text-sm text-[hsl(var(--muted-foreground))]">
               View detailed webhook events on the{' '}
-              <Link href="/admin/billing/webhooks" className="text-blue-600 dark:text-blue-400 hover:underline">
+              <Link href="/admin/billing/webhooks" className="text-[hsl(var(--primary))] hover:underline">
                 webhooks page
               </Link>
               .
             </p>
-          </div>
+          </Card>
         </TabsContent>
 
         {/* Offer Codes Tab */}
@@ -472,33 +466,30 @@ function OfferCodesTab() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+        <h2 className="text-lg font-semibold text-[hsl(var(--foreground))]">
           Special Offer Codes
         </h2>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-[0_2px_8px_rgba(59,130,246,0.3),inset_0_1px_0_0_rgba(255,255,255,0.2)]"
-        >
+        <Button onClick={() => setShowCreateModal(true)}>
           <Plus className="w-4 h-4" />
           Create Code
-        </button>
+        </Button>
       </div>
 
       {isLoading ? (
         <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[hsl(var(--primary))]"></div>
         </div>
       ) : codes.length === 0 ? (
-        <div className="bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/50 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 p-12 text-center shadow-[0_1px_3px_rgba(0,0,0,0.08),inset_0_1px_0_0_rgba(255,255,255,0.9)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.3),inset_0_1px_0_0_rgba(255,255,255,0.05)]">
-          <p className="text-sm text-gray-500 dark:text-gray-400">No offer codes found</p>
-        </div>
+        <Card className="p-12 text-center">
+          <p className="text-sm text-[hsl(var(--muted-foreground))]">No offer codes found</p>
+        </Card>
       ) : (
-        <div className="bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/50 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.08),inset_0_1px_0_0_rgba(255,255,255,0.9)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.3),inset_0_1px_0_0_rgba(255,255,255,0.05)]">
+        <Card className="overflow-hidden p-0">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gradient-to-br from-gray-50 to-gray-100/50 dark:from-gray-900 dark:to-gray-900/50 border-b border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm">
+              <thead className="bg-[hsl(var(--muted))] border-b border-[hsl(var(--border))]">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
                     Code
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -518,27 +509,27 @@ function OfferCodesTab() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white/50 dark:bg-gray-800/50 divide-y divide-gray-200/50 dark:divide-gray-700/50">
+              <tbody className="bg-[hsl(var(--card))]/50 divide-y divide-[hsl(var(--border))]">
                 {codes.map((code) => (
                   <tr
                     key={code.id}
-                    className="hover:bg-gradient-to-r hover:from-gray-50/80 hover:to-gray-100/40 dark:hover:from-gray-700/30 dark:hover:to-gray-700/20 transition-all duration-200"
+                    className="hover:bg-[hsl(var(--muted))] transition-colors"
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <code className="text-sm font-mono font-semibold text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
+                      <code className="text-sm font-mono font-semibold text-[hsl(var(--foreground))] bg-[hsl(var(--muted))] px-2 py-1 rounded">
                         {code.code}
                       </code>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                    <td className="px-6 py-4 text-sm text-[hsl(var(--muted-foreground))]">
                       {code.description || '—'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[hsl(var(--foreground))]">
                       {formatDiscount(code.discountType, code.discountValue)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[hsl(var(--muted-foreground))]">
                       {code.currentUses} / {code.maxUses || '∞'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[hsl(var(--muted-foreground))]">
                       {formatDate(code.validUntil)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -617,56 +608,56 @@ function CreateOfferCodeModal({ onClose, onSuccess }: { onClose: () => void; onS
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 shadow-xl max-w-2xl w-full p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-            Create Offer Code
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-          >
-            <XCircle className="w-6 h-6" />
-          </button>
-        </div>
+        <div className="bg-[hsl(var(--card))] rounded-2xl border border-[hsl(var(--border))] shadow-xl max-w-2xl w-full p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold text-[hsl(var(--foreground))]">
+              Create Offer Code
+            </h2>
+            <button
+              onClick={onClose}
+              className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
+            >
+              <XCircle className="w-6 h-6" />
+            </button>
+          </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-2">
               Code *
             </label>
             <input
               type="text"
               value={formData.code}
               onChange={(e) => setFormData(prev => ({ ...prev, code: e.target.value.toUpperCase() }))}
-              className="w-full px-4 py-2 border border-gray-300/50 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border border-[hsl(var(--border))] rounded-xl bg-[hsl(var(--input))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
               placeholder="SCHOOL2025"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-2">
               Description
             </label>
             <input
               type="text"
               value={formData.description}
               onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              className="w-full px-4 py-2 border border-gray-300/50 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border border-[hsl(var(--border))] rounded-xl bg-[hsl(var(--input))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
               placeholder="20% off for schools in 2025"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-2">
                 Discount Type *
               </label>
               <select
                 value={formData.discountType}
                 onChange={(e) => setFormData(prev => ({ ...prev, discountType: e.target.value }))}
-                className="w-full px-4 py-2 border border-gray-300/50 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border border-[hsl(var(--border))] rounded-xl bg-[hsl(var(--input))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
                 required
               >
                 <option value="PERCENTAGE">Percentage</option>
@@ -675,14 +666,14 @@ function CreateOfferCodeModal({ onClose, onSuccess }: { onClose: () => void; onS
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-2">
                 Discount Value *
               </label>
               <input
                 type="number"
                 value={formData.discountValue}
                 onChange={(e) => setFormData(prev => ({ ...prev, discountValue: e.target.value }))}
-                className="w-full px-4 py-2 border border-gray-300/50 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border border-[hsl(var(--border))] rounded-xl bg-[hsl(var(--input))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
                 placeholder={formData.discountType === 'PERCENTAGE' ? '20' : formData.discountType === 'FIXED_AMOUNT' ? '5000' : '30'}
                 required
               />
@@ -691,45 +682,46 @@ function CreateOfferCodeModal({ onClose, onSuccess }: { onClose: () => void; onS
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-2">
                 Max Uses (leave empty for unlimited)
               </label>
               <input
                 type="number"
                 value={formData.maxUses}
                 onChange={(e) => setFormData(prev => ({ ...prev, maxUses: e.target.value }))}
-                className="w-full px-4 py-2 border border-gray-300/50 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border border-[hsl(var(--border))] rounded-xl bg-[hsl(var(--input))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
                 placeholder="100"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-2">
                 Valid Until (optional)
               </label>
               <input
                 type="date"
                 value={formData.validUntil}
                 onChange={(e) => setFormData(prev => ({ ...prev, validUntil: e.target.value }))}
-                className="w-full px-4 py-2 border border-gray-300/50 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border border-[hsl(var(--border))] rounded-xl bg-[hsl(var(--input))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
               />
             </div>
           </div>
 
           <div className="flex items-center gap-4">
-            <button
+            <Button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              variant="secondary"
+              className="flex-1"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
               disabled={isSubmitting}
-              className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="flex-1"
             >
               {isSubmitting ? 'Creating...' : 'Create Code'}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

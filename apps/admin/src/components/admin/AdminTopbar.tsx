@@ -6,6 +6,8 @@ import Link from 'next/link'
 import { User, LogOut, Sun, Moon } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { useTheme } from '@/contexts/ThemeContext'
+import { Breadcrumbs } from './Breadcrumbs'
+import { DraftIndicator } from './DraftIndicator'
 
 // Simple page title mapping
 const pageTitles: Record<string, string> = {
@@ -21,6 +23,7 @@ const pageTitles: Record<string, string> = {
   '/admin/support': 'Support',
   '/admin/system': 'System',
   '/admin/achievements': 'Achievements',
+  '/admin/drafts': 'Drafts',
 }
 
 export function AdminTopbar() {
@@ -63,14 +66,23 @@ export function AdminTopbar() {
 
   return (
     <div className="sticky top-0 z-40 bg-[hsl(var(--card))] border-b border-[hsl(var(--border))] backdrop-blur-sm bg-opacity-95">
-      <div className="flex items-center justify-between px-6 h-16">
-        {/* Page Title */}
-        <h1 className="text-2xl font-bold text-[hsl(var(--foreground))] tracking-tight">
-          {getPageTitle()}
-        </h1>
+      <div className="flex flex-col px-6 py-3">
+        {/* Breadcrumbs */}
+        <div className="mb-2">
+          <Breadcrumbs />
+        </div>
+        
+        {/* Page Title and Actions */}
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-[hsl(var(--foreground))] tracking-tight">
+            {getPageTitle()}
+          </h1>
 
-        {/* User Menu - Reordered: User, Theme, Sign Out */}
-        <div className="flex items-center gap-2">
+          {/* User Menu - Reordered: Drafts, User, Theme, Sign Out */}
+          <div className="flex items-center gap-2">
+          {/* Draft Indicator */}
+          <DraftIndicator type="all" showCount />
+
           {/* User Profile Button */}
           <Link
             href="/account"
@@ -109,6 +121,7 @@ export function AdminTopbar() {
             <LogOut className="w-4 h-4" />
             <span className="hidden sm:inline">Sign Out</span>
           </button>
+          </div>
         </div>
       </div>
     </div>

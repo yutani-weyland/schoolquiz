@@ -103,3 +103,6 @@ temp/
 
 # Turbo
 .turbo
+
+# auth
+SKIP_ADMIN_AUTH=true

@@ -11,7 +11,8 @@ export const metadata: Metadata = {
   description: "Weekly quiz for Australian students"
 };
 
-// Ensure cookie is read per request (not cached)
+// Cookie reading requires dynamic rendering, but we can still cache where possible
+// Individual routes can override this with their own dynamic/static settings
 export const dynamic = "force-dynamic";
 
 export default async function RootLayout({

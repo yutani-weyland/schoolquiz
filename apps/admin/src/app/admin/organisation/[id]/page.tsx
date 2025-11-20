@@ -18,6 +18,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { DataTable } from '@/components/data-table';
+import { Card, Badge, Button, PageHeader, Input, Select, Textarea } from '@/components/admin/ui';
 
 interface Organisation {
   id: string;
@@ -70,7 +71,7 @@ export default function OrganisationAdminPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-gray-500">Loading...</div>
+        <div className="text-[hsl(var(--muted-foreground))]">Loading...</div>
       </div>
     );
   }
@@ -84,85 +85,88 @@ export default function OrganisationAdminPage() {
   }
 
   const getStatusBadge = (status: string) => {
-    const badges = {
-      ACTIVE: { label: 'Active', className: 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400', icon: CheckCircle2 },
-      TRIALING: { label: 'Trialing', className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400', icon: Clock },
-      PAST_DUE: { label: 'Past Due', className: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400', icon: AlertCircle },
-      EXPIRED: { label: 'Expired', className: 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400', icon: XCircle },
-      CANCELLED: { label: 'Cancelled', className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400', icon: XCircle },
+    const statusMap: Record<string, 'success' | 'info' | 'warning' | 'error' | 'default'> = {
+      ACTIVE: 'success',
+      TRIALING: 'info',
+      PAST_DUE: 'warning',
+      EXPIRED: 'error',
+      CANCELLED: 'default',
     };
-    return badges[status as keyof typeof badges] || badges.EXPIRED;
+    const iconMap: Record<string, typeof CheckCircle2> = {
+      ACTIVE: CheckCircle2,
+      TRIALING: Clock,
+      PAST_DUE: AlertCircle,
+      EXPIRED: XCircle,
+      CANCELLED: XCircle,
+    };
+    return {
+      variant: statusMap[status] || 'default',
+      icon: iconMap[status] || XCircle,
+      label: status === 'TRIALING' ? 'Trialing' : status.charAt(0) + status.slice(1).toLowerCase().replace('_', ' '),
+    };
   };
 
   const statusBadge = getStatusBadge(organisation.status);
   const StatusIcon = statusBadge.icon;
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#0F1419]">
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            {organisation.name}
-          </h1>
-          {organisation.emailDomain && (
-            <p className="text-gray-500 dark:text-gray-400">
-              {organisation.emailDomain}
-            </p>
-          )}
-        </div>
+    <div className="space-y-6">
+      <PageHeader
+        title={organisation.name}
+        description={organisation.emailDomain || undefined}
+      />
 
-        {/* Status Banner */}
-        {(organisation.status === 'PAST_DUE' || organisation.status === 'EXPIRED' || organisation.status === 'CANCELLED') && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-6 p-4 rounded-lg border border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-900/20"
-          >
-            <div className="flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
-              <div>
-                <p className="font-medium text-yellow-900 dark:text-yellow-200">
-                  Subscription {organisation.status === 'EXPIRED' ? 'expired' : organisation.status.toLowerCase()}
+      {/* Status Banner */}
+      {(organisation.status === 'PAST_DUE' || organisation.status === 'EXPIRED' || organisation.status === 'CANCELLED') && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-4 rounded-xl border border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-900/20"
+        >
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
+            <div>
+              <p className="font-medium text-yellow-900 dark:text-yellow-200">
+                Subscription {organisation.status === 'EXPIRED' ? 'expired' : organisation.status.toLowerCase()}
+              </p>
+              {organisation.currentPeriodEnd && (
+                <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                  Period ended: {new Date(organisation.currentPeriodEnd).toLocaleDateString()}
                 </p>
-                {organisation.currentPeriodEnd && (
-                  <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                    Period ended: {new Date(organisation.currentPeriodEnd).toLocaleDateString()}
-                  </p>
-                )}
-              </div>
+              )}
             </div>
-          </motion.div>
-        )}
+          </div>
+        </motion.div>
+      )}
 
-        {/* Tabs */}
-        <Tabs.Root value={activeTab} onValueChange={setActiveTab}>
-          <Tabs.List className="flex border-b border-gray-200 dark:border-gray-700 mb-6">
-            <Tabs.Trigger
-              value="overview"
-              className="px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white data-[state=active]:text-blue-600 dark:data-[state=active]:text-blue-400 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 dark:data-[state=active]:border-blue-400"
-            >
-              Overview
-            </Tabs.Trigger>
-            <Tabs.Trigger
-              value="members"
-              className="px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white data-[state=active]:text-blue-600 dark:data-[state=active]:text-blue-400 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 dark:data-[state=active]:border-blue-400"
-            >
-              Members
-            </Tabs.Trigger>
-            <Tabs.Trigger
-              value="groups"
-              className="px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white data-[state=active]:text-blue-600 dark:data-[state=active]:text-blue-400 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 dark:data-[state=active]:border-blue-400"
-            >
-              Groups
-            </Tabs.Trigger>
-            <Tabs.Trigger
-              value="leaderboards"
-              className="px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white data-[state=active]:text-blue-600 dark:data-[state=active]:text-blue-400 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 dark:data-[state=active]:border-blue-400"
-            >
-              Leaderboards
-            </Tabs.Trigger>
-          </Tabs.List>
+      {/* Tabs */}
+      <Tabs.Root value={activeTab} onValueChange={setActiveTab}>
+        <Tabs.List className="flex border-b border-[hsl(var(--border))] mb-6">
+          <Tabs.Trigger
+            value="overview"
+            className="px-4 py-3 text-sm font-medium text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] data-[state=active]:text-[hsl(var(--primary))] data-[state=active]:border-b-2 data-[state=active]:border-[hsl(var(--primary))]"
+          >
+            Overview
+          </Tabs.Trigger>
+          <Tabs.Trigger
+            value="members"
+            className="px-4 py-3 text-sm font-medium text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] data-[state=active]:text-[hsl(var(--primary))] data-[state=active]:border-b-2 data-[state=active]:border-[hsl(var(--primary))]"
+          >
+            Members
+          </Tabs.Trigger>
+          <Tabs.Trigger
+            value="groups"
+            className="px-4 py-3 text-sm font-medium text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] data-[state=active]:text-[hsl(var(--primary))] data-[state=active]:border-b-2 data-[state=active]:border-[hsl(var(--primary))]"
+          >
+            Groups
+          </Tabs.Trigger>
+          <Tabs.Trigger
+            value="leaderboards"
+            className="px-4 py-3 text-sm font-medium text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] data-[state=active]:text-[hsl(var(--primary))] data-[state=active]:border-b-2 data-[state=active]:border-[hsl(var(--primary))]"
+          >
+            Leaderboards
+          </Tabs.Trigger>
+        </Tabs.List>
 
           <Tabs.Content value="overview">
             <OverviewTab organisation={organisation} seats={seats} />
@@ -176,11 +180,10 @@ export default function OrganisationAdminPage() {
             <GroupsTab organisationId={organisationId} />
           </Tabs.Content>
 
-          <Tabs.Content value="leaderboards">
-            <LeaderboardsTab organisationId={organisationId} />
-          </Tabs.Content>
-        </Tabs.Root>
-      </div>
+        <Tabs.Content value="leaderboards">
+          <LeaderboardsTab organisationId={organisationId} />
+        </Tabs.Content>
+      </Tabs.Root>
     </div>
   );
 }
@@ -196,59 +199,62 @@ function OverviewTab({ organisation, seats }: { organisation: Organisation; seat
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6"
         >
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Licence Usage</h3>
-            <Users className="w-5 h-5 text-gray-400" />
-          </div>
-          <div className="text-2xl font-bold text-gray-900 dark:text-white">
-            {seats?.used || 0} / {seats?.total || 0}
-          </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            {seats?.available || 0} seats available
-          </p>
+          <Card>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-medium text-[hsl(var(--muted-foreground))]">Licence Usage</h3>
+              <Users className="w-5 h-5 text-[hsl(var(--muted-foreground))]" />
+            </div>
+            <div className="text-2xl font-bold text-[hsl(var(--foreground))]">
+              {seats?.used || 0} / {seats?.total || 0}
+            </div>
+            <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
+              {seats?.available || 0} seats available
+            </p>
+          </Card>
         </motion.div>
 
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6"
         >
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Subscription Status</h3>
-            <StatusIcon className={`w-5 h-5 ${statusBadge.className.split(' ')[1]}`} />
-          </div>
-          <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusBadge.className}`}>
-            {statusBadge.label}
-          </div>
-          {organisation.currentPeriodEnd && (
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-              {organisation.status === 'ACTIVE' || organisation.status === 'TRIALING' 
-                ? `Renews ${new Date(organisation.currentPeriodEnd).toLocaleDateString()}`
-                : `Expired ${new Date(organisation.currentPeriodEnd).toLocaleDateString()}`
-              }
-            </p>
-          )}
+          <Card>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-medium text-[hsl(var(--muted-foreground))]">Subscription Status</h3>
+              <StatusIcon className="w-5 h-5" />
+            </div>
+            <Badge variant={statusBadge.variant} icon={StatusIcon}>
+              {statusBadge.label}
+            </Badge>
+            {organisation.currentPeriodEnd && (
+              <p className="text-sm text-[hsl(var(--muted-foreground))] mt-2">
+                {organisation.status === 'ACTIVE' || organisation.status === 'TRIALING' 
+                  ? `Renews ${new Date(organisation.currentPeriodEnd).toLocaleDateString()}`
+                  : `Expired ${new Date(organisation.currentPeriodEnd).toLocaleDateString()}`
+                }
+              </p>
+            )}
+          </Card>
         </motion.div>
 
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6"
         >
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Plan</h3>
-            <Building2 className="w-5 h-5 text-gray-400" />
-          </div>
-          <div className="text-2xl font-bold text-gray-900 dark:text-white">
-            {organisation.plan.replace('_', ' ')}
-          </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            {organisation.plan.includes('ANNUAL') ? 'Annual billing' : organisation.plan.includes('MONTHLY') ? 'Monthly billing' : 'Individual'}
-          </p>
+          <Card>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-medium text-[hsl(var(--muted-foreground))]">Plan</h3>
+              <Building2 className="w-5 h-5 text-[hsl(var(--muted-foreground))]" />
+            </div>
+            <div className="text-2xl font-bold text-[hsl(var(--foreground))]">
+              {organisation.plan.replace('_', ' ')}
+            </div>
+            <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
+              {organisation.plan.includes('ANNUAL') ? 'Annual billing' : organisation.plan.includes('MONTHLY') ? 'Monthly billing' : 'Individual'}
+            </p>
+          </Card>
         </motion.div>
       </div>
     </div>
@@ -278,7 +284,7 @@ function MembersTab({ organisationId }: { organisationId: string }) {
   };
 
   if (loading) {
-    return <div className="text-gray-500">Loading members...</div>;
+    return <div className="text-[hsl(var(--muted-foreground))]">Loading members...</div>;
   }
 
   // Flatten data for DataTable
@@ -294,17 +300,14 @@ function MembersTab({ organisationId }: { organisationId: string }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Members</h2>
-        <button
-          onClick={() => setShowInviteModal(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-medium transition-colors"
-        >
+        <h2 className="text-xl font-semibold text-[hsl(var(--foreground))]">Members</h2>
+        <Button onClick={() => setShowInviteModal(true)}>
           <Plus className="w-4 h-4" />
           Invite Member
-        </button>
+        </Button>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <Card className="overflow-hidden p-0">
         <DataTable
           data={tableData}
           columns={[
@@ -315,7 +318,7 @@ function MembersTab({ organisationId }: { organisationId: string }) {
             { key: 'seatAssigned', label: 'Seat', sortable: true },
           ]}
         />
-      </div>
+      </Card>
 
       {showInviteModal && (
         <InviteMemberModal
@@ -367,7 +370,7 @@ function GroupsTab({ organisationId }: { organisationId: string }) {
   };
 
   if (loading) {
-    return <div className="text-gray-500">Loading groups...</div>;
+    return <div className="text-[hsl(var(--muted-foreground))]">Loading groups...</div>;
   }
 
   const currentGroup = selectedGroup ? groups.find(g => g.id === selectedGroup) : null;
@@ -376,14 +379,11 @@ function GroupsTab({ organisationId }: { organisationId: string }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Groups</h2>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-medium transition-colors"
-        >
+        <h2 className="text-xl font-semibold text-[hsl(var(--foreground))]">Groups</h2>
+        <Button onClick={() => setShowCreateModal(true)}>
           <Plus className="w-4 h-4" />
           Create Group
-        </button>
+        </Button>
       </div>
 
       {selectedGroup ? (
@@ -402,24 +402,25 @@ function GroupsTab({ organisationId }: { organisationId: string }) {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               onClick={() => setSelectedGroup(group.id)}
-              className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 cursor-pointer hover:border-blue-500 transition-colors"
             >
-              <div className="flex items-start justify-between mb-2">
-                <h3 className="font-semibold text-gray-900 dark:text-white">{group.name}</h3>
-                <span className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-full">
-                  {group.type}
-                </span>
-              </div>
-              {group.description && (
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">{group.description}</p>
-              )}
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                {group.members?.length || 0} members
-              </p>
+              <Card className="cursor-pointer hover:border-[hsl(var(--primary))] transition-colors" padding="sm">
+                <div className="flex items-start justify-between mb-2">
+                  <h3 className="font-semibold text-[hsl(var(--foreground))]">{group.name}</h3>
+                  <Badge variant="default">
+                    {group.type}
+                  </Badge>
+                </div>
+                {group.description && (
+                  <p className="text-sm text-[hsl(var(--muted-foreground))] mb-2">{group.description}</p>
+                )}
+                <p className="text-sm text-[hsl(var(--muted-foreground))]">
+                  {group.members?.length || 0} members
+                </p>
+              </Card>
             </motion.div>
           ))}
           {groups.length === 0 && (
-            <div className="col-span-full text-center py-12 text-gray-500 dark:text-gray-400">
+            <div className="col-span-full text-center py-12 text-[hsl(var(--muted-foreground))]">
               No groups yet. Create your first group to organize members.
             </div>
           )}
@@ -490,48 +491,45 @@ function GroupDetailView({
     <div className="space-y-4">
       <button
         onClick={onBack}
-        className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+        className="text-sm text-[hsl(var(--primary))] hover:underline"
       >
         ← Back to groups
       </button>
 
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+      <Card>
         <div className="flex items-start justify-between mb-4">
           <div>
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">{group.name}</h3>
-            <span className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-full">
+            <h3 className="text-xl font-semibold text-[hsl(var(--foreground))] mb-1">{group.name}</h3>
+            <Badge variant="default">
               {group.type}
-            </span>
+            </Badge>
           </div>
-          <button
-            onClick={() => setShowAddMemberModal(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-medium transition-colors text-sm"
-          >
+          <Button onClick={() => setShowAddMemberModal(true)} size="sm">
             <Plus className="w-4 h-4" />
             Add Members
-          </button>
+          </Button>
         </div>
 
         {group.description && (
-          <p className="text-gray-600 dark:text-gray-400 mb-4">{group.description}</p>
+          <p className="text-[hsl(var(--muted-foreground))] mb-4">{group.description}</p>
         )}
 
         <div>
-          <h4 className="font-medium text-gray-900 dark:text-white mb-3">Members ({groupMembers.length})</h4>
+          <h4 className="font-medium text-[hsl(var(--foreground))] mb-3">Members ({groupMembers.length})</h4>
           {groupMembers.length === 0 ? (
-            <p className="text-gray-500 dark:text-gray-400">No members yet</p>
+            <p className="text-[hsl(var(--muted-foreground))]">No members yet</p>
           ) : (
             <div className="space-y-2">
               {groupMembers.map((gm: any) => (
                 <div
                   key={gm.member.id}
-                  className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
+                  className="flex items-center justify-between p-3 bg-[hsl(var(--muted))] rounded-lg"
                 >
                   <div>
-                    <p className="font-medium text-gray-900 dark:text-white">
+                    <p className="font-medium text-[hsl(var(--foreground))]">
                       {gm.member.user?.name || 'Unknown'}
                     </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                    <p className="text-sm text-[hsl(var(--muted-foreground))]">
                       {gm.member.user?.email || 'Unknown'}
                     </p>
                   </div>
@@ -546,7 +544,7 @@ function GroupDetailView({
             </div>
           )}
         </div>
-      </div>
+      </Card>
 
       {showAddMemberModal && (
         <AddMemberToGroupModal
@@ -591,63 +589,47 @@ function CreateGroupModal({ organisationId, onClose }: { organisationId: string;
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4"
+        className="bg-[hsl(var(--card))] rounded-2xl border border-[hsl(var(--border))] p-6 max-w-md w-full mx-4"
       >
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Create Group</h3>
+        <h3 className="text-lg font-semibold text-[hsl(var(--foreground))] mb-4">Create Group</h3>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Name
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Type
-            </label>
-            <select
-              value={type}
-              onChange={(e) => setType(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            >
-              <option value="HOUSE">House</option>
-              <option value="FACULTY">Faculty</option>
-              <option value="YEAR_GROUP">Year Group</option>
-              <option value="CUSTOM">Custom</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Description (optional)
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              rows={3}
-            />
-          </div>
+          <Input
+            label="Name"
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
+          <Select
+            label="Type"
+            value={type}
+            onChange={(e) => setType(e.target.value)}
+          >
+            <option value="HOUSE">House</option>
+            <option value="FACULTY">Faculty</option>
+            <option value="YEAR_GROUP">Year Group</option>
+            <option value="CUSTOM">Custom</option>
+          </Select>
+          <Textarea
+            label="Description (optional)"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={3}
+          />
           <div className="flex gap-3 justify-end">
-            <button
+            <Button
               type="button"
+              variant="ghost"
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-medium disabled:opacity-50"
             >
               {loading ? 'Creating...' : 'Create Group'}
-            </button>
+            </Button>
           </div>
         </form>
       </motion.div>
@@ -669,32 +651,29 @@ function AddMemberToGroupModal({
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto"
+        className="bg-[hsl(var(--card))] rounded-2xl border border-[hsl(var(--border))] p-6 max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto"
       >
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Add Members</h3>
+        <h3 className="text-lg font-semibold text-[hsl(var(--foreground))] mb-4">Add Members</h3>
         {members.length === 0 ? (
-          <p className="text-gray-500 dark:text-gray-400">All members are already in this group</p>
+          <p className="text-[hsl(var(--muted-foreground))]">All members are already in this group</p>
         ) : (
           <div className="space-y-2">
             {members.map((member) => (
               <button
                 key={member.id}
                 onClick={() => onAdd(member.id)}
-                className="w-full text-left p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                className="w-full text-left p-3 bg-[hsl(var(--muted))] rounded-lg hover:bg-[hsl(var(--muted))]/80 transition-colors"
               >
-                <p className="font-medium text-gray-900 dark:text-white">{member.user?.name || 'Unknown'}</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{member.user?.email || 'Unknown'}</p>
+                <p className="font-medium text-[hsl(var(--foreground))]">{member.user?.name || 'Unknown'}</p>
+                <p className="text-sm text-[hsl(var(--muted-foreground))]">{member.user?.email || 'Unknown'}</p>
               </button>
             ))}
           </div>
         )}
         <div className="mt-4 flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
-          >
+          <Button variant="ghost" onClick={onClose}>
             Close
-          </button>
+          </Button>
         </div>
       </motion.div>
     </div>
@@ -751,20 +730,17 @@ function LeaderboardsTab({ organisationId }: { organisationId: string }) {
   };
 
   if (loading) {
-    return <div className="text-gray-500">Loading leaderboards...</div>;
+    return <div className="text-[hsl(var(--muted-foreground))]">Loading leaderboards...</div>;
   }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Leaderboards</h2>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-medium transition-colors"
-        >
+        <h2 className="text-xl font-semibold text-[hsl(var(--foreground))]">Leaderboards</h2>
+        <Button onClick={() => setShowCreateModal(true)}>
           <Plus className="w-4 h-4" />
           Create Leaderboard
-        </button>
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -773,40 +749,41 @@ function LeaderboardsTab({ organisationId }: { organisationId: string }) {
             key={leaderboard.id}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6"
           >
-            <div className="flex items-start justify-between mb-2">
-              <div className="flex-1">
-                <h3 className="font-semibold text-gray-900 dark:text-white mb-1">{leaderboard.name}</h3>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-full">
-                    {leaderboard.visibility === 'ORG_WIDE' ? 'Org-wide' : leaderboard.visibility === 'GROUP' ? 'Group' : 'Ad-hoc'}
-                  </span>
-                  {leaderboard.organisationGroup && (
-                    <span className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-full">
-                      {leaderboard.organisationGroup.name}
-                    </span>
-                  )}
+            <Card>
+              <div className="flex items-start justify-between mb-2">
+                <div className="flex-1">
+                  <h3 className="font-semibold text-[hsl(var(--foreground))] mb-1">{leaderboard.name}</h3>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Badge variant="info">
+                      {leaderboard.visibility === 'ORG_WIDE' ? 'Org-wide' : leaderboard.visibility === 'GROUP' ? 'Group' : 'Ad-hoc'}
+                    </Badge>
+                    {leaderboard.organisationGroup && (
+                      <Badge variant="default">
+                        {leaderboard.organisationGroup.name}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
+                <button
+                  onClick={() => handleDelete(leaderboard.id)}
+                  className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+                >
+                  <XCircle className="w-5 h-5" />
+                </button>
               </div>
-              <button
-                onClick={() => handleDelete(leaderboard.id)}
-                className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
-              >
-                <XCircle className="w-5 h-5" />
-              </button>
-            </div>
-            {leaderboard.description && (
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">{leaderboard.description}</p>
-            )}
-            <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
-              <span>{leaderboard.members?.length || 0} members</span>
-              <span>Created by {leaderboard.creator?.name || 'Unknown'}</span>
-            </div>
+              {leaderboard.description && (
+                <p className="text-sm text-[hsl(var(--muted-foreground))] mb-3">{leaderboard.description}</p>
+              )}
+              <div className="flex items-center justify-between text-sm text-[hsl(var(--muted-foreground))]">
+                <span>{leaderboard.members?.length || 0} members</span>
+                <span>Created by {leaderboard.creator?.name || 'Unknown'}</span>
+              </div>
+            </Card>
           </motion.div>
         ))}
         {leaderboards.length === 0 && (
-          <div className="col-span-full text-center py-12 text-gray-500 dark:text-gray-400">
+          <div className="col-span-full text-center py-12 text-[hsl(var(--muted-foreground))]">
             No leaderboards yet. Create your first leaderboard to start competitions.
           </div>
         )}
@@ -872,81 +849,60 @@ function CreateLeaderboardModal({
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4"
+        className="bg-[hsl(var(--card))] rounded-2xl border border-[hsl(var(--border))] p-6 max-w-md w-full mx-4"
       >
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Create Leaderboard</h3>
+        <h3 className="text-lg font-semibold text-[hsl(var(--foreground))] mb-4">Create Leaderboard</h3>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Name
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Description (optional)
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              rows={3}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Visibility
-            </label>
-            <select
-              value={visibility}
-              onChange={(e) => setVisibility(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            >
-              <option value="ORG_WIDE">Organisation-wide</option>
-              <option value="GROUP">Group-based</option>
-            </select>
-          </div>
+          <Input
+            label="Name"
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
+          <Textarea
+            label="Description (optional)"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={3}
+          />
+          <Select
+            label="Visibility"
+            value={visibility}
+            onChange={(e) => setVisibility(e.target.value)}
+          >
+            <option value="ORG_WIDE">Organisation-wide</option>
+            <option value="GROUP">Group-based</option>
+          </Select>
           {visibility === 'GROUP' && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Group
-              </label>
-              <select
-                value={organisationGroupId}
-                onChange={(e) => setOrganisationGroupId(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                required
-              >
-                <option value="">Select a group</option>
-                {groups.map((group) => (
-                  <option key={group.id} value={group.id}>
-                    {group.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <Select
+              label="Group"
+              value={organisationGroupId}
+              onChange={(e) => setOrganisationGroupId(e.target.value)}
+              required
+            >
+              <option value="">Select a group</option>
+              {groups.map((group) => (
+                <option key={group.id} value={group.id}>
+                  {group.name}
+                </option>
+              ))}
+            </Select>
           )}
           <div className="flex gap-3 justify-end">
-            <button
+            <Button
               type="button"
+              variant="ghost"
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-medium disabled:opacity-50"
             >
               {loading ? 'Creating...' : 'Create Leaderboard'}
-            </button>
+            </Button>
           </div>
         </form>
       </motion.div>
@@ -954,16 +910,6 @@ function CreateLeaderboardModal({
   );
 }
 
-function getStatusBadge(status: string) {
-  const badges = {
-    ACTIVE: { label: 'Active', className: 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400', icon: CheckCircle2 },
-    TRIALING: { label: 'Trialing', className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400', icon: Clock },
-    PAST_DUE: { label: 'Past Due', className: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400', icon: AlertCircle },
-    EXPIRED: { label: 'Expired', className: 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400', icon: XCircle },
-    CANCELLED: { label: 'Cancelled', className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400', icon: XCircle },
-  };
-  return badges[status as keyof typeof badges] || badges.EXPIRED;
-}
 
 function InviteMemberModal({ organisationId, onClose }: { organisationId: string; onClose: () => void }) {
   const [email, setEmail] = useState('');
@@ -994,51 +940,40 @@ function InviteMemberModal({ organisationId, onClose }: { organisationId: string
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4"
+        className="bg-[hsl(var(--card))] rounded-2xl border border-[hsl(var(--border))] p-6 max-w-md w-full mx-4"
       >
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Invite Member</h3>
+        <h3 className="text-lg font-semibold text-[hsl(var(--foreground))] mb-4">Invite Member</h3>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Email
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Role
-            </label>
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            >
-              <option value="TEACHER">Teacher</option>
-              <option value="ADMIN">Admin</option>
-              <option value="BILLING_ADMIN">Billing Admin</option>
-            </select>
-          </div>
+          <Input
+            label="Email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+          <Select
+            label="Role"
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+          >
+            <option value="TEACHER">Teacher</option>
+            <option value="ADMIN">Admin</option>
+            <option value="BILLING_ADMIN">Billing Admin</option>
+          </Select>
           <div className="flex gap-3 justify-end">
-            <button
+            <Button
               type="button"
+              variant="ghost"
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-medium disabled:opacity-50"
             >
               {loading ? 'Sending...' : 'Send Invite'}
-            </button>
+            </Button>
           </div>
         </form>
       </motion.div>

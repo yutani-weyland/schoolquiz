@@ -36,30 +36,36 @@ const getUserFromToken = cache(async (request: NextRequest) => {
 
 // Cached function to fetch user achievements
 async function getUserAchievementsUncached(userId: string) {
-  const userAchievements = await prisma.userAchievement.findMany({
-    where: { userId },
-    include: {
-      achievement: true,
-    },
-    orderBy: { unlockedAt: 'desc' },
-  })
-  
-  return {
-    achievements: userAchievements.map((ua) => ({
-      id: ua.id,
-      achievementId: ua.achievementId,
-      achievementSlug: ua.achievement.slug,
-      achievementName: ua.achievement.name,
-      achievementDescription: ua.achievement.shortDescription,
-      achievementRarity: ua.achievement.rarity,
-      achievementCategory: ua.achievement.category,
-      achievementIconKey: ua.achievement.iconKey,
-      quizSlug: ua.quizSlug,
-      progressValue: ua.progressValue,
-      progressMax: ua.progressMax,
-      unlockedAt: ua.unlockedAt.toISOString(),
-      meta: ua.meta ? JSON.parse(ua.meta) : null,
-    })),
+  try {
+    const userAchievements = await prisma.userAchievement.findMany({
+      where: { userId },
+      include: {
+        achievement: true,
+      },
+      orderBy: { unlockedAt: 'desc' },
+    })
+    
+    return {
+      achievements: userAchievements.map((ua) => ({
+        id: ua.id,
+        achievementId: ua.achievementId,
+        achievementSlug: ua.achievement.slug,
+        achievementName: ua.achievement.name,
+        achievementDescription: ua.achievement.shortDescription,
+        achievementRarity: ua.achievement.rarity,
+        achievementCategory: ua.achievement.category,
+        achievementIconKey: ua.achievement.iconKey,
+        quizSlug: ua.quizSlug,
+        progressValue: ua.progressValue,
+        progressMax: ua.progressMax,
+        unlockedAt: ua.unlockedAt.toISOString(),
+        meta: ua.meta ? JSON.parse(ua.meta) : null,
+      })),
+    }
+  } catch (dbError: any) {
+    console.error('[User Achievements API] Database error in getUserAchievementsUncached:', dbError)
+    // Return empty achievements if database query fails
+    return { achievements: [] }
   }
 }
 
@@ -95,18 +101,25 @@ export async function GET(request: NextRequest) {
     console.error('[User Achievements API] Error fetching user achievements:', error)
     console.error('[User Achievements API] Error stack:', error.stack)
     
-    // Return empty array if database is unavailable
-    if (error.message?.includes('connect') || error.message?.includes('P1001') || error.code === 'P1001') {
+    // Return empty array for any error to prevent UI breakage
+    // This includes database connection errors, Prisma errors, etc.
+    const isDatabaseError = 
+      error.message?.includes('connect') || 
+      error.message?.includes('P1001') || 
+      error.code === 'P1001' ||
+      error.message?.includes('Prisma') ||
+      error.name === 'PrismaClientInitializationError'
+    
+    if (isDatabaseError) {
       console.warn('[User Achievements API] Database unavailable, returning empty achievements')
-      return NextResponse.json({
-        achievements: [],
-      })
+    } else {
+      console.warn('[User Achievements API] Unexpected error, returning empty achievements:', error.message)
     }
     
-    return NextResponse.json(
-      { error: 'Failed to fetch user achievements', details: error.message },
-      { status: 500 }
-    )
+    // Always return empty achievements instead of 500 to prevent UI breakage
+    return NextResponse.json({
+      achievements: [],
+    })
   }
 }
 

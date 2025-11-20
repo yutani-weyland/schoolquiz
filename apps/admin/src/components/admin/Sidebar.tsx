@@ -18,13 +18,16 @@ import {
   ChevronLeft,
   ChevronRight,
   MessageSquare,
+  FileText,
 } from 'lucide-react';
+import { DraftIndicator } from './DraftIndicator';
 
 const sidebarItems = [
   { id: 'overview', label: 'Overview', href: '/admin', icon: Home, section: 'main' as const },
   { id: 'organisations', label: 'Organisations', href: '/admin/organisations', icon: Building2, section: 'main' as const },
   { id: 'users', label: 'Users', href: '/admin/users', icon: Users, section: 'main' as const },
   { id: 'quizzes', label: 'Quizzes', href: '/admin/quizzes', icon: BookOpen, section: 'main' as const },
+  { id: 'drafts', label: 'Drafts', href: '/admin/drafts', icon: FileText, section: 'main' as const },
   { id: 'scheduling', label: 'Scheduling', href: '/admin/scheduling', icon: Calendar, section: 'main' as const },
   { id: 'analytics', label: 'Analytics', href: '/admin/analytics', icon: BarChart3, section: 'main' as const },
   { id: 'billing', label: 'Billing', href: '/admin/billing', icon: CreditCard, section: 'main' as const },
@@ -71,14 +74,21 @@ export function Sidebar() {
     const content = (
       <Link
         href={item.href}
-        className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
+        className={`relative flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
           isActive 
             ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]' 
             : 'text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]'
         }`}
       >
         <Icon className="w-5 h-5 flex-shrink-0" />
-        {!collapsed && <span className="break-words">{item.label}</span>}
+        {!collapsed && (
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <span className="break-words">{item.label}</span>
+            {item.id === 'drafts' && (
+              <DraftIndicator type="all" showCount linkToDrafts={false} />
+            )}
+          </div>
+        )}
       </Link>
     );
 

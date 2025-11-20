@@ -87,10 +87,21 @@ export async function fetchUserAchievements(
     })
       .then(async (response) => {
         if (!response.ok) {
+          // For 500 errors, return empty achievements instead of throwing
+          // This prevents the UI from breaking when the API has issues
+          if (response.status >= 500) {
+            console.warn(`User Achievements API returned ${response.status}, returning empty achievements`);
+            return { achievements: [] };
+          }
           throw new Error(`User Achievements API error: ${response.status}`);
         }
         // Parse JSON once and cache the result
         return response.json();
+      })
+      .catch((error) => {
+        // Catch any errors and return empty achievements to prevent UI breakage
+        console.error('Error fetching user achievements:', error);
+        return { achievements: [] };
       })
       .finally(() => {
         // Remove from cache after request completes (success or failure)

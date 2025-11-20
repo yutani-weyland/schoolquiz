@@ -3,6 +3,7 @@
 import { KpiCard } from '@/components/admin/KpiCard';
 import { Heatmap } from '@/components/admin/Heatmap';
 import { BarChart3, TrendingUp, AlertTriangle } from 'lucide-react';
+import { PageHeader, Card, Button, Badge } from '@/components/admin/ui';
 
 // Mock data
 const mockKpis = [
@@ -120,14 +121,11 @@ export default function InsightsPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto">
-      {/* Page Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-          Insights
-        </h1>
-        <p className="text-gray-600 dark:text-gray-400">Decision-grade KPIs and performance analytics</p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Insights"
+        description="Decision-grade KPIs and performance analytics"
+      />
 
       {/* KPI Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
@@ -146,70 +144,70 @@ export default function InsightsPage() {
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Success Rate Heatmap */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        <Card>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-[hsl(var(--foreground))] flex items-center gap-2">
               <TrendingUp className="w-5 h-5" />
               Success Rate Heatmap
             </h2>
-            <div className="text-sm text-gray-500 dark:text-gray-400">
+            <div className="text-sm text-[hsl(var(--muted-foreground))]">
               Category × Difficulty
             </div>
           </div>
           <Heatmap data={mockHeatmapData} onCellClick={handleHeatmapClick} />
-          <div className="mt-4 text-xs text-gray-500 dark:text-gray-400">
+          <div className="mt-4 text-xs text-[hsl(var(--muted-foreground))]">
             Click any cell to filter Question Bank by category and difficulty
           </div>
-        </div>
+        </Card>
 
         {/* Category Leaderboard */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+        <Card>
+          <h2 className="text-lg font-semibold text-[hsl(var(--foreground))] mb-4 flex items-center gap-2">
             <BarChart3 className="w-5 h-5" />
             Category Performance
           </h2>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-700">
-                  <th className="text-left py-3 px-2 text-sm font-medium text-gray-900 dark:text-white">Category</th>
-                  <th className="text-right py-3 px-2 text-sm font-medium text-gray-900 dark:text-white">Quizzes</th>
-                  <th className="text-right py-3 px-2 text-sm font-medium text-gray-900 dark:text-white">Exposures</th>
-                  <th className="text-right py-3 px-2 text-sm font-medium text-gray-900 dark:text-white">Weighted SR</th>
-                  <th className="text-right py-3 px-2 text-sm font-medium text-gray-900 dark:text-white">Trend</th>
-                  <th className="text-right py-3 px-2 text-sm font-medium text-gray-900 dark:text-white">Freshness</th>
+                <tr className="border-b border-[hsl(var(--border))]">
+                  <th className="text-left py-3 px-2 text-sm font-medium text-[hsl(var(--foreground))]">Category</th>
+                  <th className="text-right py-3 px-2 text-sm font-medium text-[hsl(var(--foreground))]">Quizzes</th>
+                  <th className="text-right py-3 px-2 text-sm font-medium text-[hsl(var(--foreground))]">Exposures</th>
+                  <th className="text-right py-3 px-2 text-sm font-medium text-[hsl(var(--foreground))]">Weighted SR</th>
+                  <th className="text-right py-3 px-2 text-sm font-medium text-[hsl(var(--foreground))]">Trend</th>
+                  <th className="text-right py-3 px-2 text-sm font-medium text-[hsl(var(--foreground))]">Freshness</th>
                 </tr>
               </thead>
               <tbody>
                 {mockCategoryLeaderboard.map((row, index) => (
-                  <tr key={index} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td className="py-3 px-2 text-sm font-medium text-gray-900 dark:text-white">{row.category}</td>
-                    <td className="py-3 px-2 text-sm text-gray-600 dark:text-gray-400 text-right">{row.quizzes}</td>
-                    <td className="py-3 px-2 text-sm text-gray-600 dark:text-gray-400 text-right">{row.exposures.toLocaleString()}</td>
-                    <td className="py-3 px-2 text-sm text-gray-600 dark:text-gray-400 text-right">{row.weightedSr.toFixed(1)}%</td>
+                  <tr key={index} className="border-b border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))]/50">
+                    <td className="py-3 px-2 text-sm font-medium text-[hsl(var(--foreground))]">{row.category}</td>
+                    <td className="py-3 px-2 text-sm text-[hsl(var(--muted-foreground))] text-right">{row.quizzes}</td>
+                    <td className="py-3 px-2 text-sm text-[hsl(var(--muted-foreground))] text-right">{row.exposures.toLocaleString()}</td>
+                    <td className="py-3 px-2 text-sm text-[hsl(var(--muted-foreground))] text-right">{row.weightedSr.toFixed(1)}%</td>
                     <td className="py-3 px-2 text-sm text-right">
                       <span className={`flex items-center justify-end gap-1 ${
                         row.trend > 0 ? 'text-emerald-600 dark:text-emerald-400' : 
                         row.trend < 0 ? 'text-rose-600 dark:text-rose-400' : 
-                        'text-gray-500 dark:text-gray-400'
+                        'text-[hsl(var(--muted-foreground))]'
                       }`}>
                         {row.trend > 0 ? '▲' : row.trend < 0 ? '▼' : '•'} {Math.abs(row.trend).toFixed(1)}%
                       </span>
                     </td>
-                    <td className="py-3 px-2 text-sm text-gray-600 dark:text-gray-400 text-right">{row.freshnessDays}d</td>
+                    <td className="py-3 px-2 text-sm text-[hsl(var(--muted-foreground))] text-right">{row.freshnessDays}d</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* Risk Alerts */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+      <Card>
+        <h2 className="text-lg font-semibold text-[hsl(var(--foreground))] mb-4 flex items-center gap-2">
           <AlertTriangle className="w-5 h-5 text-amber-500" />
           Risk Alerts
         </h2>
@@ -219,21 +217,21 @@ export default function InsightsPage() {
               <div className="font-medium text-amber-800 dark:text-amber-200">Low Success Rate Questions</div>
               <div className="text-sm text-amber-700 dark:text-amber-300">3 questions with SR &lt; 50% and n ≥ 100</div>
             </div>
-            <button className="px-3 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 text-sm rounded-lg hover:bg-amber-200 dark:hover:bg-amber-900/50">
+            <Button variant="outline" size="sm" className="bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 hover:bg-amber-200 dark:hover:bg-amber-900/50 border-amber-200 dark:border-amber-800">
               Review
-            </button>
+            </Button>
           </div>
           <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
             <div>
               <div className="font-medium text-blue-800 dark:text-blue-200">Coverage Gaps</div>
               <div className="text-sm text-blue-700 dark:text-blue-300">3 categories with &lt; 3 published questions in 60d</div>
             </div>
-            <button className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 text-sm rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/50">
+            <Button variant="outline" size="sm" className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-900/50 border-blue-200 dark:border-blue-800">
               Fill Gaps
-            </button>
+            </Button>
           </div>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }
