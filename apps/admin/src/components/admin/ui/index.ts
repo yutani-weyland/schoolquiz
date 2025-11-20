@@ -14,4 +14,5 @@ export {
   DataTableCell,
   DataTableEmpty,
 } from './DataTable'
+export { StatusStrip } from '../StatusStrip'
 

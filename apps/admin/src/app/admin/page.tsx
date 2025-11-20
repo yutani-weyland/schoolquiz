@@ -3,7 +3,7 @@
 import { Building2, Users, BookOpen, TrendingUp, Activity, Clock, CheckCircle2, AlertCircle, BarChart3, Zap, Plus, Crown, User } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { PageHeader } from '@/components/admin/ui'
+import { PageHeader, StatusStrip } from '@/components/admin/ui'
 
 type TimePeriod = 'week' | 'month' | 'year'
 
@@ -222,6 +222,10 @@ export default function AdminOverviewPage() {
     { label: 'View Analytics', href: '/admin/analytics', icon: BarChart3 },
   ]
 
+  // Example: Check for system issues (this would come from real data)
+  const hasStorageWarning = false // Example: would check actual storage usage
+  const hasSystemIssues = false // Example: would check system health
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -234,6 +238,30 @@ export default function AdminOverviewPage() {
           </div>
         }
       />
+
+      {/* Status Strips - Example usage */}
+      {hasStorageWarning && (
+        <StatusStrip
+          variant="warning"
+          message="Storage capacity at 75%"
+          details="Consider cleaning up old data or upgrading storage plan."
+          action={{
+            label: 'View Storage',
+            onClick: () => window.location.href = '/admin/system',
+          }}
+        />
+      )}
+      {hasSystemIssues && (
+        <StatusStrip
+          variant="error"
+          message="System health check failed"
+          details="Some services are experiencing issues. Check system status for details."
+          action={{
+            label: 'View Status',
+            onClick: () => window.location.href = '/admin/system',
+          }}
+        />
+      )}
 
       {/* User Split Section - Free vs Premium */}
       <div className="bg-[hsl(var(--card))] rounded-2xl p-6 border border-[hsl(var(--border))]">

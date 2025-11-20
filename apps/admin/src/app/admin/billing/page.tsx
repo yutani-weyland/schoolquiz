@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { CreditCard, DollarSign, TrendingUp, FileText, ExternalLink, AlertCircle, CheckCircle2, Clock, Plus, XCircle } from 'lucide-react'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { Card, PageHeader, Badge, Button } from '@/components/admin/ui'
+import { Card, PageHeader, Badge, Button, StatusStrip } from '@/components/admin/ui'
 
 interface Subscription {
   id: string
@@ -126,12 +126,40 @@ export default function BillingPage() {
     )
   }
 
+  // Check for billing issues
+  const pastDueSubscriptions = subscriptions.filter(s => s.status === 'PAST_DUE')
+  const overdueInvoices = invoices.filter(i => i.status === 'OVERDUE')
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Billing"
         description="Manage subscriptions, invoices, and payment information"
       />
+
+      {/* Status Strips */}
+      {pastDueSubscriptions.length > 0 && (
+        <StatusStrip
+          variant="error"
+          message={`${pastDueSubscriptions.length} organisation${pastDueSubscriptions.length > 1 ? 's' : ''} ${pastDueSubscriptions.length > 1 ? 'have' : 'has'} past due subscriptions`}
+          details="Payment failed or subscription is past due. Review and update payment methods."
+          action={{
+            label: 'View Subscriptions',
+            onClick: () => setActiveTab('subscriptions'),
+          }}
+        />
+      )}
+      {overdueInvoices.length > 0 && (
+        <StatusStrip
+          variant="warning"
+          message={`${overdueInvoices.length} invoice${overdueInvoices.length > 1 ? 's' : ''} ${overdueInvoices.length > 1 ? 'are' : 'is'} overdue`}
+          details="Some invoices are past their due date and require attention."
+          action={{
+            label: 'View Invoices',
+            onClick: () => setActiveTab('invoices'),
+          }}
+        />
+      )}
 
       {/* Revenue Stats */}
       {revenue && (
