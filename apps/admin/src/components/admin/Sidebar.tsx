@@ -22,27 +22,57 @@ import {
 } from 'lucide-react';
 import { DraftIndicator } from './DraftIndicator';
 
-const sidebarItems = [
-  { id: 'overview', label: 'Overview', href: '/admin', icon: Home, section: 'main' as const },
-  { id: 'organisations', label: 'Organisations', href: '/admin/organisations', icon: Building2, section: 'main' as const },
-  { id: 'users', label: 'Users', href: '/admin/users', icon: Users, section: 'main' as const },
-  { id: 'quizzes', label: 'Quizzes', href: '/admin/quizzes', icon: BookOpen, section: 'main' as const },
-  { id: 'drafts', label: 'Drafts', href: '/admin/drafts', icon: FileText, section: 'main' as const },
-  { id: 'scheduling', label: 'Scheduling', href: '/admin/scheduling', icon: Calendar, section: 'main' as const },
-  { id: 'analytics', label: 'Analytics', href: '/admin/analytics', icon: BarChart3, section: 'main' as const },
-  { id: 'billing', label: 'Billing', href: '/admin/billing', icon: CreditCard, section: 'main' as const },
-  { id: 'support', label: 'Support', href: '/admin/support', icon: HelpCircle, section: 'main' as const },
-  { id: 'system', label: 'System', href: '/admin/system', icon: Settings, section: 'main' as const },
-  { id: 'achievements', label: 'Achievements', href: '/admin/achievements', icon: Target, section: 'main' as const },
-  { id: 'question-submissions', label: 'Question Submissions', href: '/admin/questions/submissions', icon: MessageSquare, section: 'main' as const },
+type Section = 'overview' | 'management' | 'content' | 'operations';
+
+interface SidebarItem {
+  id: string;
+  label: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  section: Section;
+}
+
+const sidebarItems: SidebarItem[] = [
+  { id: 'overview', label: 'Overview', href: '/admin', icon: Home, section: 'overview' },
+  { id: 'organisations', label: 'Organisations', href: '/admin/organisations', icon: Building2, section: 'management' },
+  { id: 'users', label: 'Users', href: '/admin/users', icon: Users, section: 'management' },
+  { id: 'quizzes', label: 'Quizzes', href: '/admin/quizzes', icon: BookOpen, section: 'content' },
+  { id: 'drafts', label: 'Drafts', href: '/admin/drafts', icon: FileText, section: 'content' },
+  { id: 'achievements', label: 'Achievements', href: '/admin/achievements', icon: Target, section: 'content' },
+  { id: 'question-submissions', label: 'Question Submissions', href: '/admin/questions/submissions', icon: MessageSquare, section: 'content' },
+  { id: 'scheduling', label: 'Scheduling', href: '/admin/scheduling', icon: Calendar, section: 'operations' },
+  { id: 'analytics', label: 'Analytics', href: '/admin/analytics', icon: BarChart3, section: 'operations' },
+  { id: 'billing', label: 'Billing', href: '/admin/billing', icon: CreditCard, section: 'operations' },
+  { id: 'support', label: 'Support', href: '/admin/support', icon: HelpCircle, section: 'operations' },
+  { id: 'system', label: 'System', href: '/admin/system', icon: Settings, section: 'operations' },
 ];
 
-const sectionLabels = {
-  main: '',
+const sectionLabels: Record<Section, string> = {
+  overview: '',
+  management: 'Management',
+  content: 'Content',
+  operations: 'Operations',
+};
+
+// Get environment from env vars
+const getEnvironment = (): 'DEV' | 'STAGE' | 'PROD' | null => {
+  if (typeof window === 'undefined') {
+    // Server-side: check process.env
+    const env = process.env.NEXT_PUBLIC_ENV || process.env.NODE_ENV;
+    if (env === 'development') return 'DEV';
+    if (env === 'staging' || env === 'stage') return 'STAGE';
+    return null; // Production - don't show badge
+  }
+  // Client-side: check window location or env
+  const hostname = window.location.hostname;
+  if (hostname.includes('localhost') || hostname.includes('127.0.0.1')) return 'DEV';
+  if (hostname.includes('staging') || hostname.includes('stage')) return 'STAGE';
+  return null; // Production
 };
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
+  const [environment, setEnvironment] = useState<'DEV' | 'STAGE' | 'PROD' | null>(null);
   const pathname = usePathname();
 
   // Persist collapsed state
@@ -51,6 +81,8 @@ export function Sidebar() {
     if (saved) {
       setCollapsed(JSON.parse(saved));
     }
+    // Get environment
+    setEnvironment(getEnvironment());
   }, []);
 
   const toggleCollapsed = () => {
@@ -59,25 +91,38 @@ export function Sidebar() {
     localStorage.setItem('sidebar-collapsed', JSON.stringify(newCollapsed));
   };
 
+  // Group items by section
   const groupedItems = sidebarItems.reduce((acc, item) => {
     if (!acc[item.section]) {
       acc[item.section] = [];
     }
     acc[item.section].push(item);
     return acc;
-  }, {} as Record<string, typeof sidebarItems>);
+  }, {} as Record<Section, SidebarItem[]>);
 
-  const SidebarItem = ({ item }: { item: typeof sidebarItems[0] }) => {
+  // Check if any item in a section is active
+  const isSectionActive = (section: Section) => {
+    return groupedItems[section]?.some(item => {
+      if (item.href === '/admin') {
+        return pathname === '/admin';
+      }
+      return pathname?.startsWith(item.href);
+    }) || false;
+  };
+
+  const SidebarItem = ({ item }: { item: SidebarItem }) => {
     const Icon = item.icon;
-    const isActive = pathname === item.href;
+    const isActive = item.href === '/admin' 
+      ? pathname === '/admin'
+      : pathname?.startsWith(item.href);
     
     const content = (
       <Link
         href={item.href}
-        className={`relative flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
+        className={`relative flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
           isActive 
-            ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]' 
-            : 'text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]'
+            ? 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))] border-l-4 border-[hsl(var(--primary))]' 
+            : 'text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] border-l-4 border-transparent'
         }`}
       >
         <Icon className="w-5 h-5 flex-shrink-0" />
@@ -116,21 +161,52 @@ export function Sidebar() {
     return content;
   };
 
+  const SectionHeader = ({ section }: { section: Section }) => {
+    if (section === 'overview' || !sectionLabels[section]) return null;
+    const isActive = isSectionActive(section);
+    
+    return (
+      <div className={`px-3 py-2 text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wider ${
+        isActive ? 'text-[hsl(var(--foreground))]' : ''
+      }`}>
+        {sectionLabels[section]}
+      </div>
+    );
+  };
+
   return (
     <div className={`bg-[hsl(var(--card))] border-r border-[hsl(var(--border))] transition-all duration-200 ${
-      collapsed ? 'w-16' : 'w-60'
+      collapsed ? 'w-20' : 'w-[280px]'
     }`}>
       <div className="sticky top-0 h-screen flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-[hsl(var(--border))] bg-[hsl(var(--card))]">
-          {!collapsed && (
-            <div className="text-lg font-semibold text-[hsl(var(--foreground))]">
-              Admin
+          {!collapsed ? (
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <div className="text-lg font-semibold text-[hsl(var(--foreground))]">
+                SchoolQuiz Admin
+              </div>
+              {environment && (
+                <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded-full ${
+                  environment === 'DEV' 
+                    ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                    : environment === 'STAGE'
+                    ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                    : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
+                }`}>
+                  {environment}
+                </span>
+              )}
+            </div>
+          ) : (
+            <div className="text-lg font-semibold text-[hsl(var(--foreground))] mx-auto">
+              SQ
             </div>
           )}
           <button
             onClick={toggleCollapsed}
             className="p-2 rounded-xl hover:bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] transition-all duration-200"
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
           </button>
@@ -138,10 +214,41 @@ export function Sidebar() {
 
         {/* Navigation */}
         <div className="flex-1 overflow-y-auto p-3">
-          <div className="space-y-1">
-            {sidebarItems.map((item) => (
+          <div className="space-y-4">
+            {/* Overview (ungrouped) */}
+            {groupedItems.overview && groupedItems.overview.map((item) => (
               <SidebarItem key={item.id} item={item} />
             ))}
+
+            {/* Management */}
+            {groupedItems.management && groupedItems.management.length > 0 && (
+              <div className="space-y-1">
+                <SectionHeader section="management" />
+                {groupedItems.management.map((item) => (
+                  <SidebarItem key={item.id} item={item} />
+                ))}
+              </div>
+            )}
+
+            {/* Content */}
+            {groupedItems.content && groupedItems.content.length > 0 && (
+              <div className="space-y-1">
+                <SectionHeader section="content" />
+                {groupedItems.content.map((item) => (
+                  <SidebarItem key={item.id} item={item} />
+                ))}
+              </div>
+            )}
+
+            {/* Operations */}
+            {groupedItems.operations && groupedItems.operations.length > 0 && (
+              <div className="space-y-1">
+                <SectionHeader section="operations" />
+                {groupedItems.operations.map((item) => (
+                  <SidebarItem key={item.id} item={item} />
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

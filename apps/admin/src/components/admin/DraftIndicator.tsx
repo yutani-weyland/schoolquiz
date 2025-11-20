@@ -7,7 +7,7 @@
 
 import { useEffect, useState } from 'react'
 import { FileText } from 'lucide-react'
-import { Link } from 'next/link'
+import Link from 'next/link'
 import { checkDraft, getAllDrafts, type Draft } from '@/hooks/useDraft'
 
 interface DraftIndicatorProps {

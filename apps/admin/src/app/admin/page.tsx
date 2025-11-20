@@ -3,6 +3,7 @@
 import { Building2, Users, BookOpen, TrendingUp, Activity, Clock, CheckCircle2, AlertCircle, BarChart3, Zap, Plus, Crown, User } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { PageHeader } from '@/components/admin/ui'
 
 type TimePeriod = 'week' | 'month' | 'year'
 
@@ -223,21 +224,16 @@ export default function AdminOverviewPage() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-      <div>
-          <h1 className="text-3xl font-bold text-[hsl(var(--foreground))] tracking-tight">
-            Admin Overview
-          </h1>
-          <p className="mt-2 text-sm text-[hsl(var(--muted-foreground))]">
-            Platform statistics and key metrics
-          </p>
-        </div>
-        <div className="flex items-center gap-2 text-sm text-[hsl(var(--muted-foreground))]">
-          <Clock className="w-4 h-4" />
-          <span>Last updated: {currentTime || '--:--:--'}</span>
-        </div>
-      </div>
+      <PageHeader
+        title="Overview"
+        description="Platform statistics and key metrics"
+        actions={
+          <div className="flex items-center gap-2 text-sm text-[hsl(var(--muted-foreground))]">
+            <Clock className="w-4 h-4" />
+            <span>Last updated: {currentTime || '--:--:--'}</span>
+          </div>
+        }
+      />
 
       {/* User Split Section - Free vs Premium */}
       <div className="bg-[hsl(var(--card))] rounded-2xl p-6 border border-[hsl(var(--border))]">
