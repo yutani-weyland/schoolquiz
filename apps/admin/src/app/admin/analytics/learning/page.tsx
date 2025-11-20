@@ -102,7 +102,6 @@ export default function LearningAnalyticsPage() {
                   border: '1px solid #e5e7eb',
                   borderRadius: '0.5rem',
                 }}
-                className="dark:bg-gray-800 dark:border-gray-700"
                 formatter={(value: number, name: string) => [
                   `${value.toFixed(1)}%`,
                   'Coverage'
@@ -223,7 +222,6 @@ export default function LearningAnalyticsPage() {
                     border: '1px solid #e5e7eb',
                     borderRadius: '0.5rem',
                   }}
-                  className="dark:bg-gray-800 dark:border-gray-700"
                   formatter={(value: number) => [`${value.toFixed(1)}%`, 'Correct Rate']}
                 />
                 <Bar dataKey="percentage" radius={[8, 8, 0, 0]}>
@@ -263,7 +261,6 @@ export default function LearningAnalyticsPage() {
                     border: '1px solid #e5e7eb',
                     borderRadius: '0.5rem',
                   }}
-                  className="dark:bg-gray-800 dark:border-gray-700"
                 />
                 <Line 
                   type="monotone" 

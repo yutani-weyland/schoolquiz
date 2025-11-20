@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { fetchSubscription } from '@/lib/subscription-fetch';
 
 export type UserTier = 'basic' | 'premium';
 
@@ -41,18 +42,11 @@ export function useUserTier(): {
         // Get userId from localStorage (stored during signin)
         const userId = localStorage.getItem('userId');
         
-        // Fetch user subscription/tier from API
-        const headers: HeadersInit = { Authorization: `Bearer ${token}` };
-        if (userId) {
-          headers['X-User-Id'] = userId;
-        }
+        // Use shared fetch utility with automatic deduplication
+        // Returns parsed JSON data directly (not Response object)
+        const data = await fetchSubscription(userId, token);
         
-        const response = await fetch('/api/user/subscription', {
-          headers,
-        });
-
-        if (response.ok) {
-          const data = await response.json();
+        if (data) {
           // Determine tier: premium if status is ACTIVE, TRIALING, or FREE_TRIAL
           // OR if tier field exists and is "premium"
           const premiumStatuses = ['ACTIVE', 'TRIALING', 'FREE_TRIAL'];
@@ -65,13 +59,6 @@ export function useUserTier(): {
           setTier(determinedTier);
           // Update localStorage to match API response
           localStorage.setItem('userTier', determinedTier);
-        } else {
-          // If API fails but we have localStorage, use that
-          // Otherwise default to basic
-          if (!storedTier) {
-            setTier('basic');
-          }
-          // Don't override localStorage if API fails - trust localStorage
         }
       } catch (error) {
         console.error('Failed to fetch user tier:', error);

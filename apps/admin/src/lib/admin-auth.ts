@@ -1,9 +1,11 @@
 import { redirect } from 'next/navigation'
+import { cache } from 'react'
 
 /**
  * Check if user is a platform admin
+ * Cached to prevent duplicate database queries in the same render pass
  */
-export async function isPlatformAdmin(userId: string): Promise<boolean> {
+export const isPlatformAdmin = cache(async function isPlatformAdmin(userId: string): Promise<boolean> {
   try {
     // Lazy import to avoid Prisma initialization errors
     const { prisma } = await import('@schoolquiz/db')
@@ -20,13 +22,14 @@ export async function isPlatformAdmin(userId: string): Promise<boolean> {
     }
     return false
   }
-}
+});
 
 /**
  * Require platform admin access or redirect
  * Gracefully handles database connection issues
+ * Cached to prevent duplicate checks in the same render pass
  */
-export async function requirePlatformAdmin() {
+export const requirePlatformAdmin = cache(async function requirePlatformAdmin() {
   // Check if DATABASE_URL is set first
   const dbUrl = process.env.DATABASE_URL
   
@@ -78,5 +81,5 @@ export async function requirePlatformAdmin() {
     console.error('Unexpected error in admin auth:', error)
     throw error
   }
-}
+});
 

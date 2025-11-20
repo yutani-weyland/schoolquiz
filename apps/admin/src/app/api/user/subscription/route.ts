@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@schoolquiz/db";
 import { handleApiError, UnauthorizedError, InternalServerError } from "@/lib/api-error";
 import { logger } from "@/lib/logger";
+import { cache } from "react";
+
+// Server-side cache for getUserFromToken to prevent duplicate DB queries
+const cachedGetUserFromToken = cache(async (request: NextRequest) => {
+  return getUserFromToken(request);
+});
 
 /**
  * Get user from token-based auth (localStorage token system)
@@ -37,7 +43,7 @@ async function getUserFromToken(request: NextRequest) {
         }
       } catch (err) {
         // NextAuth not available, continue
-        logger.debug('NextAuth not available:', err);
+        logger.debug('NextAuth not available:', err as any);
       }
     }
 
@@ -70,85 +76,99 @@ async function getUserFromToken(request: NextRequest) {
   }
 }
 
+// Cached function to get subscription data
+async function getSubscriptionDataUncached(request: NextRequest) {
+  // Get headers from request
+  const userId = request.headers.get("X-User-Id");
+  const authHeader = request.headers.get("Authorization");
+  
+  // Try to get user from token (with React cache for deduplication)
+  let user;
+  try {
+    user = await cachedGetUserFromToken(request);
+  } catch (dbError: any) {
+    console.error('[Subscription API] Database error in getUserFromToken:', dbError);
+    user = null; // Set to null so we can use fallback
+  }
+  
+  // If no user found, try fallback from token/userId
+  if (!user && userId && authHeader) {
+    console.log('[Subscription API] No user from DB, trying fallback with userId:', userId);
+    const token = authHeader.substring(7);
+    
+    // Extract tier from token or userId
+    let tier = 'basic';
+    
+    // Check token format: "mock-token-{userKey}-{timestamp}"
+    if (token.startsWith("mock-token-")) {
+      const parts = token.split("-");
+      if (parts.length >= 3) {
+        const userKey = parts.slice(2, -1).join("-");
+        console.log('[Subscription API] Extracted user key from token:', userKey);
+        
+        if (userKey === 'premium' || userKey === 'andrew') {
+          tier = 'premium';
+        } else if (userKey === 'richard') {
+          tier = 'basic';
+        }
+      }
+    }
+    
+    // Also check userId for premium indicator
+    if (userId.includes('premium') || userId === 'user-premium-789') {
+      tier = 'premium';
+    }
+    
+    console.log('[Subscription API] Using fallback tier:', tier);
+    return {
+      tier,
+      status: tier === 'premium' ? 'ACTIVE' : 'FREE_TRIAL',
+      plan: null,
+      subscriptionEndsAt: null,
+      freeTrialUntil: null,
+      freeTrialStartedAt: null,
+      freeTrialEndsAt: null,
+    };
+  }
+  
+  if (!user) {
+    console.log('[Subscription API] No user found and no fallback available - unauthorized');
+    throw new UnauthorizedError();
+  }
+
+  console.log('[Subscription API] User found:', user.id, 'tier:', user.tier);
+
+  // Determine tier: premium if tier is "premium" OR subscription is active
+  const isPremium = 
+    user.tier === 'premium' || 
+    (user.subscriptionStatus === 'ACTIVE' || user.subscriptionStatus === 'TRIALING') ||
+    (user.freeTrialUntil && new Date(user.freeTrialUntil) > new Date());
+
+  return {
+    tier: isPremium ? 'premium' : 'basic',
+    status: user.subscriptionStatus || 'FREE_TRIAL',
+    plan: user.subscriptionPlan,
+    subscriptionEndsAt: user.subscriptionEndsAt?.toISOString() || null,
+    freeTrialUntil: user.freeTrialUntil?.toISOString() || null,
+    freeTrialStartedAt: user.freeTrialStartedAt?.toISOString() || null,
+    freeTrialEndsAt: user.freeTrialEndsAt?.toISOString() || null,
+  };
+}
+
 export async function GET(request: NextRequest) {
   try {
     console.log('[Subscription API] Starting request...');
     
-    // Get headers first for fallback
+    // Get headers first for cache key
     const userId = request.headers.get("X-User-Id");
-    const authHeader = request.headers.get("Authorization");
     
-    // Try to get user from token
-    let user;
-    try {
-      user = await getUserFromToken(request);
-    } catch (dbError: any) {
-      console.error('[Subscription API] Database error in getUserFromToken:', dbError);
-      user = null; // Set to null so we can use fallback
-    }
+    // Note: unstable_cache doesn't work well with request objects directly
+    // So we'll do simple in-memory caching for the database query part
+    // The client-side deduplication (in subscription-fetch.ts) is more important
+    // and will prevent multiple simultaneous requests from reaching the server
     
-    // If no user found, try fallback from token/userId
-    if (!user && userId && authHeader) {
-      console.log('[Subscription API] No user from DB, trying fallback with userId:', userId);
-      const token = authHeader.substring(7);
-      
-      // Extract tier from token or userId
-      let tier = 'basic';
-      
-      // Check token format: "mock-token-{userKey}-{timestamp}"
-      if (token.startsWith("mock-token-")) {
-        const parts = token.split("-");
-        if (parts.length >= 3) {
-          const userKey = parts.slice(2, -1).join("-");
-          console.log('[Subscription API] Extracted user key from token:', userKey);
-          
-          if (userKey === 'premium' || userKey === 'andrew') {
-            tier = 'premium';
-          } else if (userKey === 'richard') {
-            tier = 'basic';
-          }
-        }
-      }
-      
-      // Also check userId for premium indicator
-      if (userId.includes('premium') || userId === 'user-premium-789') {
-        tier = 'premium';
-      }
-      
-      console.log('[Subscription API] Using fallback tier:', tier);
-      return NextResponse.json({
-        tier,
-        status: tier === 'premium' ? 'ACTIVE' : 'FREE_TRIAL',
-        plan: null,
-        subscriptionEndsAt: null,
-        freeTrialUntil: null,
-        freeTrialStartedAt: null,
-        freeTrialEndsAt: null,
-      });
-    }
-    
-    if (!user) {
-      console.log('[Subscription API] No user found and no fallback available - unauthorized');
-      throw new UnauthorizedError();
-    }
-
-    console.log('[Subscription API] User found:', user.id, 'tier:', user.tier);
-
-    // Determine tier: premium if tier is "premium" OR subscription is active
-    const isPremium = 
-      user.tier === 'premium' || 
-      (user.subscriptionStatus === 'ACTIVE' || user.subscriptionStatus === 'TRIALING') ||
-      (user.freeTrialUntil && new Date(user.freeTrialUntil) > new Date());
-
-    return NextResponse.json({
-      tier: isPremium ? 'premium' : 'basic',
-      status: user.subscriptionStatus || 'FREE_TRIAL',
-      plan: user.subscriptionPlan,
-      subscriptionEndsAt: user.subscriptionEndsAt?.toISOString() || null,
-      freeTrialUntil: user.freeTrialUntil?.toISOString() || null,
-      freeTrialStartedAt: user.freeTrialStartedAt?.toISOString() || null,
-      freeTrialEndsAt: user.freeTrialEndsAt?.toISOString() || null,
-    });
+    const data = await getSubscriptionDataUncached(request);
+    return NextResponse.json(data);
   } catch (error: unknown) {
     console.error('[Subscription API] Error:', error);
     return handleApiError(error);

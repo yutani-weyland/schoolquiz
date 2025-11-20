@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@schoolquiz/db';
 import { requireAdmin } from '@/lib/auth-helpers';
+import { requireAuth } from '@/lib/auth';
 
 // Helper to generate CUID-like IDs
 function generateId(): string {
@@ -98,20 +99,21 @@ export async function GET(request: NextRequest) {
     ]);
     
     // Get runs count separately
-    let runsCounts;
+    let runsCounts: any[] = [];
     try {
       // Check if runs table exists by trying a simple query
-      const runs = await prisma.run.findMany({
+      await prisma.run.findMany({
         select: { quizId: true },
         take: 1,
       });
       // If that works, do the groupBy
-      runsCounts = await prisma.run.groupBy({
+      const result = await prisma.run.groupBy({
         by: ['quizId'],
         _count: {
           id: true,
         },
       });
+      runsCounts = result as any[];
     } catch {
       // If runs table or quizId column doesn't exist, return empty array
       runsCounts = [];
@@ -176,7 +178,7 @@ export async function POST(request: NextRequest) {
     console.log('📝 Creating quiz:', { number: body.number, title: body.title });
 
     // Get authenticated user (will create default if none exists, for now)
-    let user = await requireAuth(request).catch(async () => {
+    let user = await requireAuth().catch(async () => {
       // Fallback: Create default teacher if auth fails (for development)
       let teacher = await prisma.teacher.findFirst();
       if (!teacher) {
@@ -203,7 +205,6 @@ export async function POST(request: NextRequest) {
         email: teacher.email,
         name: teacher.name,
         role: teacher.role || 'teacher',
-        schoolId: teacher.schoolId,
       };
     });
 
@@ -255,7 +256,6 @@ export async function POST(request: NextRequest) {
         status: body.status,
         colorHex: '#FFE135', // Default yellow, can be customized later
         createdBy: user.id,
-        schoolId: user.schoolId,
         weekISO: body.scheduledDate 
           ? new Date(body.scheduledDate).toISOString().split('T')[0]
           : new Date().toISOString().split('T')[0],
@@ -295,7 +295,6 @@ export async function POST(request: NextRequest) {
             categoryId,
             text: questionInput.question,
             answer: questionInput.answer,
-            explanation: questionInput.explanation || null,
             difficulty: 0.5, // Default difficulty
             createdBy: user.id,
             isPeopleQuestion: isPeoplesRound,

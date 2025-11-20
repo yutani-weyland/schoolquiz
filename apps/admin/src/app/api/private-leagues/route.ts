@@ -49,8 +49,10 @@ function generateInviteCode(): string {
 // In-memory storage for development/testing (when DATABASE_URL is not set)
 const getDevStorage = () => {
   if (typeof (global as any).devLeaguesStorage === 'undefined') {
-    (global as any).devLeaguesStorage = new Map<string, any>()
-    (global as any).devMembersStorage = new Map<string, Set<string>>()
+    const MapConstructor = globalThis.Map as any;
+    const SetConstructor = globalThis.Set as any;
+    (global as any).devLeaguesStorage = new MapConstructor()
+    (global as any).devMembersStorage = new MapConstructor()
   }
   return {
     leagues: (global as any).devLeaguesStorage,
@@ -85,11 +87,11 @@ export async function GET(request: NextRequest) {
       const storage = getDevStorage()
       const userLeagues: any[] = []
       for (const [leagueId, league] of storage.leagues.entries()) {
-        const memberIds = storage.members.get(leagueId) || new Set<string>()
+        const memberIds = storage.members.get(leagueId) || new (globalThis.Set as any)()
         if (league.createdByUserId === user.id || memberIds.has(user.id)) {
           userLeagues.push({
             ...league,
-            members: Array.from(memberIds).map((memberId: string) => ({
+            members: Array.from(memberIds as Set<string>).map((memberId: string) => ({
               id: memberId,
               userId: memberId,
               joinedAt: new Date().toISOString(),
@@ -260,7 +262,7 @@ export async function POST(request: NextRequest) {
       
       const storage = getDevStorage()
       storage.leagues.set(leagueId, league)
-      const members = new Set<string>([user.id])
+      const members = new (globalThis.Set as any)([user.id])
       storage.members.set(leagueId, members)
       
       return NextResponse.json({

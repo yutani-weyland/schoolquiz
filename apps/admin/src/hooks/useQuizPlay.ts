@@ -51,6 +51,7 @@ export interface UseQuizPlayResult {
 	switchToPresenterView: () => void;
 	startRound: () => void;
 	finishQuiz: () => void;
+	reset: () => void;
 	
 	// Completion
 	isComplete: boolean;

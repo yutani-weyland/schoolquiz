@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@schoolquiz/db'
+import { unstable_cache } from 'next/cache'
+import { cache } from 'react'
 
 // Import getUserTier from achievements module
 function getUserTier(user: {
@@ -18,7 +20,8 @@ function getUserTier(user: {
   return isPremium ? 'premium' : 'free'
 }
 
-async function getUserFromToken(request: NextRequest) {
+// Memoize getUserFromToken to prevent duplicate database queries in same render
+const getUserFromToken = cache(async (request: NextRequest) => {
   try {
     const authHeader = request.headers.get('Authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -57,29 +60,20 @@ async function getUserFromToken(request: NextRequest) {
     console.error('[Achievements API] Error in getUserFromToken:', error)
     return null
   }
-}
+})
 
-/**
- * GET /api/achievements
- * Get all achievements with user's unlock status
- */
-export async function GET(request: NextRequest) {
+// Cached function to fetch achievements data
+async function getAchievementsDataUncached(userId: string | null, tier: 'visitor' | 'free' | 'premium') {
+  // Get all achievements - handle case where table doesn't exist yet
+  let allAchievements: any[] = []
   try {
-    console.log('[Achievements API] Starting request...')
-    const user = await getUserFromToken(request)
-    const tier = user ? getUserTier(user) : 'visitor'
-    console.log('[Achievements API] User tier:', tier)
-    
-    // Get all achievements - handle case where table doesn't exist yet
-    let allAchievements: any[] = []
-    try {
-      allAchievements = await (prisma as any).achievement.findMany({
-        orderBy: [
-          { rarity: 'asc' }, // Legendary first
-          { name: 'asc' },
-        ],
-      })
-      console.log('[Achievements API] Found achievements:', allAchievements.length)
+    allAchievements = await (prisma as any).achievement.findMany({
+      orderBy: [
+        { rarity: 'asc' }, // Legendary first
+        { name: 'asc' },
+      ],
+    })
+    console.log('[Achievements API] Found achievements:', allAchievements.length)
     } catch (error: any) {
       // If achievements table doesn't exist yet, return empty array
       const errorMsg = error.message || String(error)
@@ -91,11 +85,11 @@ export async function GET(request: NextRequest) {
         errorMsg.includes('is not a function')
       ) {
         console.warn('Achievements table not found - migrations may need to be run:', errorMsg)
-        return NextResponse.json({
+        return {
           achievements: [],
           tier,
           message: 'Achievements table not initialized. Please run database migrations.',
-        })
+        }
       }
       throw error
     }
@@ -311,12 +305,44 @@ export async function GET(request: NextRequest) {
       }
     })
     
-    return NextResponse.json({
+    return {
       achievements: achievementsWithStatus,
       tier,
-    })
+    }
   } catch (error: any) {
     console.error('[Achievements API] Error fetching achievements:', error)
+    throw error
+  }
+}
+
+/**
+ * GET /api/achievements
+ * Get all achievements with user's unlock status
+ */
+export async function GET(request: NextRequest) {
+  try {
+    console.log('[Achievements API] Starting request...')
+    const user = await getUserFromToken(request)
+    const tier = user ? getUserTier(user) : 'visitor'
+    const userId = user?.id || null
+    console.log('[Achievements API] User tier:', tier)
+    
+    // Cache achievements data for 60 seconds per user
+    // This prevents duplicate database queries when multiple components request the same data
+    const cacheKey = userId || 'anonymous'
+    const getCachedAchievements = unstable_cache(
+      async (uid: string | null, t: 'visitor' | 'free' | 'premium') => getAchievementsDataUncached(uid, t),
+      [`achievements-${cacheKey}`],
+      { 
+        revalidate: 60, // Cache for 60 seconds
+        tags: [`achievements-${cacheKey}`]
+      }
+    )
+
+    const data = await getCachedAchievements(userId, tier)
+    return NextResponse.json(data)
+  } catch (error: any) {
+    console.error('[Achievements API] Error:', error)
     console.error('[Achievements API] Error stack:', error.stack)
     console.error('[Achievements API] Error name:', error.name)
     

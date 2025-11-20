@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-// import { prisma } from '@schoolquiz/db' // Commented out for prototyping
+import { prisma } from '@schoolquiz/db'
 
 async function getUserFromToken(request: NextRequest) {
   try {
@@ -486,7 +486,7 @@ function calculateWeeklyStreakData(completions: Array<{ completedAt: Date; quizS
       date: date.toISOString().split('T')[0],
       completed: !!weekData,
       completedAt: weekData?.completedAt.toISOString(),
-      quizSlug: weekData?.quizSlug || null,
+      quizSlug: weekData?.quizSlug || undefined,
     })
   }
 

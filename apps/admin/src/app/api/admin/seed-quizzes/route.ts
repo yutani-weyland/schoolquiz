@@ -131,7 +131,6 @@ export async function POST(request: NextRequest) {
                 categoryId: category.id,
                 text: questionData.question,
                 answer: questionData.answer,
-                explanation: questionData.explanation || null,
                 difficulty: 0.5, // Default difficulty
                 status: 'published',
                 createdBy: teacher.id,

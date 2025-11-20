@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@schoolquiz/db'
 
 // In-memory storage for development/testing (when DATABASE_URL is not set)
-const getDevStorage = () => {
+function getDevStorage(): { leagues: Map<string, any>; members: Map<string, Set<string>> } {
   if (typeof (global as any).devLeaguesStorage === 'undefined') {
-    (global as any).devLeaguesStorage = new Map<string, any>()
-    (global as any).devMembersStorage = new Map<string, Set<string>>()
+    const MapConstructor = globalThis.Map as any;
+    const SetConstructor = globalThis.Set as any;
+    (global as any).devLeaguesStorage = new MapConstructor()
+    ;(global as any).devMembersStorage = new MapConstructor()
   }
   return {
     leagues: (global as any).devLeaguesStorage,
@@ -85,7 +87,7 @@ export async function POST(
       }
       
       // Check if user is creator or member
-      const memberIds = storage.members.get(id) || new Set<string>()
+      const memberIds = storage.members.get(id) || new (globalThis.Set as any)()
       const isCreator = league.createdByUserId === user.id
       const isMember = memberIds.has(user.id)
       

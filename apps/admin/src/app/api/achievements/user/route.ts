@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma, getUserTier } from '@schoolquiz/db'
+import { unstable_cache } from 'next/cache'
+import { cache } from 'react'
 
-async function getUserFromToken(request: NextRequest) {
+// Memoize getUserFromToken to prevent duplicate database queries in same render
+const getUserFromToken = cache(async (request: NextRequest) => {
   try {
     const authHeader = request.headers.get('authorization')
     const token = authHeader?.replace('Bearer ', '')
@@ -29,6 +32,35 @@ async function getUserFromToken(request: NextRequest) {
     console.error('[User Achievements API] Error in getUserFromToken:', error)
     return null
   }
+})
+
+// Cached function to fetch user achievements
+async function getUserAchievementsUncached(userId: string) {
+  const userAchievements = await prisma.userAchievement.findMany({
+    where: { userId },
+    include: {
+      achievement: true,
+    },
+    orderBy: { unlockedAt: 'desc' },
+  })
+  
+  return {
+    achievements: userAchievements.map((ua) => ({
+      id: ua.id,
+      achievementId: ua.achievementId,
+      achievementSlug: ua.achievement.slug,
+      achievementName: ua.achievement.name,
+      achievementDescription: ua.achievement.shortDescription,
+      achievementRarity: ua.achievement.rarity,
+      achievementCategory: ua.achievement.category,
+      achievementIconKey: ua.achievement.iconKey,
+      quizSlug: ua.quizSlug,
+      progressValue: ua.progressValue,
+      progressMax: ua.progressMax,
+      unlockedAt: ua.unlockedAt.toISOString(),
+      meta: ua.meta ? JSON.parse(ua.meta) : null,
+    })),
+  }
 }
 
 /**
@@ -46,31 +78,19 @@ export async function GET(request: NextRequest) {
       )
     }
     
-    const userAchievements = await prisma.userAchievement.findMany({
-      where: { userId: user.id },
-      include: {
-        achievement: true,
-      },
-      orderBy: { unlockedAt: 'desc' },
-    })
-    
-    return NextResponse.json({
-      achievements: userAchievements.map((ua) => ({
-        id: ua.id,
-        achievementId: ua.achievementId,
-        achievementSlug: ua.achievement.slug,
-        achievementName: ua.achievement.name,
-        achievementDescription: ua.achievement.shortDescription,
-        achievementRarity: ua.achievement.rarity,
-        achievementCategory: ua.achievement.category,
-        achievementIconKey: ua.achievement.iconKey,
-        quizSlug: ua.quizSlug,
-        progressValue: ua.progressValue,
-        progressMax: ua.progressMax,
-        unlockedAt: ua.unlockedAt.toISOString(),
-        meta: ua.meta ? JSON.parse(ua.meta) : null,
-      })),
-    })
+    // Cache user achievements for 30 seconds
+    // This prevents duplicate database queries when multiple components request the same data
+    const getCachedUserAchievements = unstable_cache(
+      async (uid: string) => getUserAchievementsUncached(uid),
+      [`user-achievements-${user.id}`],
+      { 
+        revalidate: 30, // Cache for 30 seconds
+        tags: [`user-achievements-${user.id}`]
+      }
+    )
+
+    const data = await getCachedUserAchievements(user.id)
+    return NextResponse.json(data)
   } catch (error: any) {
     console.error('[User Achievements API] Error fetching user achievements:', error)
     console.error('[User Achievements API] Error stack:', error.stack)

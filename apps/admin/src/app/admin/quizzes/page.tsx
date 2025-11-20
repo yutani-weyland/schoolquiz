@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import { BookOpen, FileDown, Plus, Search, Filter, ArrowUpDown, ArrowUp, ArrowDown, CheckCircle2, FileText } from 'lucide-react'
 import Link from 'next/link'
@@ -97,8 +97,8 @@ export default function AdminQuizzesPage() {
               bVal = b.status
               break
             case 'runs':
-              aVal = a._count.runs
-              bVal = b._count.runs
+              aVal = a._count?.runs ?? 0
+              bVal = b._count?.runs ?? 0
               break
             case 'publicationDate':
               aVal = a.publicationDate ? new Date(a.publicationDate).getTime() : 0
@@ -306,12 +306,18 @@ export default function AdminQuizzesPage() {
 
       {/* Table */}
       <div className="bg-[hsl(var(--card))] rounded-2xl border border-[hsl(var(--border))] overflow-hidden">
-        {isLoading ? (
+        <Suspense fallback={
           <div className="p-12 text-center">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[hsl(var(--primary))]"></div>
             <p className="mt-4 text-sm text-[hsl(var(--muted-foreground))]">Loading quizzes...</p>
           </div>
-        ) : quizzes.length === 0 ? (
+        }>
+          {isLoading ? (
+            <div className="p-12 text-center">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[hsl(var(--primary))]"></div>
+              <p className="mt-4 text-sm text-[hsl(var(--muted-foreground))]">Loading quizzes...</p>
+            </div>
+          ) : quizzes.length === 0 ? (
           <div className="p-12 text-center">
             <BookOpen className="mx-auto h-12 w-12 text-[hsl(var(--muted-foreground))]" />
             <p className="mt-4 text-sm text-[hsl(var(--muted-foreground))]">No quizzes found</p>
@@ -343,7 +349,7 @@ export default function AdminQuizzesPage() {
                     // Calculate quiz IDs: Sort published quizzes by publication date
                     // Special editions are excluded from the numbering
                     const publishedQuizzes = quizzes
-                      .filter(q => q.status === 'published' && !q.specialEdition)
+                      .filter(q => q.status === 'published' && !(q.specialEdition === true))
                       .sort((a, b) => {
                         const dateA = a.publicationDate ? new Date(a.publicationDate).getTime() : 0
                         const dateB = b.publicationDate ? new Date(b.publicationDate).getTime() : 0
@@ -406,7 +412,7 @@ export default function AdminQuizzesPage() {
                         {getStatusBadge(quiz.status)}
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-[hsl(var(--foreground))] font-medium">
-                        {quiz._count.runs}
+                        {quiz._count?.runs ?? 0}
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-[hsl(var(--muted-foreground))]">
                         {formatDate(quiz.publicationDate)}
@@ -511,6 +517,7 @@ export default function AdminQuizzesPage() {
             )}
           </>
         )}
+        </Suspense>
       </div>
     </div>
   )

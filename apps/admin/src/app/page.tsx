@@ -172,10 +172,15 @@ export default function HomePage() {
 		const isActuallyLoggedIn = !!(authToken && userId);
 		
 		// If user is logged in, redirect to quizzes (regardless of tier)
-		if (isActuallyLoggedIn && !isLoading) {
-			window.location.href = '/quizzes';
+		// Don't wait for isLoading - use localStorage as source of truth
+		// Add a small delay to ensure page has rendered
+		if (isActuallyLoggedIn) {
+			const redirectTimer = setTimeout(() => {
+				window.location.href = '/quizzes';
+			}, 100);
+			return () => clearTimeout(redirectTimer);
 		}
-	}, [isLoading, mounted]);
+	}, [mounted]);
 	
 	return (
 		<>

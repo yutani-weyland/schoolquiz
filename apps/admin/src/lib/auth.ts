@@ -1,5 +1,6 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@schoolquiz/auth';
+import { cache } from 'react';
 
 /**
  * Get Prisma client with error handling
@@ -25,8 +26,11 @@ async function getPrismaClient() {
 /**
  * Get current user from session
  * Returns null if not authenticated or database unavailable
+ * 
+ * Wrapped in cache() to prevent duplicate fetches in the same render pass
+ * This is especially important when called multiple times in one route
  */
-export async function getCurrentUser() {
+export const getCurrentUser = cache(async function getCurrentUser() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return null;
@@ -82,16 +86,17 @@ export async function getCurrentUser() {
   }
 
   return null;
-}
+});
 
 /**
  * Require authentication or throw error
+ * Also cached to prevent duplicate session checks
  */
-export async function requireAuth() {
+export const requireAuth = cache(async function requireAuth() {
   const user = await getCurrentUser();
   if (!user) {
     throw new Error('Unauthorized');
   }
   return user;
-}
+});
 

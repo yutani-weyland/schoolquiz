@@ -64,8 +64,10 @@ export async function GET(
       // Development mode: find league in memory
       const getDevStorage = () => {
         if (typeof (global as any).devLeaguesStorage === 'undefined') {
-          (global as any).devLeaguesStorage = new Map<string, any>()
-          (global as any).devMembersStorage = new Map<string, Set<string>>()
+          const MapConstructor = globalThis.Map as any;
+          const SetConstructor = globalThis.Set as any;
+          (global as any).devLeaguesStorage = new MapConstructor()
+          (global as any).devMembersStorage = new MapConstructor()
         }
         return {
           leagues: (global as any).devLeaguesStorage,
@@ -82,8 +84,8 @@ export async function GET(
         )
       }
       
-      const memberIds = storage.members.get(id) || new Set<string>()
-      const members = Array.from(memberIds).map((memberId: string) => ({
+      const memberIds = storage.members.get(id) || new (globalThis.Set as any)()
+      const members = Array.from(memberIds as Set<string>).map((memberId: string) => ({
         id: memberId,
         userId: memberId,
         joinedAt: new Date().toISOString(),

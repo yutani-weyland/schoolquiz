@@ -45,7 +45,7 @@ You're building a **quiz platform** with:
 ## Recommended Structure
 
 ```
-apps/web/  (Single Next.js app)
+apps/admin/  (Single Next.js app)
 ├── app/
 │   ├── (public)/          # Public routes (no auth)
 │   │   ├── page.tsx      # Landing page

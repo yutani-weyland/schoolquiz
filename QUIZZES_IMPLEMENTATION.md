@@ -1,7 +1,9 @@
 # Quizzes Page Implementation
 
 ## Overview
-Implemented the Past Quizzes grid page with animated cards, full-screen intro transition, and scroll/filter restoration on back navigation in the **public-facing Astro app** (`apps/web`).
+Implemented the Past Quizzes grid page with animated cards, full-screen intro transition, and scroll/filter restoration on back navigation in the **Next.js app** (`apps/admin`).
+
+**Note**: This was originally implemented in the Astro app, which has since been removed. The functionality has been migrated to the Next.js app.
 
 ## Key Features
 
@@ -25,36 +27,29 @@ Implemented the Past Quizzes grid page with animated cards, full-screen intro tr
 
 ## Files
 
-### New Files (Astro App)
-- `apps/web/src/components/quiz/QuizCard.tsx` - Animated card component with Framer Motion
-- `apps/web/src/components/quiz/QuizFilters.tsx` - Filter UI with URL sync
-- `apps/web/src/components/quiz/QuizzesGrid.tsx` - Grid with filtering logic
-- `apps/web/src/components/quiz/QuizIntro.tsx` - Full-screen intro component
-- `apps/web/src/pages/quiz/[slug]/intro.astro` - Intro page route
-
-### Modified Files (Astro App)
-- `apps/web/src/pages/quizzes.astro` - Updated to use React components
-- `apps/web/package.json` - Added `lucide-react` dependency
+### Current Implementation (Next.js App)
+- `apps/admin/src/components/quiz/QuizCard.tsx` - Animated card component with Framer Motion
+- `apps/admin/src/app/quizzes/page.tsx` - Quizzes listing page
+- `apps/admin/src/app/quizzes/[slug]/play/page.tsx` - Quiz player page
 
 ### Helper Scripts
-- `scripts/dev-web.sh` - Start Astro dev server on port 4321
 - `scripts/dev-admin.sh` - Start Next.js dev server on port 3000
 
 ## How to Test
 
-1. **Install dependencies** (if lucide-react isn't installed):
+1. **Install dependencies**:
    ```bash
    pnpm install
    ```
 
-2. **Start Astro dev server**:
+2. **Start Next.js dev server**:
    ```bash
-   ./scripts/dev-web.sh
+   ./scripts/dev-admin.sh
    # or manually:
-   pnpm --filter @schoolquiz/web dev
+   pnpm --filter @schoolquiz/admin dev
    ```
 
-3. **Navigate**: http://localhost:4321/quizzes
+3. **Navigate**: http://localhost:3000/quizzes
 
 4. **Test flow**:
    - Apply filters (search, sort, tags)
@@ -65,19 +60,19 @@ Implemented the Past Quizzes grid page with animated cards, full-screen intro tr
 
 ## Architecture Notes
 
-### Astro Islands
-React components are loaded as interactive islands using `client:load` directive. This enables:
-- SSR for initial page load (fast)
-- Client-side interactivity for animations and filters
+### Next.js App Router
+The implementation uses Next.js App Router with:
+- Server Components for initial page load (fast)
+- Client Components for interactivity and animations
 - Shared Framer Motion context between components
 
 ### Data Flow
 Currently using mock data in:
-- `apps/web/src/pages/quizzes.astro` - Main listing
-- `apps/web/src/pages/quiz/[slug]/intro.astro` - Static paths generation
+- `apps/admin/src/app/quizzes/page.tsx` - Main listing
+- `apps/admin/src/app/quizzes/[slug]/play/page.tsx` - Quiz player
 
 To connect to real data:
-- Fetch from Supabase in the Astro frontmatter
+- Fetch from Supabase in Server Components or API routes
 - Pass as props to React components
 - Update `getStaticPaths()` for SSG
 

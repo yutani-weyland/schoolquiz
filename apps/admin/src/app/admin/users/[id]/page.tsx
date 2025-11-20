@@ -219,7 +219,7 @@ export default function AdminUserDetailPage() {
         </TabsList>
 
         <TabsContent value="overview" className="mt-6">
-          <OverviewTab user={user} />
+          <OverviewTab user={user} onRoleChange={handleRoleChange} />
         </TabsContent>
 
         <TabsContent value="organisations" className="mt-6">
@@ -238,7 +238,7 @@ export default function AdminUserDetailPage() {
   )
 }
 
-function OverviewTab({ user }: { user: UserDetail }) {
+function OverviewTab({ user, onRoleChange }: { user: UserDetail; onRoleChange: (newRole: string | null) => void }) {
   return (
     <div className="space-y-6">
       {/* Stats Grid */}
@@ -324,7 +324,7 @@ function OverviewTab({ user }: { user: UserDetail }) {
             <p className="text-sm text-gray-500 dark:text-gray-400">Platform Role</p>
             <select
               value={user.platformRole || ''}
-              onChange={(e) => handleRoleChange(e.target.value || null)}
+              onChange={(e) => onRoleChange(e.target.value || null)}
               className="mt-1 px-3 py-1.5 border border-gray-300/50 dark:border-gray-700/50 rounded-xl bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/50 backdrop-blur-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)] shadow-[inset_0_1px_2px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)] text-sm"
             >
               <option value="">None</option>

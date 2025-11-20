@@ -761,7 +761,7 @@ export default function CreateQuiz() {
   };
 
   const getSelectedCategories = () => {
-    return [...new Set(quiz.rounds.map(round => round.category))];
+    return Array.from(new Set(quiz.rounds.map(round => round.category)));
   };
 
   const getRoundsForCategory = (category: string) => {
@@ -1315,6 +1315,7 @@ export default function CreateQuiz() {
                  </div>
                </div>
              </main>
+             )}
 
              {/* Sticky Progress Bar */}
              {!isLoadingQuiz && !loadError && (

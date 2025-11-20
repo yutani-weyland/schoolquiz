@@ -11,8 +11,11 @@ interface AdminLayoutProps {
  * Only PlatformAdmins can access routes under /admin/*
  */
 export default async function AdminLayout({ children }: AdminLayoutProps) {
-  // For testing: Skip authentication check
-  // TODO: Re-enable authentication in production
+  // Authentication is now handled by middleware (apps/admin/src/middleware.ts)
+  // This preserves static rendering for pages that don't need auth
+  // 
+  // For platform admin role check, we still do it here since middleware
+  // shouldn't do database queries. But we can make it optional in dev.
   const skipAuth = process.env.SKIP_ADMIN_AUTH === 'true' || process.env.NODE_ENV !== 'production'
   
   if (!skipAuth) {

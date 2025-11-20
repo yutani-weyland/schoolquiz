@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, lazy, Suspense } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { QuizPlayer } from "@/components/quiz/QuizPlayer";
 import { Quiz } from "@/components/quiz/QuizCard";
 import { getQuizColor } from '@/lib/colors';
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -10,6 +9,9 @@ import { useQuiz } from "@/hooks/useQuiz";
 import { QuizLoadingSkeleton } from "@/components/quiz/QuizLoadingSkeleton";
 import { QuizError } from "@/components/quiz/QuizError";
 import { QuizNotFound } from "@/components/quiz/QuizNotFound";
+
+// Lazy load QuizPlayer to reduce initial bundle size (~200-300KB saved)
+const QuizPlayer = lazy(() => import("@/components/quiz/QuizPlayer").then(module => ({ default: module.QuizPlayer })));
 
 const DATA: Quiz[] = [
 	{ id: 12, slug: "12", title: "Shape Up, Pumpkins, Famous First Words, Crazes, and Next In Sequence.", blurb: "A weekly selection mixing patterns, pop culture and logic.", weekISO: "2024-01-15", colorHex: getQuizColor(12), status: "available" },
@@ -27,6 +29,7 @@ const DATA: Quiz[] = [
 ];
 
 // Quiz data is now fetched via useQuiz hook from centralized fixtures
+// Static generation is handled in layout.tsx
 
 export default function QuizPlayPage() {
 	const params = useParams();
@@ -70,19 +73,26 @@ export default function QuizPlayPage() {
 		return <QuizLoadingSkeleton />;
 	}
 
+	// Ensure quiz and quizData exist before accessing their properties
+	if (!quiz || !quizData) {
+		return <QuizNotFound slug={slug} />;
+	}
+
 	const isNewest = DATA[0].slug === quiz.slug;
 
 	return (
 		<ErrorBoundary>
-			<QuizPlayer
-				quizTitle={quiz.title}
-				quizColor={quiz.colorHex}
-				quizSlug={quiz.slug}
-				questions={quizData.questions}
-				rounds={quizData.rounds}
-				weekISO={quiz.weekISO}
-				isNewest={isNewest}
-			/>
+			<Suspense fallback={<QuizLoadingSkeleton />}>
+				<QuizPlayer
+					quizTitle={quiz.title}
+					quizColor={quiz.colorHex}
+					quizSlug={quiz.slug}
+					questions={quizData.questions}
+					rounds={quizData.rounds}
+					weekISO={quiz.weekISO}
+					isNewest={isNewest}
+				/>
+			</Suspense>
 		</ErrorBoundary>
 	);
 }

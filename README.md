@@ -21,7 +21,6 @@ SchoolQuiz delivers a **5 categories × 5 questions** weekly quiz format, publis
 ```
 schoolquiz/
 ├── apps/
-│   ├── web/          # Astro + React islands + Tailwind
 │   └── admin/        # Next.js (App Router) + shadcn/ui
 ├── packages/
 │   ├── db/           # Supabase SQL + typed client
@@ -32,8 +31,8 @@ schoolquiz/
 
 ### Tech Stack
 
-- **Frontend**: Astro + React islands + Tailwind CSS + Framer Motion
-- **Admin**: Next.js (App Router) + shadcn/ui + @dnd-kit
+- **Frontend**: Next.js 15 (App Router) + React + Tailwind CSS + Framer Motion
+- **UI Components**: shadcn/ui + @dnd-kit
 - **Database**: Supabase with Row Level Security (RLS)
 - **Deployment**: Vercel + Supabase Scheduler
 - **Monorepo**: pnpm + Turborepo
@@ -134,24 +133,24 @@ pnpm dev
 
 ### Development URLs
 
-- **Web app**: http://localhost:4321
-- **Admin app**: http://localhost:3000
+- **App**: http://localhost:3000
 - **Supabase Studio**: http://localhost:54323
 
 ## 📱 App Routes
 
-### Web App (Astro)
+### Public Routes
 
-- `/` - Splash page with headline animation
+- `/` - Landing page with headline animation
 - `/quizzes` - Grid of published quizzes
-- `/quiz/[slug]` - Interactive quiz presenter
-- `/sign-in`, `/sign-up` - Supabase auth
-- `/get-premium` - Single plan card
+- `/quizzes/[slug]/play` - Interactive quiz player
+- `/sign-in`, `/sign-up` - Authentication
+- `/upgrade` - Premium subscription
 - `/about`, `/faq`, `/legal/*` - Content pages
 
-### Admin App (Next.js)
+### Admin Routes (Protected)
 
 - `/admin` - Dashboard
+- `/admin/quizzes` - Quiz management
 - `/admin/quizzes/[id]` - Quiz Composer (4×6 rounds + People's Question)
 - `/admin/categories` - Category Library
 
@@ -247,11 +246,7 @@ SELECT publish_due_quizzes();
 ### Vercel Setup
 
 ```bash
-# Deploy web app
-cd apps/web
-vercel --prod
-
-# Deploy admin app  
+# Deploy app
 cd apps/admin
 vercel --prod
 ```
@@ -270,8 +265,8 @@ SELECT cron.schedule(
 ## 🎨 Adding New Round Accents
 
 1. Update color in `packages/ui/src/tokens.ts`
-2. Add CSS variable in `apps/web/src/layouts/Layout.astro`
-3. Update Tailwind config in both apps
+2. Add CSS variable in `apps/admin/src/app/globals.css`
+3. Update Tailwind config
 4. Test accessibility contrast (AA on white)
 
 ## ⌨️ Builder Shortcuts

@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
         user.tier === 'premium' ||
         user.subscriptionStatus === 'ACTIVE' ||
         user.subscriptionStatus === 'TRIALING' ||
-        (user.freeTrialUntil && new Date(user.freeTrialUntil) > new Date())
+        !!(user.freeTrialUntil && new Date(user.freeTrialUntil) > new Date())
       )
     }
 

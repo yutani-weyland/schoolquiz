@@ -215,7 +215,6 @@ export default function FunnelAnalyticsPage() {
                   border: '1px solid #e5e7eb',
                   borderRadius: '0.5rem',
                 }}
-                className="dark:bg-gray-800 dark:border-gray-700"
               />
               <Line 
                 type="monotone" 

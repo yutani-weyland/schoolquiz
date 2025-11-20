@@ -61,9 +61,7 @@ export function transformRoundToComponent(
 		number: prismaRound.index + 1, // Prisma uses 0-indexed, component uses 1-indexed
 		title: prismaRound.title || prismaRound.category?.name || 'Untitled Round',
 		blurb: prismaRound.blurb || '',
-		questions: sortedQuestions.map((qrq) =>
-			transformQuestionToComponent(qrq.question, prismaRound.index + 1)
-		),
+		// Note: questions are not part of QuizRound type - they belong to the Quiz object
 	};
 }
 

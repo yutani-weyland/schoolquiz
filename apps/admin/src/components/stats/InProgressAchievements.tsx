@@ -33,25 +33,17 @@ export function InProgressAchievements() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchAchievements = async () => {
-      try {
-        const token = localStorage.getItem('authToken');
-        const userId = localStorage.getItem('userId');
+    // Defer fetching to avoid blocking initial page load
+    const timeoutId = setTimeout(() => {
+      const fetchAchievements = async () => {
+        try {
+          const token = localStorage.getItem('authToken');
+          const userId = localStorage.getItem('userId');
+          
+          // Use shared fetch utility with automatic deduplication
+          const { fetchAchievements } = await import('@/lib/achievement-fetch');
         
-        const response = await fetch('/api/achievements', {
-          headers: {
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            ...(userId ? { 'X-User-Id': userId } : {}),
-          },
-        });
-
-        if (!response.ok) {
-          console.warn('Failed to fetch achievements');
-          setIsLoading(false);
-          return;
-        }
-
-        const data = await response.json();
+        const data = await fetchAchievements(userId, token);
         
         // Filter for in-progress achievements (have progress but not unlocked)
         const inProgressAchievements = data.achievements.filter((achievement: Achievement) => {
@@ -59,9 +51,9 @@ export function InProgressAchievements() {
                             achievement.progressValue !== null &&
                             achievement.progressMax !== undefined && 
                             achievement.progressMax !== null;
-          const isInProgress = hasProgress && 
-                              achievement.progressValue > 0 && 
-                              achievement.progressValue < achievement.progressMax &&
+          const isInProgress = hasProgress &&
+                              (achievement.progressValue ?? 0) > 0 &&
+                              (achievement.progressValue ?? 0) < (achievement.progressMax ?? 0) &&
                               achievement.status !== 'unlocked';
           return isInProgress;
         });
@@ -82,6 +74,9 @@ export function InProgressAchievements() {
     };
 
     fetchAchievements();
+    }, 100); // Defer by 100ms to avoid blocking initial render
+
+    return () => clearTimeout(timeoutId);
   }, []);
 
   if (isLoading) {

@@ -1,6 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   transpilePackages: ["@schoolquiz/ui", "@schoolquiz/db"],
+  
+  // Enable experimental features for better performance
+  experimental: {
+    optimizePackageImports: ['framer-motion', 'lucide-react', '@radix-ui/react-icons'],
+  },
+  
+  // Compress responses
+  compress: true,
+  
   webpack: (config) => {
     const webpack = require('webpack');
     

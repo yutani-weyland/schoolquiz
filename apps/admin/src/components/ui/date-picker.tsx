@@ -1,7 +1,6 @@
 "use client"
 
 import * as React from "react"
-import { format } from "date-fns"
 import { Calendar as CalendarIcon } from "lucide-react"
 import { Calendar } from "@/components/ui/calendar"
 import {
@@ -16,6 +15,26 @@ interface DatePickerProps {
   onChange: (value: string) => void
   placeholder?: string
   className?: string
+}
+
+// Helper function to format date using native Intl API (replaces date-fns)
+function formatDate(date: Date, formatStr: string): string {
+  if (formatStr === "dd/MM/yyyy") {
+    return new Intl.DateTimeFormat("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }).format(date)
+  }
+  if (formatStr === "yyyy-MM-dd") {
+    return new Intl.DateTimeFormat("en-CA", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(date)
+  }
+  // Fallback to default format
+  return date.toLocaleDateString()
 }
 
 export function DatePicker({
@@ -39,7 +58,7 @@ export function DatePicker({
           )}
         >
           <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[hsl(var(--muted-foreground))] pointer-events-none z-10" />
-          <span className="block truncate">{date ? format(date, "dd/MM/yyyy") : placeholder}</span>
+          <span className="block truncate">{date ? formatDate(date, "dd/MM/yyyy") : placeholder}</span>
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
@@ -48,7 +67,7 @@ export function DatePicker({
           selected={date}
           onSelect={(selectedDate) => {
             if (selectedDate) {
-              onChange(format(selectedDate, "yyyy-MM-dd"))
+              onChange(formatDate(selectedDate, "yyyy-MM-dd"))
             } else {
               onChange("")
             }

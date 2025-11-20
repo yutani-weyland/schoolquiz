@@ -64,6 +64,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    if (!historyCategory) {
+      throw new Error('Failed to create or find History category')
+    }
+
     let geographyCategory = await prisma.category.findFirst({
       where: { name: 'Geography' },
     })
@@ -86,6 +90,10 @@ export async function POST(request: NextRequest) {
           throw createError
         }
       }
+    }
+
+    if (!geographyCategory) {
+      throw new Error('Failed to create or find Geography category')
     }
 
     let scienceCategory = await prisma.category.findFirst({
@@ -112,6 +120,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    if (!scienceCategory) {
+      throw new Error('Failed to create or find Science category')
+    }
+
     let cultureCategory = await prisma.category.findFirst({
       where: { name: 'Culture' },
     })
@@ -134,6 +146,10 @@ export async function POST(request: NextRequest) {
           throw createError
         }
       }
+    }
+
+    if (!cultureCategory) {
+      throw new Error('Failed to create or find Culture category')
     }
 
     // Create the quiz

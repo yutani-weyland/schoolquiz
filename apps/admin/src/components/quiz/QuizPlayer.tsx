@@ -1394,15 +1394,15 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 						finaleRoundNumber={FINALE_ROUND_NUMBER}
 								isAnswerRevealed={isAnswerRevealed}
 								isMarkedCorrect={isMarkedCorrect}
-								isQuestionAnswered={isMarkedCorrect || incorrectAnswers.has(currentQuestion.id)}
+								isQuestionAnswered={currentQuestion ? (isMarkedCorrect || incorrectAnswers.has(currentQuestion.id)) : false}
 						isMouseMoving={isMouseMoving}
 						canGoNext={currentIndex < finalQuestions.length - 1}
 						canGoPrevious={currentIndex > 0}
 						onStartRound={startRound}
-								onRevealAnswer={() => handleRevealAnswer(currentQuestion.id)}
-								onHideAnswer={() => handleHideAnswer(currentQuestion.id)}
-						onMarkCorrect={(event) => handleMarkCorrect(currentQuestion.id, event)}
-								onUnmarkCorrect={() => handleUnmarkCorrect(currentQuestion.id)}
+								onRevealAnswer={() => currentQuestion && handleRevealAnswer(currentQuestion.id)}
+								onHideAnswer={() => currentQuestion && handleHideAnswer(currentQuestion.id)}
+						onMarkCorrect={(event) => currentQuestion && handleMarkCorrect(currentQuestion.id, event)}
+								onUnmarkCorrect={() => currentQuestion && handleUnmarkCorrect(currentQuestion.id)}
 								onNext={goToNext}
 								onPrevious={goToPrevious}
 								onFinish={!isDemo ? handleFinishQuiz : undefined}

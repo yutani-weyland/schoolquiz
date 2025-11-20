@@ -172,13 +172,16 @@ interface AllAchievement {
 }
 
 export function RecentAchievements() {
-  const { tier } = useUserTier();
+  const { tier: hookTier } = useUserTier();
+  // Map hook tier ('basic' | 'premium') to feature-gating tier ('visitor' | 'free' | 'premium')
+  const tier: UserTier = hookTier === 'premium' ? 'premium' : 'free';
   const [recentAchievements, setRecentAchievements] = useState<Achievement[]>([]);
   const [inProgressAchievements, setInProgressAchievements] = useState<AllAchievement[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchAchievements = async () => {
+    // Defer fetching to avoid blocking initial page load
+    const timeoutId = setTimeout(async () => {
       try {
         const token = localStorage.getItem('authToken');
         const userId = localStorage.getItem('userId');
@@ -190,77 +193,59 @@ export function RecentAchievements() {
           return;
         }
 
+        // Use shared fetch utilities with automatic deduplication
+        const { fetchUserAchievements, fetchAchievements } = await import('@/lib/achievement-fetch');
+        
         // Fetch recent unlocked achievements
-        const userResponse = await fetch('/api/achievements/user', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'X-User-Id': userId,
-          },
-        });
-
-        if (userResponse.ok) {
-          const userData = await userResponse.json();
-          const fetchedAchievements = userData.achievements || [];
-          // If no achievements, use mock data for prototyping
-          if (fetchedAchievements.length === 0) {
-            setRecentAchievements(getMockAchievements());
-          } else {
-            // Get the most recent 10 achievements
-            setRecentAchievements(fetchedAchievements.slice(0, 10));
-          }
-        } else {
-          // Use mock achievements if API fails
+        const userData = await fetchUserAchievements(userId, token);
+        const fetchedAchievements = userData.achievements || [];
+        // If no achievements, use mock data for prototyping
+        if (fetchedAchievements.length === 0) {
           setRecentAchievements(getMockAchievements());
+        } else {
+          // Get the most recent 10 achievements
+          setRecentAchievements(fetchedAchievements.slice(0, 10));
         }
 
         // Fetch all achievements to get in-progress ones
-        const allResponse = await fetch('/api/achievements', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'X-User-Id': userId,
-          },
+        const allData = await fetchAchievements(userId, token);
+        // Filter for in-progress achievements (have progress but not unlocked)
+        const inProgress = (allData.achievements || []).filter((achievement: AllAchievement) => {
+          const hasProgress = achievement.progressValue !== undefined && 
+                            achievement.progressValue !== null &&
+                            achievement.progressMax !== undefined && 
+                            achievement.progressMax !== null;
+          const isInProgress = hasProgress &&
+                            (achievement.progressValue ?? 0) > 0 &&
+                            (achievement.progressValue ?? 0) < (achievement.progressMax ?? 0) &&
+                            achievement.status !== 'unlocked';
+          return isInProgress;
         });
 
-        if (allResponse.ok) {
-          const allData = await allResponse.json();
-          // Filter for in-progress achievements (have progress but not unlocked)
-          const inProgress = (allData.achievements || []).filter((achievement: AllAchievement) => {
-            const hasProgress = achievement.progressValue !== undefined && 
-                              achievement.progressValue !== null &&
-                              achievement.progressMax !== undefined && 
-                              achievement.progressMax !== null;
-            const isInProgress = hasProgress && 
-                              achievement.progressValue > 0 && 
-                              achievement.progressValue < achievement.progressMax &&
-                              achievement.status !== 'unlocked';
-            return isInProgress;
-          });
+        // Sort by progress percentage (highest first)
+        inProgress.sort((a: AllAchievement, b: AllAchievement) => {
+          const percentA = a.progressMax ? (a.progressValue || 0) / a.progressMax : 0;
+          const percentB = b.progressMax ? (b.progressValue || 0) / b.progressMax : 0;
+          return percentB - percentA;
+        });
 
-          // Sort by progress percentage (highest first)
-          inProgress.sort((a: AllAchievement, b: AllAchievement) => {
-            const percentA = a.progressMax ? (a.progressValue || 0) / a.progressMax : 0;
-            const percentB = b.progressMax ? (b.progressValue || 0) / b.progressMax : 0;
-            return percentB - percentA;
-          });
+        // Add test achievement with progress
+        const progressTestAchievement: AllAchievement = {
+          id: "test-progress-1",
+          slug: "quiz-master-progress",
+          name: "Quiz Master",
+          shortDescription: "Complete 10 quizzes",
+          longDescription: "Show your dedication by completing 10 quizzes. You're making great progress!",
+          category: "engagement",
+          rarity: "uncommon",
+          isPremiumOnly: false,
+          cardVariant: "standard",
+          status: "locked_free",
+          progressValue: 7,
+          progressMax: 10,
+        };
 
-          // Add test achievement with progress
-          const progressTestAchievement: AllAchievement = {
-            id: "test-progress-1",
-            slug: "quiz-master-progress",
-            name: "Quiz Master",
-            shortDescription: "Complete 10 quizzes",
-            longDescription: "Show your dedication by completing 10 quizzes. You're making great progress!",
-            category: "engagement",
-            rarity: "uncommon",
-            isPremiumOnly: false,
-            cardVariant: "standard",
-            status: "locked_free",
-            progressValue: 7,
-            progressMax: 10,
-          };
-
-          setInProgressAchievements([...inProgress, progressTestAchievement].slice(0, 6));
-        }
+        setInProgressAchievements([...inProgress, progressTestAchievement].slice(0, 6));
       } catch (error) {
         console.error('Error fetching achievements:', error);
         // Use mock achievements on error for prototyping
@@ -268,9 +253,9 @@ export function RecentAchievements() {
       } finally {
         setIsLoading(false);
       }
-    };
+    }, 100); // Defer by 100ms to avoid blocking initial render
 
-    fetchAchievements();
+    return () => clearTimeout(timeoutId);
   }, []);
 
   if (isLoading) {
@@ -429,7 +414,7 @@ export function RecentAchievements() {
                     quizSlug={achievement.quizSlug}
                     progressValue={achievement.progressValue}
                     progressMax={achievement.progressMax}
-                    tier={tier as UserTier}
+                    tier={tier}
                   />
                 </motion.div>
               ))}

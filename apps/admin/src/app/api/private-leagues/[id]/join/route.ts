@@ -65,8 +65,10 @@ export async function POST(
       // Development mode: find league in memory
       const getDevStorage = () => {
         if (typeof (global as any).devLeaguesStorage === 'undefined') {
-          (global as any).devLeaguesStorage = new Map<string, any>()
-          (global as any).devMembersStorage = new Map<string, Set<string>>()
+          const MapConstructor = globalThis.Map as any;
+          const SetConstructor = globalThis.Set as any;
+          (global as any).devLeaguesStorage = new MapConstructor()
+          (global as any).devMembersStorage = new MapConstructor()
         }
         return {
           leagues: (global as any).devLeaguesStorage,
@@ -89,7 +91,7 @@ export async function POST(
         )
       }
       
-      const members = storage.members.get(league.id) || new Set()
+      const members = storage.members.get(league.id) || new (globalThis.Set as any)()
       if (members.has(user.id)) {
         return NextResponse.json(
           { error: 'You are already a member of this league' },

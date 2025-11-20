@@ -37,11 +37,11 @@ function loadStateFromStorage(quizSlug: string): Partial<QuizState> {
   // Convert arrays back to Sets
   const state: Partial<QuizState> = {
     ...saved,
-    viewedQuestions: saved.viewedQuestions ? new Set(saved.viewedQuestions as number[]) : new Set(),
-    revealedAnswers: saved.revealedAnswers ? new Set(saved.revealedAnswers as number[]) : new Set(),
-    correctAnswers: saved.correctAnswers ? new Set(saved.correctAnswers as number[]) : new Set(),
-    incorrectAnswers: saved.incorrectAnswers ? new Set(saved.incorrectAnswers as number[]) : new Set(),
-    attemptedAnswers: saved.attemptedAnswers ? new Set(saved.attemptedAnswers as number[]) : new Set(),
+    viewedQuestions: saved.viewedQuestions ? new Set(saved.viewedQuestions as unknown as number[]) : new Set(),
+    revealedAnswers: saved.revealedAnswers ? new Set(saved.revealedAnswers as unknown as number[]) : new Set(),
+    correctAnswers: saved.correctAnswers ? new Set(saved.correctAnswers as unknown as number[]) : new Set(),
+    incorrectAnswers: saved.incorrectAnswers ? new Set(saved.incorrectAnswers as unknown as number[]) : new Set(),
+    attemptedAnswers: saved.attemptedAnswers ? new Set(saved.attemptedAnswers as unknown as number[]) : new Set(),
   };
   
   return state;

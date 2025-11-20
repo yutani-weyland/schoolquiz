@@ -306,7 +306,7 @@ export default function AdminOverviewPage() {
         {statCards.map((stat) => {
           const Icon = stat.icon
           const cardTimePeriod = stat.hasTimeToggle ? (timePeriods[stat.id] || 'month') : 'month'
-          const data = stat.hasTimeToggle ? stat.getData(cardTimePeriod) : {
+          const data = stat.hasTimeToggle && stat.getData ? stat.getData(cardTimePeriod) : {
             value: stat.value!,
             trend: stat.trend!,
             description: stat.description!,

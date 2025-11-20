@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
 import { storage, getAuthToken, getUserId, getUserName, getUserEmail, getUserTier } from '@/lib/storage';
 import { logger } from '@/lib/logger';
+import { fetchSubscription } from '@/lib/subscription-fetch';
 
 export type AccessTier = 'visitor' | 'free' | 'premium';
 
@@ -33,6 +34,11 @@ export function UserAccessProvider({ children }: UserAccessProviderProps) {
 
   useEffect(() => {
     const determineTier = async () => {
+      // Set a timeout to ensure isLoading is always set to false, even if API hangs
+      const timeoutId = setTimeout(() => {
+        setIsLoading(false);
+      }, 2000); // Max 2 seconds to determine tier
+
       try {
         // Check if user is logged in
         const token = getAuthToken();
@@ -42,6 +48,7 @@ export function UserAccessProvider({ children }: UserAccessProviderProps) {
 
         if (!token || !storedUserId) {
           // Visitor (not logged in)
+          clearTimeout(timeoutId);
           setTier('visitor');
           setUserId(null);
           setUserName(null);
@@ -64,22 +71,14 @@ export function UserAccessProvider({ children }: UserAccessProviderProps) {
           // Set tier immediately from localStorage for instant UI update
           const tierToSet = storedTier === 'premium' ? 'premium' : 'free';
           console.log('[UserAccessContext] Setting tier immediately to:', tierToSet);
+          clearTimeout(timeoutId);
           setTier(tierToSet);
           setIsLoading(false);
           
           // Then try to refresh from API in the background (non-blocking)
-          fetch('/api/user/subscription', {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              ...(storedUserId ? { 'X-User-Id': storedUserId } : {}),
-            },
-          })
-            .then((response) => {
-              if (response.ok) {
-                return response.json();
-              }
-              return null;
-            })
+          // Use shared fetch utility with automatic deduplication
+          // Returns parsed JSON data directly (not Response object)
+          fetchSubscription(storedUserId, token)
             .then((data) => {
               if (data) {
                 const premiumStatuses = ['ACTIVE', 'TRIALING', 'FREE_TRIAL'];
@@ -101,19 +100,21 @@ export function UserAccessProvider({ children }: UserAccessProviderProps) {
           return; // Early return - we've set the tier from localStorage
         }
 
-        // No stored tier - fetch from API
+        // No stored tier - fetch from API with timeout
         try {
-          const headers: HeadersInit = { Authorization: `Bearer ${token}` };
-          if (storedUserId) {
-            headers['X-User-Id'] = storedUserId;
-          }
-
-          const response = await fetch('/api/user/subscription', {
-            headers,
-          });
-
-          if (response.ok) {
-            const data = await response.json();
+          // Use shared fetch utility with automatic deduplication
+          // Returns parsed JSON data directly (not Response object)
+          // Add timeout to prevent hanging
+          const fetchPromise = fetchSubscription(storedUserId, token);
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Subscription fetch timeout')), 1500)
+          );
+          
+          const data = await Promise.race([fetchPromise, timeoutPromise]) as any;
+          
+          clearTimeout(timeoutId);
+          
+          if (data) {
             // Determine tier: premium if status is ACTIVE, TRIALING, or FREE_TRIAL
             // OR if tier field exists and is "premium"
             const premiumStatuses = ['ACTIVE', 'TRIALING', 'FREE_TRIAL'];
@@ -126,21 +127,24 @@ export function UserAccessProvider({ children }: UserAccessProviderProps) {
             setTier(determinedTier);
             // Store tier in localStorage for future use
             storage.set('userTier', determinedTier === 'premium' ? 'premium' : 'basic');
-          } else {
-            // API returned error - default to free
-            setTier('free');
-            storage.set('userTier', 'basic');
           }
         } catch (error) {
+          clearTimeout(timeoutId);
           logger.error('Failed to fetch subscription:', error);
-          // API failed - default to free
-          setTier('free');
-          storage.set('userTier', 'basic');
+          // API failed - default to free if logged in, visitor if not
+          if (token && storedUserId) {
+            setTier('free');
+            storage.set('userTier', 'basic');
+          } else {
+            setTier('visitor');
+          }
         }
       } catch (error) {
+        clearTimeout(timeoutId);
         logger.error('Failed to determine tier:', error);
         setTier('visitor');
       } finally {
+        clearTimeout(timeoutId);
         setIsLoading(false);
       }
     };
