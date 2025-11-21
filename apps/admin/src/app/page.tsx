@@ -512,7 +512,7 @@ export default function HomePage() {
 							Do more with Premium
 						</h2>
 						<p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-							Premium adds simple tools that boost engagement, support connection, and make each week's quiz feel even more special.
+							Premium adds the tools that turn a good Monday quiz into a term-long routine students actually look forward to.
 						</p>
 					</div>
 
@@ -855,6 +855,9 @@ export default function HomePage() {
 						<h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
 							What teachers are saying
 						</h2>
+						<p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+							Teachers across Australia use The School Quiz to spark conversation, build routines, and make pastoral time a bit easier.
+						</p>
 					</div>
 
 					{/* Testimonials Grid */}
@@ -993,11 +996,14 @@ export default function HomePage() {
 						transition={{ duration: 0.5, delay: 0.6 }}
 						className="text-center"
 					>
-						<p className="text-gray-600 dark:text-gray-400 mb-2">
-							Want to add your own comment?
-						</p>
-						<p className="text-sm text-gray-500 dark:text-gray-500">
-							Submit one and you might unlock a little achievement 😉
+						<a
+							href="/contact"
+							className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-[#3B82F6] text-white font-medium hover:bg-[#2563EB] transition-colors mb-2"
+						>
+							Submit a comment →
+						</a>
+						<p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
+							Share your experience — you might even unlock a tiny achievement 😉
 						</p>
 					</motion.div>
 				</motion.div>
