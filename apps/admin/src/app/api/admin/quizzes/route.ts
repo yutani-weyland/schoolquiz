@@ -55,6 +55,8 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50');
     const search = searchParams.get('search') || '';
     const status = searchParams.get('status') || '';
+    const sortBy = searchParams.get('sortBy') || 'createdAt';
+    const sortOrder = searchParams.get('sortOrder') || 'desc';
 
     const skip = (page - 1) * limit;
 
@@ -71,72 +73,177 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    // Get quizzes with counts and rounds
-    // Note: We query runs separately to avoid issues if the runs table/column doesn't exist yet
-    const [quizzes, total] = await Promise.all([
-      prisma.quiz.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { createdAt: 'desc' },
-        include: {
-          rounds: {
-            include: {
-              category: true,
-            },
-            orderBy: {
-              index: 'asc',
-            },
-          },
-          _count: {
-            select: {
-              rounds: true,
-            },
-          },
-        },
-      }),
-      prisma.quiz.count({ where }),
-    ]);
-    
-    // Get runs count separately
-    let runsCounts: any[] = [];
-    try {
-      // Check if runs table exists by trying a simple query
-      await prisma.run.findMany({
-        select: { quizId: true },
-        take: 1,
-      });
-      // If that works, do the groupBy
-      const result = await prisma.run.groupBy({
-        by: ['quizId'],
-        _count: {
-          id: true,
-        },
-      });
-      runsCounts = result as any[];
-    } catch {
-      // If runs table or quizId column doesn't exist, return empty array
-      runsCounts = [];
+    // Build orderBy clause
+    const orderBy: any = {};
+    if (sortBy === 'publicationDate') {
+      orderBy.publicationDate = sortOrder;
+    } else if (sortBy === 'title') {
+      orderBy.title = sortOrder;
+    } else if (sortBy === 'status') {
+      orderBy.status = sortOrder;
+    } else {
+      // Default to createdAt
+      orderBy.createdAt = sortOrder;
     }
 
-    // Create a map of quizId -> runs count
-    const runsCountMap = new Map(
-      Array.isArray(runsCounts) 
-        ? runsCounts.map((r: any) => [r.quizId, r._count.id])
-        : []
-    );
-
-    // Add runs count to each quiz
-    const quizzesWithRuns = quizzes.map(quiz => ({
-      ...quiz,
-      _count: {
-        ...quiz._count,
-        runs: runsCountMap.get(quiz.id) || 0,
-      },
-    }));
+    // Optimized query - use select instead of include, and _count for runs
+    // Try optimized query first, fallback if runs relation doesn't exist
+    let quizzes: any[];
+    let total: number;
+    
+    try {
+      // Try optimized query with relation count
+      const result = await Promise.all([
+        prisma.quiz.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy,
+          select: {
+            id: true,
+            slug: true,
+            title: true,
+            blurb: true,
+            audience: true,
+            difficultyBand: true,
+            theme: true,
+            seasonalTag: true,
+            publicationDate: true,
+            status: true,
+            pdfUrl: true,
+            pdfStatus: true,
+            createdAt: true,
+            updatedAt: true,
+            // Only include rounds if explicitly requested (for preview/explore pages)
+            ...(searchParams.get('includeRounds') === 'true' ? {
+              rounds: {
+                select: {
+                  id: true,
+                  index: true,
+                  title: true,
+                  category: {
+                    select: {
+                      id: true,
+                      name: true,
+                    },
+                  },
+                },
+                orderBy: {
+                  index: 'asc',
+                },
+              },
+            } : {}),
+            _count: {
+              select: {
+                rounds: true,
+                runs: true, // Use relation count if available
+              },
+            },
+          },
+        }),
+        prisma.quiz.count({ where }),
+      ]);
+      quizzes = result[0];
+      total = result[1];
+    } catch (error: any) {
+      // Fallback: if runs relation doesn't exist, fetch without it and get counts separately
+      if (error?.message?.includes('runs') || error?.message?.includes('quizId')) {
+        const result = await Promise.all([
+          prisma.quiz.findMany({
+            where,
+            skip,
+            take: limit,
+            orderBy,
+            select: {
+              id: true,
+              slug: true,
+              title: true,
+              blurb: true,
+              audience: true,
+              difficultyBand: true,
+              theme: true,
+              seasonalTag: true,
+              publicationDate: true,
+              status: true,
+              pdfUrl: true,
+              pdfStatus: true,
+              createdAt: true,
+              updatedAt: true,
+              // Only include rounds if explicitly requested
+              ...(searchParams.get('includeRounds') === 'true' ? {
+                rounds: {
+                  select: {
+                    id: true,
+                    index: true,
+                    title: true,
+                    category: {
+                      select: {
+                        id: true,
+                        name: true,
+                      },
+                    },
+                  },
+                  orderBy: {
+                    index: 'asc',
+                  },
+                },
+              } : {}),
+              _count: {
+                select: {
+                  rounds: true,
+                },
+              },
+            },
+          }),
+          prisma.quiz.count({ where }),
+        ]);
+        quizzes = result[0];
+        total = result[1];
+        
+        // Get runs count separately if possible
+        let runsCounts: any[] = [];
+        if (quizzes.length > 0) {
+          try {
+            const quizIds = quizzes.map((q: any) => q.id);
+            const result = await prisma.run.groupBy({
+              by: ['quizId'],
+              where: {
+                quizId: { in: quizIds },
+              },
+              _count: {
+                id: true,
+              },
+            });
+            runsCounts = result as any[];
+          } catch {
+            // If runs table doesn't exist, use empty array
+            runsCounts = [];
+          }
+        }
+        
+        // Create a map of quizId -> runs count
+        const runsCountMap = new Map(
+          Array.isArray(runsCounts) 
+            ? runsCounts.map((r: any) => [r.quizId, r._count.id])
+            : []
+        );
+        
+        // Add runs count to each quiz
+        quizzes = quizzes.map((quiz: any) => ({
+          ...quiz,
+          _count: {
+            ...quiz._count,
+            runs: runsCountMap.get(quiz.id) || 0,
+          },
+        }));
+      } else {
+        // Re-throw if it's a different error
+        throw error;
+      }
+    }
 
     return NextResponse.json({
-      quizzes: quizzesWithRuns,
+      quizzes,
       pagination: {
         page,
         limit,

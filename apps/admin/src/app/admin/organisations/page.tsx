@@ -4,8 +4,11 @@ import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Building2, Search, Filter, Users, Calendar, Edit2, X, ChevronLeft, ChevronRight, Download, Trash2, CheckSquare, Square, MoreVertical, ChevronDown, FileText, Eye, Ban, CheckCircle, CreditCard, UserPlus, Loader2, Plus } from 'lucide-react'
-import { PageHeader, Card, Input, Select, DataTable, DataTableHeader, DataTableHeaderCell, DataTableBody, DataTableRow, DataTableCell, DataTableEmpty, Badge, Button, StatusStrip } from '@/components/admin/ui'
+import { Building2, Search, Filter, Users, Calendar, Edit2, X, ChevronLeft, ChevronRight, Download, Trash2, CheckSquare, Square, MoreVertical, ChevronDown, FileText, Eye, Ban, CheckCircle, CreditCard, UserPlus, Plus } from 'lucide-react'
+import { Spinner } from '@/components/ui/spinner'
+import { PageHeader, Card, DataTable, DataTableHeader, DataTableHeaderCell, DataTableBody, DataTableRow, DataTableCell, DataTableEmpty, Badge, Button, StatusStrip } from '@/components/admin/ui'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { AutocompleteSearch } from '@/components/admin/AutocompleteSearch'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import { useDebounce } from '@/hooks/useDebounce'
 import { TableSkeleton } from '@/components/admin/ui/TableSkeleton'
@@ -120,6 +123,31 @@ export default function AdminOrganisationsPage() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const fetchSearchSuggestions = async (query: string): Promise<string[]> => {
+    if (query.length < 2) return []
+    
+    try {
+      const response = await fetch(`/api/admin/organisations?search=${encodeURIComponent(query)}&limit=10`)
+      const data = await response.json()
+      
+      if (response.ok && data.organisations) {
+        return data.organisations
+          .map((org: Organisation) => [
+            org.name,
+            org.emailDomain,
+          ])
+          .flat()
+          .filter((s: string | null | undefined): s is string => Boolean(s))
+          .filter((s, i, arr) => arr.indexOf(s) === i)
+          .slice(0, 10)
+      }
+    } catch (error) {
+      console.error('Error fetching suggestions:', error)
+    }
+    
+    return []
   }
 
   const handleSort = (column: string) => {
@@ -388,8 +416,8 @@ export default function AdminOrganisationsPage() {
               size="sm"
               onClick={() => setShowCreateModal(true)}
             >
-              <Plus className="w-4 h-4 mr-2" />
-              Create Organisation
+              <Plus className="w-4 h-4 flex-shrink-0" />
+              <span className="hidden lg:inline">Create Organisation</span>
             </Button>
             <Popover>
               <PopoverTrigger asChild>
@@ -536,32 +564,37 @@ export default function AdminOrganisationsPage() {
       {/* Filters */}
       <Card padding="sm">
         <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[hsl(var(--muted-foreground))] z-10" />
-            <Input
-              type="text"
-              placeholder="Search organisations..."
+          <div className="flex-1">
+            <AutocompleteSearch
               value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              className="pl-10 text-xs"
+              onChange={setSearchInput}
+              placeholder="Search organisations..."
+              onFetchSuggestions={fetchSearchSuggestions}
+              className="text-xs"
+              minChars={2}
+              maxSuggestions={8}
             />
           </div>
           <div className="relative">
             <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[hsl(var(--muted-foreground))] z-10" />
             <Select
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value)
+              value={statusFilter || "all"}
+              onValueChange={(value) => {
+                setStatusFilter(value === "all" ? "" : value)
                 setPage(1)
               }}
-              className="pl-10 text-xs"
             >
-              <option value="">All Statuses</option>
-              <option value="TRIALING">Trial</option>
-              <option value="ACTIVE">Active</option>
-              <option value="PAST_DUE">Past Due</option>
-              <option value="CANCELLED">Cancelled</option>
-              <option value="EXPIRED">Expired</option>
+              <SelectTrigger className="pl-10 text-xs">
+                <SelectValue placeholder="All Statuses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="TRIALING">Trial</SelectItem>
+                <SelectItem value="ACTIVE">Active</SelectItem>
+                <SelectItem value="PAST_DUE">Past Due</SelectItem>
+                <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                <SelectItem value="EXPIRED">Expired</SelectItem>
+              </SelectContent>
             </Select>
           </div>
         </div>
@@ -569,9 +602,7 @@ export default function AdminOrganisationsPage() {
 
       {/* Table */}
       {isLoading ? (
-        <Card className="overflow-hidden p-0">
-          <TableSkeleton rows={5} columns={7} />
-        </Card>
+        <TableSkeleton rows={5} columns={7} />
       ) : (
       <DataTable
         emptyState={{
@@ -731,7 +762,7 @@ export default function AdminOrganisationsPage() {
                               disabled={actionLoading === org.id}
                             >
                               {actionLoading === org.id ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
+                                <Spinner className="size-4" />
                               ) : (
                                 <MoreVertical className="w-4 h-4" />
                               )}
@@ -807,7 +838,7 @@ export default function AdminOrganisationsPage() {
                                     handleOrgAction(org.id, 'delete')
                                   }
                                 }}
-                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors text-left"
+                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10 rounded-lg transition-colors text-left"
                               >
                                 <Trash2 className="w-4 h-4" />
                                 Delete Organisation
@@ -1029,12 +1060,13 @@ function CreateOrganisationModal({ onClose, onSave }: { onClose: () => void; onS
         >
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-[hsl(var(--foreground))]">Create Organisation</h2>
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={onClose}
-              className="p-2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg transition-colors"
             >
               <X className="w-5 h-5" />
-            </button>
+            </Button>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -1099,18 +1131,18 @@ function CreateOrganisationModal({ onClose, onSave }: { onClose: () => void; onS
             </Select>
 
             {error && (
-              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-600 dark:text-red-400">
+              <div className="p-3 bg-[hsl(var(--destructive))]/10 border border-[hsl(var(--destructive))]/30 rounded-lg text-sm text-[hsl(var(--destructive))]">
                 {error}
               </div>
             )}
 
             {success && (
-              <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-sm text-green-600 dark:text-green-400">
+              <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-lg text-sm text-green-500">
                 {success}
               </div>
             )}
 
-            <div className="flex items-center justify-end gap-3 pt-4">
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-[hsl(var(--border))]">
               <Button
                 type="button"
                 variant="secondary"
@@ -1126,7 +1158,7 @@ function CreateOrganisationModal({ onClose, onSave }: { onClose: () => void; onS
               >
                 {isLoading ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    <Spinner className="size-4 mr-2" />
                     Creating...
                   </>
                 ) : (
@@ -1219,12 +1251,13 @@ function EditOrganisationModal({ organisation, onClose, onSave }: { organisation
         >
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-[hsl(var(--foreground))]">Edit Organisation</h2>
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={onClose}
-              className="p-2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg transition-colors"
             >
               <X className="w-5 h-5" />
-            </button>
+            </Button>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -1287,19 +1320,21 @@ function EditOrganisationModal({ organisation, onClose, onSave }: { organisation
               </div>
             )}
 
-            <div className="flex items-center gap-3 pt-4 border-t border-[hsl(var(--border))]">
-              <div className="flex-1" />
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-[hsl(var(--border))]">
               <Button
                 type="button"
-                variant="ghost"
+                variant="secondary"
                 onClick={onClose}
+                disabled={isLoading}
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
+                variant="primary"
                 disabled={isLoading}
               >
+                {isLoading && <Spinner className="size-4 mr-2" />}
                 {isLoading ? 'Saving...' : 'Save Changes'}
               </Button>
             </div>

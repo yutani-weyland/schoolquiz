@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Plus, Save, ArrowLeft, FileText, Layers } from 'lucide-react'
+import { Spinner } from '@/components/ui/spinner'
 import Link from 'next/link'
 
 interface Question {
@@ -293,7 +294,11 @@ export default function CreateQuestionOrRoundPage() {
                 disabled={isSaving}
                 className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl font-medium hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-[0_2px_8px_rgba(59,130,246,0.3)]"
               >
-                <Save className="w-4 h-4" />
+                {isSaving ? (
+                  <Spinner className="w-4 h-4" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
                 {isSaving ? 'Saving...' : 'Save Question'}
               </button>
             </div>
@@ -413,7 +418,11 @@ export default function CreateQuestionOrRoundPage() {
                 disabled={isSaving}
                 className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl font-medium hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-[0_2px_8px_rgba(59,130,246,0.3)]"
               >
-                <Save className="w-4 h-4" />
+                {isSaving ? (
+                  <Spinner className="w-4 h-4" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
                 {isSaving ? 'Saving...' : 'Save Round'}
               </button>
             </div>

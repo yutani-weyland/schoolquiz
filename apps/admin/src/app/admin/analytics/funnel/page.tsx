@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Users, Target, TrendingUp, ArrowRight, CheckCircle2 } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LineChart, Line } from 'recharts'
+import { ChartSkeleton, StatCardSkeleton } from '@/components/admin/ui/skeletons'
 
 interface FunnelData {
   signups: { total: number; thisMonth: number; previousMonth: number; change: number }
@@ -43,8 +44,28 @@ export default function FunnelAnalyticsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+      <div className="space-y-6">
+        {/* Header skeleton */}
+        <div className="space-y-2">
+          <div className="h-9 w-64 bg-[hsl(var(--muted))] animate-pulse rounded-md" />
+          <div className="h-4 w-96 bg-[hsl(var(--muted))] animate-pulse rounded-md" />
+        </div>
+
+        {/* KPI Cards skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <StatCardSkeleton key={i} />
+          ))}
+        </div>
+
+        {/* Charts skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <ChartSkeleton height={400} />
+          <ChartSkeleton height={400} />
+        </div>
+
+        {/* Table skeleton */}
+        <ChartSkeleton height={300} />
       </div>
     )
   }

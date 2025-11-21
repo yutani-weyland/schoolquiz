@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'
 import { Calendar, Clock, Filter, Plus, CheckCircle2, XCircle, AlertCircle, Play } from 'lucide-react'
 import { CreateJobModal } from '@/components/admin/scheduling/CreateJobModal'
-import { PageHeader, Card, Select, Button, Badge, DataTable, DataTableHeader, DataTableHeaderCell, DataTableBody, DataTableRow, DataTableCell, DataTableEmpty } from '@/components/admin/ui'
+import { PageHeader, Card, Button, Badge, DataTable, DataTableHeader, DataTableHeaderCell, DataTableBody, DataTableRow, DataTableCell, DataTableEmpty } from '@/components/admin/ui'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 interface ScheduledJob {
   id: string
@@ -115,46 +116,54 @@ export default function AdminSchedulingPage() {
         title="Scheduling"
         description="Manage scheduled jobs, quiz publications, and maintenance windows"
         actions={
-          <Button onClick={() => setIsCreateModalOpen(true)}>
-            <Plus className="w-4 h-4" />
+          <Button variant="primary" size="sm" onClick={() => setIsCreateModalOpen(true)}>
+            <Plus className="w-4 h-4 mr-2" />
             Create Job
           </Button>
         }
       />
 
       {/* Filters */}
-      <Card>
+      <Card padding="sm">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
             <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[hsl(var(--muted-foreground))] z-10" />
             <Select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              className="pl-10"
+              value={typeFilter || "all"}
+              onValueChange={(value) => setTypeFilter(value === "all" ? "" : value)}
             >
-              <option value="">All Types</option>
-              <option value="PUBLISH_QUIZ">Publish Quiz</option>
-              <option value="OPEN_QUIZ_RUN">Open Quiz Run</option>
-              <option value="CLOSE_QUIZ_RUN">Close Quiz Run</option>
-              <option value="MAINTENANCE_WINDOW">Maintenance Window</option>
-              <option value="SEND_NOTIFICATION">Send Notification</option>
-              <option value="CUSTOM">Custom</option>
+              <SelectTrigger className="pl-10">
+                <SelectValue placeholder="All Types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="PUBLISH_QUIZ">Publish Quiz</SelectItem>
+                <SelectItem value="OPEN_QUIZ_RUN">Open Quiz Run</SelectItem>
+                <SelectItem value="CLOSE_QUIZ_RUN">Close Quiz Run</SelectItem>
+                <SelectItem value="MAINTENANCE_WINDOW">Maintenance Window</SelectItem>
+                <SelectItem value="SEND_NOTIFICATION">Send Notification</SelectItem>
+                <SelectItem value="CUSTOM">Custom</SelectItem>
+              </SelectContent>
             </Select>
           </div>
           <div className="relative flex-1">
             <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[hsl(var(--muted-foreground))] z-10" />
             <Select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="pl-10"
+              value={statusFilter || "all"}
+              onValueChange={(value) => setStatusFilter(value === "all" ? "" : value)}
             >
-              <option value="">All Statuses</option>
-              <option value="PENDING">Pending</option>
-              <option value="SCHEDULED">Scheduled</option>
-              <option value="RUNNING">Running</option>
-              <option value="COMPLETED">Completed</option>
-              <option value="FAILED">Failed</option>
-              <option value="CANCELLED">Cancelled</option>
+              <SelectTrigger className="pl-10">
+                <SelectValue placeholder="All Statuses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="PENDING">Pending</SelectItem>
+                <SelectItem value="SCHEDULED">Scheduled</SelectItem>
+                <SelectItem value="RUNNING">Running</SelectItem>
+                <SelectItem value="COMPLETED">Completed</SelectItem>
+                <SelectItem value="FAILED">Failed</SelectItem>
+                <SelectItem value="CANCELLED">Cancelled</SelectItem>
+              </SelectContent>
             </Select>
           </div>
         </div>
@@ -270,7 +279,7 @@ export default function AdminSchedulingPage() {
                               }
                             }}
                             title="Delete job"
-                            className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+                            className="text-[hsl(var(--destructive))] hover:text-[hsl(var(--destructive))]/80"
                           >
                             <XCircle className="w-4 h-4" />
                           </Button>

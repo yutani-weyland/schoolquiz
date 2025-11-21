@@ -17,6 +17,7 @@ import {
   XCircle,
   AlertCircle
 } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 import { DataTable } from '@/components/data-table';
 import { Card, Badge, Button, PageHeader, Input, Select, Textarea } from '@/components/admin/ui';
 
@@ -628,6 +629,7 @@ function CreateGroupModal({ organisationId, onClose }: { organisationId: string;
               type="submit"
               disabled={loading}
             >
+              {loading && <Spinner className="size-4 mr-2" />}
               {loading ? 'Creating...' : 'Create Group'}
             </Button>
           </div>
@@ -901,6 +903,7 @@ function CreateLeaderboardModal({
               type="submit"
               disabled={loading}
             >
+              {loading && <Spinner className="size-4 mr-2" />}
               {loading ? 'Creating...' : 'Create Leaderboard'}
             </Button>
           </div>
@@ -1045,6 +1048,7 @@ function InviteMemberModal({ organisationId, onClose }: { organisationId: string
               type="submit"
               disabled={loading || !canInvite}
             >
+              {loading && <Spinner className="size-4 mr-2" />}
               {loading ? 'Sending...' : 'Send Invite'}
             </Button>
           </div>

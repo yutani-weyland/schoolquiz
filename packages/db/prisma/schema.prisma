@@ -117,6 +117,9 @@ model Quiz {
   pdfStatus String? // pending, generated, approved
 
   @@index([slug])
+  @@index([status])
+  @@index([createdAt])
+  @@index([status, createdAt])
   @@map("quizzes")
 }
 
@@ -168,6 +171,7 @@ model Run {
   stats   RunQuestionStat[]
 
   @@index([schoolId, startedAt])
+  @@index([quizId])
   @@map("runs")
 }
 
@@ -283,6 +287,7 @@ model User {
   @@index([tier])
   @@index([referralCode])
   @@index([referredBy])
+  @@index([lastLoginAt])
   @@map("users")
 }
 
@@ -318,6 +323,7 @@ model Organisation {
 
   @@index([ownerUserId])
   @@index([status, currentPeriodEnd])
+  @@index([status])
   @@map("organisations")
 }
 
@@ -663,6 +669,7 @@ model QuizCompletion {
   @@unique([userId, quizSlug]) // One completion per quiz per user
   @@index([userId, completedAt])
   @@index([quizSlug])
+  @@index([completedAt])
   @@map("quiz_completions")
 }
 

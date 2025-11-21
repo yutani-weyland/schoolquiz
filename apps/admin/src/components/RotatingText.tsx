@@ -34,8 +34,7 @@ export function RotatingText({
 			overflow: "hidden",
 			verticalAlign: "bottom",
 			minHeight: "1.2em",
-			display: "inline-flex",
-			alignItems: "center"
+			display: "inline-block"
 		}}>
 			<AnimatePresence mode="wait">
 				<motion.span
@@ -49,7 +48,8 @@ export function RotatingText({
 					}}
 					className="inline-block"
 					style={{
-						position: "relative"
+						position: "relative",
+						verticalAlign: "bottom"
 					}}
 				>
 					{text[currentIndex]}

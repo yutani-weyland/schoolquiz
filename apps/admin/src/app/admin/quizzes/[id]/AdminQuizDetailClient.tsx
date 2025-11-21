@@ -2,10 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { BookOpen, ArrowLeft, FileText, BarChart3, Play, Calendar, Users, TrendingUp, Clock, Palette, Eye, FileDown, FileCheck, CheckCircle2, Loader2 } from 'lucide-react'
+import { BookOpen, ArrowLeft, FileText, BarChart3, Play, Calendar, Users, TrendingUp, Clock, Eye, FileDown, FileCheck, CheckCircle2 } from 'lucide-react'
+import { Spinner } from '@/components/ui/spinner'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { quizColors } from '@/lib/colors'
 import { QuizCardPreview } from '@/components/admin/quizzes/QuizCardPreview'
+import { Badge, PageHeader } from '@/components/admin/ui'
+import { QuizColorPicker } from '@/components/admin/QuizColorPicker'
+import { dedupeFetch } from '@/lib/fetch-dedupe'
 
 export interface Round {
   id: string
@@ -105,6 +108,14 @@ export function AdminQuizDetailClient({ initialQuiz, initialTab = 'content', qui
     }
   }, [])
 
+  // Sync local state with props when they change (e.g., after router.refresh())
+  useEffect(() => {
+    if (initialQuiz) {
+      setQuiz(initialQuiz)
+      setColorHex(initialQuiz.colorHex || '')
+    }
+  }, [initialQuiz])
+
   useEffect(() => {
     if (quiz) {
       setColorHex(quiz.colorHex || '')
@@ -117,31 +128,21 @@ export function AdminQuizDetailClient({ initialQuiz, initialTab = 'content', qui
     }
   }, [showPreview])
 
-  const refreshQuiz = async () => {
-    try {
-      const response = await fetch(`/api/admin/quizzes/${quizId}`)
-      const data = await response.json()
-      if (response.ok) {
-        setQuiz(data.quiz)
-      }
-    } catch (error) {
-      console.error('Failed to refresh quiz:', error)
-    }
-  }
+  // Removed refreshQuiz() - using router.refresh() instead to revalidate server component data
+  // This avoids duplicate database queries
 
   const fetchAllQuizzes = async () => {
     setIsLoadingQuizzes(true)
     try {
-      const response = await fetch('/api/admin/quizzes?status=published&limit=100')
+      // Request server-side sorting by publicationDate desc to avoid client-side sort
+      // Limit to 50 for preview (100 was overkill)
+      // Include rounds for preview display
+      // Use dedupeFetch to prevent duplicate requests
+      const response = await dedupeFetch('/api/admin/quizzes?status=published&limit=50&sortBy=publicationDate&sortOrder=desc&includeRounds=true')
       const data = await response.json()
       if (response.ok) {
-        // Sort by publication date descending (newest first)
-        const sorted = [...(data.quizzes || [])].sort((a, b) => {
-          const dateA = a.publicationDate ? new Date(a.publicationDate).getTime() : 0
-          const dateB = b.publicationDate ? new Date(b.publicationDate).getTime() : 0
-          return dateB - dateA
-        })
-        setAllQuizzes(sorted)
+        // Server already sorted, no need to sort client-side
+        setAllQuizzes(data.quizzes || [])
       }
     } catch (error) {
       console.error('Failed to fetch quizzes:', error)
@@ -151,8 +152,11 @@ export function AdminQuizDetailClient({ initialQuiz, initialTab = 'content', qui
   }
 
   const handleColorChange = async (newColor: string) => {
+    // Optimistic update
+    const previousColor = colorHex
     setColorHex(newColor)
     setIsSavingColor(true)
+    
     try {
       const response = await fetch(`/api/admin/quizzes/${quizId}`, {
         method: 'PATCH',
@@ -160,24 +164,22 @@ export function AdminQuizDetailClient({ initialQuiz, initialTab = 'content', qui
         body: JSON.stringify({ colorHex: newColor || null }),
       })
       if (response.ok) {
-        const data = await response.json()
-        setQuiz(data.quiz)
+        // Revalidate server component data instead of fetching again
+        router.refresh()
         // Refresh preview if shown
         if (showPreview) {
           fetchAllQuizzes()
         }
-        // Refresh the page data
-        router.refresh()
       } else {
         const error = await response.json()
         console.error('Failed to update color:', error)
         // Revert on error
-        if (quiz) setColorHex(quiz.colorHex || '')
+        setColorHex(previousColor)
       }
     } catch (error) {
       console.error('Failed to update color:', error)
       // Revert on error
-      if (quiz) setColorHex(quiz.colorHex || '')
+      setColorHex(previousColor)
     } finally {
       setIsSavingColor(false)
     }
@@ -192,21 +194,41 @@ export function AdminQuizDetailClient({ initialQuiz, initialTab = 'content', qui
         method: 'POST',
       })
       
-      const data = await response.json()
+      // Check content type before parsing
+      const contentType = response.headers.get('content-type')
+      let data: any
+      
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json()
+      } else {
+        // If not JSON, it's likely an HTML error page
+        const text = await response.text()
+        console.error('Non-JSON response from PDF API:', text.substring(0, 500))
+        throw new Error(`Server returned an error page. Status: ${response.status}`)
+      }
+      
       if (response.ok) {
-        // Refresh quiz data
-        await fetchQuiz()
+        // Revalidate server component data instead of fetching again
+        router.refresh()
         // Open PDF in new tab for review
         if (data.pdfUrl) {
           window.open(data.pdfUrl, '_blank')
         }
         alert('PDF generated successfully! Review it and approve when ready.')
       } else {
-        alert(data.error || 'Failed to generate PDF')
+        // Show detailed error message
+        const errorMsg = data.details 
+          ? `${data.error}\n\nDetails: ${data.details}`
+          : data.error || 'Failed to generate PDF'
+        console.error('PDF generation failed:', data)
+        alert(errorMsg)
       }
     } catch (error) {
       console.error('Failed to generate PDF:', error)
-      alert('Failed to generate PDF')
+      const errorMsg = error instanceof Error 
+        ? `Failed to generate PDF: ${error.message}`
+        : 'Failed to generate PDF: Network error'
+      alert(errorMsg)
     } finally {
       setIsGeneratingPDF(false)
     }
@@ -223,8 +245,7 @@ export function AdminQuizDetailClient({ initialQuiz, initialTab = 'content', qui
       
       const data = await response.json()
       if (response.ok) {
-        // Refresh quiz data
-        await refreshQuiz()
+        // Revalidate server component data (router.refresh() handles both)
         router.refresh()
         alert('PDF approved! It will now appear on the quizzes page.')
       } else {
@@ -246,9 +267,9 @@ export function AdminQuizDetailClient({ initialQuiz, initialTab = 'content', qui
 
   const getStatusBadge = (status: string) => {
     const badges = {
-      draft: { label: 'Draft', className: 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]' },
-      scheduled: { label: 'Scheduled', className: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' },
-      published: { label: 'Published', className: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' },
+      draft: { label: 'Draft', variant: 'default' as const },
+      scheduled: { label: 'Scheduled', variant: 'info' as const },
+      published: { label: 'Published', variant: 'success' as const },
     }
     return badges[status as keyof typeof badges] || badges.draft
   }
@@ -284,49 +305,35 @@ export function AdminQuizDetailClient({ initialQuiz, initialTab = 'content', qui
   const statusBadge = getStatusBadge(quiz.status)
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => router.back()}
-            className="p-2 hover:bg-[hsl(var(--muted))] rounded-xl transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5 text-[hsl(var(--foreground))]" />
-          </button>
-          <div>
-            <h1 className="text-3xl font-bold text-[hsl(var(--foreground))] tracking-tight">
-              {quiz.title}
-            </h1>
-            {quiz.blurb && (
-              <p className="mt-2 text-sm text-[hsl(var(--muted-foreground))]">{quiz.blurb}</p>
-            )}
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${statusBadge.className}`}>
+    <div className="space-y-6">
+      {/* Page Header */}
+      <PageHeader
+        title={quiz.title}
+        description={quiz.blurb || undefined}
+        metadata={
+          <Badge variant={statusBadge.variant}>
             {statusBadge.label}
-          </span>
-        </div>
-      </div>
+          </Badge>
+        }
+      />
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-[hsl(var(--card))] rounded-2xl border border-[hsl(var(--border))] p-4 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
-              <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            <div className="p-2 bg-[hsl(var(--muted))] rounded-lg">
+              <FileText className="w-5 h-5 text-[hsl(var(--primary))]" />
             </div>
             <div>
               <p className="text-xs text-[hsl(var(--muted-foreground))]">Rounds</p>
-              <p className="text-2xl font-bold text-[hsl(var(--foreground))]">{quiz.rounds.length}</p>
+              <p className="text-2xl font-bold text-[hsl(var(--foreground))]">{quiz.rounds?.length || 0}</p>
             </div>
           </div>
         </div>
         <div className="bg-[hsl(var(--card))] rounded-2xl border border-[hsl(var(--border))] p-4 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-50 dark:bg-green-900/30 rounded-lg">
-              <Play className="w-5 h-5 text-green-600 dark:text-green-400" />
+            <div className="p-2 bg-[hsl(var(--muted))] rounded-lg">
+              <Play className="w-5 h-5 text-green-500" />
             </div>
             <div>
               <p className="text-xs text-[hsl(var(--muted-foreground))]">Total Runs</p>
@@ -360,35 +367,35 @@ export function AdminQuizDetailClient({ initialQuiz, initialTab = 'content', qui
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="inline-flex h-auto items-center justify-start rounded-none border-b border-[hsl(var(--border))] bg-transparent p-0 mb-6 w-full">
+        <TabsList className="flex border-b border-[hsl(var(--border))] mb-6 bg-transparent p-0 h-auto">
           <TabsTrigger
             value="content"
-            className="px-6 py-3 text-sm font-medium text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] data-[state=active]:text-[hsl(var(--primary))] data-[state=active]:border-b-2 data-[state=active]:border-[hsl(var(--primary))] rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none -mb-px"
+            className="px-4 py-3 text-sm font-medium text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] data-[state=active]:text-[hsl(var(--primary))] data-[state=active]:border-b-2 data-[state=active]:border-[hsl(var(--primary))] rounded-none !bg-transparent data-[state=active]:!bg-transparent"
           >
             Content
           </TabsTrigger>
           <TabsTrigger
             value="analytics"
-            className="px-6 py-3 text-sm font-medium text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] data-[state=active]:text-[hsl(var(--primary))] data-[state=active]:border-b-2 data-[state=active]:border-[hsl(var(--primary))] rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none -mb-px"
+            className="px-4 py-3 text-sm font-medium text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] data-[state=active]:text-[hsl(var(--primary))] data-[state=active]:border-b-2 data-[state=active]:border-[hsl(var(--primary))] rounded-none !bg-transparent data-[state=active]:!bg-transparent"
           >
             Analytics
           </TabsTrigger>
           <TabsTrigger
             value="runs"
-            className="px-6 py-3 text-sm font-medium text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] data-[state=active]:text-[hsl(var(--primary))] data-[state=active]:border-b-2 data-[state=active]:border-[hsl(var(--primary))] rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none -mb-px"
+            className="px-4 py-3 text-sm font-medium text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] data-[state=active]:text-[hsl(var(--primary))] data-[state=active]:border-b-2 data-[state=active]:border-[hsl(var(--primary))] rounded-none !bg-transparent data-[state=active]:!bg-transparent"
           >
             Runs
           </TabsTrigger>
           <TabsTrigger
             value="pdf"
-            className="px-6 py-3 text-sm font-medium text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] data-[state=active]:text-[hsl(var(--primary))] data-[state=active]:border-b-2 data-[state=active]:border-[hsl(var(--primary))] rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none -mb-px"
+            className="px-4 py-3 text-sm font-medium text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] data-[state=active]:text-[hsl(var(--primary))] data-[state=active]:border-b-2 data-[state=active]:border-[hsl(var(--primary))] rounded-none !bg-transparent data-[state=active]:!bg-transparent"
           >
             PDF Review
           </TabsTrigger>
         </TabsList>
 
         {/* Content Tab */}
-        <TabsContent value="content" className="mt-0 space-y-6">
+        <TabsContent value="content" className="mt-6 space-y-6">
           <div className="bg-[hsl(var(--card))] rounded-2xl border border-[hsl(var(--border))] p-6 shadow-sm">
             <div className="space-y-6">
               {/* Quiz Info */}
@@ -401,9 +408,9 @@ export function AdminQuizDetailClient({ initialQuiz, initialTab = 'content', qui
                   </div>
                   <div>
                     <p className="text-sm text-[hsl(var(--muted-foreground))]">Status</p>
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1 ${statusBadge.className}`}>
+                    <Badge variant={statusBadge.variant} className="mt-1">
                       {statusBadge.label}
-                    </span>
+                    </Badge>
                   </div>
                     <div>
                     <p className="text-sm text-[hsl(var(--muted-foreground))]">Theme</p>
@@ -427,12 +434,9 @@ export function AdminQuizDetailClient({ initialQuiz, initialTab = 'content', qui
               {/* Quiz Card Color */}
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <Palette className="w-5 h-5 text-[hsl(var(--muted-foreground))]" />
-                    <h3 className="text-lg font-semibold text-[hsl(var(--foreground))]">
-                      Quiz Card Color
-                    </h3>
-                  </div>
+                  <h3 className="text-lg font-semibold text-[hsl(var(--foreground))]">
+                    Quiz Card Color
+                  </h3>
                   <button
                     onClick={() => setShowPreview(!showPreview)}
                     className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/10 rounded-lg transition-colors"
@@ -441,101 +445,30 @@ export function AdminQuizDetailClient({ initialQuiz, initialTab = 'content', qui
                     {showPreview ? 'Hide' : 'Show'} Preview
                   </button>
                 </div>
-                <p className="text-sm text-[hsl(var(--muted-foreground))] mb-4">
-                  Choose a color for the quiz card. This color will appear on the user-facing quizzes page and in presentation mode.
-                </p>
-                
-                {/* Color Palette */}
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-2">
-                    Preset Colors
-                  </label>
-                  <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-12 gap-2">
-                    {quizColors.map((color) => (
-                      <button
-                        key={color}
-                        type="button"
-                        onClick={() => handleColorChange(color)}
-                        disabled={isSavingColor}
-                        className={`
-                          w-12 h-12 rounded-xl border-2 transition-all duration-200
-                          ${colorHex === color
-                            ? 'border-[hsl(var(--foreground))] scale-110 shadow-lg ring-2 ring-offset-2 ring-[hsl(var(--primary))]'
-                            : 'border-[hsl(var(--border))] hover:scale-105 hover:border-[hsl(var(--foreground))]/50'
-                          }
-                          ${isSavingColor ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-                        `}
-                        style={{ backgroundColor: color }}
-                        title={color}
-                      />
-                    ))}
+                <QuizColorPicker
+                  value={colorHex}
+                  onChange={handleColorChange}
+                  disabled={isSavingColor}
+                />
+                {isSavingColor && (
+                  <div className="mt-2 flex items-center gap-2 text-sm text-[hsl(var(--muted-foreground))]">
+                    <Spinner className="size-4" />
+                    <span>Saving...</span>
                   </div>
-                </div>
-
-                {/* Custom Color Input */}
-                <div>
-                  <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-2">
-                    Custom Color
-                  </label>
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="color"
-                      value={colorHex || '#000000'}
-                      onChange={(e) => handleColorChange(e.target.value)}
-                      disabled={isSavingColor}
-                      className="w-16 h-12 rounded-lg border border-[hsl(var(--border))] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                    />
-                    <input
-                      type="text"
-                      value={colorHex || ''}
-                      onChange={(e) => {
-                        const value = e.target.value
-                        setColorHex(value)
-                        // Validate and save on blur or Enter
-                        if (/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(value) || value === '') {
-                          handleColorChange(value || '')
-                        }
-                      }}
-                      onBlur={(e) => {
-                        if (!/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(e.target.value) && e.target.value !== '') {
-                          // Reset to current quiz color if invalid
-                          if (quiz) setColorHex(quiz.colorHex || '')
-                        }
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.currentTarget.blur()
-                        }
-                      }}
-                      disabled={isSavingColor}
-                      placeholder="#FFE135"
-                      className="flex-1 px-3 py-2 border border-[hsl(var(--border))] rounded-lg bg-[hsl(var(--input))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] placeholder:text-[hsl(var(--muted-foreground))] disabled:opacity-50 disabled:cursor-not-allowed"
-                    />
-                    {colorHex && (
-                      <div
-                        className="w-12 h-12 rounded-lg border-2 border-[hsl(var(--border))]"
-                        style={{ backgroundColor: colorHex }}
-                        title={colorHex}
-                      />
-                    )}
-                    {isSavingColor && (
-                      <div className="inline-block animate-spin rounded-full h-5 w-5 border-b-2 border-[hsl(var(--primary))]"></div>
-                    )}
-                  </div>
-                </div>
+                )}
 
                 {/* Preview */}
                 {showPreview && quiz && (
                   <div className="mt-6 pt-6 border-t border-[hsl(var(--border))]">
                     <h4 className="text-sm font-semibold text-[hsl(var(--foreground))] mb-2">
-                      Preview - How Users See Quizzes (Chronological Order, Newest First)
+                      Preview - How Users See Quizzes
                     </h4>
                     <p className="text-xs text-[hsl(var(--muted-foreground))] mb-4">
                       This shows how published quizzes appear on the user-facing quizzes page. The current quiz is highlighted.
                     </p>
                     {isLoadingQuizzes ? (
                       <div className="flex items-center justify-center py-12">
-                        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[hsl(var(--primary))]"></div>
+                        <Spinner className="size-8" />
                       </div>
                     ) : (
                       <div className="grid sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5">
@@ -620,7 +553,7 @@ export function AdminQuizDetailClient({ initialQuiz, initialTab = 'content', qui
         </TabsContent>
 
         {/* Analytics Tab */}
-        <TabsContent value="analytics" className="mt-0">
+        <TabsContent value="analytics" className="mt-6">
           <div className="space-y-6">
             <div className="bg-[hsl(var(--card))] rounded-2xl border border-[hsl(var(--border))] p-6 shadow-sm">
               <h3 className="text-lg font-semibold text-[hsl(var(--foreground))] mb-4">Performance Metrics</h3>
@@ -655,7 +588,7 @@ export function AdminQuizDetailClient({ initialQuiz, initialTab = 'content', qui
         </TabsContent>
 
         {/* Runs Tab */}
-        <TabsContent value="runs" className="mt-0">
+        <TabsContent value="runs" className="mt-6">
           <div className="bg-[hsl(var(--card))] rounded-2xl border border-[hsl(var(--border))] overflow-hidden shadow-sm">
             {quiz.runs.length === 0 ? (
               <div className="p-12 text-center">
@@ -723,7 +656,7 @@ export function AdminQuizDetailClient({ initialQuiz, initialTab = 'content', qui
         </TabsContent>
 
         {/* PDF Review Tab */}
-        <TabsContent value="pdf" className="mt-0">
+        <TabsContent value="pdf" className="mt-6">
           <div className="bg-[hsl(var(--card))] rounded-2xl border border-[hsl(var(--border))] p-6 shadow-sm">
             <div className="space-y-6">
               <div>
@@ -743,7 +676,7 @@ export function AdminQuizDetailClient({ initialQuiz, initialTab = 'content', qui
                     >
                       {isGeneratingPDF ? (
                         <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <Spinner className="size-4" />
                           Generating PDF...
                         </>
                       ) : (
@@ -756,14 +689,14 @@ export function AdminQuizDetailClient({ initialQuiz, initialTab = 'content', qui
                   </div>
                 ) : quiz.pdfStatus === 'generated' ? (
                   <div className="space-y-4">
-                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+                    <div className="bg-[hsl(var(--muted))] border border-[hsl(var(--border))] rounded-xl p-4">
                       <div className="flex items-start gap-3">
-                        <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+                        <FileText className="w-5 h-5 text-[hsl(var(--primary))] mt-0.5" />
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-blue-900 dark:text-blue-300 mb-1">
+                          <p className="text-sm font-medium text-[hsl(var(--foreground))] mb-1">
                             PDF Generated Successfully
                           </p>
-                          <p className="text-sm text-blue-700 dark:text-blue-400">
+                          <p className="text-sm text-[hsl(var(--muted-foreground))]">
                             Please review the PDF and approve it when you're ready to make it available on the quizzes page.
                           </p>
                         </div>
@@ -784,7 +717,7 @@ export function AdminQuizDetailClient({ initialQuiz, initialTab = 'content', qui
                       >
                         {isApprovingPDF ? (
                           <>
-                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <Spinner className="size-4" />
                             Approving...
                           </>
                         ) : (
@@ -801,7 +734,7 @@ export function AdminQuizDetailClient({ initialQuiz, initialTab = 'content', qui
                       >
                         {isGeneratingPDF ? (
                           <>
-                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <Spinner className="size-4" />
                             Regenerating...
                           </>
                         ) : (
@@ -843,7 +776,7 @@ export function AdminQuizDetailClient({ initialQuiz, initialTab = 'content', qui
                       >
                         {isGeneratingPDF ? (
                           <>
-                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <Spinner className="size-4" />
                             Regenerating...
                           </>
                         ) : (

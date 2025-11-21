@@ -34,9 +34,17 @@ function createPrismaClient(): PrismaClient {
   }
 
   try {
-    // Simply create Prisma client - it will read DATABASE_URL from env
-    // Prisma should handle the connection string format correctly
-    const client = new PrismaClient()
+    // Configure Prisma client for Supabase connection
+    const dbUrl = process.env.DATABASE_URL || ''
+    
+    const client = new PrismaClient({
+      datasources: {
+        db: {
+          url: dbUrl,
+        },
+      },
+      log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
+    })
     return client
   } catch (error: any) {
     // If Prisma still fails, provide helpful error message

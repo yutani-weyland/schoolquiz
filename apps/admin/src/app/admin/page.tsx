@@ -1,9 +1,11 @@
 'use client'
 
+import React, { useEffect, useState } from 'react'
 import { Building2, Users, BookOpen, TrendingUp, Activity, Clock, CheckCircle2, AlertCircle, BarChart3, Zap, Plus, Crown, User } from 'lucide-react'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
-import { PageHeader, StatusStrip } from '@/components/admin/ui'
+import { PageHeader, StatusStrip, Badge } from '@/components/admin/ui'
+import { Skeleton } from '@/components/ui/Skeleton'
+import { StatCardSkeleton } from '@/components/admin/ui/skeletons'
 
 type TimePeriod = 'week' | 'month' | 'year'
 
@@ -75,20 +77,6 @@ export default function AdminOverviewPage() {
     'completion-rate': 'month',
   })
 
-  useEffect(() => {
-    fetchStats()
-  }, [])
-
-  // Update time only on client side to prevent hydration mismatch
-  useEffect(() => {
-    const updateTime = () => {
-      setCurrentTime(new Date().toLocaleTimeString())
-    }
-    updateTime()
-    const interval = setInterval(updateTime, 1000)
-    return () => clearInterval(interval)
-  }, [])
-
   const fetchStats = async () => {
     try {
       const response = await fetch('/api/admin/stats')
@@ -107,6 +95,20 @@ export default function AdminOverviewPage() {
       setIsLoading(false)
     }
   }
+
+  useEffect(() => {
+    fetchStats()
+  }, [])
+
+  // Update time only on client side to prevent hydration mismatch
+  useEffect(() => {
+    const updateTime = () => {
+      setCurrentTime(new Date().toLocaleTimeString())
+    }
+    updateTime()
+    const interval = setInterval(updateTime, 1000)
+    return () => clearInterval(interval)
+  }, [])
 
   // TODO: Fetch real statistics from database
   // For Phase 0, we'll use placeholder data
@@ -271,7 +273,7 @@ export default function AdminOverviewPage() {
       {/* User Split Section - Free vs Premium */}
       <div className="bg-[hsl(var(--card))] rounded-2xl p-6 border border-[hsl(var(--border))]">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-[hsl(var(--foreground))] tracking-tight">
+          <h2 className="text-lg font-semibold text-[hsl(var(--foreground))] tracking-tight">
             User Distribution
           </h2>
           {stats && (
@@ -282,8 +284,21 @@ export default function AdminOverviewPage() {
           )}
         </div>
         {isLoading ? (
-          <div className="flex items-center justify-center py-4">
-            <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-[hsl(var(--primary))]"></div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex items-center gap-4 p-4 rounded-xl bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
+              <Skeleton className="h-10 w-10 rounded-lg" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-6 w-16" />
+                <Skeleton className="h-3 w-24" />
+              </div>
+            </div>
+            <div className="flex items-center gap-4 p-4 rounded-xl bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800">
+              <Skeleton className="h-10 w-10 rounded-lg" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-6 w-16" />
+                <Skeleton className="h-3 w-24" />
+              </div>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-4">
@@ -332,7 +347,12 @@ export default function AdminOverviewPage() {
 
       {/* Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {statCards.map((stat) => {
+        {isLoading ? (
+          Array.from({ length: 6 }).map((_, i) => (
+            <StatCardSkeleton key={i} />
+          ))
+        ) : (
+          statCards.map((stat) => {
           const Icon = stat.icon
           const cardTimePeriod = stat.hasTimeToggle ? (timePeriods[stat.id] || 'month') : 'month'
           const data = stat.hasTimeToggle && stat.getData ? stat.getData(cardTimePeriod) : {
@@ -351,43 +371,55 @@ export default function AdminOverviewPage() {
           return (
             <div
               key={stat.id}
-              className="group relative bg-[hsl(var(--card))] rounded-2xl p-6 border border-[hsl(var(--border))] hover:border-[hsl(var(--primary))] transition-all duration-200 hover:-translate-y-0.5"
+              className="group relative bg-[hsl(var(--card))] rounded-2xl p-4 sm:p-6 border border-[hsl(var(--border))] hover:border-[hsl(var(--primary))] transition-all duration-200 hover:-translate-y-0.5"
             >
-              <div className="flex items-start justify-between gap-4 mb-3">
+              <div className="flex items-start justify-between gap-3 sm:gap-4">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
-                    <p className="text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
+                  <div className="flex items-center justify-between gap-2 mb-1.5 sm:mb-2 flex-wrap">
+                    <p className="text-[10px] sm:text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider truncate">
                       {stat.title}
                     </p>
                     {stat.hasTimeToggle && (
+                      <div className="hidden sm:block">
+                        <TimePeriodToggle 
+                          value={cardTimePeriod} 
+                          onChange={(period) => setTimePeriods(prev => ({ ...prev, [stat.id]: period }))} 
+                        />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-baseline gap-1.5 sm:gap-2 mb-1 sm:mb-2">
+                    <p className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[hsl(var(--foreground))] tracking-tight">
+                      {data.value}
+                    </p>
+                    {data.trend && (
+                      <span className={`text-xs sm:text-sm font-medium ${trendColor} flex items-center gap-0.5 sm:gap-1`}>
+                        <TrendingUp className={`w-2.5 h-2.5 sm:w-3 sm:h-3 ${trendDirection === 'down' ? 'rotate-180' : ''}`} />
+                        <span className="hidden sm:inline">{data.trend}</span>
+                        <span className="sm:hidden">{data.trend.replace(/[^+\-%]/g, '')}</span>
+                      </span>
+                    )}
+                  </div>
+                  <p className="hidden sm:block text-xs font-normal text-[hsl(var(--muted-foreground))] leading-relaxed opacity-90">
+                    {data.description}
+                  </p>
+                  {stat.hasTimeToggle && (
+                    <div className="sm:hidden mt-1.5">
                       <TimePeriodToggle 
                         value={cardTimePeriod} 
                         onChange={(period) => setTimePeriods(prev => ({ ...prev, [stat.id]: period }))} 
                       />
-                    )}
-                  </div>
-                  <div className="flex items-baseline gap-2 mb-2">
-                    <p className="text-4xl font-extrabold text-[hsl(var(--foreground))] tracking-tight">
-                      {data.value}
-                    </p>
-                    {data.trend && (
-                      <span className={`text-sm font-medium ${trendColor} flex items-center gap-1`}>
-                        <TrendingUp className={`w-3 h-3 ${trendDirection === 'down' ? 'rotate-180' : ''}`} />
-                        {data.trend}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs font-normal text-[hsl(var(--muted-foreground))] leading-relaxed opacity-90">
-                    {data.description}
-                  </p>
+                    </div>
+                  )}
                 </div>
-                <div className="p-3 bg-[hsl(var(--muted))] rounded-xl flex-shrink-0">
-                  <Icon className="w-6 h-6 text-[hsl(var(--primary))]" />
+                <div className="p-2 sm:p-3 bg-[hsl(var(--muted))] rounded-lg sm:rounded-xl flex-shrink-0">
+                  <Icon className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-[hsl(var(--primary))]" />
                 </div>
               </div>
             </div>
           )
-        })}
+        })
+        )}
       </div>
 
       {/* Quick Actions & Recent Activity */}
@@ -395,7 +427,7 @@ export default function AdminOverviewPage() {
         {/* Quick Actions */}
         <div className="lg:col-span-1">
           <div className="bg-[hsl(var(--card))] rounded-2xl p-6 border border-[hsl(var(--border))]">
-            <h2 className="text-lg font-bold text-[hsl(var(--foreground))] mb-4 tracking-tight">
+            <h2 className="text-lg font-semibold text-[hsl(var(--foreground))] mb-4 tracking-tight">
               Quick Actions
             </h2>
             <div className="space-y-2">
@@ -405,7 +437,7 @@ export default function AdminOverviewPage() {
                   <Link
                     key={action.label}
                     href={action.href}
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[hsl(var(--muted))] hover:bg-[hsl(var(--accent))] transition-colors group"
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[hsl(var(--muted))] hover:bg-[hsl(var(--muted))]/80 transition-colors group"
                   >
                     <Icon className="w-5 h-5 text-[hsl(var(--muted-foreground))] group-hover:text-[hsl(var(--primary))] transition-colors" />
                     <span className="text-sm font-semibold text-[hsl(var(--foreground))] group-hover:text-[hsl(var(--primary))] transition-colors">
@@ -422,7 +454,7 @@ export default function AdminOverviewPage() {
         <div className="lg:col-span-2">
           <div className="bg-[hsl(var(--card))] rounded-2xl p-6 border border-[hsl(var(--border))]">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-[hsl(var(--foreground))] tracking-tight">
+              <h2 className="text-lg font-semibold text-[hsl(var(--foreground))] tracking-tight">
                 Recent Activity
               </h2>
               <Link
@@ -466,7 +498,7 @@ export default function AdminOverviewPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Platform Health */}
         <div className="bg-[hsl(var(--card))] rounded-2xl p-6 border border-[hsl(var(--border))]">
-          <h2 className="text-lg font-bold text-[hsl(var(--foreground))] mb-4 tracking-tight">
+          <h2 className="text-lg font-semibold text-[hsl(var(--foreground))] mb-4 tracking-tight">
             Platform Health
           </h2>
           <div className="space-y-4">
@@ -480,9 +512,9 @@ export default function AdminOverviewPage() {
                   <p className="text-xs font-normal text-[hsl(var(--muted-foreground))]">All systems operational</p>
                 </div>
               </div>
-              <span className="px-2 py-1 text-xs font-medium text-green-500 bg-[hsl(var(--muted))] rounded-lg">
+              <Badge variant="success">
                 Healthy
-              </span>
+              </Badge>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -494,9 +526,9 @@ export default function AdminOverviewPage() {
                   <p className="text-xs font-normal text-[hsl(var(--muted-foreground))]">Response time: 1.2s avg</p>
                 </div>
               </div>
-              <span className="px-2 py-1 text-xs font-medium text-green-500 bg-[hsl(var(--muted))] rounded-lg">
+              <Badge variant="success">
                 Healthy
-              </span>
+              </Badge>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -508,16 +540,16 @@ export default function AdminOverviewPage() {
                   <p className="text-xs font-normal text-[hsl(var(--muted-foreground))]">75% capacity used</p>
                 </div>
               </div>
-              <span className="px-2 py-1 text-xs font-medium text-yellow-500 bg-[hsl(var(--muted))] rounded-lg">
+              <Badge variant="warning">
                 Warning
-              </span>
+              </Badge>
             </div>
           </div>
         </div>
 
         {/* System Status */}
         <div className="bg-[hsl(var(--card))] rounded-2xl p-6 border border-[hsl(var(--border))]">
-          <h2 className="text-lg font-bold text-[hsl(var(--foreground))] mb-4 tracking-tight">
+          <h2 className="text-lg font-semibold text-[hsl(var(--foreground))] mb-4 tracking-tight">
             System Status
           </h2>
           <div className="space-y-4">

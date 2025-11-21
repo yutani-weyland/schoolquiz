@@ -1,7 +1,16 @@
 diff --git a/dist/index.mjs b/dist/index.mjs
-index d7ea37463aa39e6b9f27e9ab6882d3ed6e61ffe1..015bfec87843d2ede2bd627baac12b126ffd8aa5 100644
+index d7ea37463aa39e6b9f27e9ab6882d3ed6e61ffe1..ce2ea7979ebfc302f8990fdb26d40921973cebc2 100644
 --- a/dist/index.mjs
 +++ b/dist/index.mjs
+@@ -49,7 +49,7 @@ function createSlotClone(ownerName) {
+       const childrenRef = getElementRef(children);
+       const props2 = mergeProps(slotProps, children.props);
+       if (children.type !== React.Fragment) {
+-        props2.ref = forwardedRef ? composeRefs(forwardedRef, childrenRef) : childrenRef;
++        props2.ref = forwardedRef ? composeRefs(forwardedRef, childrenRef) : childrenRef;
+       }
+       return React.cloneElement(children, props2);
+     }
 @@ -97,17 +97,13 @@ function mergeProps(slotProps, childProps) {
    return { ...slotProps, ...overrideProps };
  }
@@ -10,16 +19,17 @@ index d7ea37463aa39e6b9f27e9ab6882d3ed6e61ffe1..015bfec87843d2ede2bd627baac12b12
 -  let mayWarn = getter && "isReactWarning" in getter && getter.isReactWarning;
 -  if (mayWarn) {
 -    return element.ref;
--  }
--  getter = Object.getOwnPropertyDescriptor(element, "ref")?.get;
--  mayWarn = getter && "isReactWarning" in getter && getter.isReactWarning;
--  if (mayWarn) {
 +  // In React 19, ref is always a regular prop in element.props.ref
 +  // In React 18, ref is also available in element.props.ref (React normalizes it)
 +  // Accessing element.ref directly triggers React 19 warnings, so we only use props.ref
 +  if (element.props && "ref" in element.props) {
-     return element.props.ref;
++    return element.props.ref;
    }
+-  getter = Object.getOwnPropertyDescriptor(element, "ref")?.get;
+-  mayWarn = getter && "isReactWarning" in getter && getter.isReactWarning;
+-  if (mayWarn) {
+-    return element.props.ref;
+-  }
 -  return element.props.ref || element.ref;
 +  return undefined;
  }

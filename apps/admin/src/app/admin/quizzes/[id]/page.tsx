@@ -9,6 +9,7 @@ import { headers } from 'next/headers'
 import { unstable_cache } from 'next/cache'
 import { notFound } from 'next/navigation'
 import { AdminQuizDetailClient } from './AdminQuizDetailClient'
+import { CACHE_TTL, CACHE_TAGS } from '@/lib/cache-config'
 
 async function getQuizInternal(id: string) {
   // Optimized: Load basic data first, defer heavy question loading
@@ -40,7 +41,7 @@ async function getQuizInternal(id: string) {
         },
       },
     }),
-    // Rounds metadata only (no questions yet - lazy load)
+    // Rounds with questions - use nested include to combine queries
     prisma.round.findMany({
       where: { quizId: id },
       select: {
@@ -56,10 +57,22 @@ async function getQuizInternal(id: string) {
             name: true,
           },
         },
-        // Don't load questions here - will be loaded separately if needed
-        _count: {
+        // Include questions directly to avoid separate query
+        questions: {
           select: {
-            questions: true,
+            id: true,
+            order: true,
+            question: {
+              select: {
+                id: true,
+                text: true,
+                answer: true,
+                difficulty: true,
+              },
+            },
+          },
+          orderBy: {
+            order: 'asc',
           },
         },
       },
@@ -95,45 +108,8 @@ async function getQuizInternal(id: string) {
     return null
   }
 
-  // Load questions separately in a single optimized query
-  // This is faster than nested queries
-  const roundIds = roundsBasic.map(r => r.id)
-  const questionsData = roundIds.length > 0 ? await prisma.quizRoundQuestion.findMany({
-    where: {
-      roundId: { in: roundIds },
-    },
-    select: {
-      id: true,
-      order: true,
-      roundId: true,
-      question: {
-        select: {
-          id: true,
-          text: true,
-          answer: true,
-          difficulty: true,
-        },
-      },
-    },
-    orderBy: {
-      order: 'asc',
-    },
-  }) : []
-
-  // Group questions by roundId
-  const questionsByRound = new Map<string, typeof questionsData>()
-  questionsData.forEach(q => {
-    if (!questionsByRound.has(q.roundId)) {
-      questionsByRound.set(q.roundId, [])
-    }
-    questionsByRound.get(q.roundId)!.push(q)
-  })
-
-  // Attach questions to rounds
-  const rounds = roundsBasic.map(round => ({
-    ...round,
-    questions: questionsByRound.get(round.id) || [],
-  }))
+  // Questions are already included in rounds query - no separate query needed
+  const rounds = roundsBasic
 
   const averageAudienceSize = runsStats.count > 0 
     ? Math.round(runsStats.totalParticipants / runsStats.count) 
@@ -154,12 +130,14 @@ async function getQuizInternal(id: string) {
 }
 
 async function getQuiz(id: string) {
-  // Cache quiz data for 30 seconds (shorter cache for detail pages that might be edited)
-  // This helps with performance while still allowing recent edits to show
+  // Cache quiz data with standardized TTL and tag for revalidation
   return unstable_cache(
     async () => getQuizInternal(id),
-    [`quiz-detail-${id}`],
-    { revalidate: 30 }
+    [CACHE_TAGS.QUIZ_DETAIL(id)],
+    { 
+      revalidate: CACHE_TTL.DETAIL,
+      tags: [CACHE_TAGS.QUIZZES, CACHE_TAGS.QUIZ_DETAIL(id)],
+    }
   )()
 }
 

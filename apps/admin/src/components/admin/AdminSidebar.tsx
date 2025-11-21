@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import * as Tooltip from '@radix-ui/react-tooltip'
@@ -67,25 +67,45 @@ const sidebarSections: SidebarSection[] = [
       { 
         id: 'quizzes', 
         label: 'Quizzes', 
-        href: '/admin/quizzes', 
+        href: '#', // Parent items with children don't navigate
         icon: BookOpen,
         children: [
+          { id: 'quiz-browser', label: 'Quiz Browser', href: '/admin/quizzes', icon: BookOpen },
           { id: 'quiz-builder', label: 'Quiz Builder', href: '/admin/quizzes/builder', icon: Wand2 },
           { id: 'drafts', label: 'Drafts', href: '/admin/drafts', icon: FileText },
-          { id: 'question-bank', label: 'Question Bank', href: '/admin/questions/bank', icon: Database },
-          { id: 'round-creator', label: 'Round Creator', href: '/admin/rounds/create', icon: Layers },
+        ]
+      },
+      { 
+        id: 'questions', 
+        label: 'Questions', 
+        href: '#', // Parent items with children don't navigate
+        icon: Database,
+        children: [
+          { id: 'question-browser', label: 'Question Browser', href: '/admin/questions/bank', icon: Database },
+          { id: 'question-builder', label: 'Question Builder', href: '/admin/questions/create', icon: Plus },
+        ]
+      },
+      { 
+        id: 'rounds', 
+        label: 'Rounds', 
+        href: '#', // Parent items with children don't navigate - only expand/collapse
+        icon: Layers,
+        children: [
+          { id: 'round-browser', label: 'Round Browser', href: '/admin/rounds', icon: Layers },
+          { id: 'round-creator', label: 'Round Creator', href: '/admin/rounds/create', icon: Plus },
         ]
       },
       { 
         id: 'achievements', 
         label: 'Achievements', 
-        href: '/admin/achievements', 
+        href: '#', // Parent items with children don't navigate - only expand/collapse
         icon: Trophy,
         children: [
+          { id: 'achievement-browser', label: 'Achievement Browser', href: '/admin/achievements', icon: Trophy },
           { id: 'achievement-builder', label: 'Achievement Builder', href: '/admin/achievements?create=true', icon: Plus },
         ]
       },
-      { id: 'question-submissions', label: "People's Round Submissions", href: '/admin/questions/submissions', icon: MessageSquare },
+      { id: 'question-submissions', label: "Peoples' Round", href: '/admin/questions/submissions', icon: MessageSquare },
     ],
   },
   {
@@ -101,45 +121,50 @@ const sidebarSections: SidebarSection[] = [
   },
 ]
 
-// Get environment from env vars
-const getEnvironment = (): 'DEV' | 'STAGE' | 'PROD' | null => {
-  if (typeof window === 'undefined') {
-    // Server-side: check process.env
-    const env = process.env.NEXT_PUBLIC_ENV || process.env.NODE_ENV;
-    if (env === 'development') return 'DEV';
-    if (env === 'staging' || env === 'stage') return 'STAGE';
-    return null; // Production - don't show badge
-  }
-  // Client-side: check window location or env
-  const hostname = window.location.hostname;
-  if (hostname.includes('localhost') || hostname.includes('127.0.0.1')) return 'DEV';
-  if (hostname.includes('staging') || hostname.includes('stage')) return 'STAGE';
-  return null; // Production
-};
-
 export function AdminSidebar() {
-  const [collapsed, setCollapsed] = useState(false)
-  const [environment, setEnvironment] = useState<'DEV' | 'STAGE' | 'PROD' | null>(null)
+  const [isHovered, setIsHovered] = useState(false)
+  const [isPinned, setIsPinned] = useState(false)
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
   const pathname = usePathname()
+  const sidebarRef = useRef<HTMLDivElement>(null)
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Persist collapsed state
-  useEffect(() => {
-    const saved = localStorage.getItem('admin-sidebar-collapsed')
-    if (saved) {
-      setCollapsed(JSON.parse(saved))
+  const isExpanded = isHovered || isPinned
+
+  const handleMouseEnter = () => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current)
+      hoverTimeoutRef.current = null
     }
-    // Get environment
-    setEnvironment(getEnvironment())
-  }, [])
-
-  const toggleCollapsed = () => {
-    const newCollapsed = !collapsed
-    setCollapsed(newCollapsed)
-    localStorage.setItem('admin-sidebar-collapsed', JSON.stringify(newCollapsed))
+    setIsHovered(true)
   }
 
-  // Check if any item in a section is active (including children)
+  const handleMouseLeave = () => {
+    hoverTimeoutRef.current = setTimeout(() => {
+      if (!isPinned) {
+        setIsHovered(false)
+      }
+    }, 150)
+  }
+
+  useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  const togglePinned = () => {
+    setIsPinned(prev => {
+      const newPinned = !prev
+      if (!newPinned) {
+        setIsHovered(false)
+      }
+      return newPinned
+    })
+  }
+
   const isSectionActive = (section: SidebarSection) => {
     const checkItem = (item: SidebarItem): boolean => {
       if (item.href === '/admin') {
@@ -152,17 +177,24 @@ export function AdminSidebar() {
     return section.items.some(checkItem)
   }
 
-  // Check if item or any of its children is active
   const isItemActive = (item: SidebarItem): boolean => {
+    // Only mark as active if this exact item matches, not if it has active children
+    // Parent items with children should not be highlighted when a child is active
     if (item.href === '/admin') {
       return pathname === '/admin'
     }
-    const isActive = pathname?.startsWith(item.href) || false
-    const hasActiveChild = item.children?.some(isItemActive) || false
-    return isActive || hasActiveChild
+    // For items with children, they should never be marked as active (they're just expandable containers)
+    if (item.children && item.children.length > 0) {
+      return false
+    }
+    // For leaf items, use exact match only to prevent sibling routes from both being highlighted
+    // This ensures only one item is active at a time (e.g., /admin/quizzes vs /admin/quizzes/builder)
+    if (!pathname || !item.href) return false
+    
+    // Exact match only - this prevents /admin/quizzes from matching when on /admin/quizzes/builder
+    return pathname === item.href
   }
 
-  // Toggle expanded state
   const toggleExpanded = (itemId: string) => {
     setExpandedItems(prev => {
       const next = new Set(prev)
@@ -202,82 +234,95 @@ export function AdminSidebar() {
   const SidebarItem = ({ item, level = 0 }: { item: SidebarItem; level?: number }) => {
     const Icon = item.icon
     const isActive = isItemActive(item)
-    const isExpanded = expandedItems.has(item.id)
+    const isItemExpanded = expandedItems.has(item.id)
     const hasChildren = item.children && item.children.length > 0
-    
+
+    // Unified styling for both collapsed and expanded states
+    const baseClasses = `flex items-center h-10 rounded-md transition-colors ${
+      isActive
+        ? 'bg-[hsl(var(--primary))]/15 text-[hsl(var(--primary))]'
+        : 'text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]'
+    }`
+
+    // Always use same padding (px-3) so icons stay in exact same position when expanding
+    // If item has children, make it a button that only expands/collapses (no navigation)
+    // Otherwise, make it a link that navigates
     const itemContent = (
-      <div className="flex items-center gap-3 flex-1 min-w-0">
+      <div
+        className={`${baseClasses} ${
+          isExpanded 
+            ? 'px-3 gap-3' 
+            : 'px-0 justify-center'
+        }`}
+        style={isExpanded && level > 0 ? { paddingLeft: `${12 + level * 16}px` } : undefined}
+      >
         <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-[hsl(var(--primary))]' : ''}`} />
-        {!collapsed && (
+        {isExpanded && (
           <>
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              <span className={isActive ? 'font-semibold' : ''}>{item.label}</span>
-              {(item.id === 'drafts' || item.href === '/admin/drafts') && (
-                <DraftIndicator type="all" showCount linkToDrafts={false} />
-              )}
-            </div>
-            {hasChildren && (
+            {hasChildren ? (
+              // Parent item with children - button that expands/collapses only
               <button
                 onClick={(e) => {
                   e.preventDefault()
                   e.stopPropagation()
                   toggleExpanded(item.id)
                 }}
-                className="p-0.5 hover:bg-[hsl(var(--muted))] rounded transition-colors"
+                className="flex items-center gap-3 flex-1 min-w-0 text-left"
               >
-                {isExpanded ? (
-                  <ChevronUp className="w-4 h-4 text-[hsl(var(--muted-foreground))]" />
+                <span className={`text-sm ${isActive ? 'font-semibold' : 'font-medium'}`}>
+                  {item.label}
+                </span>
+                {isItemExpanded ? (
+                  <ChevronUp className="w-4 h-4 text-[hsl(var(--muted-foreground))] ml-auto flex-shrink-0" />
                 ) : (
-                  <ChevronDown className="w-4 h-4 text-[hsl(var(--muted-foreground))]" />
+                  <ChevronDown className="w-4 h-4 text-[hsl(var(--muted-foreground))] ml-auto flex-shrink-0" />
                 )}
               </button>
+            ) : (
+              // Regular item without children - link that navigates
+              <Link
+                href={item.href}
+                className="flex items-center gap-2 flex-1 min-w-0"
+              >
+                <span className={`text-sm ${isActive ? 'font-semibold' : 'font-medium'}`}>
+                  {item.label}
+                </span>
+                {(item.id === 'drafts' || item.href === '/admin/drafts') && (
+                  <DraftIndicator type="all" showCount linkToDrafts={false} />
+                )}
+              </Link>
             )}
           </>
         )}
       </div>
     )
 
-    const content = (
-      <div>
-        <Link
-          href={item.href}
-          className={`relative flex items-center ${collapsed ? 'justify-center' : ''} ${collapsed ? 'px-2 py-3' : 'px-3 py-2.5'} rounded-lg text-sm font-medium transition-all duration-200 ${
-            isActive 
-              ? collapsed
-                ? 'bg-[hsl(var(--primary))]/15 text-[hsl(var(--primary))]'
-                : 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]'
-              : collapsed
-              ? 'text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]'
-              : 'text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]'
-          }`}
-          style={!collapsed && level > 0 ? { paddingLeft: `${12 + level * 16}px` } : undefined}
-        >
-          {itemContent}
-        </Link>
-        {!collapsed && hasChildren && isExpanded && (
-          <div className="ml-3 mt-1 space-y-1">
-            {item.children?.map((child) => (
-              <SidebarItem key={child.id} item={child} level={level + 1} />
-            ))}
-          </div>
-        )}
-      </div>
-    )
-
-    if (collapsed) {
+    if (!isExpanded) {
+      // Collapsed state - show tooltip
+      // If has children, clicking should expand (but sidebar needs to be expanded first)
+      // For now, just show tooltip
       return (
-        <Tooltip.Provider>
+        <Tooltip.Provider delayDuration={0}>
           <Tooltip.Root>
             <Tooltip.Trigger asChild>
-              {content}
+              {hasChildren ? (
+                <div className={baseClasses + ' px-0 justify-center cursor-pointer'}>
+                  <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-[hsl(var(--primary))]' : ''}`} />
+                </div>
+              ) : (
+                <Link href={item.href} className={baseClasses + ' px-0 justify-center'}>
+                  <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-[hsl(var(--primary))]' : ''}`} />
+                </Link>
+              )}
             </Tooltip.Trigger>
             <Tooltip.Portal>
-              <Tooltip.Content 
-                className="bg-[hsl(var(--raised))] text-[hsl(var(--foreground))] border border-[hsl(var(--border))] text-xs px-2 py-1 rounded shadow-lg z-50"
+              <Tooltip.Content
+                className="bg-[hsl(var(--popover))] text-[hsl(var(--popover-foreground))] border border-[hsl(var(--border))] text-xs px-2 py-1.5 rounded-md shadow-lg z-[100]"
                 side="right"
+                sideOffset={8}
               >
                 {item.label}
-                <Tooltip.Arrow className="fill-[hsl(var(--raised))]" />
+                <Tooltip.Arrow className="fill-[hsl(var(--popover))]" />
               </Tooltip.Content>
             </Tooltip.Portal>
           </Tooltip.Root>
@@ -285,101 +330,51 @@ export function AdminSidebar() {
       )
     }
 
-    return content
-  }
-
-  const SectionHeader = ({ section }: { section: SidebarSection }) => {
-    if (!section.label || section.id === 'overview') return null
-    if (collapsed) return null // Hide section headers when collapsed
-    const isActive = isSectionActive(section)
-    
+    // Expanded state - show children if expanded
     return (
-      <div className={`px-3 py-2 text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wider ${
-        isActive ? 'text-[hsl(var(--foreground))]' : ''
-      }`}>
-        {section.label}
+      <div>
+        {itemContent}
+        {hasChildren && isItemExpanded && (
+          <div className="ml-3 mt-1 space-y-1 pb-1">
+            {item.children?.map((child) => (
+              <SidebarItem key={child.id} item={child} level={level + 1} />
+            ))}
+          </div>
+        )}
       </div>
     )
   }
 
-  return (
-    <div className={`relative bg-[hsl(var(--card))] border-r border-[hsl(var(--border))] transition-all duration-200 flex-shrink-0 ${
-      collapsed ? 'w-20' : 'w-[280px]'
-    }`}>
-      {/* Expand tab - overlayed on border line, vertically aligned with logo, spanning both sides */}
-      {collapsed && (
-        <button
-          onClick={toggleCollapsed}
-          className="absolute right-0 top-[30px] -translate-y-1/2 translate-x-1/2 w-4 h-8 bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-md hover:bg-[hsl(var(--muted))] transition-all duration-200 flex items-center justify-center group z-50 shadow-sm"
-          aria-label="Expand sidebar"
-        >
-          <ChevronRight className="w-2.5 h-2.5 text-[hsl(var(--muted-foreground))] group-hover:text-[hsl(var(--foreground))] transition-colors" />
-        </button>
-      )}
-      <div className="sticky top-0 h-screen flex flex-col">
-        {/* Header - matches top bar height */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[hsl(var(--border))] bg-[hsl(var(--card))] h-[60px]">
-          {!collapsed ? (
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              <div className="text-lg font-semibold text-[hsl(var(--foreground))] whitespace-nowrap">
-                SchoolQuiz Admin
-              </div>
-              {environment && (
-                <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded-full flex-shrink-0 ${
-                  environment === 'DEV' 
-                    ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                    : environment === 'STAGE'
-                    ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-                    : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
-                }`}>
-                  {environment}
-                </span>
-              )}
-            </div>
-          ) : (
-            <div className="text-xl font-bold text-[hsl(var(--primary))] leading-none mx-auto flex-1 text-center">
-              SQ
-            </div>
-          )}
-          {!collapsed && (
-            <button
-              onClick={toggleCollapsed}
-              className="p-2 rounded-xl hover:bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] transition-all duration-200 flex-shrink-0"
-              aria-label="Collapse sidebar"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-          )}
-        </div>
+  const SectionHeader = ({ section }: { section: SidebarSection }) => {
+    // Section headers removed - separator lines are sufficient to distinguish groups
+    return null
+  }
 
+  return (
+    <div
+      ref={sidebarRef}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      className={`fixed left-0 top-[60px] h-[calc(100vh-60px)] bg-[hsl(var(--card))] border-r border-[hsl(var(--border))] transition-all duration-200 ease-out z-50 ${
+        isExpanded ? 'w-[280px] shadow-xl' : 'w-[60px]'
+      }`}
+    >
+      <div className="h-full flex flex-col overflow-hidden">
         {/* Navigation */}
         <ScrollArea className="flex-1">
-          <div className={collapsed ? 'space-y-2 p-2' : 'space-y-4 p-3'}>
+          <div className="py-3">
             {sidebarSections.map((section, sectionIndex) => {
-              // Overview section (ungrouped)
-              if (!section.label || section.id === 'overview') {
-                return (
-                  <div key={section.id} className={collapsed ? 'space-y-2' : 'space-y-1'}>
+              return (
+                <div key={section.id}>
+                  {/* Separator line between sections (except before first section) */}
+                  {sectionIndex > 0 && (
+                    <div className={`h-px bg-[hsl(var(--border))] mx-3 my-3`} />
+                  )}
+                  <div className={`space-y-1 ${isExpanded ? 'px-2' : 'px-0'}`}>
                     {section.items.map((item) => (
                       <SidebarItem key={item.id} item={item} />
                     ))}
-                    {collapsed && sectionIndex < sidebarSections.length - 1 && (
-                      <div className="h-px bg-[hsl(var(--border))] mx-2 my-2" />
-                    )}
                   </div>
-                )
-              }
-
-              // Other sections with headers
-              return (
-                <div key={section.id} className={collapsed ? 'space-y-2' : 'space-y-1'}>
-                  <SectionHeader section={section} />
-                  {section.items.map((item) => (
-                    <SidebarItem key={item.id} item={item} />
-                  ))}
-                  {collapsed && sectionIndex < sidebarSections.length - 1 && (
-                    <div className="h-px bg-[hsl(var(--border))] mx-2 my-2" />
-                  )}
                 </div>
               )
             })}
@@ -389,4 +384,3 @@ export function AdminSidebar() {
     </div>
   )
 }
-

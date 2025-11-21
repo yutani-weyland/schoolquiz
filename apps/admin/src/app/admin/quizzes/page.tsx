@@ -9,6 +9,8 @@ import { requireAdmin } from '@/lib/auth-helpers'
 import { QuizzesTable } from './QuizzesTable'
 import { headers } from 'next/headers'
 import { unstable_cache } from 'next/cache'
+import { TableSkeleton } from '@/components/admin/ui/TableSkeleton'
+import { CACHE_TTL, CACHE_TAGS, createCacheKey } from '@/lib/cache-config'
 
 interface Quiz {
   id: string
@@ -30,10 +32,7 @@ interface Quiz {
   }
 }
 
-// Cache key generator for quizzes query
-function getCacheKey(searchParams: { page?: string; limit?: string; search?: string; status?: string }) {
-  return `quizzes-${searchParams.page || '1'}-${searchParams.limit || '50'}-${searchParams.search || ''}-${searchParams.status || ''}`
-}
+// Removed getCacheKey - using createCacheKey from cache-config instead
 
 async function getQuizzesInternal(searchParams: {
   page?: string
@@ -62,73 +61,124 @@ async function getQuizzesInternal(searchParams: {
   }
 
   // Optimized query - only fetch what we need for the list view
-  // Don't load rounds/categories data (not needed for list)
-  const [quizzes, total] = await Promise.all([
-    prisma.quiz.findMany({
-      where,
-      skip,
-      take: limit,
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        title: true,
-        blurb: true,
-        audience: true,
-        difficultyBand: true,
-        theme: true,
-        seasonalTag: true,
-        publicationDate: true,
-        status: true,
-        pdfUrl: true,
-        pdfStatus: true,
-        createdAt: true,
-        updatedAt: true,
-        _count: {
-          select: {
-            rounds: true,
+  // Try to use _count for runs, but fallback if relation doesn't exist
+  let quizzes: any[]
+  let total: number
+  
+  try {
+    // Try optimized query with relation count
+    const result = await Promise.all([
+      prisma.quiz.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          slug: true,
+          title: true,
+          blurb: true,
+          audience: true,
+          difficultyBand: true,
+          theme: true,
+          seasonalTag: true,
+          publicationDate: true,
+          status: true,
+          pdfUrl: true,
+          pdfStatus: true,
+          createdAt: true,
+          updatedAt: true,
+          _count: {
+            select: {
+              rounds: true,
+              runs: true, // Use relation count if available
+            },
           },
         },
-      },
-    }),
-    prisma.quiz.count({ where }),
-  ])
-  
-  // Get runs count separately - only for the quizzes we fetched
-  let runsCounts: any[] = []
-  if (quizzes.length > 0) {
-    try {
-      const quizIds = quizzes.map(q => q.id)
-      const result = await prisma.run.groupBy({
-        by: ['quizId'],
-        where: {
-          quizId: { in: quizIds },
-        },
+      }),
+      prisma.quiz.count({ where }),
+    ])
+    quizzes = result[0]
+    total = result[1]
+  } catch (error: any) {
+    // Fallback: if runs relation doesn't exist, fetch without it and get counts separately
+    if (error?.message?.includes('runs') || error?.message?.includes('quizId')) {
+      const result = await Promise.all([
+        prisma.quiz.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            slug: true,
+            title: true,
+            blurb: true,
+            audience: true,
+            difficultyBand: true,
+            theme: true,
+            seasonalTag: true,
+            publicationDate: true,
+            status: true,
+            pdfUrl: true,
+            pdfStatus: true,
+            createdAt: true,
+            updatedAt: true,
+            _count: {
+              select: {
+                rounds: true,
+              },
+            },
+          },
+        }),
+        prisma.quiz.count({ where }),
+      ])
+      quizzes = result[0]
+      total = result[1]
+      
+      // Get runs count separately if possible
+      let runsCounts: any[] = []
+      if (quizzes.length > 0) {
+        try {
+          const quizIds = quizzes.map(q => q.id)
+          const result = await prisma.run.groupBy({
+            by: ['quizId'],
+            where: {
+              quizId: { in: quizIds },
+            },
+            _count: {
+              id: true,
+            },
+          })
+          runsCounts = result as any[]
+        } catch {
+          // If runs table doesn't exist, use empty array
+          runsCounts = []
+        }
+      }
+      
+      // Create a map of quizId -> runs count
+      const runsCountMap = new Map(
+        Array.isArray(runsCounts) 
+          ? runsCounts.map((r: any) => [r.quizId, r._count.id])
+          : []
+      )
+      
+      // Add runs count to each quiz
+      quizzes = quizzes.map(quiz => ({
+        ...quiz,
         _count: {
-          id: true,
+          ...quiz._count,
+          runs: runsCountMap.get(quiz.id) || 0,
         },
-      })
-      runsCounts = result as any[]
-    } catch {
-      // If runs table doesn't exist, return empty array
-      runsCounts = []
+      }))
+    } else {
+      // Re-throw if it's a different error
+      throw error
     }
   }
-
-  // Create a map of quizId -> runs count
-  const runsCountMap = new Map(
-    Array.isArray(runsCounts) 
-      ? runsCounts.map((r: any) => [r.quizId, r._count.id])
-      : []
-  )
-
-  // Add runs count to each quiz
-  const quizzesWithRuns = quizzes.map(quiz => ({
-    ...quiz,
-    _count: {
-      ...quiz._count,
-      runs: runsCountMap.get(quiz.id) || 0,
-    },
-  }))
+  
+  const quizzesWithRuns = quizzes
 
   return {
     quizzes: quizzesWithRuns as Quiz[],
@@ -159,16 +209,22 @@ async function getQuizzes(searchParams: {
     })
   }
 
-  // Cache non-search queries for 30 seconds (search results shouldn't be cached)
+  // Cache non-search queries (search results shouldn't be cached for freshness)
   if (!searchParams.search && !searchParams.status) {
     return unstable_cache(
       async () => getQuizzesInternal(searchParams),
-      [getCacheKey(searchParams)],
-      { revalidate: 30 }
+      createCacheKey('quizzes', {
+        page: searchParams.page || '1',
+        limit: searchParams.limit || '50',
+      }),
+      { 
+        revalidate: CACHE_TTL.LIST,
+        tags: [CACHE_TAGS.QUIZZES],
+      }
     )()
   }
 
-  // No cache for search/filter queries
+  // No cache for search/filter queries (always fresh results)
   return getQuizzesInternal(searchParams)
 }
 
@@ -186,12 +242,7 @@ export default async function AdminQuizzesPage({
   const { quizzes, pagination } = await getQuizzes(params)
 
   return (
-    <Suspense fallback={
-          <div className="p-12 text-center">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[hsl(var(--primary))]"></div>
-            <p className="mt-4 text-sm text-[hsl(var(--muted-foreground))]">Loading quizzes...</p>
-          </div>
-    }>
+    <Suspense fallback={<TableSkeleton rows={5} columns={6} />}>
       <QuizzesTable
         initialQuizzes={quizzes}
         initialPagination={pagination}

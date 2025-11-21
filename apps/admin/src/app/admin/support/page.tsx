@@ -3,7 +3,9 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { HelpCircle, Filter, AlertCircle, Clock, CheckCircle2, User, Building2, Search, ChevronLeft, ChevronRight, Eye, X } from 'lucide-react'
-import { PageHeader, Card, Input, Select, DataTable, DataTableHeader, DataTableHeaderCell, DataTableBody, DataTableRow, DataTableCell, DataTableEmpty, Badge, Button } from '@/components/admin/ui'
+import { PageHeader, Card, DataTable, DataTableHeader, DataTableHeaderCell, DataTableBody, DataTableRow, DataTableCell, DataTableEmpty, Badge, Button } from '@/components/admin/ui'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { AutocompleteSearch } from '@/components/admin/AutocompleteSearch'
 import { useDebounce } from '@/hooks/useDebounce'
 import { TableSkeleton } from '@/components/admin/ui/TableSkeleton'
 import { formatDate, formatDateTime } from '@/lib/dateUtils'
@@ -100,6 +102,32 @@ function SupportPageContent() {
       fetchTickets()
     }
   }, [mounted, debouncedSearch, statusFilter, priorityFilter, page, sortBy, sortOrder])
+
+  const fetchSearchSuggestions = async (query: string): Promise<string[]> => {
+    if (query.length < 2) return []
+    
+    try {
+      const response = await fetch(`/api/admin/support?search=${encodeURIComponent(query)}&limit=10`)
+      const data = await response.json()
+      
+      if (response.ok && data.tickets) {
+        return data.tickets
+          .map((ticket: SupportTicket) => [
+            ticket.subject,
+            ticket.userName,
+            ticket.userEmail,
+          ])
+          .flat()
+          .filter((s: string | null | undefined): s is string => Boolean(s))
+          .filter((s, i, arr) => arr.indexOf(s) === i)
+          .slice(0, 10)
+      }
+    } catch (error) {
+      console.error('Error fetching suggestions:', error)
+    }
+    
+    return []
+  }
 
   const fetchTickets = async () => {
     try {
@@ -199,42 +227,50 @@ function SupportPageContent() {
       />
 
       {/* Filters */}
-      <Card>
+      <Card padding="sm">
         <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[hsl(var(--muted-foreground))] z-10" />
-            <Input
-              type="text"
-              placeholder="Search tickets..."
+          <div className="flex-1">
+            <AutocompleteSearch
               value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              className="pl-10"
+              onChange={setSearchInput}
+              placeholder="Search tickets..."
+              onFetchSuggestions={fetchSearchSuggestions}
+              minChars={2}
+              maxSuggestions={8}
             />
           </div>
           <div className="relative flex-1">
-            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[hsl(var(--muted-foreground))] z-10" />
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[hsl(var(--muted-foreground))] z-10" />
             <Select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="pl-10"
+              value={statusFilter || "all"}
+              onValueChange={(value) => setStatusFilter(value === "all" ? "" : value)}
             >
-              <option value="">All Statuses</option>
-              <option value="OPEN">Open</option>
-              <option value="IN_PROGRESS">In Progress</option>
-              <option value="CLOSED">Closed</option>
+              <SelectTrigger className="pl-10">
+                <SelectValue placeholder="All Statuses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="OPEN">Open</SelectItem>
+                <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
+                <SelectItem value="CLOSED">Closed</SelectItem>
+              </SelectContent>
             </Select>
           </div>
           <div className="relative flex-1">
-            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[hsl(var(--muted-foreground))] z-10" />
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[hsl(var(--muted-foreground))] z-10" />
             <Select
-              value={priorityFilter}
-              onChange={(e) => setPriorityFilter(e.target.value)}
-              className="pl-10"
+              value={priorityFilter || "all"}
+              onValueChange={(value) => setPriorityFilter(value === "all" ? "" : value)}
             >
-              <option value="">All Priorities</option>
-              <option value="HIGH">High</option>
-              <option value="MEDIUM">Medium</option>
-              <option value="LOW">Low</option>
+              <SelectTrigger className="pl-10">
+                <SelectValue placeholder="All Priorities" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Priorities</SelectItem>
+                <SelectItem value="HIGH">High</SelectItem>
+                <SelectItem value="MEDIUM">Medium</SelectItem>
+                <SelectItem value="LOW">Low</SelectItem>
+              </SelectContent>
             </Select>
           </div>
         </div>
@@ -323,7 +359,6 @@ function SupportPageContent() {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleViewDetails(ticket)}
-                        className="h-8 px-3"
                       >
                         <Eye className="w-4 h-4 mr-2" />
                         View
@@ -344,11 +379,10 @@ function SupportPageContent() {
             </div>
             <div className="flex items-center gap-2">
               <Button
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 onClick={() => setPage(page - 1)}
                 disabled={page === 1}
-                className="h-8 px-3"
               >
                 <ChevronLeft className="w-4 h-4 mr-1" />
                 Previous
@@ -357,11 +391,10 @@ function SupportPageContent() {
                 Page {pagination.page} of {pagination.totalPages}
               </div>
               <Button
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 onClick={() => setPage(page + 1)}
                 disabled={page >= pagination.totalPages}
-                className="h-8 px-3"
               >
                 Next
                 <ChevronRight className="w-4 h-4 ml-1" />
@@ -400,7 +433,6 @@ function SupportPageContent() {
                     setShowDetailModal(false)
                     setSelectedTicket(null)
                   }}
-                  className="h-8 w-8 p-0"
                 >
                   <X className="w-4 h-4" />
                 </Button>
@@ -466,7 +498,7 @@ function SupportPageContent() {
                   Created {formatDateTime(selectedTicket.createdAt)} • Updated {formatDateTime(selectedTicket.updatedAt)}
                 </div>
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   onClick={() => {
                     setShowDetailModal(false)
                     setSelectedTicket(null)

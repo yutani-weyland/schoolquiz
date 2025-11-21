@@ -24,85 +24,118 @@ export async function GET(
     const { id } = await params
 
     try {
-      const user = await prisma.user.findUnique({
-        where: { id },
-        include: {
-          organisationMembers: {
-            include: {
-              organisation: {
-                select: {
-                  id: true,
-                  name: true,
-                  status: true,
+      // First, try to get user without achievements (which may not exist)
+      let user: any
+      try {
+        user = await prisma.user.findUnique({
+          where: { id },
+          include: {
+            organisationMembers: {
+              include: {
+                organisation: {
+                  select: {
+                    id: true,
+                    name: true,
+                    status: true,
+                  },
                 },
               },
             },
-          },
-          referrer: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              referralCode: true,
+            referrer: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                referralCode: true,
+              },
             },
-          },
-          referrals: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              createdAt: true,
+            referrals: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                createdAt: true,
+              },
+              orderBy: {
+                createdAt: 'desc',
+              },
             },
-            orderBy: {
-              createdAt: 'desc',
+            quizCompletions: {
+              take: 10,
+              orderBy: {
+                completedAt: 'desc',
+              },
+              select: {
+                id: true,
+                quizSlug: true,
+                score: true,
+                totalQuestions: true,
+                completedAt: true,
+              },
             },
-          },
-          quizCompletions: {
-            take: 10,
-            orderBy: {
-              completedAt: 'desc',
+            createdOrganisations: {
+              select: {
+                id: true,
+                name: true,
+                status: true,
+              },
             },
-            select: {
-              id: true,
-              quizSlug: true,
-              score: true,
-              totalQuestions: true,
-              completedAt: true,
-            },
-          },
-          achievements: {
-            take: 10,
-            orderBy: {
-              unlockedAt: 'desc',
-            },
-            include: {
-              achievement: {
-                select: {
-                  id: true,
-                  name: true,
-                  rarity: true,
-                },
+            _count: {
+              select: {
+                organisationMembers: true,
+                quizCompletions: true,
+                referrals: true,
+                createdOrganisations: true,
               },
             },
           },
-          createdOrganisations: {
-            select: {
-              id: true,
-              name: true,
-              status: true,
+        })
+        
+        // Try to add achievements if the table exists
+        try {
+          const userWithAchievements = await prisma.user.findUnique({
+            where: { id },
+            include: {
+              achievements: {
+                take: 10,
+                orderBy: {
+                  unlockedAt: 'desc',
+                },
+                include: {
+                  achievement: {
+                    select: {
+                      id: true,
+                      name: true,
+                      rarity: true,
+                    },
+                  },
+                },
+              },
+              _count: {
+                select: {
+                  achievements: true,
+                },
+              },
             },
-          },
-          _count: {
-            select: {
-              organisationMembers: true,
-              quizCompletions: true,
-              achievements: true,
-              referrals: true,
-              createdOrganisations: true,
-            },
-          },
-        },
-      })
+          })
+          
+          if (userWithAchievements) {
+            user.achievements = userWithAchievements.achievements || []
+            user._count.achievements = userWithAchievements._count?.achievements || 0
+          }
+        } catch (achievementsError: any) {
+          // If achievements table doesn't exist, just use empty array
+          console.warn('Achievements table not available:', achievementsError.message)
+          user.achievements = []
+          user._count.achievements = 0
+        }
+      } catch (userError: any) {
+        // If the main query fails, check if it's a schema issue
+        if (userError.message?.includes('does not exist') || userError.code === 'P2021') {
+          throw userError // Re-throw to trigger fallback
+        }
+        throw userError
+      }
 
     if (!user) {
       return NextResponse.json(
@@ -160,7 +193,7 @@ export async function GET(
         score: qc.score,
         totalQuestions: qc.totalQuestions,
       })),
-      achievements: user.achievements.map(ach => ({
+      achievements: (user.achievements || []).map((ach: any) => ({
         id: ach.id,
         unlockedAt: ach.unlockedAt.toISOString(),
         achievement: {
@@ -184,7 +217,7 @@ export async function GET(
       _count: {
         organisationMembers: user._count.organisationMembers,
         quizCompletions: user._count.quizCompletions,
-        achievements: user._count.achievements,
+        achievements: user._count.achievements || 0,
         referrals: user._count.referrals,
         createdOrganisations: user._count.createdOrganisations,
       },

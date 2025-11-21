@@ -2,7 +2,8 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { Trophy, Plus, Edit2, Copy, Trash2, Eye, Archive, Upload, Loader2 } from 'lucide-react'
+import { Trophy, Plus, Edit2, Copy, Trash2, Eye, Archive, Upload } from 'lucide-react'
+import { Spinner } from '@/components/ui/spinner'
 import { AdminAchievementEditor } from '@/components/admin/achievements/AdminAchievementEditor'
 import { AchievementPreviewPane } from '@/components/admin/achievements/AchievementPreviewPane'
 import { AchievementFormProvider } from '@/components/admin/achievements/AchievementFormContext'
@@ -11,6 +12,7 @@ import { AchievementCard } from '@/components/achievements/AchievementCard'
 import { useAutosave } from '@/hooks/useAutosave'
 import { useUnsavedChangesWarning } from '@/hooks/useUnsavedChangesWarning'
 import { SaveIndicator } from '@/components/admin/SaveIndicator'
+import { Button, Badge } from '@/components/admin/ui'
 
 interface Achievement {
   id: string
@@ -630,13 +632,10 @@ function AdminAchievementsPageContent() {
             Create and manage achievement cards
           </p>
         </div>
-        <button
-          onClick={handleCreate}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] rounded-xl font-medium hover:bg-[hsl(var(--primary))]/90 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
+        <Button variant="primary" size="sm" onClick={handleCreate}>
+          <Plus className="w-4 h-4 mr-2" />
           New Achievement
-        </button>
+        </Button>
       </div>
 
       {/* Bulk Actions Bar */}
@@ -654,42 +653,48 @@ function AdminAchievementsPageContent() {
             </button>
           </div>
           <div className="flex items-center gap-2">
-            <button
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={handleBulkActivate}
               disabled={isBulkOperating}
-              className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="gap-2"
             >
               {isBulkOperating ? (
-                <Loader2 className="w-3 h-3 animate-spin" />
+                <Spinner className="size-3" />
               ) : (
                 <Upload className="w-3 h-3" />
               )}
               Activate
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={handleBulkDeactivate}
               disabled={isBulkOperating}
-              className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="gap-2"
             >
               {isBulkOperating ? (
-                <Loader2 className="w-3 h-3 animate-spin" />
+                <Spinner className="size-3" />
               ) : (
                 <Archive className="w-3 h-3" />
               )}
               Deactivate
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
               onClick={handleBulkDelete}
               disabled={isBulkOperating}
-              className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="gap-2"
             >
               {isBulkOperating ? (
-                <Loader2 className="w-3 h-3 animate-spin" />
+                <Spinner className="size-3" />
               ) : (
                 <Trash2 className="w-3 h-3" />
               )}
               Delete
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -697,21 +702,30 @@ function AdminAchievementsPageContent() {
       {/* Table */}
       <div className="flex-1 min-h-0 bg-[hsl(var(--card))] rounded-2xl border border-[hsl(var(--border))] overflow-hidden shadow-sm">
         {isLoading ? (
-          <div className="p-12 text-center">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[hsl(var(--primary))]"></div>
-            <p className="mt-4 text-sm text-[hsl(var(--muted-foreground))]">Loading achievements...</p>
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="bg-[hsl(var(--card))] rounded-2xl p-6 border border-[hsl(var(--border))]">
+                  <div className="space-y-4">
+                    <div className="h-32 w-full bg-[hsl(var(--muted))] animate-pulse rounded-xl" />
+                    <div className="space-y-2">
+                      <div className="h-5 w-3/4 bg-[hsl(var(--muted))] animate-pulse rounded-md" />
+                      <div className="h-4 w-full bg-[hsl(var(--muted))] animate-pulse rounded-md" />
+                      <div className="h-4 w-5/6 bg-[hsl(var(--muted))] animate-pulse rounded-md" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         ) : achievements.length === 0 ? (
           <div className="p-12 text-center">
             <Trophy className="mx-auto h-12 w-12 text-[hsl(var(--muted-foreground))]" />
             <p className="mt-4 text-sm text-[hsl(var(--muted-foreground))]">No achievements found</p>
-            <button
-              onClick={handleCreate}
-              className="mt-4 inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:bg-[hsl(var(--primary))]/90 transition-colors duration-200"
-            >
-              <Plus className="w-4 h-4" />
+            <Button variant="primary" size="sm" onClick={handleCreate}>
+              <Plus className="w-4 h-4 mr-2" />
               Create Your First Achievement
-            </button>
+            </Button>
           </div>
         ) : (
           <div className="relative">
@@ -805,7 +819,7 @@ function AdminAchievementsPageContent() {
                             <button
                               onMouseEnter={() => setHoveredAchievementId(achievement.id)}
                               onMouseLeave={() => setHoveredAchievementId(null)}
-                              className="p-2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--primary))] hover:bg-[hsl(var(--accent))] rounded-lg transition-colors"
+                              className="p-2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/10 rounded-lg transition-colors"
                               title="Preview achievement"
                             >
                               <Eye className="w-4 h-4" />
@@ -836,32 +850,22 @@ function AdminAchievementsPageContent() {
                           {achievement.category}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              achievement.rarity === 'legendary'
-                                ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
-                                : achievement.rarity === 'epic'
-                                ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
-                                : achievement.rarity === 'rare'
-                                ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
-                                : achievement.rarity === 'uncommon'
-                                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                                : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-                            }`}
+                          <Badge 
+                            variant={
+                              achievement.rarity === 'legendary' ? 'warning' :
+                              achievement.rarity === 'epic' ? 'info' :
+                              achievement.rarity === 'rare' ? 'info' :
+                              achievement.rarity === 'uncommon' ? 'success' :
+                              'default'
+                            }
                           >
                             {achievement.rarity}
-                          </span>
+                          </Badge>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              achievement.isActive
-                                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                                : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-                            }`}
-                          >
+                          <Badge variant={achievement.isActive ? 'success' : 'default'}>
                             {achievement.isActive ? 'Active' : 'Inactive'}
-                          </span>
+                          </Badge>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-[hsl(var(--muted-foreground))]">
                           {new Date(achievement.createdAt).toLocaleDateString('en-AU', {
@@ -877,7 +881,7 @@ function AdminAchievementsPageContent() {
                                 e.stopPropagation()
                                 handleEdit(achievement)
                               }}
-                              className="p-2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--primary))] hover:bg-[hsl(var(--accent))] rounded-lg transition-colors"
+                              className="p-2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/10 rounded-lg transition-colors"
                               title="Edit"
                             >
                               <Edit2 className="w-4 h-4" />
@@ -887,7 +891,7 @@ function AdminAchievementsPageContent() {
                                 e.stopPropagation()
                                 handleDuplicate(achievement)
                               }}
-                              className="p-2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--primary))] hover:bg-[hsl(var(--accent))] rounded-lg transition-colors"
+                              className="p-2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/10 rounded-lg transition-colors"
                               title="Duplicate"
                             >
                               <Copy className="w-4 h-4" />
@@ -897,7 +901,7 @@ function AdminAchievementsPageContent() {
                                 e.stopPropagation()
                                 handleDelete(achievement.id)
                               }}
-                              className="p-2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive)/0.1)] rounded-lg transition-colors"
+                              className="p-2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10 rounded-lg transition-colors"
                               title="Delete"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -920,8 +924,28 @@ function AdminAchievementsPageContent() {
 export default function AdminAchievementsPage() {
   return (
     <Suspense fallback={
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[hsl(var(--primary))]"></div>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <div className="h-8 w-48 bg-[hsl(var(--muted))] animate-pulse rounded-md" />
+            <div className="h-4 w-96 bg-[hsl(var(--muted))] animate-pulse rounded-md" />
+          </div>
+        </div>
+        <div className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="bg-[hsl(var(--card))] rounded-2xl p-6 border border-[hsl(var(--border))]">
+                <div className="space-y-4">
+                  <div className="h-32 w-full bg-[hsl(var(--muted))] animate-pulse rounded-xl" />
+                  <div className="space-y-2">
+                    <div className="h-5 w-3/4 bg-[hsl(var(--muted))] animate-pulse rounded-md" />
+                    <div className="h-4 w-full bg-[hsl(var(--muted))] animate-pulse rounded-md" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     }>
       <AdminAchievementsPageContent />

@@ -1,7 +1,10 @@
+'use client'
+
 import { ReactNode } from 'react'
 import { Card } from './Card'
 import { cn } from '@/lib/utils'
 import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
+import { TableSkeleton } from './TableSkeleton'
 
 interface DataTableProps {
   children: ReactNode
@@ -20,12 +23,7 @@ export function DataTable({
   isLoading = false
 }: DataTableProps) {
   if (isLoading) {
-    return (
-      <Card className={cn('p-12 text-center', className)}>
-        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[hsl(var(--primary))]"></div>
-        <p className="mt-4 text-sm text-[hsl(var(--muted-foreground))]">Loading...</p>
-      </Card>
-    )
+    return <TableSkeleton rows={5} columns={6} />
   }
 
   if (emptyState && !children) {

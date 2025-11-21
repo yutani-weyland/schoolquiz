@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { ArrowLeft, Webhook, CheckCircle2, XCircle, Clock } from 'lucide-react'
+import { Spinner } from '@/components/ui/spinner'
 import { useRouter } from 'next/navigation'
 
 interface WebhookEvent {
@@ -66,7 +67,7 @@ export default function WebhooksPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+        <Spinner className="size-8" />
       </div>
     )
   }

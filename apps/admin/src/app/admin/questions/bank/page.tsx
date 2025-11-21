@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { Plus, Search, Filter, X, Edit2, Trash2, Database } from 'lucide-react'
 import { Card, Input, Select, Badge, Button, DataTable, DataTableHeader, DataTableHeaderCell, DataTableBody, DataTableRow, DataTableCell, DataTableEmpty } from '@/components/admin/ui'
 import { useDebounce } from '@/hooks/useDebounce'
@@ -15,6 +16,11 @@ interface Question {
   categoryName?: string
   createdAt: string
   updatedAt: string
+  usedInQuiz?: {
+    id: string
+    title: string
+    slug: string | null
+  } | null
 }
 
 function QuestionBankPageContent() {
@@ -309,9 +315,7 @@ function QuestionBankPageContent() {
 
       {/* Table */}
       {isLoading ? (
-        <Card className="overflow-hidden p-0">
-          <TableSkeleton rows={10} columns={5} />
-        </Card>
+        <TableSkeleton rows={10} columns={5} />
       ) : (
         <DataTable
           emptyState={{
@@ -345,6 +349,9 @@ function QuestionBankPageContent() {
                     >
                       Category
                     </DataTableHeaderCell>
+                    <DataTableHeaderCell>
+                      Status
+                    </DataTableHeaderCell>
                     <DataTableHeaderCell 
                       sortable 
                       sorted={sortBy === 'updatedAt' ? sortOrder : undefined}
@@ -377,6 +384,20 @@ function QuestionBankPageContent() {
                         <Badge variant="secondary" className="text-xs">
                           {getCategoryDisplayName(question.categoryId)}
                         </Badge>
+                      </DataTableCell>
+                      <DataTableCell>
+                        {question.usedInQuiz ? (
+                          <Link 
+                            href={`/admin/quizzes/${question.usedInQuiz.id}`}
+                            className="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+                          >
+                            Used in: {question.usedInQuiz.title}
+                          </Link>
+                        ) : (
+                          <Badge variant="secondary" className="text-xs">
+                            Unused
+                          </Badge>
+                        )}
                       </DataTableCell>
                       <DataTableCell>
                         <div className="text-xs text-[hsl(var(--muted-foreground))]">

@@ -16,6 +16,9 @@ import { getQuizColor } from "@/lib/colors";
 import type { Quiz } from "@/components/quiz/QuizCard";
 import { AchievementCard } from "@/components/achievements/AchievementCard";
 import type { UserTier } from "@/lib/feature-gating";
+import { Trophy, Users, TrendingUp, FileText, Download, RotateCcw, Sparkles, MessageSquare, Crown } from "lucide-react";
+import { Spotlight } from "@/components/ui/spotlight";
+import { TypingAnimation } from "@/components/ui/typing-animation";
 
 // Sample quiz data for the card stack
 const sampleQuizzes: Quiz[] = [
@@ -190,7 +193,7 @@ export default function HomePage() {
 				<NextQuizCountdown />
 
 				{/* Hero Section */}
-				<section className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-8 md:px-4 pt-24 sm:pt-32 relative">
+				<section className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-8 md:px-4 pt-24 sm:pt-32 relative bg-gray-50 dark:bg-[#0F1419]">
 					<div className="max-w-4xl mx-auto text-center mb-8 sm:mb-16 px-4 sm:px-6 md:px-0">
 						{contentLoaded ? (
 							<motion.h1
@@ -217,16 +220,39 @@ export default function HomePage() {
 							</div>
 						)}
 
-						{contentLoaded ? (
-							<motion.p
-								initial={{ opacity: 0, y: 10 }}
-								animate={{ opacity: 1, y: 0 }}
-								transition={{ duration: 0.4, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-								className="text-base sm:text-lg md:text-xl text-gray-600 dark:text-[#DCDCDC] mb-8 sm:mb-12 max-w-4xl mx-auto px-4 sm:px-6 md:px-8 lg:px-12 leading-relaxed"
-								id="description"
-							>
-								The School Quiz blends general knowledge, educational content, and entertainment - covering music, sport, movies, current affairs, pop culture, and topics relevant to high school students. No insanely hard questions, no AI slop. Just a solid quiz that drops every Monday morning.
-							</motion.p>
+					{contentLoaded ? (
+						<motion.div
+							initial={{ opacity: 0, y: 10 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ duration: 0.4, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+							className="text-base sm:text-lg md:text-xl text-gray-600 dark:text-[#DCDCDC] mb-8 sm:mb-12 max-w-4xl mx-auto px-4 sm:px-6 md:px-8 lg:px-12 leading-relaxed"
+							id="description"
+						>
+							{/* Desktop version */}
+							<div className="hidden sm:block space-y-4">
+								<p>
+									A great quiz brings out shared laughs, inside jokes, and those easy moments that help you build stronger connections with your students.
+								</p>
+								<p>
+									The School Quiz is built for exactly that.
+								</p>
+								<p>
+									Each week it blends general knowledge with school-friendly fun — music, sport, movies, current affairs, pop culture, and whatever's actually trending with teenagers in Australia. No trick questions. No AI slop. Just a solid, reliable quiz landing every Monday morning.
+								</p>
+							</div>
+							{/* Mobile version */}
+							<div className="block sm:hidden space-y-3">
+								<p>
+									A great quiz brings out shared laughs, inside jokes, and those easy moments that help you build stronger connections with your students.
+								</p>
+								<p>
+									The School Quiz is built for exactly that.
+								</p>
+								<p>
+									Each week it blends general knowledge with school-friendly fun — music, sport, movies, current affairs, pop culture, and whatever's actually trending with teenagers in Australia. No trick questions. No AI slop. Just a solid, reliable quiz landing every Monday morning.
+								</p>
+							</div>
+						</motion.div>
 						) : (
 							<div className="mb-8 sm:mb-12 max-w-4xl mx-auto px-4 sm:px-6 md:px-8 lg:px-12">
 								<SkeletonText lines={3} />
@@ -264,7 +290,7 @@ export default function HomePage() {
 									A new quiz every week
 								</h2>
 								<p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-									Explore our back catalogue of weekly quizzes and discover past challenges
+									Balanced, teacher-written, and tailor made for Australian high school students.
 								</p>
 							</div>
 						</motion.div>
@@ -292,10 +318,10 @@ export default function HomePage() {
 						>
 							<div className="max-w-4xl mx-auto text-center">
 								<h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
-									Interactive quiz experience
+									Run the quiz your way
 								</h2>
 								<p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-									Switch between presenter and grid views. Navigate questions, reveal answers, and track your score in real-time.
+									Use Presenter View for the screen or projector, Quick View for an at-a-glance overview, and Printable when you need a paper copy. Three simple, flexible ways to run the quiz your way.
 								</p>
 							</div>
 						</motion.div>
@@ -334,7 +360,7 @@ export default function HomePage() {
 									Earn achievements as you play
 								</h2>
 								<p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-									Unlock collectible cards by completing quizzes, getting perfect scores, and reaching milestones
+									Unlock a growing library of achievement cards, including progress milestones, perfect scores, special editions, and fun one-offs.
 								</p>
 							</div>
 						</motion.div>
@@ -470,6 +496,511 @@ export default function HomePage() {
 							</div>
 						</motion.div>
 				) : null}
+			</section>
+
+			{/* Premium Features - Mobbin Style */}
+			<section className="w-full py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8">
+				<motion.div
+					initial={{ opacity: 0, y: 20 }}
+					whileInView={{ opacity: 1, y: 0 }}
+					viewport={{ once: true, margin: "-100px" }}
+					transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+					className="max-w-7xl mx-auto"
+				>
+					<div className="text-center mb-12">
+						<h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
+							Do more with Premium
+						</h2>
+						<p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+							Premium adds simple tools that boost engagement, support connection, and make each week's quiz feel even more special.
+						</p>
+					</div>
+
+					{/* Premium Feature Cards - Mobbin Style (2 rows, 3 columns) */}
+					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+						{/* The People's Round - with spotlight and typing animation */}
+						<motion.div
+							initial={{ opacity: 0, y: 20, rotate: -0.5 }}
+							whileInView={{ opacity: 1, y: 0 }}
+							viewport={{ once: true }}
+							whileHover={{ rotate: 0.5, scale: 1.02, y: -4 }}
+							transition={{ 
+								duration: 0.5, 
+								delay: 0.1,
+								type: "spring",
+								stiffness: 300,
+								damping: 20
+							}}
+							className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden group hover:shadow-lg transition-shadow"
+							style={{ transformOrigin: 'center' }}
+						>
+							{/* UI Preview Area */}
+							<div className="relative bg-gray-50 dark:bg-gray-800 px-4 py-6 border-b border-gray-200 dark:border-gray-700">
+								<Spotlight className="-top-20 left-20" fill="#9333EA" />
+								{/* Form mockup with typing animation */}
+								<div className="relative z-10 space-y-3">
+									<div className="bg-white dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+										<div className="space-y-3">
+											<div>
+												<label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">Your question</label>
+												<div className="min-h-[60px] bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 p-3 text-sm text-gray-700 dark:text-gray-300">
+													<TypingAnimation 
+														text="What Australian city is known as the 'City of Churches'?"
+														speed={40}
+														delay={500}
+														className="text-sm"
+													/>
+												</div>
+											</div>
+											<div>
+												<label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">Category</label>
+												<div className="h-8 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700"></div>
+											</div>
+											<button className="w-full h-8 bg-purple-600 text-white rounded-md font-medium text-sm">Submit question</button>
+										</div>
+									</div>
+								</div>
+							</div>
+							{/* Content below */}
+							<div className="p-5">
+								<h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+									The People's Round
+								</h3>
+								<p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+									Submit your question and get featured in an upcoming quiz. Your name, teacher, and school get a shoutout when your question appears.
+								</p>
+								<p className="text-xs text-gray-500 dark:text-gray-500 mt-2 italic">
+									Example: "Submitted by Miss O from Stanton Road High School"
+								</p>
+							</div>
+						</motion.div>
+
+						{/* Private Leaderboards */}
+						<motion.div
+							initial={{ opacity: 0, y: 20, rotate: 0.4 }}
+							whileInView={{ opacity: 1, y: 0 }}
+							viewport={{ once: true }}
+							whileHover={{ rotate: -0.4, scale: 1.02, y: -4 }}
+							transition={{ 
+								duration: 0.5, 
+								delay: 0.2,
+								type: "spring",
+								stiffness: 300,
+								damping: 20
+							}}
+							className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden group hover:shadow-lg transition-shadow"
+							style={{ transformOrigin: 'center' }}
+						>
+							{/* UI Preview Area */}
+							<div className="bg-gray-50 dark:bg-gray-800 px-4 py-6 border-b border-gray-200 dark:border-gray-700">
+								{/* Leaderboard mockup */}
+								<div className="space-y-2">
+									<div className="flex items-center justify-between p-2.5 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
+										<div className="flex items-center gap-2.5">
+											<div className="w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+												<span className="text-xs font-semibold text-blue-600 dark:text-blue-400">1</span>
+											</div>
+											<div>
+												<div className="h-2.5 w-20 bg-gray-300 dark:bg-gray-600 rounded mb-1"></div>
+												<div className="h-2 w-14 bg-gray-200 dark:bg-gray-700 rounded"></div>
+											</div>
+										</div>
+										<div className="text-xs font-semibold text-gray-900 dark:text-white">245</div>
+									</div>
+									<div className="flex items-center justify-between p-2.5 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
+										<div className="flex items-center gap-2.5">
+											<div className="w-7 h-7 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+												<span className="text-xs font-semibold text-purple-600 dark:text-purple-400">2</span>
+											</div>
+											<div>
+												<div className="h-2.5 w-18 bg-gray-300 dark:bg-gray-600 rounded mb-1"></div>
+												<div className="h-2 w-12 bg-gray-200 dark:bg-gray-700 rounded"></div>
+											</div>
+										</div>
+										<div className="text-xs font-semibold text-gray-900 dark:text-white">198</div>
+									</div>
+									<div className="flex items-center justify-between p-2.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+										<div className="flex items-center gap-2.5">
+											<div className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center">
+												<span className="text-xs font-semibold text-white">3</span>
+											</div>
+											<div>
+												<div className="h-2.5 w-24 bg-blue-200 dark:bg-blue-700 rounded mb-1"></div>
+												<div className="h-2 w-16 bg-blue-100 dark:bg-blue-800 rounded"></div>
+											</div>
+										</div>
+										<div className="text-xs font-semibold text-blue-600 dark:text-blue-400">156</div>
+									</div>
+								</div>
+							</div>
+							{/* Content */}
+							<div className="p-5">
+								<h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+									Private Leaderboards
+								</h3>
+								<p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+									Create exclusive leaderboards for your class or school. Compete with colleagues and friends in private competitions.
+								</p>
+							</div>
+						</motion.div>
+
+						{/* Stats & Streaks */}
+						<motion.div
+							initial={{ opacity: 0, y: 20, rotate: -0.4 }}
+							whileInView={{ opacity: 1, y: 0 }}
+							viewport={{ once: true }}
+							whileHover={{ rotate: 0.5, scale: 1.02, y: -4 }}
+							transition={{ 
+								duration: 0.5, 
+								delay: 0.3,
+								type: "spring",
+								stiffness: 300,
+								damping: 20
+							}}
+							className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden group hover:shadow-lg transition-shadow"
+							style={{ transformOrigin: 'center' }}
+						>
+							{/* UI Preview Area */}
+							<div className="bg-gray-50 dark:bg-gray-800 px-4 py-6 border-b border-gray-200 dark:border-gray-700">
+								{/* Stats mockup */}
+								<div className="space-y-3">
+									<div className="grid grid-cols-2 gap-2.5">
+										<div className="bg-white dark:bg-gray-900 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+											<div className="text-xl font-bold text-gray-900 dark:text-white mb-0.5">42</div>
+											<div className="text-xs text-gray-500 dark:text-gray-400">Perfect scores</div>
+										</div>
+										<div className="bg-white dark:bg-gray-900 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+											<div className="text-xl font-bold text-purple-600 dark:text-purple-400 mb-0.5">12</div>
+											<div className="text-xs text-gray-500 dark:text-gray-400">Week streak</div>
+										</div>
+									</div>
+									<div className="h-16 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center justify-center">
+										<div className="flex items-end gap-1 justify-center h-full pb-2">
+											{[2, 4, 3, 5, 4, 6, 5].map((height, i) => (
+												<div
+													key={i}
+													className="w-3 bg-purple-500 rounded-t"
+													style={{ height: `${height * 8}px` }}
+												></div>
+											))}
+										</div>
+									</div>
+								</div>
+							</div>
+							{/* Content */}
+							<div className="p-5">
+								<h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+									Stats & Streaks
+								</h3>
+								<p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+									Track your performance with detailed analytics and build impressive streaks.
+								</p>
+							</div>
+						</motion.div>
+
+						{/* Printable PDFs */}
+						<motion.div
+							initial={{ opacity: 0, y: 20, rotate: 0.3 }}
+							whileInView={{ opacity: 1, y: 0 }}
+							viewport={{ once: true }}
+							whileHover={{ rotate: -0.5, scale: 1.02, y: -4 }}
+							transition={{ 
+								duration: 0.5, 
+								delay: 0.4,
+								type: "spring",
+								stiffness: 300,
+								damping: 20
+							}}
+							className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden group hover:shadow-lg transition-shadow"
+							style={{ transformOrigin: 'center' }}
+						>
+							{/* UI Preview Area */}
+							<div className="bg-gray-50 dark:bg-gray-800 px-4 py-6 border-b border-gray-200 dark:border-gray-700">
+								{/* PDF mockup */}
+								<div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+									<div className="bg-emerald-50 dark:bg-emerald-900/20 px-3 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+										<div className="flex items-center gap-2">
+											<FileText className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+											<div className="h-2.5 w-24 bg-gray-200 dark:bg-gray-700 rounded"></div>
+										</div>
+										<Download className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
+									</div>
+									<div className="p-3 space-y-1.5">
+										<div className="h-2 bg-gray-100 dark:bg-gray-800 rounded w-full"></div>
+										<div className="h-2 bg-gray-100 dark:bg-gray-800 rounded w-3/4"></div>
+										<div className="h-2 bg-gray-100 dark:bg-gray-800 rounded w-full"></div>
+										<div className="h-2 bg-gray-100 dark:bg-gray-800 rounded w-5/6"></div>
+									</div>
+								</div>
+							</div>
+							{/* Content */}
+							<div className="p-5">
+								<h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+									Printable PDFs
+								</h3>
+								<p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+									Download quizzes as clean PDFs for offline use or paper copies.
+								</p>
+							</div>
+						</motion.div>
+
+						{/* Replay Old Quizzes */}
+						<motion.div
+							initial={{ opacity: 0, y: 20, rotate: -0.3 }}
+							whileInView={{ opacity: 1, y: 0 }}
+							viewport={{ once: true }}
+							whileHover={{ rotate: 0.4, scale: 1.02, y: -4 }}
+							transition={{ 
+								duration: 0.5, 
+								delay: 0.5,
+								type: "spring",
+								stiffness: 300,
+								damping: 20
+							}}
+							className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden group hover:shadow-lg transition-shadow"
+							style={{ transformOrigin: 'center' }}
+						>
+							{/* UI Preview Area */}
+							<div className="bg-gray-50 dark:bg-gray-800 px-4 py-6 border-b border-gray-200 dark:border-gray-700">
+								{/* Quiz grid mockup */}
+								<div className="grid grid-cols-3 gap-1.5">
+									{[...Array(6)].map((_, i) => (
+										<div key={i} className="aspect-square rounded-lg bg-orange-100 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800 flex items-center justify-center">
+											<span className="text-xs font-semibold text-orange-600 dark:text-orange-400">#{i + 1}</span>
+										</div>
+									))}
+								</div>
+							</div>
+							{/* Content */}
+							<div className="p-5">
+								<h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+									Replay Old Quizzes
+								</h3>
+								<p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+									Access the full back catalogue and replay any quiz from the archives.
+								</p>
+							</div>
+						</motion.div>
+
+						{/* Special Editions */}
+						<motion.div
+							initial={{ opacity: 0, y: 20, rotate: 0.5 }}
+							whileInView={{ opacity: 1, y: 0 }}
+							viewport={{ once: true }}
+							whileHover={{ rotate: -0.4, scale: 1.02, y: -4 }}
+							transition={{ 
+								duration: 0.5, 
+								delay: 0.6,
+								type: "spring",
+								stiffness: 300,
+								damping: 20
+							}}
+							className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden group hover:shadow-lg transition-shadow"
+							style={{ transformOrigin: 'center' }}
+						>
+							{/* UI Preview Area */}
+							<div className="bg-gray-50 dark:bg-gray-800 px-4 py-6 border-b border-gray-200 dark:border-gray-700">
+								{/* Special edition card mockup */}
+								<div className="space-y-2">
+									<div className="h-7 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg border border-indigo-200 dark:border-indigo-800 flex items-center px-2.5">
+										<Sparkles className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 mr-2" />
+										<div className="h-2.5 w-24 bg-indigo-200 dark:bg-indigo-700 rounded"></div>
+									</div>
+									<div className="h-16 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-200 dark:border-indigo-800 flex items-center justify-center">
+										<div className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">Holiday Special</div>
+									</div>
+								</div>
+							</div>
+							{/* Content */}
+							<div className="p-5">
+								<h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+									Special Editions
+								</h3>
+								<p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+									Access exclusive holiday and special edition quizzes throughout the year.
+								</p>
+							</div>
+						</motion.div>
+					</div>
+
+					{/* CTA Button */}
+					<motion.div
+						initial={{ opacity: 0, y: 20 }}
+						whileInView={{ opacity: 1, y: 0 }}
+						viewport={{ once: true }}
+						transition={{ duration: 0.5, delay: 0.7 }}
+						className="text-center mt-12"
+					>
+						<a
+							href="/premium"
+							className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-[#3B82F6] text-white font-medium hover:bg-[#2563EB] transition-colors"
+						>
+							<Crown className="w-4 h-4" />
+							Upgrade to Premium
+						</a>
+					</motion.div>
+				</motion.div>
+			</section>
+
+			{/* Testimonials Section - Mobbin Style */}
+			<section className="w-full py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-white dark:bg-gray-900">
+				<motion.div
+					initial={{ opacity: 0, y: 20 }}
+					whileInView={{ opacity: 1, y: 0 }}
+					viewport={{ once: true, margin: "-100px" }}
+					transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+					className="max-w-7xl mx-auto"
+				>
+					<div className="text-center mb-12">
+						<h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
+							What teachers are saying
+						</h2>
+					</div>
+
+					{/* Testimonials Grid */}
+					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto mb-12">
+						{/* Sarah L. */}
+						<motion.div
+							initial={{ opacity: 0, y: 20, rotate: -0.3 }}
+							whileInView={{ opacity: 1, y: 0 }}
+							viewport={{ once: true }}
+							whileHover={{ rotate: 0.3, scale: 1.02, y: -4 }}
+							transition={{ 
+								duration: 0.5, 
+								delay: 0.1,
+								type: "spring",
+								stiffness: 300,
+								damping: 20
+							}}
+							className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg transition-shadow"
+							style={{ transformOrigin: 'center' }}
+						>
+							<div className="mb-4">
+								<div className="font-bold text-gray-900 dark:text-white mb-1">Sarah L.</div>
+								<div className="text-xs text-gray-500 dark:text-gray-400">Year 10 Adviser — NSW</div>
+							</div>
+							<p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+								Private leaderboards have created the healthiest bit of competition I've seen in pastoral time. The boys race to beat last week's score and actually cheer each other on.
+							</p>
+						</motion.div>
+
+						{/* Tom B. */}
+						<motion.div
+							initial={{ opacity: 0, y: 20, rotate: 0.4 }}
+							whileInView={{ opacity: 1, y: 0 }}
+							viewport={{ once: true }}
+							whileHover={{ rotate: -0.4, scale: 1.02, y: -4 }}
+							transition={{ 
+								duration: 0.5, 
+								delay: 0.2,
+								type: "spring",
+								stiffness: 300,
+								damping: 20
+							}}
+							className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg transition-shadow"
+							style={{ transformOrigin: 'center' }}
+						>
+							<div className="mb-4">
+								<div className="font-bold text-gray-900 dark:text-white mb-1">Tom B.</div>
+								<div className="text-xs text-gray-500 dark:text-gray-400">Homeroom Teacher — VIC</div>
+							</div>
+							<p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+								It's refreshingly social. Kids aren't buried in laptops — they're talking, guessing, arguing, laughing. It feels like old-school trivia but sharper.
+							</p>
+						</motion.div>
+
+						{/* Michelle R. */}
+						<motion.div
+							initial={{ opacity: 0, y: 20, rotate: -0.4 }}
+							whileInView={{ opacity: 1, y: 0 }}
+							viewport={{ once: true }}
+							whileHover={{ rotate: 0.3, scale: 1.02, y: -4 }}
+							transition={{ 
+								duration: 0.5, 
+								delay: 0.3,
+								type: "spring",
+								stiffness: 300,
+								damping: 20
+							}}
+							className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg transition-shadow"
+							style={{ transformOrigin: 'center' }}
+						>
+							<div className="mb-4">
+								<div className="font-bold text-gray-900 dark:text-white mb-1">Michelle R.</div>
+								<div className="text-xs text-gray-500 dark:text-gray-400">Assistant Head of Wellbeing — QLD</div>
+							</div>
+							<p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+								The difficulty sits in a sweet spot. Easy wins early, a few curveballs later, and enough variety that everyone gets to feel clever at least once.
+							</p>
+						</motion.div>
+
+						{/* Mark P. */}
+						<motion.div
+							initial={{ opacity: 0, y: 20, rotate: 0.3 }}
+							whileInView={{ opacity: 1, y: 0 }}
+							viewport={{ once: true }}
+							whileHover={{ rotate: -0.3, scale: 1.02, y: -4 }}
+							transition={{ 
+								duration: 0.5, 
+								delay: 0.4,
+								type: "spring",
+								stiffness: 300,
+								damping: 20
+							}}
+							className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg transition-shadow"
+							style={{ transformOrigin: 'center' }}
+						>
+							<div className="mb-4">
+								<div className="font-bold text-gray-900 dark:text-white mb-1">Mark P.</div>
+								<div className="text-xs text-gray-500 dark:text-gray-400">Digital Technologies Teacher — SA</div>
+							</div>
+							<p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+								Honestly, it's just simple. One quiz a week, well-written questions, no setup dramas, and the class actually looks forward to Monday mornings.
+							</p>
+						</motion.div>
+					</div>
+
+					{/* Angie D. - Full width card */}
+					<motion.div
+						initial={{ opacity: 0, y: 20, rotate: -0.2 }}
+						whileInView={{ opacity: 1, y: 0 }}
+						viewport={{ once: true }}
+						whileHover={{ rotate: 0.2, scale: 1.02, y: -4 }}
+						transition={{ 
+							duration: 0.5, 
+							delay: 0.5,
+							type: "spring",
+							stiffness: 300,
+							damping: 20
+						}}
+						className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg transition-shadow max-w-3xl mx-auto mb-12"
+						style={{ transformOrigin: 'center' }}
+					>
+						<div className="mb-4">
+							<div className="font-bold text-gray-900 dark:text-white mb-1">Angie D.</div>
+							<div className="text-xs text-gray-500 dark:text-gray-400">PDHPE Teacher — NSW</div>
+						</div>
+						<p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+							The categories keep it interesting — sport, music, trends, news. There's always at least one round that hooks the whole room.
+						</p>
+					</motion.div>
+
+					{/* CTA */}
+					<motion.div
+						initial={{ opacity: 0, y: 20 }}
+						whileInView={{ opacity: 1, y: 0 }}
+						viewport={{ once: true }}
+						transition={{ duration: 0.5, delay: 0.6 }}
+						className="text-center"
+					>
+						<p className="text-gray-600 dark:text-gray-400 mb-2">
+							Want to add your own comment?
+						</p>
+						<p className="text-sm text-gray-500 dark:text-gray-500">
+							Submit one and you might unlock a little achievement 😉
+						</p>
+					</motion.div>
+				</motion.div>
 			</section>
 
 			{/* Why The School Quiz Section */}

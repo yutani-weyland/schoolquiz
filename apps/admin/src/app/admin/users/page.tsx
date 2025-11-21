@@ -4,8 +4,11 @@ import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Users, Search, Filter, Building2, Trophy, BookOpen, Edit2, X, KeyRound, ChevronLeft, ChevronRight, Download, Trash2, CheckSquare, Square, MoreVertical, Plus, Trash2 as TrashIcon, ChevronDown, FileText, Key, Ban, CheckCircle, Crown, UserCog, Copy, Loader2, Eye } from 'lucide-react'
-import { PageHeader, Card, Input, Select, DataTable, DataTableHeader, DataTableHeaderCell, DataTableBody, DataTableRow, DataTableCell, DataTableEmpty, Badge, Button, StatusStrip, TableSkeleton } from '@/components/admin/ui'
+import { Users, Search, Filter, Building2, Trophy, BookOpen, Edit2, X, KeyRound, ChevronLeft, ChevronRight, Download, Trash2, CheckSquare, Square, MoreVertical, Plus, Trash2 as TrashIcon, ChevronDown, FileText, Key, Ban, CheckCircle, Crown, UserCog, Copy, Eye } from 'lucide-react'
+import { Spinner } from '@/components/ui/spinner'
+import { PageHeader, Card, DataTable, DataTableHeader, DataTableHeaderCell, DataTableBody, DataTableRow, DataTableCell, DataTableEmpty, Badge, Button, StatusStrip, TableSkeleton } from '@/components/admin/ui'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { AutocompleteSearch } from '@/components/admin/AutocompleteSearch'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import { useDebounce } from '@/hooks/useDebounce'
 import { formatDate } from '@/lib/dateUtils'
@@ -114,6 +117,32 @@ export default function AdminUsersPage() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const fetchSearchSuggestions = async (query: string): Promise<string[]> => {
+    if (query.length < 2) return []
+    
+    try {
+      const response = await fetch(`/api/admin/users?search=${encodeURIComponent(query)}&limit=10`)
+      const data = await response.json()
+      
+      if (response.ok && data.users) {
+        // Return user names and emails as suggestions
+        return data.users
+          .map((user: User) => [
+            user.name || user.email,
+            user.email,
+          ])
+          .flat()
+          .filter((s: string | null | undefined): s is string => Boolean(s))
+          .filter((s, i, arr) => arr.indexOf(s) === i) // Remove duplicates
+          .slice(0, 10)
+      }
+    } catch (error) {
+      console.error('Error fetching suggestions:', error)
+    }
+    
+    return []
   }
 
   const handleSort = (column: string) => {
@@ -365,8 +394,8 @@ export default function AdminUsersPage() {
               size="sm"
               onClick={() => setShowCreateModal(true)}
             >
-              <Plus className="w-4 h-4 mr-2" />
-              Create User
+              <Plus className="w-4 h-4 flex-shrink-0" />
+              <span className="hidden lg:inline">Create User</span>
             </Button>
             <Popover>
               <PopoverTrigger asChild>
@@ -510,29 +539,34 @@ export default function AdminUsersPage() {
       {/* Filters */}
       <Card padding="sm">
         <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[hsl(var(--muted-foreground))] z-10" />
-            <Input
-              type="text"
-              placeholder="Search users..."
+          <div className="flex-1">
+            <AutocompleteSearch
               value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              className="pl-10 text-xs"
+              onChange={setSearchInput}
+              placeholder="Search users..."
+              onFetchSuggestions={fetchSearchSuggestions}
+              className="text-xs"
+              minChars={2}
+              maxSuggestions={8}
             />
           </div>
           <div className="relative">
             <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[hsl(var(--muted-foreground))] z-10" />
             <Select
-              value={tierFilter}
-              onChange={(e) => {
-                setTierFilter(e.target.value)
+              value={tierFilter || "all"}
+              onValueChange={(value) => {
+                setTierFilter(value === "all" ? "" : value)
                 setPage(1)
               }}
-              className="pl-10 text-xs"
             >
-              <option value="">All Tiers</option>
-              <option value="basic">Basic</option>
-              <option value="premium">Premium</option>
+              <SelectTrigger className="pl-10 text-xs">
+                <SelectValue placeholder="All Tiers" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Tiers</SelectItem>
+                <SelectItem value="basic">Basic</SelectItem>
+                <SelectItem value="premium">Premium</SelectItem>
+              </SelectContent>
             </Select>
           </div>
         </div>
@@ -540,9 +574,7 @@ export default function AdminUsersPage() {
 
       {/* Table */}
       {isLoading ? (
-        <Card className="overflow-hidden p-0">
-          <TableSkeleton rows={5} columns={7} />
-        </Card>
+        <TableSkeleton rows={5} columns={7} />
       ) : (
       <DataTable
         emptyState={{
@@ -695,7 +727,7 @@ export default function AdminUsersPage() {
                               disabled={actionLoading === user.id}
                             >
                               {actionLoading === user.id ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
+                                <Spinner className="size-4" />
                               ) : (
                                 <MoreVertical className="w-4 h-4" />
                               )}
@@ -781,7 +813,7 @@ export default function AdminUsersPage() {
                                     handleUserAction(user.id, 'delete')
                                   }
                                 }}
-                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors text-left"
+                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10 rounded-lg transition-colors text-left"
                               >
                                 <Trash2 className="w-4 h-4" />
                                 Delete User
@@ -980,12 +1012,13 @@ function CreateUserModal({ onClose, onSave }: { onClose: () => void; onSave: () 
         >
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-[hsl(var(--foreground))]">Create User</h2>
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={onClose}
-              className="p-2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg transition-colors"
             >
               <X className="w-5 h-5" />
-            </button>
+            </Button>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -1049,7 +1082,7 @@ function CreateUserModal({ onClose, onSave }: { onClose: () => void; onSave: () 
               </div>
             )}
 
-            <div className="flex items-center justify-end gap-3 pt-4">
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-[hsl(var(--border))]">
               <Button
                 type="button"
                 variant="secondary"
@@ -1065,7 +1098,7 @@ function CreateUserModal({ onClose, onSave }: { onClose: () => void; onSave: () 
               >
                 {isLoading ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    <Spinner className="size-4 mr-2" />
                     Creating...
                   </>
                 ) : (
@@ -1289,12 +1322,13 @@ function EditUserModal({ user, onClose, onSave }: { user: User; onClose: () => v
         >
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-[hsl(var(--foreground))]">Edit User</h2>
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={onClose}
-              className="p-2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg transition-colors"
             >
               <X className="w-5 h-5" />
-            </button>
+            </Button>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -1416,28 +1450,34 @@ function EditUserModal({ user, onClose, onSave }: { user: User; onClose: () => v
               </div>
             )}
 
-            <div className="flex items-center gap-3 pt-4 border-t border-[hsl(var(--border))]">
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-[hsl(var(--border))]">
               <Button
                 type="button"
                 variant="secondary"
                 onClick={handleResetPassword}
                 disabled={isResettingPassword}
               >
-                <KeyRound className="w-4 h-4" />
+                {isResettingPassword ? (
+                  <Spinner className="size-4 mr-2" />
+                ) : (
+                  <KeyRound className="w-4 h-4 mr-2" />
+                )}
                 {isResettingPassword ? 'Sending...' : 'Reset Password'}
               </Button>
-              <div className="flex-1" />
               <Button
                 type="button"
-                variant="ghost"
+                variant="secondary"
                 onClick={onClose}
+                disabled={isLoading || isResettingPassword}
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
+                variant="primary"
                 disabled={isLoading}
               >
+                {isLoading && <Spinner className="size-4 mr-2" />}
                 {isLoading ? 'Saving...' : 'Save Changes'}
               </Button>
             </div>

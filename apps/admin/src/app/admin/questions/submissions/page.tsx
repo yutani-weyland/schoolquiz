@@ -271,9 +271,7 @@ function UserQuestionSubmissionsPageContent() {
 
       {/* Table */}
       {isLoading ? (
-        <Card className="overflow-hidden p-0">
-          <TableSkeleton rows={10} columns={6} />
-        </Card>
+        <TableSkeleton rows={10} columns={6} />
       ) : (
         <DataTable
           emptyState={{

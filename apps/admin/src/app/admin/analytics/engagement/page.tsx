@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Users, TrendingUp, TrendingDown, Activity, Building2 } from 'lucide-react'
+import { ChartSkeleton, StatCardSkeleton } from '@/components/admin/ui/skeletons'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 
 interface EngagementData {
@@ -48,8 +49,28 @@ export default function EngagementAnalyticsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+      <div className="space-y-6">
+        {/* Header skeleton */}
+        <div className="space-y-2">
+          <div className="h-9 w-64 bg-[hsl(var(--muted))] animate-pulse rounded-md" />
+          <div className="h-4 w-96 bg-[hsl(var(--muted))] animate-pulse rounded-md" />
+        </div>
+
+        {/* KPI Cards skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <StatCardSkeleton key={i} />
+          ))}
+        </div>
+
+        {/* Charts skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <ChartSkeleton height={300} />
+          <ChartSkeleton height={300} />
+        </div>
+
+        {/* Table skeleton */}
+        <ChartSkeleton height={400} />
       </div>
     )
   }

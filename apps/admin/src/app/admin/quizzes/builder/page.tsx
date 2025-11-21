@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { BookOpen, Plus, Save, Eye, FileDown, ArrowLeft, Import, CheckCircle2, XCircle, Sparkles, Upload } from 'lucide-react'
+import { Spinner } from '@/components/ui/spinner'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select'
 import Link from 'next/link'
 import { useAutosave } from '@/hooks/useAutosave'
 import { useUnsavedChangesWarning } from '@/hooks/useUnsavedChangesWarning'
@@ -13,6 +15,7 @@ import { QuestionTemplateModal } from '@/components/admin/questions/QuestionTemp
 import { BulkImportModal } from '@/components/admin/questions/BulkImportModal'
 import { QuestionPreview } from '@/components/admin/questions/QuestionPreview'
 import { validateQuestion, normalizeQuestion, type Question as QuestionValidation } from '@/lib/question-validation'
+import { Card } from '@/components/admin/ui/Card'
 
 interface Question {
   id: string
@@ -642,7 +645,11 @@ export default function QuizBuilderPage() {
             className="inline-flex items-center justify-center gap-2 px-3 py-2 sm:px-4 text-sm font-medium text-white bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
             title={isSaving ? 'Saving...' : 'Save Now'}
           >
-            <Save className="w-4 h-4 flex-shrink-0" />
+            {isSaving ? (
+              <Spinner className="w-4 h-4 flex-shrink-0" />
+            ) : (
+              <Save className="w-4 h-4 flex-shrink-0" />
+            )}
             <span className="hidden lg:inline">{isSaving ? 'Saving...' : 'Save Now'}</span>
           </button>
         </div>
@@ -663,22 +670,24 @@ export default function QuizBuilderPage() {
       </div>
 
       {/* Round Tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-2">
-        {quiz.rounds.map((round, index) => (
-          <button
-            key={round.id}
-            onClick={() => setActiveRound(index)}
-            className={`flex-shrink-0 px-3 py-1.5 text-sm rounded-lg font-medium transition-colors ${
-              activeRound === index
-                ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]'
-                : 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]/80'
-            }`}
-          >
-            {round.isPeoplesRound ? "People's Question" : `Round ${index + 1}`}
-            {round.title && `: ${round.title}`}
-          </button>
-        ))}
-      </div>
+      <Card padding="sm">
+        <div className="flex gap-2 overflow-x-auto">
+          {quiz.rounds.map((round, index) => (
+            <button
+              key={round.id}
+              onClick={() => setActiveRound(index)}
+              className={`flex-shrink-0 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                activeRound === index
+                  ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]'
+                  : 'bg-[hsl(var(--muted))] text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/80'
+              }`}
+            >
+              {round.isPeoplesRound ? "People's Question" : `Round ${index + 1}`}
+              {round.title && `: ${round.title}`}
+            </button>
+          ))}
+        </div>
+      </Card>
 
       {/* Active Round Editor */}
       {quiz.rounds[activeRound] && (
@@ -1221,31 +1230,36 @@ function ImportQuestionModal({
               placeholder="Search questions..."
               className="flex-1 px-4 py-2 border border-gray-300/50 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <select
-              value={categoryFilter}
-              onChange={(e) => onCategoryFilterChange(e.target.value)}
-              className="px-4 py-2 border border-gray-300/50 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            <Select
+              value={categoryFilter || "all"}
+              onValueChange={(value) => onCategoryFilterChange(value === "all" ? "" : value)}
             >
-              <option value="">All Categories</option>
-              {mainCategories.map(cat => (
-                <optgroup key={cat.id} label={cat.name}>
-                  <option value={cat.id}>{cat.name}</option>
-                  {categories
-                    .filter(sub => sub.parentId === cat.id)
-                    .map(sub => (
-                      <option key={sub.id} value={sub.id}>
-                        {cat.name} &gt; {sub.name}
-                      </option>
-                    ))}
-                </optgroup>
-              ))}
-            </select>
+              <SelectTrigger className="px-4 py-2 border border-gray-300/50 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
+                <SelectValue placeholder="All Categories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {mainCategories.map(cat => (
+                  <SelectGroup key={cat.id}>
+                    <SelectLabel>{cat.name}</SelectLabel>
+                    <SelectItem value={cat.id}>{cat.name}</SelectItem>
+                    {categories
+                      .filter(sub => sub.parentId === cat.id)
+                      .map(sub => (
+                        <SelectItem key={sub.id} value={sub.id}>
+                          {cat.name} &gt; {sub.name}
+                        </SelectItem>
+                      ))}
+                  </SelectGroup>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
         <div className="flex-1 overflow-y-auto p-6">
           {isLoading ? (
             <div className="text-center py-12">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+              <Spinner className="size-8" />
             </div>
           ) : questions.length === 0 ? (
             <div className="text-center py-12 text-gray-500 dark:text-gray-400">
@@ -1396,7 +1410,7 @@ function ImportRoundModal({
         <div className="flex-1 overflow-y-auto p-6">
           {isLoading ? (
             <div className="text-center py-12">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+              <Spinner className="size-8" />
             </div>
           ) : rounds.length === 0 ? (
             <div className="text-center py-12 text-gray-500 dark:text-gray-400">

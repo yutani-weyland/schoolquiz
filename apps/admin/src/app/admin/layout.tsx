@@ -50,13 +50,17 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
   }
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[hsl(var(--background))]">
-      {/* Sidebar */}
+    <div className="h-screen w-screen overflow-hidden bg-[hsl(var(--background))]">
+      {/* Sidebar - fixed on the left, full height, z-50 so it's above topbar */}
       <AdminSidebar />
       
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-[hsl(var(--background))]">
+      {/* Full-width topbar - spans entire width, z-40 (above sidebar) */}
+      <div className="fixed top-0 left-0 right-0 z-40">
         <AdminTopbar />
+      </div>
+      
+      {/* Main Content area - offset by sidebar, below topbar */}
+      <div className="main-content-wrapper h-screen flex flex-col min-h-0 overflow-hidden bg-[hsl(var(--background))] pt-[60px]">
         <ScrollArea className="flex-1">
           <main className="p-6 bg-[hsl(var(--background))]">
             {children}

@@ -39,7 +39,7 @@ export default function AnalyticsPage() {
     const colors = {
       blue: {
         bg: 'bg-blue-50 dark:bg-blue-900/30',
-        icon: 'text-blue-600 dark:text-blue-400',
+        icon: 'text-[hsl(var(--primary))]',
       },
       green: {
         bg: 'bg-green-50 dark:bg-green-900/30',

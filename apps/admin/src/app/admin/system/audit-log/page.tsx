@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { FileText, Filter, User, Target, Building2, CreditCard, BookOpen } from 'lucide-react'
+import { Spinner } from '@/components/ui/spinner'
 
 interface AuditLog {
   id: string
@@ -87,8 +88,32 @@ export default function AuditLogPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+      <div className="space-y-6">
+        {/* Header skeleton */}
+        <div className="space-y-2">
+          <div className="h-8 w-48 bg-[hsl(var(--muted))] animate-pulse rounded-md" />
+          <div className="h-4 w-96 bg-[hsl(var(--muted))] animate-pulse rounded-md" />
+        </div>
+
+        {/* Table skeleton */}
+        <div className="bg-[hsl(var(--card))] rounded-2xl border border-[hsl(var(--border))] overflow-hidden">
+          <div className="p-6 border-b border-[hsl(var(--border))]">
+            <div className="flex gap-4">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="h-4 flex-1 bg-[hsl(var(--muted))] animate-pulse rounded-md" />
+              ))}
+            </div>
+          </div>
+          <div className="divide-y divide-[hsl(var(--border))]">
+            {Array.from({ length: 5 }).map((_, rowIndex) => (
+              <div key={rowIndex} className="p-6 flex gap-4">
+                {Array.from({ length: 5 }).map((_, colIndex) => (
+                  <div key={colIndex} className="h-5 flex-1 bg-[hsl(var(--muted))] animate-pulse rounded-md" />
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     )
   }

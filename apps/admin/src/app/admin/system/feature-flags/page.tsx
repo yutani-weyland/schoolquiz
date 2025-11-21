@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Flag, ToggleLeft, ToggleRight, Building2 } from 'lucide-react'
+import { Spinner } from '@/components/ui/spinner'
 
 interface FeatureFlag {
   id: string
@@ -59,8 +60,25 @@ export default function FeatureFlagsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+      <div className="space-y-6">
+        {/* Header skeleton */}
+        <div className="space-y-2">
+          <div className="h-8 w-48 bg-[hsl(var(--muted))] animate-pulse rounded-md" />
+          <div className="h-4 w-96 bg-[hsl(var(--muted))] animate-pulse rounded-md" />
+        </div>
+
+        {/* Flags list skeleton */}
+        <div className="bg-[hsl(var(--card))] rounded-2xl border border-[hsl(var(--border))] p-6 space-y-4">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex items-center justify-between p-4 border border-[hsl(var(--border))] rounded-xl">
+              <div className="space-y-2 flex-1">
+                <div className="h-5 w-48 bg-[hsl(var(--muted))] animate-pulse rounded-md" />
+                <div className="h-4 w-96 bg-[hsl(var(--muted))] animate-pulse rounded-md" />
+              </div>
+              <div className="h-6 w-12 bg-[hsl(var(--muted))] animate-pulse rounded-full" />
+            </div>
+          ))}
+        </div>
       </div>
     )
   }

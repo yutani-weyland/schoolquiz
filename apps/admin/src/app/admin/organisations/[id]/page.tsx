@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Building2, ArrowLeft, Users, Layers, CreditCard, Activity, Mail, Calendar, CheckCircle2, Clock, XCircle, AlertCircle } from 'lucide-react'
+import { Spinner } from '@/components/ui/spinner'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { formatDate } from '@/lib/dateUtils'
 import { getOrganisationStatusBadge, getMemberStatusBadge } from '@/lib/statusBadge'
@@ -124,8 +125,58 @@ export default function AdminOrganisationDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+      <div className="space-y-6">
+        {/* Header skeleton */}
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <div className="h-8 w-64 bg-[hsl(var(--muted))] animate-pulse rounded-md" />
+            <div className="h-4 w-96 bg-[hsl(var(--muted))] animate-pulse rounded-md" />
+          </div>
+        </div>
+
+        {/* Organisation header skeleton */}
+        <div className="bg-[hsl(var(--card))] rounded-2xl p-6 border border-[hsl(var(--border))]">
+          <div className="flex items-center gap-6">
+            <div className="h-20 w-20 bg-[hsl(var(--muted))] animate-pulse rounded-full" />
+            <div className="flex-1 space-y-2">
+              <div className="h-6 w-48 bg-[hsl(var(--muted))] animate-pulse rounded-md" />
+              <div className="h-4 w-64 bg-[hsl(var(--muted))] animate-pulse rounded-md" />
+              <div className="flex gap-2 pt-2">
+                <div className="h-6 w-20 bg-[hsl(var(--muted))] animate-pulse rounded-md" />
+                <div className="h-6 w-20 bg-[hsl(var(--muted))] animate-pulse rounded-md" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Stats grid skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div
+              key={i}
+              className="bg-[hsl(var(--card))] rounded-2xl p-4 border border-[hsl(var(--border))]"
+            >
+              <div className="h-4 w-24 bg-[hsl(var(--muted))] animate-pulse rounded-md mb-2" />
+              <div className="h-8 w-16 bg-[hsl(var(--muted))] animate-pulse rounded-md" />
+            </div>
+          ))}
+        </div>
+
+        {/* Tabs skeleton */}
+        <div className="bg-[hsl(var(--card))] rounded-2xl p-6 border border-[hsl(var(--border))]">
+          <div className="space-y-6">
+            <div className="flex gap-2 border-b border-[hsl(var(--border))] pb-2">
+              <div className="h-9 w-32 bg-[hsl(var(--muted))] animate-pulse rounded-md" />
+              <div className="h-9 w-32 bg-[hsl(var(--muted))] animate-pulse rounded-md" />
+              <div className="h-9 w-32 bg-[hsl(var(--muted))] animate-pulse rounded-md" />
+            </div>
+            <div className="space-y-4">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="h-16 w-full bg-[hsl(var(--muted))] animate-pulse rounded-xl" />
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     )
   }
@@ -133,7 +184,7 @@ export default function AdminOrganisationDetailPage() {
   if (!organisation) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500 dark:text-gray-400">Organisation not found</p>
+        <p className="text-[hsl(var(--muted-foreground))]">Organisation not found</p>
       </div>
     )
   }

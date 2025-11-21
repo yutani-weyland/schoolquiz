@@ -93,20 +93,24 @@ export function QuizCardStack({ quizzes }: QuizCardStackProps) {
               const invert = text === "white" ? "text-white" : "text-gray-900";
               const sub = text === "white" ? "text-white/90" : "text-gray-800/80";
               
-              return (
+              // Only the top card (last in array, first visually) should be interactive
+              const isTopCard = index === displayQuizzes.length - 1;
+              
+              const cardContent = (
                 <div
-                  key={quiz.id}
                   className={cn(
                     "rounded-3xl shadow-lg h-full w-full flex flex-col relative overflow-hidden",
-                    // Fixed padding at breakpoints for predictable scaling
+                    // Larger padding for bigger feel
                     "p-5",
                     "sm:p-7",
                     "md:p-8",
                     "lg:p-9",
                     "xl:p-9",
                     "2xl:p-9",
-                    // Remove fixed min-height, let aspect ratio handle it
-                    "aspect-[5/8]"
+                    "aspect-[5/8]",
+                    // Clickability cues - only for top card
+                    isTopCard && "cursor-pointer transition-shadow duration-300 hover:shadow-xl hover:ring-2 hover:ring-white/30",
+                    !isTopCard && "pointer-events-none"
                   )}
                   style={{ 
                     backgroundColor: quiz.colorHex,
@@ -129,109 +133,133 @@ export function QuizCardStack({ quizzes }: QuizCardStackProps) {
                     </div>
                   )}
                   
-                  <div className="relative z-10 flex flex-col h-full overflow-hidden">
-                    <div className="flex items-center justify-between gap-2 sm:gap-3 md:gap-4 mb-1.5 sm:mb-2 md:mb-3 lg:mb-3 xl:mb-2 2xl:mb-2">
-                      <div className="flex items-center gap-2 sm:gap-3 flex-nowrap">
-                        <span
-                          className={cn(
-                            "inline-flex items-center rounded-full font-bold whitespace-nowrap",
-                            "px-2.5 sm:px-3 md:px-3.5 lg:px-4 xl:px-5",
-                            "py-1 sm:py-1.5 md:py-2",
-                            "text-sm sm:text-sm md:text-base lg:text-lg xl:text-xl",
-                            invert,
-                            "bg-black/10 bg-clip-padding"
-                          )}
-                        >
-                          #{quiz.id}
-                        </span>
-                      </div>
-                      <span className={cn(
-                        "inline-flex items-center gap-1 sm:gap-1.5 md:gap-2 lg:gap-2.5 font-medium flex-shrink-0",
-                        "text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl",
-                        sub
-                      )}>
-                        <Calendar className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 lg:h-6 lg:w-6 xl:h-7 xl:w-7" aria-hidden />
-                        {formattedDate}
-                      </span>
-                    </div>
-                    
-                    <h3 className={cn(
-                      "font-extrabold leading-tight",
-                      "text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-4xl 2xl:text-4xl",
-                      "mb-1.5 sm:mb-2 md:mb-2.5 lg:mb-3 xl:mb-2 2xl:mb-2",
-                      invert,
-                      "relative z-10"
-                    )}>
-                      {quiz.title}
-                    </h3>
-                    
-                    {quiz.blurb && (
-                      <p className={cn(
-                        "line-clamp-2 sm:line-clamp-none",
-                        "text-base sm:text-base md:text-lg lg:text-lg xl:text-lg 2xl:text-lg",
-                        "mb-1.5 sm:mb-2 md:mb-3 lg:mb-3 xl:mb-2 2xl:mb-2",
-                        "leading-relaxed",
-                        sub
-                      )}>
-                        {quiz.blurb}
-                      </p>
-                    )}
-                    
-                    {/* Categories tags - exactly 5 */}
-                    {displayTags.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 sm:gap-2 md:gap-2.5 lg:gap-3 mb-1.5 sm:mb-2 md:mb-3 lg:mb-3 xl:mb-2 2xl:mb-2">
-                        {displayTags.map((tag, index) => (
-                        <span
-                          key={`${tag}-${index}`}
-                          className={cn(
-                            "rounded-full font-medium",
-                            "px-2 sm:px-2.5 md:px-3 lg:px-4 xl:px-3 2xl:px-3",
-                            "py-1 sm:py-1.5 md:py-2",
-                            "text-sm sm:text-sm md:text-base lg:text-lg xl:text-sm 2xl:text-sm",
-                            text === "white" ? "bg-white/20 text-white" : "bg-black/10 text-gray-900"
-                          )}
-                        >
-                          {tag}
-                        </span>
-                        ))}
-                      </div>
-                    )}
-                    
-                    {/* Play button */}
-                    <Link
-                      href={`/quizzes/${quiz.slug}/intro`}
+                  <div className="relative z-10 flex flex-col h-full min-h-0 overflow-hidden">
+                  {/* Small microcopy - clickability cue with bounce animation - only on top card */}
+                  {isTopCard && (
+                    <motion.div 
                       className={cn(
-                        "inline-flex items-center justify-center mt-auto rounded-full w-full",
-                        "gap-1.5 sm:gap-2",
-                        "px-4 sm:px-5 md:px-6 lg:px-7 xl:px-6 2xl:px-6",
-                        "py-3 sm:py-3.5 md:py-4 lg:py-4 xl:py-3.5 2xl:py-3.5",
-                        "font-semibold text-xs sm:text-sm md:text-base lg:text-lg xl:text-base 2xl:text-base",
-                        "transition-all duration-200",
-                        "hover:scale-[1.02] active:scale-[0.98]"
+                        "text-xs sm:text-sm font-medium opacity-60 mb-1 text-center flex-shrink-0",
+                        sub
                       )}
-                      style={{
-                        backgroundColor: text === "white" ? "rgba(255, 255, 255, 0.9)" : "rgb(17, 24, 39)",
-                        color: text === "white" ? "rgb(17, 24, 39)" : "white",
+                      animate={{
+                        y: [0, -3, 0],
                       }}
-                      onMouseEnter={(e) => {
-                        if (text === "white") {
-                          e.currentTarget.style.backgroundColor = "white";
-                        } else {
-                          e.currentTarget.style.backgroundColor = "rgb(31, 41, 55)";
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (text === "white") {
-                          e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.9)";
-                        } else {
-                          e.currentTarget.style.backgroundColor = "rgb(17, 24, 39)";
-                        }
+                      transition={{
+                        duration: 2,
+                        repeat: Infinity,
+                        ease: "easeInOut",
                       }}
                     >
-                      <Play className="w-3 h-3 sm:w-4 sm:h-4 md:w-4 md:h-4 lg:w-5 lg:h-5 xl:w-6 xl:h-6 fill-current flex-shrink-0" />
-                      Play quiz
-                    </Link>
+                      Tap to preview quiz →
+                    </motion.div>
+                  )}
+                  
+                  <div className="flex items-center justify-between gap-2 mb-2 sm:mb-3 flex-shrink-0">
+                    <div className="flex items-center gap-1.5 sm:gap-2 flex-nowrap min-w-0">
+                      <span
+                        className={cn(
+                          "inline-flex items-center rounded-full font-bold whitespace-nowrap",
+                          "px-2.5 sm:px-3 md:px-4",
+                          "py-1 sm:py-1.5",
+                          "text-sm sm:text-base md:text-lg",
+                          invert,
+                          "bg-black/10 bg-clip-padding"
+                        )}
+                      >
+                        #{quiz.id}
+                      </span>
+                    </div>
+                    <span className={cn(
+                      "inline-flex items-center gap-1 font-medium flex-shrink-0",
+                      "text-xs sm:text-sm md:text-base",
+                      sub
+                    )}>
+                      <Calendar className="h-3 w-3 sm:h-4 sm:w-4 md:h-4 md:w-4 flex-shrink-0" aria-hidden />
+                      <span className="whitespace-nowrap">{formattedDate}</span>
+                    </span>
                   </div>
+                  
+                  <h3 className={cn(
+                    "font-extrabold leading-tight flex-shrink-0",
+                    "text-2xl sm:text-3xl md:text-4xl lg:text-4xl",
+                    "mb-2 sm:mb-3",
+                    invert,
+                    "relative z-10"
+                  )}>
+                    {quiz.title}
+                  </h3>
+                  
+                  {quiz.blurb && (
+                    <p className={cn(
+                      "line-clamp-2 flex-shrink-0",
+                      "text-sm sm:text-base md:text-lg",
+                      "mb-2 sm:mb-3",
+                      "leading-relaxed",
+                      sub
+                    )}>
+                      {quiz.blurb}
+                    </p>
+                  )}
+                  
+                  {/* Categories tags - exactly 5 */}
+                  {displayTags.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-auto flex-shrink-0">
+                      {displayTags.map((tag, tagIndex) => (
+                      <span
+                        key={`${tag}-${tagIndex}`}
+                        className={cn(
+                          "rounded-full font-medium whitespace-nowrap",
+                          "px-2.5 sm:px-3",
+                          "py-1 sm:py-1.5",
+                          "text-xs sm:text-sm md:text-base",
+                          text === "white" ? "bg-white/20 text-white" : "bg-black/10 text-gray-900"
+                        )}
+                      >
+                        {tag}
+                      </span>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {/* Play button - visual only, card handles click */}
+                  <div
+                    className={cn(
+                      "inline-flex items-center justify-center mt-auto rounded-full w-full flex-shrink-0",
+                      "gap-2",
+                      "px-4 sm:px-5 md:px-6",
+                      "py-2.5 sm:py-3 md:py-4",
+                      "font-semibold text-sm sm:text-base md:text-lg",
+                      "pointer-events-none"
+                    )}
+                    style={{
+                      backgroundColor: text === "white" ? "rgba(255, 255, 255, 0.9)" : "rgb(17, 24, 39)",
+                      color: text === "white" ? "rgb(17, 24, 39)" : "white",
+                    }}
+                  >
+                    <Play className="w-4 h-4 sm:w-4 sm:h-4 md:w-5 md:h-5 fill-current flex-shrink-0" />
+                    Play quiz
+                  </div>
+                  </div>
+                </div>
+              );
+              
+              // Only wrap top card in Link
+              if (isTopCard) {
+                return (
+                  <Link
+                    key={quiz.id}
+                    href={`/quizzes/${quiz.slug}/intro`}
+                    className="focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
+                  >
+                    {cardContent}
+                  </Link>
+                );
+              }
+              
+              // Other cards are just visual
+              return (
+                <div key={quiz.id}>
+                  {cardContent}
                 </div>
               );
             })}
@@ -243,13 +271,19 @@ export function QuizCardStack({ quizzes }: QuizCardStackProps) {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-100px" }}
           transition={{ duration: 0.5, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-          className="text-center mt-12"
+          className="text-center mt-12 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4"
         >
           <Link
             href="/quizzes"
             className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-[#3B82F6] text-white font-medium hover:bg-[#2563EB] transition-colors"
           >
-            Explore the quiz collection
+            Browse past quizzes
+          </Link>
+          <Link
+            href={quizzes.length > 0 ? `/quizzes/${quizzes[quizzes.length - 1].slug}/intro` : "/quizzes"}
+            className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-[#3B82F6] text-white font-medium hover:bg-[#2563EB] transition-colors"
+          >
+            Play the latest
           </Link>
         </motion.div>
       </div>

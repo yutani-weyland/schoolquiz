@@ -21,11 +21,11 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const search = searchParams.get('search') || ''
     const status = searchParams.get('status') || ''
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = parseInt(searchParams.get('limit') || '50')
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10))
+    const limit = Math.max(1, Math.min(100, parseInt(searchParams.get('limit') || '50', 10)))
     const skip = (page - 1) * limit
     const sortBy = searchParams.get('sortBy') || 'createdAt'
-    const sortOrder = searchParams.get('sortOrder') || 'desc'
+    const sortOrder = (searchParams.get('sortOrder') || 'desc') as 'asc' | 'desc'
 
     try {
       // Build where clause
@@ -65,13 +65,29 @@ export async function GET(request: NextRequest) {
       }
 
       // Fetch organisations from database
+      // Use select instead of include for better performance
       let [organisations, total] = await Promise.all([
         prisma.organisation.findMany({
           where,
           skip: sortBy === 'members' ? 0 : skip, // Fetch all if sorting by members
           take: sortBy === 'members' ? undefined : limit,
           orderBy,
-          include: {
+          select: {
+            id: true,
+            name: true,
+            emailDomain: true,
+            ownerUserId: true,
+            stripeCustomerId: true,
+            stripeSubscriptionId: true,
+            maxSeats: true,
+            plan: true,
+            status: true,
+            currentPeriodStart: true,
+            currentPeriodEnd: true,
+            gracePeriodEnd: true,
+            featureFlags: true,
+            createdAt: true,
+            updatedAt: true,
             owner: {
               select: {
                 id: true,
@@ -109,11 +125,11 @@ export async function GET(request: NextRequest) {
         plan: org.plan,
         maxSeats: org.maxSeats,
         currentPeriodEnd: org.currentPeriodEnd?.toISOString() || null,
-        owner: {
+        owner: org.owner ? {
           id: org.owner.id,
           name: org.owner.name,
           email: org.owner.email,
-        },
+        } : null,
         _count: {
           members: org._count.members,
           groups: org._count.groups,
@@ -217,10 +233,28 @@ export async function GET(request: NextRequest) {
     }
   } catch (error: any) {
     console.error('Error fetching organisations:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch organisations', details: error.message },
-      { status: 500 }
-    )
+    console.error('Error stack:', error.stack)
+    
+    // Ensure we always return JSON, never HTML
+    try {
+      return NextResponse.json(
+        { 
+          error: 'Failed to fetch organisations', 
+          details: error?.message || 'Unknown error',
+          type: error?.name || 'Error'
+        },
+        { status: 500 }
+      )
+    } catch (jsonError) {
+      // If even JSON serialization fails, return a simple error
+      return new NextResponse(
+        JSON.stringify({ error: 'Internal server error' }),
+        { 
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      )
+    }
   }
 }
 
@@ -315,11 +349,11 @@ export async function POST(request: NextRequest) {
         plan: organisation.plan,
         maxSeats: organisation.maxSeats,
         currentPeriodEnd: organisation.currentPeriodEnd?.toISOString() || null,
-        owner: {
+        owner: organisation.owner ? {
           id: organisation.owner.id,
           name: organisation.owner.name,
           email: organisation.owner.email,
-        },
+        } : null,
         _count: {
           members: organisation._count.members + 1, // +1 for the owner we just added
           groups: organisation._count.groups,

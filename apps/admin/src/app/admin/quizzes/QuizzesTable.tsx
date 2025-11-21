@@ -9,13 +9,17 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { BookOpen, Search, Filter, CheckCircle2, FileText, Trash2, Archive, Upload, Loader2, Edit2, Copy, X, Download } from 'lucide-react'
+import { BookOpen, Search, Filter, CheckCircle2, FileText, Trash2, Archive, Upload, Edit2, Copy, X, Download, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Spinner } from '@/components/ui/spinner'
 import Link from 'next/link'
 import { Plus } from 'lucide-react'
-import { PageHeader, Card, Input, Select, Button, Badge, DataTableHeader, DataTableHeaderCell, DataTableBody, DataTableRow, DataTableCell } from '@/components/admin/ui'
+import { PageHeader, Card, Button, Badge, DataTableHeader, DataTableHeaderCell, DataTableBody, DataTableRow, DataTableCell } from '@/components/admin/ui'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { AutocompleteSearch } from '@/components/admin/AutocompleteSearch'
 
 interface Quiz {
   id: string
+  slug?: string | null
   title: string
   blurb?: string | null
   audience?: string | null
@@ -64,8 +68,15 @@ export function QuizzesTable({
   const [isGeneratingPDF, setIsGeneratingPDF] = useState<string | null>(null) // Track which quiz is generating PDF
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Client-side sorting
+  // Only sort client-side if it differs from server default (createdAt desc)
+  // Server already sorts by createdAt desc, so no need to re-sort if that's what we want
   const sortedQuizzes = useMemo(() => {
+    // If sorting by createdAt desc (server default), no need to sort
+    if (sortBy === 'createdAt' && sortOrder === 'desc') {
+      return quizzes
+    }
+    
+    // Otherwise, sort client-side
     return [...quizzes].sort((a, b) => {
       let aVal: any
       let bVal: any
@@ -124,6 +135,33 @@ export function QuizzesTable({
       if (statusFilter) params.set('status', statusFilter)
       router.push(`/admin/quizzes?${params.toString()}`)
     }, 500)
+  }
+
+  const fetchSearchSuggestions = async (query: string): Promise<string[]> => {
+    if (query.length < 2) return []
+    
+    try {
+      const response = await fetch(`/api/admin/quizzes?search=${encodeURIComponent(query)}&limit=10`)
+      const data = await response.json()
+      
+      if (response.ok && data.quizzes) {
+        return data.quizzes
+          .map((quiz: Quiz) => [
+            quiz.title,
+            quiz.blurb,
+            quiz.audience,
+            quiz.theme,
+          ])
+          .flat()
+          .filter((s: string | null | undefined): s is string => Boolean(s))
+          .filter((s, i, arr) => arr.indexOf(s) === i)
+          .slice(0, 10)
+      }
+    } catch (error) {
+      console.error('Error fetching suggestions:', error)
+    }
+    
+    return []
   }
 
   // Cleanup timeout on unmount
@@ -415,19 +453,15 @@ export function QuizzesTable({
     })
   }
 
-  // Calculate quiz IDs for published quizzes
-  const publishedQuizzes = sortedQuizzes
-    .filter(q => q.status === 'published')
-    .sort((a, b) => {
-      const dateA = a.publicationDate ? new Date(a.publicationDate).getTime() : 0
-      const dateB = b.publicationDate ? new Date(b.publicationDate).getTime() : 0
-      return dateA - dateB
-    })
-  
-  const quizIdMap = new Map<string, number>()
-  publishedQuizzes.forEach((q, idx) => {
-    quizIdMap.set(q.id, idx + 1)
-  })
+  // Helper function to display identifier: slug if available, otherwise shortened CUID
+  // This follows best practices by using non-sequential identifiers
+  const getDisplayId = (quiz: Quiz): string => {
+    if (quiz.slug) {
+      return quiz.slug
+    }
+    // Show first 8 characters of CUID for readability
+    return quiz.id.substring(0, 8)
+  }
 
   return (
     <div className={`space-y-6 ${selectedQuizIds.size > 0 ? 'pr-80' : ''} transition-all duration-300`}>
@@ -436,9 +470,9 @@ export function QuizzesTable({
         description="Manage quizzes, view analytics, and schedule publications"
         action={
           <Link href="/admin/quizzes/builder">
-            <Button>
-              <Plus className="w-4 h-4" />
-              Create Quiz
+            <Button variant="primary" size="sm">
+              <Plus className="w-4 h-4 flex-shrink-0" />
+              <span className="hidden lg:inline">Create Quiz</span>
             </Button>
           </Link>
         }
@@ -447,39 +481,31 @@ export function QuizzesTable({
       {/* Filters */}
       <Card padding="sm">
         <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[hsl(var(--muted-foreground))] z-10" />
-            <Input
-              type="text"
-              placeholder="Search quizzes..."
+          <div className="flex-1">
+            <AutocompleteSearch
               value={searchQuery}
-              onChange={(e) => handleSearch(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  // Clear timeout and search immediately
-                  if (searchTimeoutRef.current) {
-                    clearTimeout(searchTimeoutRef.current)
-                  }
-                  const params = new URLSearchParams()
-                  if (searchQuery) params.set('search', searchQuery)
-                  if (statusFilter) params.set('status', statusFilter)
-                  router.push(`/admin/quizzes?${params.toString()}`)
-                }
-              }}
-              className="pl-10"
+              onChange={handleSearch}
+              placeholder="Search quizzes..."
+              onFetchSuggestions={fetchSearchSuggestions}
+              minChars={2}
+              maxSuggestions={8}
             />
           </div>
           <div className="relative">
             <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[hsl(var(--muted-foreground))] z-10" />
             <Select
-              value={statusFilter}
-              onChange={(e) => handleStatusFilter(e.target.value)}
-              className="pl-10"
+              value={statusFilter || "all"}
+              onValueChange={(value) => handleStatusFilter(value === "all" ? "" : value)}
             >
-              <option value="">All Statuses</option>
-              <option value="draft">Draft</option>
-              <option value="scheduled">Scheduled</option>
-              <option value="published">Published</option>
+              <SelectTrigger className="pl-10">
+                <SelectValue placeholder="All Statuses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="scheduled">Scheduled</SelectItem>
+                <SelectItem value="published">Published</SelectItem>
+              </SelectContent>
             </Select>
           </div>
         </div>
@@ -602,7 +628,7 @@ export function QuizzesTable({
               <table className="w-full table-auto">
                 <DataTableHeader>
                   <tr>
-                    <th className="px-4 py-3 text-left w-12">
+                    <th className="px-6 py-3 text-left w-12">
                       <input
                         type="checkbox"
                         checked={isAllSelected}
@@ -661,8 +687,8 @@ export function QuizzesTable({
                 </DataTableHeader>
                 <tbody className="bg-[hsl(var(--card))] divide-y divide-[hsl(var(--border))]">
                   {sortedQuizzes.map((quiz) => {
-                    const quizId = quizIdMap.get(quiz.id) || null
                     const isSelected = selectedQuizIds.has(quiz.id)
+                    const displayId = getDisplayId(quiz)
                     
                     return (
                       <tr
@@ -671,7 +697,7 @@ export function QuizzesTable({
                           isSelected ? 'bg-[hsl(var(--primary))]/5' : ''
                         }`}
                       >
-                        <td className="px-4 py-4 whitespace-nowrap">
+                        <td className="px-6 py-4 whitespace-nowrap">
                           <input
                             type="checkbox"
                             checked={isSelected}
@@ -680,18 +706,14 @@ export function QuizzesTable({
                             className="w-4 h-4 rounded border-[hsl(var(--border))] text-[hsl(var(--primary))] focus:ring-2 focus:ring-[hsl(var(--ring))] cursor-pointer"
                           />
                         </td>
-                        <td className="px-4 py-4 whitespace-nowrap">
+                        <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-2">
-                          {quizId !== null ? (
-                            <span className="text-sm font-mono font-medium text-[hsl(var(--foreground))]">
-                              {quizId}
+                            <span className="text-sm font-mono font-medium text-[hsl(var(--foreground))]" title={quiz.id}>
+                              {displayId}
                             </span>
-                          ) : (
-                            <span className="text-xs text-[hsl(var(--muted-foreground))]">-</span>
-                          )}
                           </div>
                         </td>
-                        <td className="px-4 py-4">
+                        <td className="px-6 py-4">
                           <div className="flex items-start">
                             <div className="flex-1 min-w-0">
                               <button
@@ -711,38 +733,36 @@ export function QuizzesTable({
                             </div>
                           </div>
                         </td>
-                        <td className="px-4 py-4 whitespace-nowrap">
+                        <td className="px-6 py-4 whitespace-nowrap">
                           <Badge variant={getStatusBadge(quiz.status)}>
                             {quiz.status.charAt(0).toUpperCase() + quiz.status.slice(1)}
                           </Badge>
                         </td>
-                        <td className="px-4 py-4 whitespace-nowrap text-sm text-[hsl(var(--foreground))] font-medium">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-[hsl(var(--foreground))] font-medium">
                           {quiz._count?.runs ?? 0}
                         </td>
-                        <td className="px-4 py-4 whitespace-nowrap text-sm text-[hsl(var(--muted-foreground))]">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-[hsl(var(--muted-foreground))]">
                           {formatDate(quiz.publicationDate)}
                         </td>
-                        <td className="px-4 py-4 whitespace-nowrap">
+                        <td className="px-6 py-4 whitespace-nowrap">
                           {quiz.pdfStatus === 'approved' ? (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
-                              <CheckCircle2 className="w-3 h-3" />
+                            <Badge variant="success" icon={CheckCircle2}>
                               Approved
-                            </span>
+                            </Badge>
                           ) : quiz.pdfStatus === 'generated' ? (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-                              <FileText className="w-3 h-3" />
+                            <Badge variant="info" icon={FileText}>
                               Review
-                            </span>
+                            </Badge>
                           ) : (
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                            <Badge variant="default">
                               None
-                            </span>
+                            </Badge>
                           )}
                         </td>
-                        <td className="px-4 py-4 whitespace-nowrap text-sm text-[hsl(var(--muted-foreground))]">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-[hsl(var(--muted-foreground))]">
                           {formatDate(quiz.createdAt)}
                         </td>
-                        <td className="px-4 py-4 whitespace-nowrap">
+                        <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-2">
                             <button
                               onClick={(e) => {
@@ -760,11 +780,11 @@ export function QuizzesTable({
                                 handleGeneratePDF(quiz.id)
                               }}
                               disabled={isGeneratingPDF === quiz.id}
-                              className="p-2 text-[hsl(var(--muted-foreground))] hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors disabled:opacity-50"
+                              className="p-2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/10 rounded-lg transition-colors disabled:opacity-50"
                               title="Generate PDF"
                             >
                               {isGeneratingPDF === quiz.id ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
+                                <Spinner className="size-4" />
                               ) : (
                                 <FileText className="w-4 h-4" />
                               )}
@@ -774,7 +794,7 @@ export function QuizzesTable({
                                 e.stopPropagation()
                                 handleDuplicate(quiz.id)
                               }}
-                              className="p-2 text-[hsl(var(--muted-foreground))] hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                              className="p-2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/10 rounded-lg transition-colors"
                               title="Duplicate quiz"
                             >
                               <Copy className="w-4 h-4" />
@@ -784,22 +804,23 @@ export function QuizzesTable({
                                 e.stopPropagation()
                                 handleDelete(quiz.id, quiz.title)
                               }}
-                              className="p-2 text-[hsl(var(--muted-foreground))] hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                              className="p-2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10 rounded-lg transition-colors"
                               title="Delete quiz"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
                             {quiz.pdfStatus === 'generated' && (
-                              <button
+                              <Button
+                                variant="secondary"
+                                size="sm"
                                 onClick={(e) => {
                                   e.stopPropagation()
                                   router.push(`/admin/quizzes/${quiz.id}?tab=pdf`)
                                 }}
-                                className="px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors whitespace-nowrap"
                                 title="Review PDF"
                               >
                                 Review
-                              </button>
+                              </Button>
                             )}
                           </div>
                         </td>
@@ -812,42 +833,32 @@ export function QuizzesTable({
 
             {/* Pagination */}
             {pagination.totalPages > 1 && (
-              <div className="px-4 py-4 border-t border-[hsl(var(--border))] flex items-center justify-between bg-[hsl(var(--muted))]">
+              <div className="px-6 py-4 border-t border-[hsl(var(--border))] flex flex-col sm:flex-row items-center justify-between gap-4 bg-[hsl(var(--muted))]">
                 <div className="text-sm text-[hsl(var(--foreground))]">
                   Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
                   {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} results
                 </div>
-                <div className="flex gap-2">
-                  {pagination.page > 1 ? (
-                    <Link
-                      href={`/admin/quizzes?page=${pagination.page - 1}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ''}${statusFilter ? `&status=${statusFilter}` : ''}`}
-                      className="px-4 py-2 text-sm font-medium text-[hsl(var(--foreground))] bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl hover:bg-[hsl(var(--muted))] transition-colors"
-                    >
-                      Previous
-                    </Link>
-                  ) : (
-                    <button
-                      disabled
-                      className="px-4 py-2 text-sm font-medium text-[hsl(var(--foreground))] bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl opacity-50 cursor-not-allowed"
-                    >
-                      Previous
-                    </button>
-                  )}
-                  {pagination.page < pagination.totalPages ? (
-                    <Link
-                      href={`/admin/quizzes?page=${pagination.page + 1}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ''}${statusFilter ? `&status=${statusFilter}` : ''}`}
-                      className="px-4 py-2 text-sm font-medium text-[hsl(var(--foreground))] bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl hover:bg-[hsl(var(--muted))] transition-colors"
-                    >
-                      Next
-                    </Link>
-                  ) : (
-                    <button
-                      disabled
-                      className="px-4 py-2 text-sm font-medium text-[hsl(var(--foreground))] bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl opacity-50 cursor-not-allowed"
-                    >
-                      Next
-                    </button>
-                  )}
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => router.push(`/admin/quizzes?page=${Math.max(1, pagination.page - 1)}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ''}${statusFilter ? `&status=${statusFilter}` : ''}`)}
+                    disabled={pagination.page === 1}
+                    title="Previous page"
+                  >
+                    <ChevronLeft className="w-4 h-4 mr-1" />
+                    Previous
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => router.push(`/admin/quizzes?page=${Math.min(pagination.totalPages, pagination.page + 1)}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ''}${statusFilter ? `&status=${statusFilter}` : ''}`)}
+                    disabled={pagination.page >= pagination.totalPages}
+                    title="Next page"
+                  >
+                    Next
+                    <ChevronRight className="w-4 h-4 ml-1" />
+                  </Button>
                 </div>
               </div>
             )}

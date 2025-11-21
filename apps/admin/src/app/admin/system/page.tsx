@@ -35,7 +35,7 @@ export default function SystemPage() {
     const colors = {
       blue: {
         bg: 'bg-blue-50 dark:bg-blue-900/30',
-        icon: 'text-blue-600 dark:text-blue-400',
+        icon: 'text-[hsl(var(--primary))]',
         hover: 'hover:from-blue-50 hover:to-blue-100/50 dark:hover:from-blue-900/30 dark:hover:to-blue-900/20',
       },
       green: {

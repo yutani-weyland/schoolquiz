@@ -1,83 +1,62 @@
-'use client';
+import { cn } from "@/lib/utils"
 
-import React from 'react';
-import { motion } from 'framer-motion';
-
-interface SkeletonProps {
-  className?: string;
-  variant?: 'text' | 'rectangular' | 'circular';
-  width?: string | number;
-  height?: string | number;
-  animate?: boolean;
-}
-
-export function Skeleton({ 
-  className = '', 
-  variant = 'rectangular',
-  width,
-  height,
-  animate = true 
-}: SkeletonProps) {
-  const baseClasses = 'bg-gray-200 dark:bg-gray-700 rounded';
-  
-  const variantClasses = {
-    text: 'h-4 rounded-lg',
-    rectangular: 'rounded-xl',
-    circular: 'rounded-full'
-  };
-
-  const style: React.CSSProperties = {};
-  if (width) style.width = typeof width === 'number' ? `${width}px` : width;
-  if (height) style.height = typeof height === 'number' ? `${height}px` : height;
-
-  const content = (
+function Skeleton({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) {
+  return (
     <div
-      className={`${baseClasses} ${variantClasses[variant]} ${className}`}
-      style={style}
+      className={cn("animate-pulse rounded-md bg-[hsl(var(--muted))]", className)}
+      {...props}
     />
-  );
-
-  if (!animate) return content;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0.6 }}
-      animate={{ 
-        opacity: [0.6, 1, 0.6],
-      }}
-      transition={{
-        duration: 1.5,
-        repeat: Infinity,
-        ease: 'easeInOut'
-      }}
-      className={variant === 'text' ? 'w-full' : ''}
-    >
-      {content}
-    </motion.div>
-  );
+  )
 }
 
-export function SkeletonText({ lines = 3, className = '' }: { lines?: number; className?: string }) {
+interface SkeletonTextProps {
+  lines?: number;
+  className?: string;
+}
+
+function SkeletonText({ lines = 3, className }: SkeletonTextProps) {
   return (
-    <div className={`space-y-2 ${className}`}>
+    <div className={cn("space-y-2", className)}>
       {Array.from({ length: lines }).map((_, i) => (
         <Skeleton
           key={i}
-          variant="text"
-          width={i === lines - 1 ? '80%' : '100%'}
-          className="h-4"
+          className={cn(
+            "h-4 w-full",
+            i === lines - 1 && "w-3/4" // Last line is shorter
+          )}
         />
       ))}
     </div>
-  );
+  )
 }
 
-export function SkeletonCard({ className = '' }: { className?: string }) {
-  return (
-    <div className={`rounded-3xl p-7 sm:p-9 bg-gray-200 dark:bg-gray-700 shadow-lg min-h-[430px] flex flex-col space-y-4 ${className}`}>
-      <Skeleton variant="rectangular" height={200} className="w-full rounded-2xl" />
-      <SkeletonText lines={3} />
-    </div>
-  );
+interface SkeletonCardProps {
+  className?: string;
 }
+
+function SkeletonCard({ className }: SkeletonCardProps) {
+  return (
+    <div className={cn("rounded-3xl p-7 sm:p-9 shadow-lg flex flex-col", className)}>
+      <div className="flex items-center justify-between mb-4">
+        <Skeleton className="h-8 w-16 rounded-full" />
+        <Skeleton className="h-6 w-32" />
+      </div>
+      <Skeleton className="h-10 w-3/4 mb-5" />
+      <div className="flex flex-wrap gap-2 mb-7">
+        <Skeleton className="h-6 w-20 rounded-full" />
+        <Skeleton className="h-6 w-24 rounded-full" />
+        <Skeleton className="h-6 w-16 rounded-full" />
+      </div>
+      <div className="mt-auto flex items-center justify-between">
+        <Skeleton className="h-12 w-32 rounded-full" />
+        <Skeleton className="h-12 w-12 rounded-full" />
+      </div>
+    </div>
+  )
+}
+
+export { Skeleton, SkeletonText, SkeletonCard }
 

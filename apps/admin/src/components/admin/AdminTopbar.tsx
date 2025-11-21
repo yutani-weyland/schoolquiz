@@ -59,12 +59,21 @@ export function AdminTopbar() {
   }
 
   return (
-    <div className="sticky top-0 z-40 bg-[hsl(var(--card))] border-b border-[hsl(var(--border))] backdrop-blur-sm bg-opacity-95 h-[60px] flex items-center">
+    <div className="sticky top-0 z-40 bg-[hsl(var(--card))] border-b border-[hsl(var(--border))] backdrop-blur-sm bg-opacity-95 h-[60px] flex items-center flex-shrink-0">
       <div className="flex items-center justify-between px-6 py-3 gap-4 w-full">
-        {/* Global Search - Hidden on smaller screens */}
+        {/* Logo - Left side */}
+        <div className="flex-1 flex items-center">
+          <Link href="/admin" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+            <span className="text-lg font-semibold text-[hsl(var(--foreground))] hidden sm:inline">
+              The School Quiz
+            </span>
+          </Link>
+        </div>
+
+        {/* Global Search - Centered */}
         <button
           onClick={handleSearchClick}
-          className="hidden md:flex flex-1 max-w-md items-center gap-3 px-4 py-2.5 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--input))] text-[hsl(var(--muted-foreground))] hover:border-[hsl(var(--primary))]/50 hover:bg-[hsl(var(--input))] transition-all duration-200 text-left"
+          className="hidden md:flex max-w-md items-center gap-3 px-4 py-2.5 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--input))] text-[hsl(var(--muted-foreground))] hover:border-[hsl(var(--primary))]/50 hover:bg-[hsl(var(--input))] transition-all duration-200 text-left"
         >
           <Search className="w-4 h-4 flex-shrink-0" />
           <span className="flex-1 text-sm">Search organisations, users, quizzes…</span>
@@ -79,7 +88,8 @@ export function AdminTopbar() {
         </button>
 
         {/* Right-side cluster */}
-        <div className="flex items-center gap-2">
+        <div className="flex-1 flex justify-end">
+          <div className="flex items-center gap-2">
           {/* Draft Indicator */}
           <DraftIndicator type="all" showCount />
 
@@ -212,6 +222,7 @@ export function AdminTopbar() {
               <Moon className="w-4 h-4" />
             </button>
           )}
+          </div>
         </div>
       </div>
     </div>

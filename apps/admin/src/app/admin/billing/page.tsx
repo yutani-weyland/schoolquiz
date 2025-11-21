@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { CreditCard, DollarSign, TrendingUp, FileText, ExternalLink, AlertCircle, CheckCircle2, Clock, Plus, XCircle } from 'lucide-react'
+import { Spinner } from '@/components/ui/spinner'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { Card, PageHeader, Badge, Button, StatusStrip } from '@/components/admin/ui'
+import { Card, PageHeader, Badge, Button, StatusStrip, Input, Select } from '@/components/admin/ui'
 
 interface Subscription {
   id: string
@@ -120,8 +121,31 @@ export default function BillingPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[hsl(var(--primary))]"></div>
+      <div className="space-y-6">
+        {/* Header skeleton */}
+        <div className="space-y-2">
+          <div className="h-8 w-48 bg-[hsl(var(--muted))] animate-pulse rounded-md" />
+          <div className="h-4 w-96 bg-[hsl(var(--muted))] animate-pulse rounded-md" />
+        </div>
+
+        {/* Tabs skeleton */}
+        <div className="bg-[hsl(var(--card))] rounded-2xl p-6 border border-[hsl(var(--border))]">
+          <div className="space-y-6">
+            <div className="flex gap-2 border-b border-[hsl(var(--border))] pb-2">
+              <div className="h-9 w-32 bg-[hsl(var(--muted))] animate-pulse rounded-md" />
+              <div className="h-9 w-32 bg-[hsl(var(--muted))] animate-pulse rounded-md" />
+            </div>
+            <div className="space-y-4">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="bg-[hsl(var(--muted))] rounded-xl p-6 space-y-3">
+                  <div className="h-6 w-48 bg-[hsl(var(--background))] animate-pulse rounded-md" />
+                  <div className="h-4 w-full bg-[hsl(var(--background))] animate-pulse rounded-md" />
+                  <div className="h-4 w-3/4 bg-[hsl(var(--background))] animate-pulse rounded-md" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     )
   }
@@ -179,7 +203,7 @@ export default function BillingPage() {
                 </div>
               </div>
               <div className="p-3 bg-blue-50 dark:bg-blue-900/30 rounded-xl">
-                <DollarSign className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                <DollarSign className="w-8 h-8 text-[hsl(var(--primary))]" />
               </div>
             </div>
           </Card>
@@ -214,28 +238,28 @@ export default function BillingPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="flex border-b border-gray-200/50 dark:border-gray-700/50 mb-6 bg-transparent p-0 h-auto">
+        <TabsList className="flex border-b border-[hsl(var(--border))] mb-6 bg-transparent p-0 h-auto">
           <TabsTrigger
             value="subscriptions"
-            className="px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white data-[state=active]:text-blue-600 dark:data-[state=active]:text-blue-400 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 dark:data-[state=active]:border-blue-400 rounded-none bg-transparent"
+            className="px-4 py-3 text-sm font-medium text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] data-[state=active]:text-[hsl(var(--primary))] data-[state=active]:border-b-2 data-[state=active]:border-[hsl(var(--primary))] rounded-none bg-transparent"
           >
             Subscriptions
           </TabsTrigger>
           <TabsTrigger
             value="invoices"
-            className="px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white data-[state=active]:text-blue-600 dark:data-[state=active]:text-blue-400 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 dark:data-[state=active]:border-blue-400 rounded-none bg-transparent"
+            className="px-4 py-3 text-sm font-medium text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] data-[state=active]:text-[hsl(var(--primary))] data-[state=active]:border-b-2 data-[state=active]:border-[hsl(var(--primary))] rounded-none bg-transparent"
           >
             Invoices
           </TabsTrigger>
           <TabsTrigger
             value="webhooks"
-            className="px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white data-[state=active]:text-blue-600 dark:data-[state=active]:text-blue-400 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 dark:data-[state=active]:border-blue-400 rounded-none bg-transparent"
+            className="px-4 py-3 text-sm font-medium text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] data-[state=active]:text-[hsl(var(--primary))] data-[state=active]:border-b-2 data-[state=active]:border-[hsl(var(--primary))] rounded-none bg-transparent"
           >
             Webhooks
           </TabsTrigger>
           <TabsTrigger
             value="offer-codes"
-            className="px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white data-[state=active]:text-blue-600 dark:data-[state=active]:text-blue-400 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 dark:data-[state=active]:border-blue-400 rounded-none bg-transparent"
+            className="px-4 py-3 text-sm font-medium text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] data-[state=active]:text-[hsl(var(--primary))] data-[state=active]:border-b-2 data-[state=active]:border-[hsl(var(--primary))] rounded-none bg-transparent"
           >
             Offer Codes
           </TabsTrigger>
@@ -246,29 +270,29 @@ export default function BillingPage() {
           <Card className="overflow-hidden p-0">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gradient-to-br from-gray-50 to-gray-100/50 dark:from-gray-900 dark:to-gray-900/50 border-b border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm">
+                <thead className="bg-[hsl(var(--muted))] border-b border-[hsl(var(--border))]">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
                       Organisation
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
                       Plan
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
                       Amount
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
                       Seats
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
                       Period
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white/50 dark:bg-gray-800/50 divide-y divide-gray-200/50 dark:divide-gray-700/50">
+                <tbody className="bg-[hsl(var(--card))]/50 divide-y divide-[hsl(var(--border))]">
                   {subscriptions.map((sub) => {
                     const statusBadge = getStatusBadge(sub.status)
                     const StatusIcon = statusBadge.icon
@@ -497,15 +521,25 @@ function OfferCodesTab() {
         <h2 className="text-lg font-semibold text-[hsl(var(--foreground))]">
           Special Offer Codes
         </h2>
-        <Button onClick={() => setShowCreateModal(true)}>
-          <Plus className="w-4 h-4" />
+        <Button variant="primary" size="sm" onClick={() => setShowCreateModal(true)}>
+          <Plus className="w-4 h-4 mr-2" />
           Create Code
         </Button>
       </div>
 
       {isLoading ? (
-        <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[hsl(var(--primary))]"></div>
+        <div className="space-y-4">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="bg-[hsl(var(--card))] rounded-xl p-4 border border-[hsl(var(--border))]">
+              <div className="flex items-center justify-between">
+                <div className="space-y-2 flex-1">
+                  <div className="h-5 w-32 bg-[hsl(var(--muted))] animate-pulse rounded-md" />
+                  <div className="h-4 w-48 bg-[hsl(var(--muted))] animate-pulse rounded-md" />
+                </div>
+                <div className="h-8 w-20 bg-[hsl(var(--muted))] animate-pulse rounded-md" />
+              </div>
+            </div>
+          ))}
         </div>
       ) : codes.length === 0 ? (
         <Card className="p-12 text-center">
@@ -520,19 +554,19 @@ function OfferCodesTab() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
                     Code
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
                     Description
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
                     Discount
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
                     Uses
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
                     Valid Until
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
                     Status
                   </th>
                 </tr>
@@ -561,13 +595,9 @@ function OfferCodesTab() {
                       {formatDate(code.validUntil)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        code.isActive
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                          : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-                      }`}>
+                      <Badge variant={code.isActive ? 'success' : 'default'}>
                         {code.isActive ? 'Active' : 'Inactive'}
-                      </span>
+                      </Badge>
                     </td>
                   </tr>
                 ))}
@@ -641,97 +671,68 @@ function CreateOfferCodeModal({ onClose, onSuccess }: { onClose: () => void; onS
             <h2 className="text-xl font-semibold text-[hsl(var(--foreground))]">
               Create Offer Code
             </h2>
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={onClose}
-              className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
             >
-              <XCircle className="w-6 h-6" />
-            </button>
+              <XCircle className="w-5 h-5" />
+            </Button>
           </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-2">
-              Code *
-            </label>
-            <input
-              type="text"
-              value={formData.code}
-              onChange={(e) => setFormData(prev => ({ ...prev, code: e.target.value.toUpperCase() }))}
-              className="w-full px-4 py-2 border border-[hsl(var(--border))] rounded-xl bg-[hsl(var(--input))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
-              placeholder="SCHOOL2025"
+          <Input
+            label="Code"
+            type="text"
+            value={formData.code}
+            onChange={(e) => setFormData(prev => ({ ...prev, code: e.target.value.toUpperCase() }))}
+            placeholder="SCHOOL2025"
+            required
+          />
+
+          <Input
+            label="Description"
+            type="text"
+            value={formData.description}
+            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+            placeholder="20% off for schools in 2025"
+          />
+
+          <div className="grid grid-cols-2 gap-4">
+            <Select
+              label="Discount Type"
+              value={formData.discountType}
+              onChange={(e) => setFormData(prev => ({ ...prev, discountType: e.target.value }))}
+              required
+            >
+              <option value="PERCENTAGE">Percentage</option>
+              <option value="FIXED_AMOUNT">Fixed Amount (cents)</option>
+              <option value="FREE_TRIAL_EXTENSION">Free Trial Extension (days)</option>
+            </Select>
+            <Input
+              label="Discount Value"
+              type="number"
+              value={formData.discountValue}
+              onChange={(e) => setFormData(prev => ({ ...prev, discountValue: e.target.value }))}
+              placeholder={formData.discountType === 'PERCENTAGE' ? '20' : formData.discountType === 'FIXED_AMOUNT' ? '5000' : '30'}
               required
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-2">
-              Description
-            </label>
-            <input
-              type="text"
-              value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              className="w-full px-4 py-2 border border-[hsl(var(--border))] rounded-xl bg-[hsl(var(--input))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
-              placeholder="20% off for schools in 2025"
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Max Uses (leave empty for unlimited)"
+              type="number"
+              value={formData.maxUses}
+              onChange={(e) => setFormData(prev => ({ ...prev, maxUses: e.target.value }))}
+              placeholder="100"
             />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-2">
-                Discount Type *
-              </label>
-              <select
-                value={formData.discountType}
-                onChange={(e) => setFormData(prev => ({ ...prev, discountType: e.target.value }))}
-                className="w-full px-4 py-2 border border-[hsl(var(--border))] rounded-xl bg-[hsl(var(--input))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
-                required
-              >
-                <option value="PERCENTAGE">Percentage</option>
-                <option value="FIXED_AMOUNT">Fixed Amount (cents)</option>
-                <option value="FREE_TRIAL_EXTENSION">Free Trial Extension (days)</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-2">
-                Discount Value *
-              </label>
-              <input
-                type="number"
-                value={formData.discountValue}
-                onChange={(e) => setFormData(prev => ({ ...prev, discountValue: e.target.value }))}
-                className="w-full px-4 py-2 border border-[hsl(var(--border))] rounded-xl bg-[hsl(var(--input))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
-                placeholder={formData.discountType === 'PERCENTAGE' ? '20' : formData.discountType === 'FIXED_AMOUNT' ? '5000' : '30'}
-                required
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-2">
-                Max Uses (leave empty for unlimited)
-              </label>
-              <input
-                type="number"
-                value={formData.maxUses}
-                onChange={(e) => setFormData(prev => ({ ...prev, maxUses: e.target.value }))}
-                className="w-full px-4 py-2 border border-[hsl(var(--border))] rounded-xl bg-[hsl(var(--input))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
-                placeholder="100"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-[hsl(var(--foreground))] mb-2">
-                Valid Until (optional)
-              </label>
-              <input
-                type="date"
-                value={formData.validUntil}
-                onChange={(e) => setFormData(prev => ({ ...prev, validUntil: e.target.value }))}
-                className="w-full px-4 py-2 border border-[hsl(var(--border))] rounded-xl bg-[hsl(var(--input))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
-              />
-            </div>
+            <Input
+              label="Valid Until (optional)"
+              type="date"
+              value={formData.validUntil}
+              onChange={(e) => setFormData(prev => ({ ...prev, validUntil: e.target.value }))}
+            />
           </div>
 
           <div className="flex items-center gap-4">
@@ -748,6 +749,7 @@ function CreateOfferCodeModal({ onClose, onSuccess }: { onClose: () => void; onS
               disabled={isSubmitting}
               className="flex-1"
             >
+              {isSubmitting && <Spinner className="size-4 mr-2" />}
               {isSubmitting ? 'Creating...' : 'Create Code'}
             </Button>
           </div>

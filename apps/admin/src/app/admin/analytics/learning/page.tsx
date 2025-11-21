@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { BookOpen, AlertCircle, TrendingUp, Target } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LineChart, Line } from 'recharts'
+import { ChartSkeleton } from '@/components/admin/ui/skeletons'
 
 interface LearningData {
   outcomeCoverage: Array<{ outcome: string; coverage: number; questions: number; correct: number }>
@@ -51,8 +52,22 @@ export default function LearningAnalyticsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+      <div className="space-y-6">
+        {/* Header skeleton */}
+        <div className="space-y-2">
+          <div className="h-9 w-64 bg-[hsl(var(--muted))] animate-pulse rounded-md" />
+          <div className="h-4 w-96 bg-[hsl(var(--muted))] animate-pulse rounded-md" />
+        </div>
+
+        {/* Charts skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <ChartSkeleton height={400} />
+          <ChartSkeleton height={400} />
+        </div>
+
+        {/* More charts */}
+        <ChartSkeleton height={400} />
+        <ChartSkeleton height={300} />
       </div>
     )
   }

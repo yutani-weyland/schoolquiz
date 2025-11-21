@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
           break
       }
 
-      // Fetch questions from database
+      // Fetch questions from database with quiz usage information
       const questions = await prisma.question.findMany({
         where,
         orderBy,
@@ -60,20 +60,47 @@ export async function GET(request: NextRequest) {
               name: true,
             },
           },
+          rounds: {
+            include: {
+              round: {
+                include: {
+                  quiz: {
+                    select: {
+                      id: true,
+                      title: true,
+                      slug: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
       })
 
       // Transform to match expected format
-      const formattedQuestions = questions.map(q => ({
-        id: q.id,
-        text: q.text,
-        answer: q.answer,
-        explanation: q.explanation || undefined,
-        categoryId: q.categoryId,
-        categoryName: q.category.name,
-        createdAt: q.createdAt.toISOString(),
-        updatedAt: q.updatedAt.toISOString(),
-      }))
+      const formattedQuestions = questions.map(q => {
+        // Get the first quiz this question is used in (if any)
+        const quizUsage = q.rounds.length > 0 
+          ? q.rounds[0].round.quiz 
+          : null
+
+        return {
+          id: q.id,
+          text: q.text,
+          answer: q.answer,
+          explanation: q.explanation || undefined,
+          categoryId: q.categoryId,
+          categoryName: q.category.name,
+          createdAt: q.createdAt.toISOString(),
+          updatedAt: q.updatedAt.toISOString(),
+          usedInQuiz: quizUsage ? {
+            id: quizUsage.id,
+            title: quizUsage.title,
+            slug: quizUsage.slug,
+          } : null,
+        }
+      })
 
       console.log(`✅ Fetched ${questions.length} questions from database`)
 
@@ -92,6 +119,11 @@ export async function GET(request: NextRequest) {
           categoryName: 'WW2 History',
           createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
           updatedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+          usedInQuiz: {
+            id: 'quiz-1',
+            title: 'Week 1 Quiz',
+            slug: 'week-1-quiz',
+          },
         },
         {
           id: 'q2',
@@ -102,6 +134,7 @@ export async function GET(request: NextRequest) {
           categoryName: 'Geography',
           createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
           updatedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+          usedInQuiz: null,
         },
         {
           id: 'q3',
@@ -112,6 +145,7 @@ export async function GET(request: NextRequest) {
           categoryName: 'Australian History',
           createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
           updatedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+          usedInQuiz: null,
         },
       ]
 

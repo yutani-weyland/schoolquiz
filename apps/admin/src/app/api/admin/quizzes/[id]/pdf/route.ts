@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCurrentUser } from '@/lib/auth'
-import { generateQuizPDF } from '@/lib/pdf-generator'
-import { getDummyQuizDetail } from '@/lib/dummy-quiz-data'
 import { writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
 import { prisma } from '@schoolquiz/db'
 import { supabaseAdmin } from '@/lib/supabase'
+import { generateQuizPdf } from '@/lib/generateQuizPdf'
 
 /**
  * POST /api/admin/quizzes/[id]/pdf
@@ -25,31 +23,24 @@ export async function POST(
 
     const { id } = await params
 
-    // Try to fetch quiz from database first, fall back to dummy data
-    let quiz: any = null
-    try {
-      quiz = await prisma.quiz.findUnique({
-        where: { id },
-        include: {
-          rounds: {
-            include: {
-              category: true,
-              questions: {
-                include: {
-                  question: true,
-                },
-                orderBy: { order: 'asc' },
+    // Fetch quiz from database
+    const quiz = await prisma.quiz.findUnique({
+      where: { id },
+      include: {
+        rounds: {
+          include: {
+            category: true,
+            questions: {
+              include: {
+                question: true,
               },
+              orderBy: { order: 'asc' },
             },
-            orderBy: { index: 'asc' },
           },
+          orderBy: { index: 'asc' },
         },
-      })
-    } catch (dbError) {
-      console.log('Database fetch failed, using dummy data:', dbError)
-      // Fall back to dummy data for testing
-      quiz = getDummyQuizDetail(id)
-    }
+      },
+    })
 
     if (!quiz) {
       return NextResponse.json(
@@ -58,22 +49,64 @@ export async function POST(
       )
     }
 
-    // Transform quiz data for PDF
-    const pdfData = {
-      title: quiz.title,
-      rounds: quiz.rounds.map((round: any) => ({
-        title: round.title || round.category?.name || `Round ${round.index + 1}`,
-        isPeoplesRound: round.isPeoplesRound || false,
-        questions: round.questions?.map((qr: any) => ({
-          text: qr.question?.text || qr.text,
-          answer: qr.question?.answer || qr.answer,
-          explanation: qr.question?.explanation || qr.explanation || undefined,
-        })) || [],
-      })),
+    // Validate quiz has rounds and questions
+    if (!quiz.rounds || quiz.rounds.length === 0) {
+      return NextResponse.json(
+        { error: 'Quiz has no rounds. Please add rounds before generating PDF.' },
+        { status: 400 }
+      )
     }
 
-    // Generate PDF
-    const pdfBuffer = await generateQuizPDF(pdfData)
+    // Validate each round has questions
+    const roundsWithQuestions = quiz.rounds.filter((round: any) => 
+      round.questions && round.questions.length > 0
+    )
+    
+    if (roundsWithQuestions.length === 0) {
+      return NextResponse.json(
+        { error: 'Quiz has no questions. Please add questions to rounds before generating PDF.' },
+        { status: 400 }
+      )
+    }
+
+    console.log('[PDF Generation] Starting PDF generation for quiz:', id)
+    console.log('[PDF Generation] Quiz title:', quiz.title)
+    console.log('[PDF Generation] Number of rounds:', quiz.rounds.length)
+    console.log('[PDF Generation] Total questions:', quiz.rounds.reduce((sum: number, r: any) => sum + (r.questions?.length || 0), 0))
+
+    // Generate PDF using Playwright
+    let pdfBuffer: Buffer
+    try {
+      // Get base URL from request or environment
+      // In development, derive from request URL to get correct port
+      let baseUrl = process.env.NEXT_PUBLIC_APP_URL
+      
+      if (!baseUrl) {
+        if (process.env.VERCEL_URL) {
+          baseUrl = `https://${process.env.VERCEL_URL}`
+        } else {
+          // Derive from request URL to get correct port
+          const url = new URL(request.url)
+          baseUrl = `${url.protocol}//${url.host}`
+        }
+      }
+      
+      console.log('[PDF Generation] Using base URL:', baseUrl)
+      pdfBuffer = await generateQuizPdf(id, baseUrl)
+      console.log('[PDF Generation] PDF generated successfully, size:', pdfBuffer.length, 'bytes')
+    } catch (pdfError: any) {
+      console.error('[PDF Generation] PDF generation failed:', pdfError)
+      console.error('[PDF Generation] Error message:', pdfError.message)
+      console.error('[PDF Generation] Error stack:', pdfError.stack)
+      return NextResponse.json(
+        { 
+          error: 'Failed to generate PDF', 
+          details: pdfError.message || 'Unknown error',
+          stack: process.env.NODE_ENV === 'development' ? pdfError.stack : undefined,
+        },
+        { status: 500 }
+      )
+    }
 
     // Save PDF - try Supabase storage first, fall back to local filesystem
     const filename = `quiz-${id}-${Date.now()}.pdf`
@@ -150,9 +183,18 @@ export async function POST(
       pdfStatus: 'generated',
     })
   } catch (error: any) {
-    console.error('Error generating PDF:', error)
+    console.error('[PDF Route] Error generating PDF:', error)
+    console.error('[PDF Route] Error message:', error.message)
+    console.error('[PDF Route] Error stack:', error.stack)
+    console.error('[PDF Route] Error name:', error.name)
+    
     return NextResponse.json(
-      { error: 'Failed to generate PDF', details: error.message },
+      { 
+        error: 'Failed to generate PDF', 
+        details: error.message || 'Unknown error',
+        type: error.name,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+      },
       { status: 500 }
     )
   }
