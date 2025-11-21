@@ -17,6 +17,24 @@
   animation: spotlight 2s ease 0.75s 1 forwards;
 }
 
+@keyframes infinite-scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(calc(-320px * 4 - 24px * 4));
+  }
+}
+
+.animate-infinite-scroll {
+  animation: infinite-scroll 40s linear infinite;
+}
+
+.group\/testimonials:hover .animate-infinite-scroll,
+.group\/testimonials:hover .pause-animation {
+  animation-play-state: paused;
+}
+
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;

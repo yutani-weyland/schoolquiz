@@ -10,15 +10,23 @@ import { cn } from "@/lib/utils";
 import { Play, Calendar } from "lucide-react";
 import type { Quiz } from "@/components/quiz/QuizCard";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
+import { CursorProvider, Cursor, CursorFollow, useCursor } from "@/components/ui/animated-cursor";
 
 interface QuizCardStackProps {
   quizzes: Quiz[];
 }
 
-export function QuizCardStack({ quizzes }: QuizCardStackProps) {
+function QuizCardStackContent({ quizzes }: QuizCardStackProps) {
   // Show more cards on larger screens: 5 on mobile, 7 on tablet, 8 on desktop
   const [cardCount, setCardCount] = React.useState(5);
   const [currentQuizStreak, setCurrentQuizStreak] = React.useState(0);
+  const [isHoveringTopCard, setIsHoveringTopCard] = React.useState(false);
+  const { setIsActive } = useCursor();
+  
+  // Update cursor active state when hovering
+  React.useEffect(() => {
+    setIsActive(isHoveringTopCard);
+  }, [isHoveringTopCard, setIsActive]);
   
   React.useEffect(() => {
     const updateCardCount = () => {
@@ -71,9 +79,33 @@ export function QuizCardStack({ quizzes }: QuizCardStackProps) {
   const showFireAnimation = currentQuizStreak >= 3;
   
   return (
-    <section className="w-full py-16 px-4 sm:px-6 md:px-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex justify-center">
+    <>
+      {/* Animated Cursor - rendered outside section for proper positioning */}
+      <Cursor>
+        <svg
+          className="size-6 text-blue-500"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 40 40"
+        >
+          <path
+            fill="currentColor"
+            d="M1.8 4.4 7 36.2c.3 1.8 2.6 2.3 3.6.8l3.9-5.7c1.7-2.5 4.5-4.1 7.5-4.3l6.9-.5c1.8-.1 2.5-2.4 1.1-3.5L5 2.5c-1.4-1.1-3.5 0-3.3 1.9Z"
+          />
+        </svg>
+      </Cursor>
+      <CursorFollow
+        align="bottom-right"
+        sideOffset={20}
+        transition={{ stiffness: 400, damping: 30, bounce: 0 }}
+      >
+        <div className="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-lg whitespace-nowrap">
+          Try this week's quiz out for free
+        </div>
+      </CursorFollow>
+      
+      <section className="w-full py-16 px-4 sm:px-6 md:px-8">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex justify-center">
           <CardStack className="mb-8">
             {displayQuizzes.map((quiz, index) => {
               const text = textOn(quiz.colorHex);
@@ -243,22 +275,38 @@ export function QuizCardStack({ quizzes }: QuizCardStackProps) {
                 </div>
               );
               
-              // Only wrap top card in Link
+              // Only wrap top card in Link - ensure it's interactive
               if (isTopCard) {
                 return (
                   <Link
                     key={quiz.id}
                     href={`/quizzes/${quiz.slug}/intro`}
-                    className="focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
+                    className="focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 cursor-pointer block relative"
+                    style={{ 
+                      pointerEvents: 'auto',
+                      zIndex: 1000, // Ensure it's above other cards
+                    }}
+                    onMouseEnter={(e) => {
+                      e.stopPropagation();
+                      setIsHoveringTopCard(true);
+                    }}
+                    onMouseLeave={(e) => {
+                      e.stopPropagation();
+                      setIsHoveringTopCard(false);
+                    }}
                   >
                     {cardContent}
                   </Link>
                 );
               }
               
-              // Other cards are just visual
+              // Other cards are just visual - ensure they don't block mouse events
               return (
-                <div key={quiz.id}>
+                <div 
+                  key={quiz.id}
+                  className="pointer-events-none"
+                  style={{ pointerEvents: 'none' }}
+                >
                   {cardContent}
                 </div>
               );
@@ -273,20 +321,36 @@ export function QuizCardStack({ quizzes }: QuizCardStackProps) {
           transition={{ duration: 0.5, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
           className="text-center mt-12 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4"
         >
-          <Link
-            href="/quizzes"
+          <a
+            href="#header-section"
+            onClick={(e) => {
+              e.preventDefault();
+              const element = document.getElementById('header-section');
+              if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }
+            }}
             className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-[#3B82F6] text-white font-medium hover:bg-[#2563EB] transition-colors"
           >
-            Browse past quizzes
-          </Link>
+            See how it works
+          </a>
           <Link
             href={quizzes.length > 0 ? `/quizzes/${quizzes[quizzes.length - 1].slug}/intro` : "/quizzes"}
-            className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-[#3B82F6] text-white font-medium hover:bg-[#2563EB] transition-colors"
+            className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-white dark:bg-gray-900 text-gray-900 dark:text-white font-medium border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
           >
             Play the latest
           </Link>
         </motion.div>
-      </div>
-    </section>
+        </div>
+      </section>
+    </>
+  );
+}
+
+export function QuizCardStack({ quizzes }: QuizCardStackProps) {
+  return (
+    <CursorProvider>
+      <QuizCardStackContent quizzes={quizzes} />
+    </CursorProvider>
   );
 }

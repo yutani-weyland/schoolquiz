@@ -26,7 +26,8 @@ function CardItem({ children, index, totalCards, spreadProgress }: CardItemProps
   // Initial stacked position - centered with slight overlap
   const defaultX = index * 10 - centerOffset;
   const defaultY = index * 2;
-  const defaultRotate = index * 1.5;
+  // Right leaning: positive rotation (cards lean to the right like a deck) - reduced for better readability
+  const defaultRotate = index * 0.8;
 
   // Use viewport-based card width that scales proportionally
   // Base width: 380px max on xl/2xl screens, scales down proportionally
@@ -48,7 +49,8 @@ function CardItem({ children, index, totalCards, spreadProgress }: CardItemProps
     expandedCenterOffset +
     cardWidth / 2;
   const maxSpreadY = 0;
-  const maxSpreadRotate = index * 3 - (totalCards - 1) * 1.5;
+  // Right leaning spread: positive rotation - reduced for better readability
+  const maxSpreadRotate = index * 1.5 - (totalCards - 1) * 0.75;
 
   const xTransform = useTransform(spreadProgress, (progress) => {
     return defaultX + (maxSpreadX - defaultX) * progress;
@@ -60,13 +62,17 @@ function CardItem({ children, index, totalCards, spreadProgress }: CardItemProps
     return defaultRotate + (maxSpreadRotate - defaultRotate) * progress;
   });
 
+  // Reverse z-index so last card (index = totalCards - 1) is on top
+  // Last card should have highest z-index
+  const zIndex = index + 1;
+  
   return (
     <motion.div
       style={{
         x: xTransform,
         y: yTransform,
         rotate: rotateTransform,
-        zIndex: totalCards - index,
+        zIndex: zIndex,
         transformStyle: "preserve-3d",
         perspective: "2000px",
         left: "50%",
