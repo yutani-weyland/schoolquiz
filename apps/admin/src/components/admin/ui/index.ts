@@ -15,4 +15,5 @@ export {
   DataTableEmpty,
 } from './DataTable'
 export { StatusStrip } from '../StatusStrip'
+export { TableSkeleton } from './TableSkeleton'
 

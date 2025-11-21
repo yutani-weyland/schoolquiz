@@ -4,6 +4,9 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Building2, ArrowLeft, Users, Layers, CreditCard, Activity, Mail, Calendar, CheckCircle2, Clock, XCircle, AlertCircle } from 'lucide-react'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { formatDate } from '@/lib/dateUtils'
+import { getOrganisationStatusBadge, getMemberStatusBadge } from '@/lib/statusBadge'
+import { Badge } from '@/components/admin/ui'
 
 interface Organisation {
   id: string
@@ -94,14 +97,29 @@ export default function AdminOrganisationDetailPage() {
   }
 
   const getStatusBadge = (status: string) => {
-    const badges = {
-      ACTIVE: { label: 'Active', className: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300', icon: CheckCircle2 },
-      TRIALING: { label: 'Trialing', className: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300', icon: Clock },
-      PAST_DUE: { label: 'Past Due', className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300', icon: AlertCircle },
-      EXPIRED: { label: 'Expired', className: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300', icon: XCircle },
-      CANCELLED: { label: 'Cancelled', className: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300', icon: XCircle },
+    const statusConfig = getOrganisationStatusBadge(status)
+    const iconMap = {
+      ACTIVE: CheckCircle2,
+      TRIALING: Clock,
+      PAST_DUE: AlertCircle,
+      EXPIRED: XCircle,
+      CANCELLED: XCircle,
     }
-    return badges[status as keyof typeof badges] || badges.EXPIRED
+    const Icon = iconMap[status as keyof typeof iconMap] || XCircle
+    
+    const classNameMap = {
+      success: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+      info: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+      warning: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
+      error: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+      default: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+    }
+    
+    return {
+      label: statusConfig.label,
+      className: classNameMap[statusConfig.variant],
+      icon: Icon,
+    }
   }
 
   if (isLoading) {
@@ -120,8 +138,15 @@ export default function AdminOrganisationDetailPage() {
     )
   }
 
-  const statusBadge = getStatusBadge(organisation.status)
-  const StatusIcon = statusBadge.icon
+  const statusConfig = getOrganisationStatusBadge(organisation.status)
+  const iconMap = {
+    ACTIVE: CheckCircle2,
+    TRIALING: Clock,
+    PAST_DUE: AlertCircle,
+    EXPIRED: XCircle,
+    CANCELLED: XCircle,
+  }
+  const StatusIcon = iconMap[organisation.status as keyof typeof iconMap] || XCircle
 
   return (
     <div className="space-y-6">
@@ -146,10 +171,9 @@ export default function AdminOrganisationDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${statusBadge.className}`}>
-            <StatusIcon className="w-4 h-4" />
-            {statusBadge.label}
-          </span>
+          <Badge variant={statusConfig.variant} icon={StatusIcon}>
+            {statusConfig.label}
+          </Badge>
         </div>
       </div>
 
@@ -200,7 +224,7 @@ function OverviewTab({ organisation }: { organisation: Organisation }) {
                 {organisation._count.members}
               </p>
               <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                {organisation.maxSeats > 0 ? `of ${organisation.maxSeats} seats` : 'Unlimited seats'}
+                {organisation.maxSeats > 0 ? `of ${organisation.maxSeats} member capacity` : 'Unlimited member capacity'}
               </p>
             </div>
             <Users className="w-8 h-8 text-blue-500" />
@@ -236,9 +260,6 @@ function OverviewTab({ organisation }: { organisation: Organisation }) {
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Owner</h3>
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-semibold">
-            {(organisation.owner.name || organisation.owner.email)[0].toUpperCase()}
-          </div>
           <div>
             <p className="text-sm font-medium text-gray-900 dark:text-white">
               {organisation.owner.name || 'No name'}
@@ -294,11 +315,11 @@ function MembersTab({ organisation, onUpdate }: { organisation: Organisation; on
         onUpdate() // Refresh organisation data
       } else {
         const data = await response.json()
-        alert(data.error || 'Failed to update role')
+        // Error will be shown via StatusStrip if we add state management
+        console.error('Failed to update role:', data.error || 'Failed to update role')
       }
     } catch (error) {
       console.error('Failed to update role:', error)
-      alert('Failed to update role')
     }
   }
   const getRoleBadge = (role: string) => {
@@ -318,14 +339,11 @@ function MembersTab({ organisation, onUpdate }: { organisation: Organisation; on
   }
 
   const getStatusBadge = (status: string) => {
-    return status === 'ACTIVE' ? (
-      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
-        Active
-      </span>
-    ) : (
-      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
-        {status}
-      </span>
+    const statusConfig = getMemberStatusBadge(status)
+    return (
+      <Badge variant={statusConfig.variant}>
+        {statusConfig.label}
+      </Badge>
     )
   }
 
@@ -362,10 +380,7 @@ function MembersTab({ organisation, onUpdate }: { organisation: Organisation; on
               <tr key={member.id}>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-semibold">
-                      {(member.user.name || member.user.email)[0].toUpperCase()}
-                    </div>
-                    <div className="ml-4">
+                    <div>
                       <div className="text-sm font-medium text-gray-900 dark:text-white">
                         {member.user.name || 'No name'}
                       </div>
@@ -401,7 +416,9 @@ function MembersTab({ organisation, onUpdate }: { organisation: Organisation; on
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                  {new Date(member.createdAt).toLocaleDateString()}
+                  <span title={new Date(member.createdAt).toLocaleString()}>
+                    {formatDate(member.createdAt)}
+                  </span>
                 </td>
               </tr>
             ))}
@@ -527,11 +544,11 @@ function BillingTab({ organisation }: { organisation: Organisation }) {
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Seats</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Member Capacity</h3>
         <div className="flex items-center gap-4">
           <div className="flex-1">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-gray-500 dark:text-gray-400">Used Seats</span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">Members / Capacity</span>
               <span className="text-sm font-medium text-gray-900 dark:text-white">
                 {organisation._count.members} / {organisation.maxSeats || '∞'}
               </span>

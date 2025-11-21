@@ -93,8 +93,13 @@ export default function AdminOverviewPage() {
     try {
       const response = await fetch('/api/admin/stats')
       if (response.ok) {
-        const data = await response.json()
-        setStats(data)
+        const contentType = response.headers.get('content-type')
+        if (contentType && contentType.includes('application/json')) {
+          const data = await response.json()
+          setStats(data)
+        } else {
+          console.warn('Expected JSON but got:', contentType)
+        }
       }
     } catch (error) {
       console.error('Failed to fetch stats:', error)

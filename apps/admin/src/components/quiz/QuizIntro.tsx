@@ -119,14 +119,16 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 							},
 						});
 						
-						if (response.ok) {
+						// Check if response is JSON before parsing
+						const contentType = response.headers.get('content-type');
+						if (response.ok && contentType && contentType.includes('application/json')) {
 							const data = await response.json();
 							if (data.completion) {
 								setIsQuizCompleted(true);
 							}
 						}
 					} catch (err) {
-						// Ignore errors
+						// Ignore errors silently
 					}
 				}
 			};

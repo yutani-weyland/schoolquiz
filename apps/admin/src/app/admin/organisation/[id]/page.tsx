@@ -315,7 +315,7 @@ function MembersTab({ organisationId }: { organisationId: string }) {
             { key: 'email', label: 'Email', sortable: true },
             { key: 'role', label: 'Role', sortable: true },
             { key: 'status', label: 'Status', sortable: true },
-            { key: 'seatAssigned', label: 'Seat', sortable: true },
+            { key: 'seatAssigned', label: 'Seat Assigned', sortable: true },
           ]}
         />
       </Card>
@@ -915,9 +915,31 @@ function InviteMemberModal({ organisationId, onClose }: { organisationId: string
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('TEACHER');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [seats, setSeats] = useState<{ total: number; used: number; available: number } | null>(null);
+  const [loadingSeats, setLoadingSeats] = useState(true);
+
+  useEffect(() => {
+    fetchSeats();
+  }, []);
+
+  const fetchSeats = async () => {
+    try {
+      const res = await fetch(`/api/organisation/${organisationId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setSeats(data.seats);
+      }
+    } catch (error) {
+      console.error('Error fetching seats:', error);
+    } finally {
+      setLoadingSeats(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
     setLoading(true);
     try {
       const res = await fetch(`/api/organisation/${organisationId}/members`, {
@@ -925,15 +947,23 @@ function InviteMemberModal({ organisationId, onClose }: { organisationId: string
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, role }),
       });
-      if (!res.ok) throw new Error('Failed to invite');
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to invite member');
+      }
+      // Success - close modal and refresh will happen via onClose callback
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error inviting member:', error);
-      alert('Failed to invite member');
+      setError(error.message || 'Failed to invite member');
     } finally {
       setLoading(false);
     }
   };
+
+  // Check if role requires a seat (OWNER doesn't)
+  const requiresSeat = role !== 'OWNER';
+  const canInvite = !requiresSeat || !seats || seats.available > 0;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -944,17 +974,60 @@ function InviteMemberModal({ organisationId, onClose }: { organisationId: string
       >
         <h3 className="text-lg font-semibold text-[hsl(var(--foreground))] mb-4">Invite Member</h3>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Seat availability info */}
+          {!loadingSeats && seats && (
+            <div className={`p-3 rounded-lg border ${
+              seats.available > 0 
+                ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800' 
+                : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'
+            }`}>
+              <div className="flex items-center justify-between text-sm">
+                <span className={`font-medium ${
+                  seats.available > 0 
+                    ? 'text-blue-900 dark:text-blue-100' 
+                    : 'text-amber-900 dark:text-amber-100'
+                }`}>
+                  Available Seats:
+                </span>
+                <span className={`font-semibold ${
+                  seats.available > 0 
+                    ? 'text-blue-900 dark:text-blue-100' 
+                    : 'text-amber-900 dark:text-amber-100'
+                }`}>
+                  {seats.available} of {seats.total || '∞'} remaining
+                </span>
+              </div>
+              {seats.available === 0 && requiresSeat && (
+                <p className="text-xs mt-1 text-amber-700 dark:text-amber-300">
+                  No seats available. Only OWNER role can be invited without a seat.
+                </p>
+              )}
+            </div>
+          )}
+
+          {error && (
+            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+              <p className="text-sm text-red-900 dark:text-red-100">{error}</p>
+            </div>
+          )}
+
           <Input
             label="Email"
             type="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              setError('');
+            }}
             required
           />
           <Select
             label="Role"
             value={role}
-            onChange={(e) => setRole(e.target.value)}
+            onChange={(e) => {
+              setRole(e.target.value);
+              setError('');
+            }}
           >
             <option value="TEACHER">Teacher</option>
             <option value="ADMIN">Admin</option>
@@ -970,7 +1043,7 @@ function InviteMemberModal({ organisationId, onClose }: { organisationId: string
             </Button>
             <Button
               type="submit"
-              disabled={loading}
+              disabled={loading || !canInvite}
             >
               {loading ? 'Sending...' : 'Send Invite'}
             </Button>

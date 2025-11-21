@@ -276,7 +276,7 @@ export function CommandPalette() {
       },
       {
         id: 'question-submissions',
-        label: 'Go to Question Submissions',
+        label: "Go to People's Round Submissions",
         keywords: ['submissions', 'questions', 'submitted'],
         icon: MessageSquare,
         action: () => router.push('/admin/questions/submissions'),

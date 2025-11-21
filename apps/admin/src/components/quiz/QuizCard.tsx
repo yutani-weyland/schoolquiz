@@ -117,7 +117,9 @@ export function QuizCard({ quiz, isNewest = false, index = 0 }: QuizCardProps) {
 							},
 						});
 						
-						if (response.ok) {
+						// Check if response is JSON before parsing
+						const contentType = response.headers.get('content-type');
+						if (response.ok && contentType && contentType.includes('application/json')) {
 							const data = await response.json();
 							if (data.completion && data.completion.score !== undefined && data.completion.totalQuestions !== undefined) {
 								setCompletionData({
@@ -130,6 +132,19 @@ export function QuizCard({ quiz, isNewest = false, index = 0 }: QuizCardProps) {
 									totalQuestions: data.completion.totalQuestions,
 									completedAt: data.completion.completedAt,
 								}));
+							}
+						} else if (!response.ok) {
+							// For error responses, try to parse JSON if available, otherwise log error
+							if (contentType && contentType.includes('application/json')) {
+								try {
+									const errorData = await response.json();
+									logger.warn('Quiz completion API error:', errorData);
+								} catch {
+									// If JSON parsing fails, it's probably HTML - just log status
+									logger.warn(`Quiz completion API returned ${response.status} (non-JSON response)`);
+								}
+							} else {
+								logger.warn(`Quiz completion API returned ${response.status} with content-type: ${contentType}`);
 							}
 						}
 					} catch (err) {

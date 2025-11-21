@@ -7,7 +7,9 @@
 
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { BookOpen, Search, Filter, CheckCircle2, FileText, Trash2, Archive, Upload, Loader2 } from 'lucide-react'
+import { createPortal } from 'react-dom'
+import { motion, AnimatePresence } from 'framer-motion'
+import { BookOpen, Search, Filter, CheckCircle2, FileText, Trash2, Archive, Upload, Loader2, Edit2, Copy, X, Download } from 'lucide-react'
 import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import { PageHeader, Card, Input, Select, Button, Badge, DataTableHeader, DataTableHeaderCell, DataTableBody, DataTableRow, DataTableCell } from '@/components/admin/ui'
@@ -59,6 +61,7 @@ export function QuizzesTable({
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [selectedQuizIds, setSelectedQuizIds] = useState<Set<string>>(new Set())
   const [isBulkOperating, setIsBulkOperating] = useState(false)
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState<string | null>(null) // Track which quiz is generating PDF
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Client-side sorting
@@ -298,6 +301,72 @@ export function QuizzesTable({
     }
   }
 
+  const handleGeneratePDF = async (quizId: string) => {
+    setIsGeneratingPDF(quizId)
+    try {
+      const response = await fetch(`/api/admin/quizzes/${quizId}/pdf`, {
+        method: 'POST',
+      })
+
+      const data = await response.json()
+      if (response.ok) {
+        router.refresh()
+        if (data.pdfUrl) {
+          window.open(data.pdfUrl, '_blank')
+        }
+        alert('PDF generated successfully!')
+      } else {
+        alert(data.error || 'Failed to generate PDF')
+      }
+    } catch (error) {
+      console.error('Failed to generate PDF:', error)
+      alert('Failed to generate PDF')
+    } finally {
+      setIsGeneratingPDF(null)
+    }
+  }
+
+  const handleBulkGeneratePDF = async () => {
+    const ids = Array.from(selectedQuizIds)
+    if (ids.length === 0) return
+
+    if (!confirm(`Generate PDFs for ${ids.length} quiz${ids.length > 1 ? 'zes' : ''}? This may take a while.`)) return
+
+    setIsBulkOperating(true)
+    let successCount = 0
+    let failCount = 0
+
+    try {
+      // Generate PDFs sequentially to avoid overwhelming the server
+      for (const id of ids) {
+        try {
+          const response = await fetch(`/api/admin/quizzes/${id}/pdf`, {
+            method: 'POST',
+          })
+          const data = await response.json()
+          if (response.ok) {
+            successCount++
+          } else {
+            failCount++
+            console.error(`Failed to generate PDF for quiz ${id}:`, data.error)
+          }
+        } catch (error) {
+          failCount++
+          console.error(`Failed to generate PDF for quiz ${id}:`, error)
+        }
+      }
+
+      setSelectedQuizIds(new Set())
+      router.refresh()
+      alert(`PDF generation complete: ${successCount} succeeded, ${failCount} failed`)
+    } catch (error) {
+      console.error('Failed to generate PDFs:', error)
+      alert('Failed to generate PDFs')
+    } finally {
+      setIsBulkOperating(false)
+    }
+  }
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -361,7 +430,7 @@ export function QuizzesTable({
   })
 
   return (
-    <div className="space-y-6">
+    <div className={`space-y-6 ${selectedQuizIds.size > 0 ? 'pr-80' : ''} transition-all duration-300`}>
       <PageHeader
         title="Quizzes"
         description="Manage quizzes, view analytics, and schedule publications"
@@ -416,59 +485,108 @@ export function QuizzesTable({
         </div>
       </Card>
 
-      {/* Bulk Actions Bar */}
-      {selectedQuizIds.size > 0 && (
-        <div className="bg-[hsl(var(--primary))]/10 border border-[hsl(var(--primary))]/20 rounded-xl p-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-medium text-[hsl(var(--foreground))]">
-              {selectedQuizIds.size} quiz{selectedQuizIds.size > 1 ? 'zes' : ''} selected
-            </span>
-            <button
-              onClick={() => setSelectedQuizIds(new Set())}
-              className="text-xs text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] underline"
+      {/* Slide-out Bulk Actions Panel */}
+      {typeof window !== 'undefined' && createPortal(
+        <AnimatePresence>
+          {selectedQuizIds.size > 0 && (
+            <motion.div
+              initial={{ x: 400, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: 400, opacity: 0 }}
+              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+              className="fixed right-0 top-0 bottom-0 z-[60] w-80 bg-[hsl(var(--card))] border-l border-[hsl(var(--border))] flex flex-col"
             >
-              Clear selection
-            </button>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleBulkPublish}
-              disabled={isBulkOperating}
-              className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {isBulkOperating ? (
-                <Loader2 className="w-3 h-3 animate-spin" />
-              ) : (
-                <Upload className="w-3 h-3" />
-              )}
-              Publish
-            </button>
-            <button
-              onClick={handleBulkArchive}
-              disabled={isBulkOperating}
-              className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {isBulkOperating ? (
-                <Loader2 className="w-3 h-3 animate-spin" />
-              ) : (
-                <Archive className="w-3 h-3" />
-              )}
-              Archive
-            </button>
-            <button
-              onClick={handleBulkDelete}
-              disabled={isBulkOperating}
-              className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {isBulkOperating ? (
-                <Loader2 className="w-3 h-3 animate-spin" />
-              ) : (
-                <Trash2 className="w-3 h-3" />
-              )}
-              Delete
-            </button>
-          </div>
-        </div>
+              {/* Header */}
+              <div className="flex items-center justify-between px-4 py-3 border-b border-[hsl(var(--border))] bg-[hsl(var(--card))] h-[60px]">
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <div className="w-2 h-2 rounded-full bg-[hsl(var(--primary))] animate-pulse flex-shrink-0" />
+                  <h3 className="text-sm font-semibold text-[hsl(var(--foreground))] whitespace-nowrap">
+                    Bulk Actions
+                  </h3>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedQuizIds(new Set())}
+                  className="p-2 rounded-xl hover:bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] transition-all duration-200 flex-shrink-0"
+                  title="Clear selection"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+
+              {/* Selection count */}
+              <div className="px-4 py-3 border-b border-[hsl(var(--border))] bg-[hsl(var(--muted))]/30">
+                <div className="px-3 py-1.5 bg-[hsl(var(--primary))]/10 rounded-lg border border-[hsl(var(--primary))]/20 inline-block">
+                  <span className="text-xs font-medium text-[hsl(var(--foreground))]">
+                    {selectedQuizIds.size} {selectedQuizIds.size === 1 ? 'quiz' : 'quizzes'} selected
+                  </span>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                <div>
+                  <label className="block text-xs font-medium text-[hsl(var(--muted-foreground))] mb-3 uppercase tracking-wide">
+                    Status Actions
+                  </label>
+                  <div className="space-y-2">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleBulkPublish}
+                      disabled={isBulkOperating}
+                      className="w-full justify-start gap-2 text-xs h-9 hover:bg-[hsl(var(--muted))]"
+                    >
+                      <Upload className="w-4 h-4" />
+                      <span>Publish {selectedQuizIds.size} {selectedQuizIds.size === 1 ? 'quiz' : 'quizzes'}</span>
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleBulkArchive}
+                      disabled={isBulkOperating}
+                      className="w-full justify-start gap-2 text-xs h-9 hover:bg-[hsl(var(--muted))]"
+                    >
+                      <Archive className="w-4 h-4" />
+                      <span>Archive {selectedQuizIds.size} {selectedQuizIds.size === 1 ? 'quiz' : 'quizzes'}</span>
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t border-[hsl(var(--border))]">
+                  <label className="block text-xs font-medium text-[hsl(var(--muted-foreground))] mb-3 uppercase tracking-wide">
+                    PDF Generation
+                  </label>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleBulkGeneratePDF}
+                    disabled={isBulkOperating}
+                    className="w-full justify-start gap-2 text-xs h-9 hover:bg-[hsl(var(--muted))]"
+                  >
+                    <FileText className="w-4 h-4" />
+                    <span>Generate PDFs ({selectedQuizIds.size})</span>
+                  </Button>
+                </div>
+
+                <div className="pt-3 border-t border-[hsl(var(--border))]">
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={handleBulkDelete}
+                    disabled={isBulkOperating}
+                    className="w-full gap-2 text-xs h-9"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete {selectedQuizIds.size} {selectedQuizIds.size === 1 ? 'quiz' : 'quizzes'}
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
       )}
 
       {/* Table */}
@@ -631,29 +749,45 @@ export function QuizzesTable({
                                 e.stopPropagation()
                                 router.push(`/admin/quizzes/builder?edit=${quiz.id}`)
                               }}
-                              className="px-3 py-1.5 text-xs font-medium text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/10 rounded-lg transition-colors whitespace-nowrap"
+                              className="p-2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/10 rounded-lg transition-colors"
+                              title="Edit"
                             >
-                              Edit
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleGeneratePDF(quiz.id)
+                              }}
+                              disabled={isGeneratingPDF === quiz.id}
+                              className="p-2 text-[hsl(var(--muted-foreground))] hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors disabled:opacity-50"
+                              title="Generate PDF"
+                            >
+                              {isGeneratingPDF === quiz.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <FileText className="w-4 h-4" />
+                              )}
                             </button>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation()
                                 handleDuplicate(quiz.id)
                               }}
-                              className="px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors whitespace-nowrap"
+                              className="p-2 text-[hsl(var(--muted-foreground))] hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
                               title="Duplicate quiz"
                             >
-                              Duplicate
+                              <Copy className="w-4 h-4" />
                             </button>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation()
                                 handleDelete(quiz.id, quiz.title)
                               }}
-                              className="px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors whitespace-nowrap"
+                              className="p-2 text-[hsl(var(--muted-foreground))] hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                               title="Delete quiz"
                             >
-                              Delete
+                              <Trash2 className="w-4 h-4" />
                             </button>
                             {quiz.pdfStatus === 'generated' && (
                               <button

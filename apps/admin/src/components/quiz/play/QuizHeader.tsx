@@ -373,9 +373,6 @@ export function QuizHeader({
                 {isLoggedIn && (
                   <div className="px-0 py-0 mb-4 pb-4 border-b border-gray-100 dark:border-gray-700/50">
                     <div className="flex items-center gap-3">
-                      <div className="w-11 h-11 rounded-full bg-blue-600 dark:bg-blue-500 flex items-center justify-center text-white font-semibold text-base relative flex-shrink-0">
-                        {(userName || getUserName()) ? (userName || getUserName())?.charAt(0).toUpperCase() : 'U'}
-                      </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <p className="font-medium text-gray-900 dark:text-white text-base truncate">

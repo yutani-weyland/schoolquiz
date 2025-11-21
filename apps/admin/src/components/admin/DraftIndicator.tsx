@@ -8,6 +8,7 @@
 import { useEffect, useState } from 'react'
 import { FileText } from 'lucide-react'
 import Link from 'next/link'
+import * as Tooltip from '@radix-ui/react-tooltip'
 import { checkDraft, getAllDrafts, type Draft } from '@/hooks/useDraft'
 
 interface DraftIndicatorProps {
@@ -68,34 +69,48 @@ export function DraftIndicator({
 
   if (!hasCurrentDraft) return null
 
+  const tooltipText = `${draftCount} unfinished draft${draftCount > 1 ? 's' : ''}`
+
   const content = (
-    <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 rounded-lg text-xs font-medium">
-      <FileText className="w-3.5 h-3.5" />
+    <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 rounded-full text-xs font-medium">
+      <FileText className="w-3.5 h-3.5 flex-shrink-0" />
       {showCount && draftCount > 0 && (
-        <span className="min-w-[1.25rem] text-center">{draftCount}</span>
+        <span className="text-xs font-semibold leading-none">
+          {draftCount > 99 ? '99+' : draftCount}
+        </span>
       )}
-      <span className="hidden sm:inline">
-        {showCount && draftCount > 1 ? 'Drafts' : 'Draft'}
-      </span>
     </div>
   )
 
-  if (linkToDrafts) {
-    return (
-      <Link
-        href="/admin/drafts"
-        className="inline-flex items-center hover:opacity-80 transition-opacity"
-        title={`${draftCount} draft${draftCount > 1 ? 's' : ''} available`}
-      >
-        {content}
-      </Link>
-    )
-  }
+  const wrappedContent = linkToDrafts ? (
+    <Link
+      href="/admin/drafts"
+      className="inline-flex items-center hover:opacity-80 transition-opacity"
+    >
+      {content}
+    </Link>
+  ) : (
+    content
+  )
 
   return (
-    <div title={`${draftCount} draft${draftCount > 1 ? 's' : ''} available`}>
-      {content}
-    </div>
+    <Tooltip.Provider>
+      <Tooltip.Root>
+        <Tooltip.Trigger asChild>
+          {wrappedContent}
+        </Tooltip.Trigger>
+        <Tooltip.Portal>
+          <Tooltip.Content
+            className="bg-[hsl(var(--raised))] text-[hsl(var(--foreground))] border border-[hsl(var(--border))] text-xs px-2 py-1 rounded shadow-lg z-50"
+            side="bottom"
+            sideOffset={4}
+          >
+            {tooltipText}
+            <Tooltip.Arrow className="fill-[hsl(var(--raised))]" />
+          </Tooltip.Content>
+        </Tooltip.Portal>
+      </Tooltip.Root>
+    </Tooltip.Provider>
   )
 }
 

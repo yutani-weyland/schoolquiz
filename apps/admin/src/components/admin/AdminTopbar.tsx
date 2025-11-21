@@ -3,22 +3,30 @@
 import { useState, useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { User, LogOut, Sun, Moon, Search, Command, HelpCircle } from 'lucide-react'
+import { User, LogOut, Sun, Moon, Search, Command, HelpCircle, Settings, Mail } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { DraftIndicator } from './DraftIndicator'
 import { NotificationsBell } from './NotificationsBell'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
+import { getUserName, getUserEmail } from '@/lib/storage'
 
 export function AdminTopbar() {
   const pathname = usePathname()
   const { isDark, toggleTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
+  const [userName, setUserName] = useState<string | null>(null)
+  const [userEmail, setUserEmail] = useState<string | null>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
   
   // Prevent hydration mismatch by only showing theme-dependent content after mount
   useEffect(() => {
     setMounted(true)
+    // Get user info from localStorage only on client side
+    if (typeof window !== 'undefined') {
+      setUserName(getUserName())
+      setUserEmail(getUserEmail())
+    }
   }, [])
 
   // Open command palette on search input focus or click
@@ -53,10 +61,10 @@ export function AdminTopbar() {
   return (
     <div className="sticky top-0 z-40 bg-[hsl(var(--card))] border-b border-[hsl(var(--border))] backdrop-blur-sm bg-opacity-95 h-[60px] flex items-center">
       <div className="flex items-center justify-between px-6 py-3 gap-4 w-full">
-        {/* Global Search */}
+        {/* Global Search - Hidden on smaller screens */}
         <button
           onClick={handleSearchClick}
-          className="flex-1 max-w-md flex items-center gap-3 px-4 py-2.5 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--input))] text-[hsl(var(--muted-foreground))] hover:border-[hsl(var(--primary))]/50 hover:bg-[hsl(var(--input))] transition-all duration-200 text-left"
+          className="hidden md:flex flex-1 max-w-md items-center gap-3 px-4 py-2.5 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--input))] text-[hsl(var(--muted-foreground))] hover:border-[hsl(var(--primary))]/50 hover:bg-[hsl(var(--input))] transition-all duration-200 text-left"
         >
           <Search className="w-4 h-4 flex-shrink-0" />
           <span className="flex-1 text-sm">Search organisations, users, quizzes…</span>
@@ -75,6 +83,65 @@ export function AdminTopbar() {
           {/* Draft Indicator */}
           <DraftIndicator type="all" showCount />
 
+          {/* Notifications */}
+          <NotificationsBell />
+
+          {/* User Profile Menu */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                className="p-2.5 rounded-xl bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]/80 hover:text-[hsl(var(--foreground))] border border-[hsl(var(--border))] transition-colors"
+                title={userName ? `${userName} - Account menu` : "Account menu"}
+              >
+                <User className="w-4 h-4" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent
+              className="w-64 p-2"
+              sideOffset={8}
+              align="end"
+            >
+              {/* User Info Section */}
+              <div className="px-3 py-2.5 border-b border-[hsl(var(--border))] mb-1">
+                {userName && (
+                  <div className="text-sm font-semibold text-[hsl(var(--foreground))] truncate">
+                    {userName}
+                  </div>
+                )}
+                {userEmail && (
+                  <div className="flex items-center gap-1.5 mt-1 text-xs text-[hsl(var(--muted-foreground))] truncate">
+                    <Mail className="w-3 h-3 flex-shrink-0" />
+                    <span className="truncate">{userEmail}</span>
+                  </div>
+                )}
+                {!userName && !userEmail && (
+                  <div className="text-sm text-[hsl(var(--muted-foreground))]">
+                    Not signed in
+                  </div>
+                )}
+              </div>
+
+              {/* Menu Items */}
+              <Link
+                href="/account"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] transition-colors"
+              >
+                <Settings className="w-4 h-4" />
+                Account Settings
+              </Link>
+              
+              <div className="h-px bg-[hsl(var(--border))] my-1" />
+              
+              <button
+                onClick={handleSignOut}
+                className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] transition-colors text-left"
+              >
+                <LogOut className="w-4 h-4" />
+                Sign Out
+              </button>
+            </PopoverContent>
+          </Popover>
+
           {/* Help/Support */}
           <Popover>
             <PopoverTrigger asChild>
@@ -90,46 +157,34 @@ export function AdminTopbar() {
               sideOffset={8}
               align="end"
             >
-                <Link
-                  href="/admin/support"
-                  className="block px-3 py-2 rounded-lg text-sm text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] transition-colors"
-                >
-                  Support Tickets
-                </Link>
-                <a
-                  href="https://docs.theschoolquiz.com.au"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block px-3 py-2 rounded-lg text-sm text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] transition-colors"
-                >
-                  Documentation
-                </a>
-                <div className="h-px bg-[hsl(var(--border))] my-1" />
-                <div className="px-3 py-2 text-xs text-[hsl(var(--muted-foreground))]">
-                  <div className="font-medium mb-1">Keyboard Shortcuts</div>
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span>Open search</span>
-                      <kbd className="px-1.5 py-0.5 rounded bg-[hsl(var(--muted))] border border-[hsl(var(--border))] font-mono text-[10px]">
-                        ⌘K
-                      </kbd>
-                    </div>
+              <Link
+                href="/admin/support"
+                className="block px-3 py-2 rounded-lg text-sm text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] transition-colors"
+              >
+                Support Tickets
+              </Link>
+              <a
+                href="https://docs.theschoolquiz.com.au"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block px-3 py-2 rounded-lg text-sm text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] transition-colors"
+              >
+                Documentation
+              </a>
+              <div className="h-px bg-[hsl(var(--border))] my-1" />
+              <div className="px-3 py-2 text-xs text-[hsl(var(--muted-foreground))]">
+                <div className="font-medium mb-1">Keyboard Shortcuts</div>
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span>Open search</span>
+                    <kbd className="px-1.5 py-0.5 rounded bg-[hsl(var(--muted))] border border-[hsl(var(--border))] font-mono text-[10px]">
+                      ⌘K
+                    </kbd>
                   </div>
                 </div>
+              </div>
             </PopoverContent>
           </Popover>
-
-          {/* Notifications */}
-          <NotificationsBell />
-
-          {/* User Profile Button */}
-          <Link
-            href="/account"
-            className="p-2.5 rounded-xl bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]/80 hover:text-[hsl(var(--foreground))] border border-[hsl(var(--border))] transition-colors"
-            title="Account settings"
-          >
-            <User className="w-4 h-4" />
-          </Link>
 
           {/* Theme Toggle */}
           {mounted ? (
@@ -157,16 +212,6 @@ export function AdminTopbar() {
               <Moon className="w-4 h-4" />
             </button>
           )}
-
-          {/* Sign Out Button */}
-          <button
-            onClick={handleSignOut}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-xl border border-[hsl(var(--border))] transition-colors"
-            title="Sign out"
-          >
-            <LogOut className="w-4 h-4" />
-            <span className="hidden sm:inline">Sign Out</span>
-          </button>
         </div>
       </div>
     </div>

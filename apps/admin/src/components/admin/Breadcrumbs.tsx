@@ -27,7 +27,7 @@ const routeMetadata: Record<string, { label: string; parent?: string }> = {
   '/admin/system/feature-flags': { label: 'Feature Flags', parent: '/admin/system' },
   '/admin/system/audit-log': { label: 'Audit Log', parent: '/admin/system' },
   '/admin/achievements': { label: 'Achievements' },
-  '/admin/questions/submissions': { label: 'Question Submissions' },
+  '/admin/questions/submissions': { label: "People's Round Submissions" },
   '/admin/questions/create': { label: 'Create Question' },
   '/admin/categories': { label: 'Categories' },
 };

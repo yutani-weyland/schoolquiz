@@ -661,10 +661,25 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 				})
 					.then(async (res) => {
 						if (!res.ok) {
-							const errorData = await res.json().catch(() => ({}));
+							// Check if response is JSON before parsing
+							const contentType = res.headers.get('content-type');
+							let errorData = {};
+							if (contentType && contentType.includes('application/json')) {
+								try {
+									errorData = await res.json();
+								} catch {
+									// If JSON parsing fails, use default error
+								}
+							}
 							throw new Error(errorData.error || `Failed to save completion (${res.status})`);
 						}
-						return res.json();
+						// Verify response is JSON before parsing
+						const contentType = res.headers.get('content-type');
+						if (contentType && contentType.includes('application/json')) {
+							return res.json();
+						} else {
+							throw new Error('Unexpected response format from server');
+						}
 					})
 					.then((data) => {
 						// Handle newly unlocked achievements

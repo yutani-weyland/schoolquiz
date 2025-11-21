@@ -1,12 +1,7 @@
-'use client';
-
-import React from 'react';
-import { PageTransition } from '@/components/ui/PageTransition';
-
+/**
+ * Root template for the app
+ * This component wraps all pages and re-renders on navigation
+ */
 export default function Template({ children }: { children: React.ReactNode }) {
-  return <PageTransition>{children}</PageTransition>;
+  return <>{children}</>
 }
-
-
-
-

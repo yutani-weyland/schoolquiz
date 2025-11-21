@@ -17,6 +17,10 @@ interface UserDetail {
   subscriptionEndsAt?: string | null
   emailVerified: boolean
   phoneVerified: boolean
+  referralCode?: string | null
+  referredBy?: string | null
+  referralCount?: number
+  freeTrialUntil?: string | null
   lastLoginAt?: string | null
   createdAt: string
   organisationMembers: Array<{
@@ -57,6 +61,7 @@ interface UserDetail {
     id: string
     name?: string | null
     email: string
+    referralCode?: string | null
   } | null
   referrals: Array<{
     id: string
@@ -89,13 +94,30 @@ export default function AdminUserDetailPage() {
     try {
       setIsLoading(true)
       const response = await fetch(`/api/admin/users/${userId}`)
+      
+      // Check content type before parsing
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        console.warn('Expected JSON but got:', contentType)
+        console.error('Response status:', response.status)
+        const text = await response.text()
+        console.error('Response body:', text)
+        return
+      }
+      
       const data = await response.json()
       console.log('User detail API response:', data)
       
       if (response.ok) {
-        setUser(data.user)
+        if (data.user) {
+          setUser(data.user)
+        } else {
+          console.error('API returned success but no user data:', data)
+        }
       } else {
         console.error('API error:', data)
+        console.error('Error message:', data.error)
+        console.error('Error details:', data.details)
       }
     } catch (error) {
       console.error('Failed to fetch user:', error)
@@ -353,6 +375,22 @@ function OverviewTab({ user, onRoleChange }: { user: UserDetail; onRoleChange: (
               </p>
             </div>
           )}
+          {user.referralCode && (
+            <div>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Referral Code</p>
+              <p className="mt-1 text-sm font-medium text-gray-900 dark:text-white font-mono">
+                {user.referralCode}
+              </p>
+            </div>
+          )}
+          {user.referralCount !== undefined && user.referralCount > 0 && (
+            <div>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Successful Referrals</p>
+              <p className="mt-1 text-sm font-medium text-gray-900 dark:text-white">
+                {user.referralCount}
+              </p>
+            </div>
+          )}
           <div>
             <p className="text-sm text-gray-500 dark:text-gray-400">Last Login</p>
             <p className="mt-1 text-sm font-medium text-gray-900 dark:text-white">
@@ -597,6 +635,27 @@ function ActivityTab({ user }: { user: UserDetail }) {
 function ReferralsTab({ user }: { user: UserDetail }) {
   return (
     <div className="space-y-6">
+      {/* User's Referral Code */}
+      {user.referralCode && (
+        <div className="bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/50 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 p-6 shadow-[0_1px_3px_rgba(0,0,0,0.08),inset_0_1px_0_0_rgba(255,255,255,0.9)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.3),inset_0_1px_0_0_rgba(255,255,255,0.05)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12),inset_0_1px_0_0_rgba(255,255,255,0.9)] dark:hover:shadow-[0_4px_12px_rgba(0,0,0,0.4),inset_0_1px_0_0_rgba(255,255,255,0.05)] transition-all duration-200">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Referral Code</h3>
+          <div className="flex items-center gap-4">
+            <div className="flex-1">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">This user's referral code</p>
+              <p className="text-2xl font-mono font-bold text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-700 px-4 py-2 rounded-lg inline-block">
+                {user.referralCode}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-gray-500 dark:text-gray-400">Successful Referrals</p>
+              <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                {user.referralCount || 0}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Referrer Info */}
       {user.referrer && (
         <div className="bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/50 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 p-6 shadow-[0_1px_3px_rgba(0,0,0,0.08),inset_0_1px_0_0_rgba(255,255,255,0.9)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.3),inset_0_1px_0_0_rgba(255,255,255,0.05)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12),inset_0_1px_0_0_rgba(255,255,255,0.9)] dark:hover:shadow-[0_4px_12px_rgba(0,0,0,0.4),inset_0_1px_0_0_rgba(255,255,255,0.05)] transition-all duration-200">
@@ -605,13 +664,18 @@ function ReferralsTab({ user }: { user: UserDetail }) {
             <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-semibold">
               {(user.referrer.name || user.referrer.email)[0].toUpperCase()}
             </div>
-            <div>
+            <div className="flex-1">
               <p className="text-sm font-medium text-gray-900 dark:text-white">
                 {user.referrer.name || 'No name'}
               </p>
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 {user.referrer.email}
               </p>
+              {user.referrer.referralCode && (
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 font-mono">
+                  Code: {user.referrer.referralCode}
+                </p>
+              )}
             </div>
           </div>
         </div>

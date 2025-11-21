@@ -1,4 +1,7 @@
 /**
+ * GET /api/quiz/completion?quizSlug=<slug>
+ * Retrieve a quiz completion for the authenticated user
+ * 
  * POST /api/quiz/completion
  * Save a quiz completion to the database
  * 
@@ -22,6 +25,143 @@ interface CompletionRequest {
   completionTimeSeconds: number;
   roundScores?: RoundScore[];
   categories?: string[];
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    // Get auth token and user ID from headers
+    const authHeader = request.headers.get('Authorization');
+    const userId = request.headers.get('X-User-Id');
+
+    if (!authHeader || !userId) {
+      return NextResponse.json(
+        { error: 'Unauthorized - authentication required' },
+        { status: 401 }
+      );
+    }
+
+    // Get quizSlug from query parameters
+    const quizSlug = request.nextUrl.searchParams.get('quizSlug');
+
+    if (!quizSlug) {
+      return NextResponse.json(
+        { error: 'Missing required query parameter: quizSlug' },
+        { status: 400 }
+      );
+    }
+
+    console.log(`[Quiz Completion API] GET request for userId: ${userId}, quizSlug: ${quizSlug}`);
+
+    // Verify user exists - wrap in try-catch to handle DB errors gracefully
+    let user;
+    try {
+      user = await prisma.user.findUnique({
+        where: { id: userId },
+      });
+    } catch (dbError: any) {
+      console.error('❌ Database error when fetching user:', dbError);
+      console.error('Error code:', dbError.code);
+      console.error('Error message:', dbError.message);
+      console.error('Error stack:', dbError.stack);
+      // Return 500 with details instead of throwing
+      return NextResponse.json(
+        {
+          error: 'Database error when fetching user',
+          details: dbError.message || 'Unknown database error',
+          code: dbError.code,
+        },
+        { status: 500 }
+      );
+    }
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    // Find completion for this user and quiz
+    // Using findFirst since it's more reliable than composite unique key syntax
+    let completion;
+    try {
+      completion = await prisma.quizCompletion.findFirst({
+        where: {
+          userId,
+          quizSlug,
+        },
+      });
+    } catch (dbError: any) {
+      console.error('❌ Database error when fetching completion:', dbError);
+      console.error('Error code:', dbError.code);
+      console.error('Error message:', dbError.message);
+      console.error('Error meta:', dbError.meta);
+      console.error('Error stack:', dbError.stack);
+      
+      // If table doesn't exist, return null gracefully
+      // Check for various error codes and messages that indicate table doesn't exist
+      const errorMessage = dbError.message?.toLowerCase() || '';
+      const isTableMissing = 
+        dbError.code === 'P2021' || // Table does not exist
+        dbError.code === '42P01' || // PostgreSQL: relation does not exist
+        errorMessage.includes('does not exist') ||
+        errorMessage.includes('relation') && errorMessage.includes('does not exist') ||
+        errorMessage.includes('table') && errorMessage.includes('does not exist') ||
+        errorMessage.includes('quiz_completions') && errorMessage.includes('does not exist');
+      
+      if (isTableMissing) {
+        console.warn('⚠️ QuizCompletion table does not exist yet, returning null');
+        console.warn('💡 To fix: Run CREATE_QUIZ_COMPLETIONS_TABLE.sql in your Supabase SQL Editor');
+        return NextResponse.json({
+          completion: null,
+        });
+      }
+      
+      // Return 500 with details instead of throwing to ensure error is properly formatted
+      return NextResponse.json(
+        {
+          error: 'Database error when fetching completion',
+          details: dbError.message || 'Unknown database error',
+          code: dbError.code,
+        },
+        { status: 500 }
+      );
+    }
+
+    if (!completion) {
+      return NextResponse.json({
+        completion: null,
+      });
+    }
+
+    return NextResponse.json({
+      completion: {
+        id: completion.id,
+        quizSlug: completion.quizSlug,
+        score: completion.score,
+        totalQuestions: completion.totalQuestions,
+        timeSeconds: completion.timeSeconds,
+        completedAt: completion.completedAt,
+      },
+    });
+  } catch (error: any) {
+    console.error('❌ Error fetching quiz completion:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code,
+      meta: error.meta,
+      name: error.name,
+    });
+    return NextResponse.json(
+      {
+        error: 'Failed to fetch quiz completion',
+        details: error.message || 'Unknown error',
+        code: error.code,
+      },
+      { status: 500 }
+    );
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -73,12 +213,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if completion already exists (upsert behavior)
-    const existingCompletion = await prisma.quizCompletion.findUnique({
+    const existingCompletion = await prisma.quizCompletion.findFirst({
       where: {
-        userId_quizSlug: {
-          userId,
-          quizSlug,
-        },
+        userId,
+        quizSlug,
       },
     });
 

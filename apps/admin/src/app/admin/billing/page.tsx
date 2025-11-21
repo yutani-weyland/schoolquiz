@@ -335,7 +335,7 @@ export default function BillingPage() {
                 </tbody>
               </table>
             </div>
-          </div>
+          </Card>
         </TabsContent>
 
         {/* Invoices Tab */}
@@ -412,7 +412,7 @@ export default function BillingPage() {
                 </tbody>
               </table>
             </div>
-          </div>
+          </Card>
         </TabsContent>
 
         {/* Webhooks Tab */}
@@ -574,7 +574,7 @@ function OfferCodesTab() {
               </tbody>
             </table>
           </div>
-        </div>
+        </Card>
       )}
 
       {showCreateModal && (

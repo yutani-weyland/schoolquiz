@@ -8,7 +8,7 @@
  * {
  *   "crons": [{
  *     "path": "/api/admin/scheduling/cron",
- *     "schedule": "*/5 * * * *"
+ *     "schedule": "*\/5 * * * *"
  *   }]
  * }
  */

@@ -20,6 +20,12 @@ import {
   ChevronRight,
   MessageSquare,
   FileText,
+  Plus,
+  ChevronDown,
+  ChevronUp,
+  Database,
+  Layers,
+  Wand2,
 } from 'lucide-react'
 import { DraftIndicator } from './DraftIndicator'
 
@@ -29,6 +35,7 @@ interface SidebarItem {
   href: string
   icon: React.ComponentType<{ className?: string }>
   section?: string
+  children?: SidebarItem[]
 }
 
 interface SidebarSection {
@@ -57,10 +64,28 @@ const sidebarSections: SidebarSection[] = [
     id: 'content',
     label: 'Content',
     items: [
-      { id: 'quizzes', label: 'Quizzes', href: '/admin/quizzes', icon: BookOpen },
-      { id: 'drafts', label: 'Drafts', href: '/admin/drafts', icon: FileText },
-      { id: 'achievements', label: 'Achievements', href: '/admin/achievements', icon: Trophy },
-      { id: 'question-submissions', label: 'Question Submissions', href: '/admin/questions/submissions', icon: MessageSquare },
+      { 
+        id: 'quizzes', 
+        label: 'Quizzes', 
+        href: '/admin/quizzes', 
+        icon: BookOpen,
+        children: [
+          { id: 'quiz-builder', label: 'Quiz Builder', href: '/admin/quizzes/builder', icon: Wand2 },
+          { id: 'drafts', label: 'Drafts', href: '/admin/drafts', icon: FileText },
+          { id: 'question-bank', label: 'Question Bank', href: '/admin/questions/bank', icon: Database },
+          { id: 'round-creator', label: 'Round Creator', href: '/admin/rounds/create', icon: Layers },
+        ]
+      },
+      { 
+        id: 'achievements', 
+        label: 'Achievements', 
+        href: '/admin/achievements', 
+        icon: Trophy,
+        children: [
+          { id: 'achievement-builder', label: 'Achievement Builder', href: '/admin/achievements?create=true', icon: Plus },
+        ]
+      },
+      { id: 'question-submissions', label: "People's Round Submissions", href: '/admin/questions/submissions', icon: MessageSquare },
     ],
   },
   {
@@ -95,6 +120,7 @@ const getEnvironment = (): 'DEV' | 'STAGE' | 'PROD' | null => {
 export function AdminSidebar() {
   const [collapsed, setCollapsed] = useState(false)
   const [environment, setEnvironment] = useState<'DEV' | 'STAGE' | 'PROD' | null>(null)
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
   const pathname = usePathname()
 
   // Persist collapsed state
@@ -113,45 +139,129 @@ export function AdminSidebar() {
     localStorage.setItem('admin-sidebar-collapsed', JSON.stringify(newCollapsed))
   }
 
-  // Check if any item in a section is active
+  // Check if any item in a section is active (including children)
   const isSectionActive = (section: SidebarSection) => {
-    return section.items.some(item => {
+    const checkItem = (item: SidebarItem): boolean => {
       if (item.href === '/admin') {
         return pathname === '/admin'
       }
-      return pathname?.startsWith(item.href)
+      const isActive = pathname?.startsWith(item.href) || false
+      const hasActiveChild = item.children?.some(checkItem) || false
+      return isActive || hasActiveChild
+    }
+    return section.items.some(checkItem)
+  }
+
+  // Check if item or any of its children is active
+  const isItemActive = (item: SidebarItem): boolean => {
+    if (item.href === '/admin') {
+      return pathname === '/admin'
+    }
+    const isActive = pathname?.startsWith(item.href) || false
+    const hasActiveChild = item.children?.some(isItemActive) || false
+    return isActive || hasActiveChild
+  }
+
+  // Toggle expanded state
+  const toggleExpanded = (itemId: string) => {
+    setExpandedItems(prev => {
+      const next = new Set(prev)
+      if (next.has(itemId)) {
+        next.delete(itemId)
+      } else {
+        next.add(itemId)
+      }
+      return next
     })
   }
 
-  const SidebarItem = ({ item }: { item: SidebarItem }) => {
+  // Auto-expand items with active children
+  useEffect(() => {
+    const checkItemActive = (item: SidebarItem): boolean => {
+      if (item.href === '/admin') {
+        return pathname === '/admin'
+      }
+      const isActive = pathname?.startsWith(item.href) || false
+      const hasActiveChild = item.children?.some(checkItemActive) || false
+      return isActive || hasActiveChild
+    }
+
+    const checkAndExpand = (items: SidebarItem[]) => {
+      items.forEach(item => {
+        if (item.children) {
+          const hasActiveChild = item.children.some(checkItemActive)
+          if (hasActiveChild) {
+            setExpandedItems(prev => new Set(prev).add(item.id))
+          }
+        }
+      })
+    }
+    sidebarSections.forEach(section => checkAndExpand(section.items))
+  }, [pathname])
+
+  const SidebarItem = ({ item, level = 0 }: { item: SidebarItem; level?: number }) => {
     const Icon = item.icon
-    const isActive = item.href === '/admin'
-      ? pathname === '/admin'
-      : pathname?.startsWith(item.href)
+    const isActive = isItemActive(item)
+    const isExpanded = expandedItems.has(item.id)
+    const hasChildren = item.children && item.children.length > 0
     
-    const content = (
-      <Link
-        href={item.href}
-        className={`relative flex items-center ${collapsed ? 'justify-center' : 'gap-3'} ${collapsed ? 'px-2 py-3' : 'px-3 py-2.5'} rounded-lg text-sm font-medium transition-all duration-200 ${
-          isActive 
-            ? collapsed
-              ? 'bg-[hsl(var(--primary))]/15 text-[hsl(var(--primary))] border-l-4 border-[hsl(var(--primary))]'
-              : 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))] border-l-4 border-[hsl(var(--primary))]'
-            : collapsed
-            ? 'text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] border-l-4 border-transparent'
-            : 'text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] border-l-4 border-transparent'
-        }`}
-      >
-        <Icon className={`${collapsed ? 'w-6 h-6' : 'w-5 h-5'} flex-shrink-0 ${isActive ? 'text-[hsl(var(--primary))]' : ''}`} />
+    const itemContent = (
+      <div className="flex items-center gap-3 flex-1 min-w-0">
+        <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-[hsl(var(--primary))]' : ''}`} />
         {!collapsed && (
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <span className={isActive ? 'font-semibold' : ''}>{item.label}</span>
-            {item.id === 'drafts' && (
-              <DraftIndicator type="all" showCount linkToDrafts={false} />
+          <>
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <span className={isActive ? 'font-semibold' : ''}>{item.label}</span>
+              {(item.id === 'drafts' || item.href === '/admin/drafts') && (
+                <DraftIndicator type="all" showCount linkToDrafts={false} />
+              )}
+            </div>
+            {hasChildren && (
+              <button
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  toggleExpanded(item.id)
+                }}
+                className="p-0.5 hover:bg-[hsl(var(--muted))] rounded transition-colors"
+              >
+                {isExpanded ? (
+                  <ChevronUp className="w-4 h-4 text-[hsl(var(--muted-foreground))]" />
+                ) : (
+                  <ChevronDown className="w-4 h-4 text-[hsl(var(--muted-foreground))]" />
+                )}
+              </button>
             )}
+          </>
+        )}
+      </div>
+    )
+
+    const content = (
+      <div>
+        <Link
+          href={item.href}
+          className={`relative flex items-center ${collapsed ? 'justify-center' : ''} ${collapsed ? 'px-2 py-3' : 'px-3 py-2.5'} rounded-lg text-sm font-medium transition-all duration-200 ${
+            isActive 
+              ? collapsed
+                ? 'bg-[hsl(var(--primary))]/15 text-[hsl(var(--primary))]'
+                : 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]'
+              : collapsed
+              ? 'text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]'
+              : 'text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]'
+          }`}
+          style={!collapsed && level > 0 ? { paddingLeft: `${12 + level * 16}px` } : undefined}
+        >
+          {itemContent}
+        </Link>
+        {!collapsed && hasChildren && isExpanded && (
+          <div className="ml-3 mt-1 space-y-1">
+            {item.children?.map((child) => (
+              <SidebarItem key={child.id} item={child} level={level + 1} />
+            ))}
           </div>
         )}
-      </Link>
+      </div>
     )
 
     if (collapsed) {
@@ -193,12 +303,22 @@ export function AdminSidebar() {
   }
 
   return (
-    <div className={`bg-[hsl(var(--card))] border-r border-[hsl(var(--border))] transition-all duration-200 flex-shrink-0 ${
+    <div className={`relative bg-[hsl(var(--card))] border-r border-[hsl(var(--border))] transition-all duration-200 flex-shrink-0 ${
       collapsed ? 'w-20' : 'w-[280px]'
     }`}>
+      {/* Expand tab - overlayed on border line, vertically aligned with logo, spanning both sides */}
+      {collapsed && (
+        <button
+          onClick={toggleCollapsed}
+          className="absolute right-0 top-[30px] -translate-y-1/2 translate-x-1/2 w-4 h-8 bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-md hover:bg-[hsl(var(--muted))] transition-all duration-200 flex items-center justify-center group z-50 shadow-sm"
+          aria-label="Expand sidebar"
+        >
+          <ChevronRight className="w-2.5 h-2.5 text-[hsl(var(--muted-foreground))] group-hover:text-[hsl(var(--foreground))] transition-colors" />
+        </button>
+      )}
       <div className="sticky top-0 h-screen flex flex-col">
         {/* Header - matches top bar height */}
-        <div className="relative flex items-center justify-between px-4 py-3 border-b border-[hsl(var(--border))] bg-[hsl(var(--card))] h-[60px]">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[hsl(var(--border))] bg-[hsl(var(--card))] h-[60px]">
           {!collapsed ? (
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <div className="text-lg font-semibold text-[hsl(var(--foreground))] whitespace-nowrap">
@@ -228,15 +348,6 @@ export function AdminSidebar() {
               aria-label="Collapse sidebar"
             >
               <ChevronLeft className="w-4 h-4" />
-            </button>
-          )}
-          {collapsed && (
-            <button
-              onClick={toggleCollapsed}
-              className="absolute bottom-4 left-1/2 -translate-x-1/2 p-2 rounded-xl hover:bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] transition-all duration-200"
-              aria-label="Expand sidebar"
-            >
-              <ChevronRight className="w-4 h-4" />
             </button>
           )}
         </div>

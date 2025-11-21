@@ -621,32 +621,35 @@ export default function QuizBuilderPage() {
           <button
             onClick={handlePreview}
             disabled={!canSave}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/50 border border-gray-300/50 dark:border-gray-700/50 rounded-xl hover:bg-gradient-to-br hover:from-gray-50 hover:to-gray-100/50 dark:hover:from-gray-700 dark:hover:to-gray-700/50 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_1px_2px_rgba(0,0,0,0.05),inset_0_1px_0_0_rgba(255,255,255,0.9)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.2),inset_0_1px_0_0_rgba(255,255,255,0.05)]"
+            className="inline-flex items-center justify-center gap-2 px-3 py-2 sm:px-4 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/50 border border-gray-300/50 dark:border-gray-700/50 rounded-xl hover:bg-gradient-to-br hover:from-gray-50 hover:to-gray-100/50 dark:hover:from-gray-700 dark:hover:to-gray-700/50 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+            title="Preview"
           >
-            <Eye className="w-4 h-4" />
-            Preview
+            <Eye className="w-4 h-4 flex-shrink-0" />
+            <span className="hidden lg:inline">Preview</span>
           </button>
           <button
             onClick={handleGeneratePDF}
             disabled={!canSave}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/50 border border-gray-300/50 dark:border-gray-700/50 rounded-xl hover:bg-gradient-to-br hover:from-gray-50 hover:to-gray-100/50 dark:hover:from-gray-700 dark:hover:to-gray-700/50 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_1px_2px_rgba(0,0,0,0.05),inset_0_1px_0_0_rgba(255,255,255,0.9)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.2),inset_0_1px_0_0_rgba(255,255,255,0.05)]"
+            className="inline-flex items-center justify-center gap-2 px-3 py-2 sm:px-4 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/50 border border-gray-300/50 dark:border-gray-700/50 rounded-xl hover:bg-gradient-to-br hover:from-gray-50 hover:to-gray-100/50 dark:hover:from-gray-700 dark:hover:to-gray-700/50 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+            title="Generate PDF"
           >
-            <FileDown className="w-4 h-4" />
-            Generate PDF
+            <FileDown className="w-4 h-4 flex-shrink-0" />
+            <span className="hidden lg:inline">Generate PDF</span>
           </button>
           <button
             onClick={handleSave}
             disabled={!canSave || isSaving}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_2px_8px_rgba(59,130,246,0.3),inset_0_1px_0_0_rgba(255,255,255,0.2)]"
+            className="inline-flex items-center justify-center gap-2 px-3 py-2 sm:px-4 text-sm font-medium text-white bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+            title={isSaving ? 'Saving...' : 'Save Now'}
           >
-            <Save className="w-4 h-4" />
-            {isSaving ? 'Saving...' : 'Save Now'}
+            <Save className="w-4 h-4 flex-shrink-0" />
+            <span className="hidden lg:inline">{isSaving ? 'Saving...' : 'Save Now'}</span>
           </button>
         </div>
       </div>
 
       {/* Quiz Title (Auto-generated) */}
-      <div className="bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/50 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 p-4 shadow-[0_1px_3px_rgba(0,0,0,0.08),inset_0_1px_0_0_rgba(255,255,255,0.9)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.3),inset_0_1px_0_0_rgba(255,255,255,0.05)]">
+      <div className="bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/50 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 p-4">
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           Quiz Title (Auto-generated from round titles)
         </label>
@@ -665,10 +668,10 @@ export default function QuizBuilderPage() {
           <button
             key={round.id}
             onClick={() => setActiveRound(index)}
-            className={`flex-shrink-0 px-4 py-2 rounded-xl font-medium transition-all ${
+            className={`flex-shrink-0 px-3 py-1.5 text-sm rounded-lg font-medium transition-colors ${
               activeRound === index
-                ? 'bg-blue-600 text-white shadow-lg'
-                : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]'
+                : 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]/80'
             }`}
           >
             {round.isPeoplesRound ? "People's Question" : `Round ${index + 1}`}
@@ -807,30 +810,30 @@ function RoundEditor({
   }, [importSearch, importCategoryFilter, showImportQuestionModal])
 
   return (
-    <div className="bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-800 dark:to-gray-800/50 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 p-6 shadow-[0_1px_3px_rgba(0,0,0,0.08),inset_0_1px_0_0_rgba(255,255,255,0.9)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.3),inset_0_1px_0_0_rgba(255,255,255,0.05)]">
+    <div className="bg-[hsl(var(--card))] rounded-lg border border-[hsl(var(--border))] p-6">
       <div className="space-y-6">
         {/* Round Header */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-xs font-medium text-[hsl(var(--muted-foreground))] mb-1.5">
               Round Title {round.isPeoplesRound && "(People's Question)"}
             </label>
             <input
               type="text"
               value={round.title}
               onChange={(e) => onUpdate({ title: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300/50 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-1.5 text-sm border border-[hsl(var(--border))] rounded-lg bg-[hsl(var(--input))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
               placeholder={round.isPeoplesRound ? "People's Question" : "e.g., WW2 History"}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-xs font-medium text-[hsl(var(--muted-foreground))] mb-1.5">
               Category
             </label>
             <select
               value={round.categoryId}
               onChange={(e) => onUpdate({ categoryId: e.target.value, categoryName: getCategoryDisplayName(e.target.value) })}
-              className="w-full px-4 py-2 border border-gray-300/50 dark:border-gray-700/50 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-1.5 text-sm border border-[hsl(var(--border))] rounded-lg bg-[hsl(var(--input))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
             >
               <option value="">Select category</option>
               {mainCategories.map(cat => (
@@ -852,41 +855,41 @@ function RoundEditor({
         {/* Questions */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            <h3 className="text-base font-semibold text-[hsl(var(--foreground))]">
               Questions ({round.questions.length}/{round.isPeoplesRound ? 1 : QUESTIONS_PER_ROUND})
             </h3>
             {!round.isPeoplesRound && round.questions.length < QUESTIONS_PER_ROUND && (
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setShowTemplateModal(true)}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-md transition-colors"
                   title="Use question template"
                 >
-                  <Sparkles className="w-4 h-4" />
+                  <Sparkles className="w-3.5 h-3.5" />
                   Template
                 </button>
                 <button
                   onClick={() => setShowBulkImportModal(true)}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-md transition-colors"
                   title="Bulk import from CSV/JSON"
                 >
-                  <Upload className="w-4 h-4" />
+                  <Upload className="w-3.5 h-3.5" />
                   Import
                 </button>
                 <button
                   onClick={() => setShowImportQuestionModal(true)}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/10 rounded-md transition-colors"
                   title="Import from question bank"
                 >
-                  <Import className="w-4 h-4" />
+                  <Import className="w-3.5 h-3.5" />
                   From Bank
                 </button>
                 <button
                   onClick={onAddQuestion}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/10 rounded-md transition-colors"
                   title="Add empty question"
                 >
-                  <Plus className="w-4 h-4" />
+                  <Plus className="w-3.5 h-3.5" />
                   Add Question
                 </button>
               </div>
@@ -896,10 +899,10 @@ function RoundEditor({
           {round.questions.map((question, qIndex) => (
             <div
               key={question.id}
-              className={`p-4 bg-gradient-to-br from-white to-gray-50/30 dark:from-gray-800/30 dark:to-gray-800/20 rounded-xl border ${
+              className={`p-4 bg-[hsl(var(--card))] rounded-lg border ${
                 question.isImported 
                   ? 'border-purple-300 dark:border-purple-700' 
-                  : 'border-gray-200/50 dark:border-gray-700/50'
+                  : 'border-[hsl(var(--border))]'
               }`}
             >
               <div className="flex items-start justify-between mb-3">
@@ -974,31 +977,31 @@ function RoundEditor({
                   <textarea
                     value={question.text}
                     onChange={(e) => onQuestionUpdate(qIndex, { text: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300/50 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-1.5 text-sm border border-[hsl(var(--border))] rounded-lg bg-[hsl(var(--input))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
                     rows={2}
                     placeholder="Enter question text..."
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  <label className="block text-xs text-[hsl(var(--muted-foreground))] mb-1">
                     Answer
                   </label>
                   <input
                     type="text"
                     value={question.answer}
                     onChange={(e) => onQuestionUpdate(qIndex, { answer: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300/50 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-1.5 text-sm border border-[hsl(var(--border))] rounded-lg bg-[hsl(var(--input))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
                     placeholder="Enter answer..."
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  <label className="block text-xs text-[hsl(var(--muted-foreground))] mb-1">
                     Explanation (optional)
                   </label>
                   <textarea
                     value={question.explanation || ''}
                     onChange={(e) => onQuestionUpdate(qIndex, { explanation: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300/50 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-1.5 text-sm border border-[hsl(var(--border))] rounded-lg bg-[hsl(var(--input))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
                     rows={2}
                     placeholder="Enter explanation..."
                   />
@@ -1086,7 +1089,7 @@ function RoundEditor({
       {/* Question Preview Modal */}
       {previewQuestion && previewIndex !== null && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[hsl(var(--card))] rounded-2xl border border-[hsl(var(--border))] shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-[hsl(var(--card))] rounded-2xl border border-[hsl(var(--border))] max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold text-[hsl(var(--foreground))]">
@@ -1197,7 +1200,7 @@ function ImportQuestionModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 shadow-xl max-w-4xl w-full max-h-[80vh] flex flex-col">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 max-w-4xl w-full max-h-[80vh] flex flex-col">
         <div className="p-6 border-b border-gray-200/50 dark:border-gray-700/50">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
@@ -1348,7 +1351,7 @@ function ImportRoundModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 shadow-xl max-w-4xl w-full max-h-[80vh] flex flex-col">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 max-w-4xl w-full max-h-[80vh] flex flex-col">
         <div className="p-6 border-b border-gray-200/50 dark:border-gray-700/50">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white">

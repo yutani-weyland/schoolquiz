@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Trophy, Plus, Edit2, Copy, Trash2, Eye, Archive, Upload, Loader2 } from 'lucide-react'
 import { AdminAchievementEditor } from '@/components/admin/achievements/AdminAchievementEditor'
 import { AchievementPreviewPane } from '@/components/admin/achievements/AchievementPreviewPane'
@@ -42,7 +43,8 @@ interface AchievementStats {
   premiumPercent: number
 }
 
-export default function AdminAchievementsPage() {
+function AdminAchievementsPageContent() {
+  const searchParams = useSearchParams()
   const [achievements, setAchievements] = useState<Achievement[]>([])
   const [stats, setStats] = useState<Record<string, AchievementStats>>({})
   const [selectedAchievement, setSelectedAchievement] = useState<Achievement | null>(null)
@@ -58,13 +60,28 @@ export default function AdminAchievementsPage() {
     fetchStats()
   }, [])
 
+  // Check URL params for create mode
+  useEffect(() => {
+    const createParam = searchParams?.get('create')
+    if (createParam === 'true') {
+      setIsCreating(true)
+      setSelectedAchievement(null)
+    }
+  }, [searchParams])
+
   const fetchAchievements = async () => {
     try {
       setIsLoading(true)
       const response = await fetch('/api/admin/achievements')
       if (response.ok) {
-        const data = await response.json()
-        const apiAchievements = data.achievements || []
+        const contentType = response.headers.get('content-type')
+        if (!contentType || !contentType.includes('application/json')) {
+          console.warn('Expected JSON but got:', contentType)
+          return
+        }
+        try {
+          const data = await response.json()
+          const apiAchievements = data.achievements || []
         
         // Add example achievements for demonstration if none exist
         if (apiAchievements.length === 0) {
@@ -179,6 +196,9 @@ export default function AdminAchievementsPage() {
         } else {
           setAchievements(apiAchievements)
         }
+        } catch (parseError) {
+          console.error('Failed to parse JSON response:', parseError)
+        }
       }
     } catch (error) {
       console.error('Failed to fetch achievements:', error)
@@ -258,8 +278,17 @@ export default function AdminAchievementsPage() {
     try {
       const response = await fetch('/api/admin/achievements/stats')
       if (response.ok) {
-        const data = await response.json()
-        setStats(data.stats || {})
+        const contentType = response.headers.get('content-type')
+        if (!contentType || !contentType.includes('application/json')) {
+          console.warn('Expected JSON but got:', contentType)
+          return
+        }
+        try {
+          const data = await response.json()
+          setStats(data.stats || {})
+        } catch (parseError) {
+          console.error('Failed to parse JSON response:', parseError)
+        }
       }
     } catch (error) {
       console.error('Failed to fetch statistics:', error)
@@ -364,6 +393,11 @@ export default function AdminAchievementsPage() {
         body: JSON.stringify({ action: 'activate', ids }),
       })
 
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        console.warn('Expected JSON but got:', contentType)
+        return
+      }
       const data = await response.json()
       if (response.ok) {
         setSelectedAchievementIds(new Set())
@@ -392,6 +426,11 @@ export default function AdminAchievementsPage() {
         body: JSON.stringify({ action: 'deactivate', ids }),
       })
 
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        console.warn('Expected JSON but got:', contentType)
+        return
+      }
       const data = await response.json()
       if (response.ok) {
         setSelectedAchievementIds(new Set())
@@ -422,6 +461,11 @@ export default function AdminAchievementsPage() {
         body: JSON.stringify({ action: 'delete', ids }),
       })
 
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        console.warn('Expected JSON but got:', contentType)
+        return
+      }
       const data = await response.json()
       if (response.ok) {
         setSelectedAchievementIds(new Set())
@@ -663,7 +707,7 @@ export default function AdminAchievementsPage() {
             <p className="mt-4 text-sm text-[hsl(var(--muted-foreground))]">No achievements found</p>
             <button
               onClick={handleCreate}
-              className="mt-4 inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-[0_2px_8px_rgba(59,130,246,0.3),inset_0_1px_0_0_rgba(255,255,255,0.2)]"
+              className="mt-4 inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:bg-[hsl(var(--primary))]/90 transition-colors duration-200"
             >
               <Plus className="w-4 h-4" />
               Create Your First Achievement
@@ -870,6 +914,18 @@ export default function AdminAchievementsPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function AdminAchievementsPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[hsl(var(--primary))]"></div>
+      </div>
+    }>
+      <AdminAchievementsPageContent />
+    </Suspense>
   )
 }
 

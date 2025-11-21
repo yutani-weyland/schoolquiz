@@ -1,0 +1,232 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@schoolquiz/db'
+
+/**
+ * GET /api/admin/questions/bank
+ * List questions in the bank with optional filtering
+ */
+export async function GET(request: NextRequest) {
+  try {
+    const searchParams = request.nextUrl.searchParams
+    const search = searchParams.get('search') || ''
+    const categoryId = searchParams.get('categoryId') || ''
+    const sortBy = searchParams.get('sortBy') || 'updatedAt'
+    const sortOrder = searchParams.get('sortOrder') || 'desc'
+
+    try {
+      // Build where clause
+      const where: any = {}
+      
+      if (categoryId) {
+        where.categoryId = categoryId
+      }
+      
+      if (search) {
+        where.OR = [
+          { text: { contains: search, mode: 'insensitive' } },
+          { answer: { contains: search, mode: 'insensitive' } },
+          { explanation: { contains: search, mode: 'insensitive' } },
+        ]
+      }
+
+      // Build orderBy clause
+      const orderBy: any = {}
+      switch (sortBy) {
+        case 'question':
+          orderBy.text = sortOrder === 'asc' ? 'asc' : 'desc'
+          break
+        case 'answer':
+          orderBy.answer = sortOrder === 'asc' ? 'asc' : 'desc'
+          break
+        case 'category':
+          // Note: Prisma doesn't support sorting by related fields directly
+          // We'll sort by categoryId instead, or handle it in memory
+          orderBy.categoryId = sortOrder === 'asc' ? 'asc' : 'desc'
+          break
+        case 'updatedAt':
+        default:
+          orderBy.updatedAt = sortOrder === 'asc' ? 'asc' : 'desc'
+          break
+      }
+
+      // Fetch questions from database
+      const questions = await prisma.question.findMany({
+        where,
+        orderBy,
+        include: {
+          category: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      })
+
+      // Transform to match expected format
+      const formattedQuestions = questions.map(q => ({
+        id: q.id,
+        text: q.text,
+        answer: q.answer,
+        explanation: q.explanation || undefined,
+        categoryId: q.categoryId,
+        categoryName: q.category.name,
+        createdAt: q.createdAt.toISOString(),
+        updatedAt: q.updatedAt.toISOString(),
+      }))
+
+      console.log(`✅ Fetched ${questions.length} questions from database`)
+
+      return NextResponse.json({ questions: formattedQuestions })
+    } catch (dbError: any) {
+      // Fallback to dummy data if database is not available
+      console.log('Database not available, using dummy data for question bank')
+      
+      const dummyQuestions = [
+        {
+          id: 'q1',
+          text: 'What year did World War II end?',
+          answer: '1945',
+          explanation: 'World War II ended in 1945 with the surrender of Japan.',
+          categoryId: 'cat-2',
+          categoryName: 'WW2 History',
+          createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+          updatedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+        },
+        {
+          id: 'q2',
+          text: 'What is the capital of Western Australia?',
+          answer: 'Perth',
+          explanation: 'Perth is the capital and largest city of Western Australia.',
+          categoryId: 'cat-4',
+          categoryName: 'Geography',
+          createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+          updatedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+        },
+        {
+          id: 'q3',
+          text: 'Who was the first Prime Minister of Australia?',
+          answer: 'Edmund Barton',
+          explanation: 'Edmund Barton became the first Prime Minister of Australia in 1901.',
+          categoryId: 'cat-3',
+          categoryName: 'Australian History',
+          createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+          updatedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+        },
+      ]
+
+      let filtered = [...dummyQuestions]
+
+      // Apply filters
+      if (search) {
+        const searchLower = search.toLowerCase()
+        filtered = filtered.filter(q =>
+          q.text.toLowerCase().includes(searchLower) ||
+          q.answer.toLowerCase().includes(searchLower) ||
+          (q.explanation && q.explanation.toLowerCase().includes(searchLower))
+        )
+      }
+
+      if (categoryId) {
+        filtered = filtered.filter(q => q.categoryId === categoryId)
+      }
+
+      // Sort by updatedAt descending (most recent first)
+      filtered.sort((a, b) => 
+        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+      )
+
+      return NextResponse.json({ questions: filtered })
+    }
+  } catch (error: any) {
+    console.error('Error fetching questions:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch questions', details: error.message },
+      { status: 500 }
+    )
+  }
+}
+
+/**
+ * POST /api/admin/questions/bank
+ * Create a new question in the bank
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { text, answer, explanation, categoryId } = body
+
+    if (!text || !answer || !categoryId) {
+      return NextResponse.json(
+        { error: 'Missing required fields: text, answer, categoryId' },
+        { status: 400 }
+      )
+    }
+
+    try {
+      // Verify category exists
+      const category = await prisma.category.findUnique({
+        where: { id: categoryId },
+        select: { id: true, name: true },
+      })
+
+      if (!category) {
+        return NextResponse.json(
+          { error: 'Category not found' },
+          { status: 404 }
+        )
+      }
+
+      // Create question in database
+      // Note: createdBy is required in the schema, but we don't have auth yet
+      // For now, we'll use a placeholder. In production, use the authenticated user's ID
+      const question = await prisma.question.create({
+        data: {
+          text: text.trim(),
+          answer: answer.trim(),
+          explanation: explanation?.trim() || null,
+          categoryId,
+          difficulty: 0.5, // Default difficulty
+          status: 'draft',
+          createdBy: 'system', // TODO: Replace with actual user ID from auth
+        },
+        include: {
+          category: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      })
+
+      console.log(`✅ Created question ${question.id} in database`)
+
+      return NextResponse.json({
+        question: {
+          id: question.id,
+          text: question.text,
+          answer: question.answer,
+          explanation: question.explanation || undefined,
+          categoryId: question.categoryId,
+          categoryName: question.category.name,
+          createdAt: question.createdAt.toISOString(),
+          updatedAt: question.updatedAt.toISOString(),
+        },
+      }, { status: 201 })
+    } catch (dbError: any) {
+      console.error('Database error creating question:', dbError)
+      return NextResponse.json(
+        { error: 'Failed to create question', details: dbError.message },
+        { status: 500 }
+      )
+    }
+  } catch (error: any) {
+    console.error('Error creating question:', error)
+    return NextResponse.json(
+      { error: 'Failed to create question', details: error.message },
+      { status: 500 }
+    )
+  }
+}
+

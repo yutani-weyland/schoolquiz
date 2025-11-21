@@ -39,7 +39,7 @@ const sidebarItems: SidebarItem[] = [
   { id: 'quizzes', label: 'Quizzes', href: '/admin/quizzes', icon: BookOpen, section: 'content' },
   { id: 'drafts', label: 'Drafts', href: '/admin/drafts', icon: FileText, section: 'content' },
   { id: 'achievements', label: 'Achievements', href: '/admin/achievements', icon: Target, section: 'content' },
-  { id: 'question-submissions', label: 'Question Submissions', href: '/admin/questions/submissions', icon: MessageSquare, section: 'content' },
+  { id: 'question-submissions', label: "People's Round Submissions", href: '/admin/questions/submissions', icon: MessageSquare, section: 'content' },
   { id: 'scheduling', label: 'Scheduling', href: '/admin/scheduling', icon: Calendar, section: 'operations' },
   { id: 'analytics', label: 'Analytics', href: '/admin/analytics', icon: BarChart3, section: 'operations' },
   { id: 'billing', label: 'Billing', href: '/admin/billing', icon: CreditCard, section: 'operations' },
@@ -121,8 +121,8 @@ export function Sidebar() {
         href={item.href}
         className={`relative flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
           isActive 
-            ? 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))] border-l-4 border-[hsl(var(--primary))]' 
-            : 'text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] border-l-4 border-transparent'
+            ? 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]' 
+            : 'text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]'
         }`}
       >
         <Icon className="w-5 h-5 flex-shrink-0" />
