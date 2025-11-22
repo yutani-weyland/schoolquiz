@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { SiteHeader } from "@/components/SiteHeader";
 import NextQuizCountdown from "@/components/NextQuizCountdown";
@@ -17,59 +18,69 @@ import { getQuizColor } from "@/lib/colors";
 import type { Quiz } from "@/components/quiz/QuizCard";
 import { AchievementCard } from "@/components/achievements/AchievementCard";
 import type { UserTier } from "@/lib/feature-gating";
-import { Trophy, Users, TrendingUp, FileText, Download, RotateCcw, Sparkles, MessageSquare, Crown, School, ChevronLeft, ChevronRight } from "lucide-react";
+import { Trophy, Users, TrendingUp, FileText, Download, RotateCcw, Sparkles, MessageSquare, Crown, School, ChevronLeft, ChevronRight, FileEdit, Zap, Building2 } from "lucide-react";
 import { TypingAnimation } from "@/components/ui/typing-animation";
 import { SnowOverlay } from "@/components/ui/snow-overlay";
+import { cn } from "@/lib/utils";
 
 // Reasons carousel component
 function ReasonsCarousel() {
 	const [currentIndex, setCurrentIndex] = useState(0);
+	const videoVersion = "v3"; // Update this when video changes
+	const [isAutoScrolling, setIsAutoScrolling] = useState(true);
 	
 	const reasons = [
 		{
 			title: "Born out of frustration",
-			subline: "Built by a teacher who was sick of bad Kahoots, generic quiz content, and weekly/weekend quizzes that are simply too difficult or not relatable to students on the ground. Wanted something that actually builds connection, not just fills time.",
-			pills: ["Teacher-built", "Built for pastoral time", "No AI slop", "Ready to run"],
+			subline: "Designed by a teacher who wanted something better than the usual mix of clumsy Kahoots, generic quiz content, and weekly trivia that never seems to match what students actually know or care about.",
+			pills: ["Teacher-built", "Carefully curated", "Well balanced", "No AI slop"],
+		},
+		{
+			title: "Made for an Aussie classroom",
+			subline: "Featuring Australian current affairs, local events, sport, and the things young people are talking about right now.",
+			pills: ["Current events", "What's buzzing in Aus", "Headlines of the week", "Sport & big moments"],
+			hasFlag: true,
 		},
 		{
 			title: "Built for pastoral time",
-			subline: "Fits the reality of roll call and tutor time. Start, pause, resume whenever you need. No rigid structure that breaks when the bell goes.",
-			pills: ["Fits roll call", "Flexible start/pause/resume"],
+			subline: "Works for tutor groups, quick check-ins, and everything in between. Flexible and low-pressure — start, pause, resume. Perfect for connection in short bursts.",
+			pills: ["Flexible start/pause/resume", "Pastoral", "Short-window friendly", "Zero prep"],
 		},
 		{
-			title: "Ready to run",
-			subline: "Presenter mode for the screen, printable PDFs for paper copies. Three simple ways to run it your way, no setup required.",
-			pills: ["Presenter mode", "Printable PDFs"],
+			title: "Easy to run",
+			subline: "Switch between presenter mode, Quick View, or a printable PDF. However you teach, it's ready to go with zero setup.",
+			pills: ["Presenter mode", "Quick View", "Printable PDF", "Zero setup"],
 		},
 		{
-			title: "Balanced for teenagers",
-			subline: "Curated for Aussie teens, tuned to feel fair not brutal. The right mix of accessible, clever, and fun—so everyone gets to feel clever at least once.",
-			pills: ["Fair difficulty", "Not brutal", "Balanced for teenagers"],
+			title: "Balanced for high school students",
+			subline: "Designed for Aussie teenagers with a fair difficulty curve. Accessible, clever, and fun, with fresh topics and rotating categories each week to keep it engaging for everyone.",
+			pills: ["Fair difficulty", "Not brutal", "Balanced for students", "Varied each week"],
 		},
 		{
-			title: "Aussie + current",
-			subline: "Grounded in Australian culture, news, sport, and what's actually trending with teenagers here. Never generic. Always fresh.",
-			pills: ["Local culture", "Current news", "Aussie sport"],
+			title: "Curriculum aware",
+			subline: "Subject-based questions (history, geography, science, sport) reflect content students actually study across Australian secondary curriculums, not left-field trivia.",
+			pills: ["History", "Geography", "Science", "Sport", "Culture", "English", "Maths"],
 		},
 		{
-			title: "Curriculum-aware",
-			subline: "History, geography, civics, science, sport—when curriculum links make sense, they're woven in naturally. Not forced, just there.",
-			pills: ["Humanities", "Civics", "Geography"],
+			title: "Cultural events",
+			subline: "Celebrating the diversity of Australia — from Aboriginal and Torres Strait Islander culture and history to key cultural moments, festivals, and national observances across the year.",
+			pills: ["Aboriginal culture", "Torres Strait Islander", "Cultural awareness"],
+			aboriginalTheme: true,
 		},
 		{
 			title: "Social, not silent",
-			subline: "Designed for conversation, banter, and group thinking. No heads in laptops. No isolation. Just a room that's actually talking.",
-			pills: ["Class connection", "Heads up", "Social"],
+			subline: "Built for real interaction. No heads in laptops — just conversation, teamwork, and a bit of fun that supports connection and wellbeing.",
+			pills: ["Class connection", "Social", "Fun", "Wellbeing"],
 		},
 		{
 			title: "Healthy competition",
-			subline: "Join the public leaderboard or run your own mini-leagues for houses, year groups or mentor groups. Competition that builds connection, not division.",
+			subline: "Use the public leaderboard or create your own leagues for houses, cohorts, or mentor groups. The overall goals are connection and engagement — competition that stays friendly.",
 			pills: ["Public leaderboard", "Private leagues"],
 		},
 		{
 			title: "Fresh every week",
-			subline: "Topical, consistent, reliable. A new quiz every Monday morning. You'll never scramble for content mid-lesson again.",
-			pills: ["Topical", "Consistent", "Reliable"],
+			subline: "Topical, consistent, and reliable. A new quiz drops every Monday morning, so you're never scrambling for content mid-lesson. Replay past quizzes or dip back into older ones whenever you need.",
+			pills: ["Topical", "Consistent", "Reliable", "Replayable"],
 		},
 		{
 			title: "Classroom-safe content",
@@ -77,9 +88,9 @@ function ReasonsCarousel() {
 			pills: ["Age-appropriate", "Checked", "Classroom-safe"],
 		},
 		{
-			title: "Low tech friction",
-			subline: "No logins required for students. No apps to download. Just open it and run. Simple, fast, no drama.",
-			pills: ["No student logins", "Simple", "No apps"],
+			title: "Zero setup",
+			subline: "No logins, no apps, no downloads. Just open and run it with your class.",
+			pills: ["No logins", "No apps", "No downloads", "Instant start"],
 		},
 	];
 
@@ -88,14 +99,17 @@ function ReasonsCarousel() {
 	const maxIndex = Math.max(0, reasons.length - cardsToShow);
 
 	const goToNext = () => {
+		setIsAutoScrolling(false);
 		setCurrentIndex((prev) => Math.min(prev + 1, maxIndex));
 	};
 
 	const goToPrevious = () => {
+		setIsAutoScrolling(false);
 		setCurrentIndex((prev) => Math.max(prev - 1, 0));
 	};
 
 	const goToIndex = (index: number) => {
+		setIsAutoScrolling(false);
 		// When clicking a dot, show that card as the first visible card
 		const targetIndex = Math.min(index, maxIndex);
 		setCurrentIndex(targetIndex);
@@ -131,44 +145,43 @@ function ReasonsCarousel() {
 			<div className="max-w-7xl mx-auto">
 				{/* Header */}
 				<div className="text-center mb-10 sm:mb-12">
-					<h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-gray-900 dark:text-white mb-3">
-						Why The School Quiz exists
+					<h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
+						The story behind The School Quiz
 					</h2>
 					<p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-						The reasons I built this, and why it's different from what's already out there.
+						Created by a classroom teacher who saw a gap between what students enjoy and what most quizzes deliver.
 					</p>
 				</div>
 
 				{/* Carousel Container */}
 				<div className="relative">
-					{/* Navigation Arrows - Outside cards */}
-					<button
-						onClick={goToPrevious}
-						disabled={currentIndex === 0}
-						className={`absolute -left-4 sm:-left-6 md:-left-8 top-1/2 -translate-y-1/2 p-2 sm:p-3 rounded-full border border-gray-200/60 dark:border-gray-700/60 bg-white dark:bg-gray-900 shadow-sm transition-all z-10 ${
-							currentIndex === 0
-								? "opacity-30 cursor-not-allowed"
-								: "hover:bg-gray-50 dark:hover:bg-gray-800 hover:shadow-md"
-						}`}
-						aria-label="Previous"
-					>
-						<ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6 text-gray-700 dark:text-gray-300" />
-					</button>
-					<button
-						onClick={goToNext}
-						disabled={currentIndex >= maxIndex}
-						className={`absolute -right-4 sm:-right-6 md:-right-8 top-1/2 -translate-y-1/2 p-2 sm:p-3 rounded-full border border-gray-200/60 dark:border-gray-700/60 bg-white dark:bg-gray-900 shadow-sm transition-all z-10 ${
-							currentIndex >= maxIndex
-								? "opacity-30 cursor-not-allowed"
-								: "hover:bg-gray-50 dark:hover:bg-gray-800 hover:shadow-md"
-						}`}
-						aria-label="Next"
-					>
-						<ChevronRight className="h-5 w-5 sm:h-6 sm:w-6 text-gray-700 dark:text-gray-300" />
-					</button>
-
 					{/* Desktop: 3 cards */}
-					<div className="hidden md:grid md:grid-cols-3 gap-6 md:gap-8">
+					<div className="hidden md:grid md:grid-cols-3 gap-6 md:gap-8 relative">
+						{/* Navigation Arrows - Centered vertically relative to cards */}
+						<button
+							onClick={goToPrevious}
+							disabled={currentIndex === 0}
+							className={`absolute -left-4 sm:-left-6 md:-left-8 top-1/2 -translate-y-1/2 p-2 sm:p-3 rounded-full border border-gray-200/60 dark:border-gray-700/60 bg-white dark:bg-gray-900 shadow-sm transition-all z-10 ${
+								currentIndex === 0
+									? "opacity-30 cursor-not-allowed"
+									: "hover:bg-gray-50 dark:hover:bg-gray-800 hover:shadow-md"
+							}`}
+							aria-label="Previous"
+						>
+							<ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6 text-gray-700 dark:text-gray-300" />
+						</button>
+						<button
+							onClick={goToNext}
+							disabled={currentIndex >= maxIndex}
+							className={`absolute -right-4 sm:-right-6 md:-right-8 top-1/2 -translate-y-1/2 p-2 sm:p-3 rounded-full border border-gray-200/60 dark:border-gray-700/60 bg-white dark:bg-gray-900 shadow-sm transition-all z-10 ${
+								currentIndex >= maxIndex
+									? "opacity-30 cursor-not-allowed"
+									: "hover:bg-gray-50 dark:hover:bg-gray-800 hover:shadow-md"
+							}`}
+							aria-label="Next"
+						>
+							<ChevronRight className="h-5 w-5 sm:h-6 sm:w-6 text-gray-700 dark:text-gray-300" />
+						</button>
 						<AnimatePresence mode="wait">
 							{visibleReasons.map((reason, idx) => (
 								<motion.div
@@ -177,29 +190,78 @@ function ReasonsCarousel() {
 									animate={{ opacity: 1, x: 0 }}
 									exit={{ opacity: 0, x: -20 }}
 									transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1], delay: idx * 0.05 }}
-									style={{ transform: `rotate(${idx === 0 ? -1 : idx === 1 ? 0.5 : 1}deg)` }}
-									className="flex flex-col p-6 rounded-2xl border border-gray-200/60 dark:border-gray-700/60 bg-gradient-to-br from-blue-50/30 to-purple-50/20 dark:from-blue-950/20 dark:to-purple-950/10 backdrop-blur-sm"
+									style={{ transform: `rotate(${idx === 0 ? -0.75 : idx === 1 ? 0.75 : 0.5}deg)` }}
+									className={cn(
+										"flex flex-col p-6 rounded-2xl border backdrop-blur-sm relative overflow-hidden",
+										reason.aboriginalTheme
+											? "border-red-300/40 dark:border-red-700/40 bg-gradient-to-br from-red-50/40 via-yellow-50/30 to-black/5 dark:from-red-950/30 dark:via-yellow-950/20 dark:to-black/10"
+											: "border-gray-200/60 dark:border-gray-700/60 bg-gradient-to-br from-blue-50/30 to-purple-50/20 dark:from-blue-950/20 dark:to-purple-950/10"
+									)}
 								>
-									{/* Heading */}
-									<h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white mb-3 leading-tight">
-										{reason.title}
-									</h3>
-									
-									{/* Subline */}
-									<p className="text-sm text-gray-600 dark:text-gray-400 mb-4 leading-relaxed">
-										{reason.subline}
-									</p>
-									
-									{/* Pills */}
-									<div className="mt-auto flex flex-wrap gap-1.5">
-										{reason.pills.map((pill) => (
-											<span
-												key={pill}
-												className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium bg-gray-900/10 text-gray-900 dark:bg-white/20 dark:text-white"
+									{/* Australian video background for Aussie card */}
+									{reason.hasFlag && (
+										<>
+											<video
+												autoPlay
+												loop
+												muted
+												playsInline
+												className="absolute inset-0 w-full h-full object-cover opacity-30 dark:opacity-20"
+												key={videoVersion}
 											>
-												{pill}
-											</span>
-										))}
+												<source src={`/australia.mp4?v=${videoVersion}`} type="video/mp4" />
+											</video>
+											{/* Dark overlay for better text visibility */}
+											<div className="absolute inset-0 bg-black/20 dark:bg-black/40 pointer-events-none" />
+										</>
+									)}
+									{/* Aboriginal flag colors background for cultural events card */}
+									{reason.aboriginalTheme && (
+										<div className="absolute inset-0 opacity-[0.08] dark:opacity-[0.12] pointer-events-none">
+											<div className="absolute top-0 left-0 w-full h-1/2 bg-red-600" />
+											<div className="absolute bottom-0 left-0 w-full h-1/2 bg-black" />
+											<div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full bg-yellow-400" />
+										</div>
+									)}
+									<div className="relative z-10">
+										{/* Heading */}
+										<h3 className={cn(
+											"text-base md:text-lg font-semibold mb-3 leading-tight",
+											reason.hasFlag
+												? "text-white drop-shadow-lg"
+												: "text-gray-900 dark:text-white"
+										)}>
+											{reason.title}
+										</h3>
+										
+										{/* Subline */}
+										<p className={cn(
+											"text-sm mb-4 leading-relaxed",
+											reason.hasFlag
+												? "text-white/90 drop-shadow-md"
+												: "text-gray-600 dark:text-gray-400"
+										)}>
+											{reason.subline}
+										</p>
+										
+										{/* Pills */}
+										<div className="mt-auto flex flex-wrap gap-1.5">
+											{reason.pills.map((pill) => (
+												<span
+													key={pill}
+													className={cn(
+														"inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium",
+														reason.aboriginalTheme
+															? "bg-red-600/20 text-red-900 dark:bg-red-500/30 dark:text-red-200 border border-red-300/30 dark:border-red-600/30"
+															: reason.hasFlag
+															? "bg-white/20 text-white border border-white/30 backdrop-blur-sm"
+															: "bg-gray-900/10 text-gray-900 dark:bg-white/20 dark:text-white"
+													)}
+												>
+													{pill}
+												</span>
+											))}
+										</div>
 									</div>
 								</motion.div>
 							))}
@@ -207,7 +269,32 @@ function ReasonsCarousel() {
 					</div>
 
 					{/* Mobile: 1 card */}
-					<div className="md:hidden">
+					<div className="md:hidden relative">
+						{/* Navigation Arrows for Mobile */}
+						<button
+							onClick={goToPrevious}
+							disabled={currentIndex === 0}
+							className={`absolute -left-4 sm:-left-6 top-1/2 -translate-y-1/2 p-2 sm:p-3 rounded-full border border-gray-200/60 dark:border-gray-700/60 bg-white dark:bg-gray-900 shadow-sm transition-all z-10 ${
+								currentIndex === 0
+									? "opacity-30 cursor-not-allowed"
+									: "hover:bg-gray-50 dark:hover:bg-gray-800 hover:shadow-md"
+							}`}
+							aria-label="Previous"
+						>
+							<ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6 text-gray-700 dark:text-gray-300" />
+						</button>
+						<button
+							onClick={goToNext}
+							disabled={currentIndex >= maxIndex}
+							className={`absolute -right-4 sm:-right-6 top-1/2 -translate-y-1/2 p-2 sm:p-3 rounded-full border border-gray-200/60 dark:border-gray-700/60 bg-white dark:bg-gray-900 shadow-sm transition-all z-10 ${
+								currentIndex >= maxIndex
+									? "opacity-30 cursor-not-allowed"
+									: "hover:bg-gray-50 dark:hover:bg-gray-800 hover:shadow-md"
+							}`}
+							aria-label="Next"
+						>
+							<ChevronRight className="h-5 w-5 sm:h-6 sm:w-6 text-gray-700 dark:text-gray-300" />
+						</button>
 						<AnimatePresence mode="wait">
 							{mobileVisibleReasons.map((reason) => (
 								<motion.div
@@ -217,28 +304,77 @@ function ReasonsCarousel() {
 									exit={{ opacity: 0, x: -20 }}
 									transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
 									style={{ transform: `rotate(0.5deg)` }}
-									className="flex flex-col p-6 rounded-2xl border border-gray-200/60 dark:border-gray-700/60 bg-gradient-to-br from-blue-50/30 to-purple-50/20 dark:from-blue-950/20 dark:to-purple-950/10 backdrop-blur-sm"
+									className={cn(
+										"flex flex-col p-6 rounded-2xl border backdrop-blur-sm relative overflow-hidden",
+										reason.aboriginalTheme
+											? "border-red-300/40 dark:border-red-700/40 bg-gradient-to-br from-red-50/40 via-yellow-50/30 to-black/5 dark:from-red-950/30 dark:via-yellow-950/20 dark:to-black/10"
+											: "border-gray-200/60 dark:border-gray-700/60 bg-gradient-to-br from-blue-50/30 to-purple-50/20 dark:from-blue-950/20 dark:to-purple-950/10"
+									)}
 								>
-									{/* Heading */}
-									<h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white mb-3 leading-tight">
-										{reason.title}
-									</h3>
-									
-									{/* Subline */}
-									<p className="text-sm text-gray-600 dark:text-gray-400 mb-4 leading-relaxed">
-										{reason.subline}
-									</p>
-									
-									{/* Pills */}
-									<div className="mt-auto flex flex-wrap gap-1.5">
-										{reason.pills.map((pill) => (
-											<span
-												key={pill}
-												className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium bg-gray-900/10 text-gray-900 dark:bg-white/20 dark:text-white"
+									{/* Australian video background for Aussie card */}
+									{reason.hasFlag && (
+										<>
+											<video
+												autoPlay
+												loop
+												muted
+												playsInline
+												className="absolute inset-0 w-full h-full object-cover opacity-30 dark:opacity-20"
+												key={videoVersion}
 											>
-												{pill}
-											</span>
-										))}
+												<source src={`/australia.mp4?v=${videoVersion}`} type="video/mp4" />
+											</video>
+											{/* Dark overlay for better text visibility */}
+											<div className="absolute inset-0 bg-black/20 dark:bg-black/40 pointer-events-none" />
+										</>
+									)}
+									{/* Aboriginal flag colors background for cultural events card */}
+									{reason.aboriginalTheme && (
+										<div className="absolute inset-0 opacity-[0.08] dark:opacity-[0.12] pointer-events-none">
+											<div className="absolute top-0 left-0 w-full h-1/2 bg-red-600" />
+											<div className="absolute bottom-0 left-0 w-full h-1/2 bg-black" />
+											<div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full bg-yellow-400" />
+										</div>
+									)}
+									<div className="relative z-10">
+										{/* Heading */}
+										<h3 className={cn(
+											"text-base md:text-lg font-semibold mb-3 leading-tight",
+											reason.hasFlag
+												? "text-white drop-shadow-lg"
+												: "text-gray-900 dark:text-white"
+										)}>
+											{reason.title}
+										</h3>
+										
+										{/* Subline */}
+										<p className={cn(
+											"text-sm mb-4 leading-relaxed",
+											reason.hasFlag
+												? "text-white/90 drop-shadow-md"
+												: "text-gray-600 dark:text-gray-400"
+										)}>
+											{reason.subline}
+										</p>
+										
+										{/* Pills */}
+										<div className="mt-auto flex flex-wrap gap-1.5">
+											{reason.pills.map((pill) => (
+												<span
+													key={pill}
+													className={cn(
+														"inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium",
+														reason.aboriginalTheme
+															? "bg-red-600/20 text-red-900 dark:bg-red-500/30 dark:text-red-200 border border-red-300/30 dark:border-red-600/30"
+															: reason.hasFlag
+															? "bg-white/20 text-white border border-white/30 backdrop-blur-sm"
+															: "bg-gray-900/10 text-gray-900 dark:bg-white/20 dark:text-white"
+													)}
+												>
+													{pill}
+												</span>
+											))}
+										</div>
 									</div>
 								</motion.div>
 							))}
@@ -267,6 +403,16 @@ function ReasonsCarousel() {
 								/>
 							);
 						})}
+					</div>
+
+					{/* Find out more button */}
+					<div className="flex justify-center mt-8 sm:mt-10">
+						<Link
+							href="/about"
+							className="inline-flex items-center justify-center h-12 px-4 sm:px-6 bg-[#3B82F6] text-white rounded-full text-sm sm:text-base font-medium hover:bg-[#2563EB] transition-colors focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:ring-offset-2"
+						>
+							Find out more
+						</Link>
 					</div>
 				</div>
 			</div>
@@ -363,6 +509,7 @@ export default function HomePage() {
 	const [mounted, setMounted] = useState(false);
 	const [contentLoaded, setContentLoaded] = useState(false);
 	const [flippedCardIds, setFlippedCardIds] = useState<Set<string>>(new Set());
+	const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('yearly');
 
 	useEffect(() => {
 		setMounted(true);
@@ -616,7 +763,7 @@ export default function HomePage() {
 							animate={{ opacity: 1, y: 0 }}
 							transition={{ duration: 0.5, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
 						>
-							<div className="max-w-4xl mx-auto text-center">
+							<div className="max-w-6xl mx-auto text-center">
 								<h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
 									Earn achievements as you play
 								</h2>
@@ -635,7 +782,7 @@ export default function HomePage() {
 							animate={{ opacity: 1, y: 0 }}
 							transition={{ duration: 0.5, delay: 0.55, ease: [0.22, 1, 0.36, 1] }}
 						>
-							<div className="max-w-7xl mx-auto flex flex-wrap justify-center gap-4">
+							<div className="max-w-7xl mx-auto flex flex-wrap justify-center items-center gap-3 sm:gap-4 md:gap-5">
 								{[
 									{
 										id: "preview-1",
@@ -696,10 +843,34 @@ export default function HomePage() {
 										status: "unlocked" as const,
 										unlockedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
 									},
+									{
+										id: "preview-6",
+										slug: "first-blood",
+										name: "First Blood",
+										shortDescription: "Answer the first question correctly",
+										category: "performance",
+										rarity: "common",
+										isPremiumOnly: false,
+										cardVariant: "standard" as const,
+										status: "unlocked" as const,
+										unlockedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+									},
+									{
+										id: "preview-7",
+										slug: "streak-master",
+										name: "Streak Master",
+										shortDescription: "Play 10 quizzes in a row",
+										category: "engagement",
+										rarity: "epic",
+										isPremiumOnly: false,
+										cardVariant: "standard" as const,
+										status: "locked_free" as const,
+									},
 								].map((achievement, index) => {
-									const rotation = (index % 5 - 2) * 3; // Subtle angles: -6, -3, 0, 3, 6 degrees
 									const isFlipped = achievement.status === 'unlocked' && flippedCardIds.has(achievement.id);
 									const isUnlocked = achievement.status === 'unlocked';
+									// Subtle tilt: -1.5, -1, -0.5, 0, 0.5, 1, 1.5 degrees
+									const rotation = (index % 7 - 3) * 0.5;
 									
 									return (
 										<motion.div
@@ -709,25 +880,22 @@ export default function HomePage() {
 												opacity: 1, 
 												y: 0, 
 												scale: 1,
-												rotate: isUnlocked ? 0 : rotation, // No rotation for unlocked cards
+												rotate: isFlipped ? 0 : rotation,
 											}}
 											transition={{ 
 												duration: 0.4, 
 												delay: 0.6 + (index * 0.05),
 												ease: [0.22, 1, 0.36, 1]
 											}}
-											className="relative"
+											className="relative w-[140px] sm:w-[160px] md:w-[180px] flex-shrink-0"
 											style={{
-												width: 'clamp(120px, 25vw, 200px)',
-												maxWidth: '200px',
-												flexShrink: 0,
 												zIndex: isFlipped ? 1000 : 5 - index,
 											}}
 											whileHover={{ 
 												zIndex: 1000,
-												scale: 1.1,
+												scale: 1.05,
 												rotate: 0,
-												y: -8,
+												y: -4,
 												transition: { duration: 0.2 }
 											}}
 										>
@@ -755,8 +923,21 @@ export default function HomePage() {
 									);
 								})}
 							</div>
+							
+							{/* Explore Achievements Button */}
+							<div className="text-center mt-4 sm:mt-5">
+								<p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+									Fun, humorous and unique achievements added all the time.
+								</p>
+								<Link
+									href="/achievements"
+									className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-[#3B82F6] text-white font-medium hover:bg-[#2563EB] transition-colors focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:ring-offset-2"
+								>
+									Explore the achievements
+								</Link>
+							</div>
 						</motion.div>
-				) : null}
+					) : null}
 			</section>
 
 			{/* Premium Features - Mobbin Style */}
@@ -1330,7 +1511,7 @@ export default function HomePage() {
 			</section>
 
 			{/* Testimonials Section - Mobbin Style */}
-			<section className="w-full py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-white dark:bg-gray-900">
+			<section className="w-full py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8">
 				<motion.div
 					initial={{ opacity: 0, y: 20 }}
 					whileInView={{ opacity: 1, y: 0 }}
@@ -1348,12 +1529,12 @@ export default function HomePage() {
 					</div>
 
 					{/* Testimonials Infinite Scroll Carousel */}
-					<div className="relative overflow-hidden pb-6 mb-12 group/testimonials">
+					<div className="relative overflow-visible pb-6 mb-12 group/testimonials">
 						{/* Fade gradients at edges */}
-						<div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-white dark:from-gray-900 to-transparent z-20 pointer-events-none"></div>
-						<div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-white dark:from-gray-900 to-transparent z-20 pointer-events-none"></div>
+						<div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-gray-50 dark:from-[#0F1419] to-transparent z-20 pointer-events-none"></div>
+						<div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-gray-50 dark:from-[#0F1419] to-transparent z-20 pointer-events-none"></div>
 						
-						<div className="flex gap-6 animate-infinite-scroll group-hover/testimonials:pause-animation px-4 sm:px-6 md:px-8" style={{ width: 'max-content' }}>
+						<div className="flex gap-6 animate-infinite-scroll group-hover/testimonials:pause-animation px-8 sm:px-12 md:px-16" style={{ width: 'max-content' }}>
 							{/* First set of testimonials */}
 							{[
 								{ name: "Sarah L.", role: "Year 10 Adviser — NSW", quote: "Private leaderboards have created the healthiest bit of competition I've seen in pastoral time. The boys race to beat last week's score and actually cheer each other on.", rotate: -0.3 },
@@ -1448,12 +1629,312 @@ export default function HomePage() {
 							Submit a comment →
 						</a>
 						<p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
-							Share your experience — you might even unlock a tiny achievement 😉
+							Share your experience — you might even unlock an achievement 😉
 						</p>
 					</motion.div>
 				</motion.div>
 			</section>
 
+			{/* Pricing Section */}
+			<section className="w-full py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-gray-50 dark:bg-[#0F1419]">
+				<motion.div
+					initial={{ opacity: 0, y: 20 }}
+					whileInView={{ opacity: 1, y: 0 }}
+					viewport={{ once: true, margin: "-100px" }}
+					transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+					className="max-w-7xl mx-auto"
+				>
+					<div className="text-center mb-12">
+						<h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
+							Simple, sensible pricing
+						</h2>
+						<p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto mb-6">
+							Start free, upgrade when you're ready. Cancel anytime.
+						</p>
+						
+						{/* Billing Period Toggle */}
+						<div className="inline-flex items-center gap-2 p-1 bg-gray-100 dark:bg-gray-800 rounded-full">
+							<button
+								onClick={() => setBillingPeriod('monthly')}
+								className={cn(
+									"px-4 py-2 rounded-full text-sm font-medium transition-all",
+									billingPeriod === 'monthly'
+										? "bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm"
+										: "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+								)}
+							>
+								Monthly
+							</button>
+							<button
+								onClick={() => setBillingPeriod('yearly')}
+								className={cn(
+									"px-4 py-2 rounded-full text-sm font-medium transition-all",
+									billingPeriod === 'yearly'
+										? "bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm"
+										: "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+								)}
+							>
+								Yearly
+							</button>
+						</div>
+						{billingPeriod === 'yearly' && (
+							<p className="text-sm text-blue-600 dark:text-blue-400 mt-3 font-medium">
+								Save 25% on yearly subscription
+							</p>
+						)}
+					</div>
+
+					{/* Pricing Cards */}
+					<div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 max-w-6xl mx-auto">
+						{/* Free Plan */}
+						<motion.div
+							initial={{ opacity: 0, y: 20, rotate: -0.5 }}
+							whileInView={{ opacity: 1, y: 0, rotate: -0.5 }}
+							viewport={{ once: true }}
+							transition={{ 
+								duration: 0.5, 
+								delay: 0.1,
+								type: "spring",
+								stiffness: 300,
+								damping: 25
+							}}
+							whileHover={{ rotate: 0, scale: 1.02, y: -4 }}
+							className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 sm:p-8 flex flex-col hover:shadow-lg transition-all"
+							style={{ transformOrigin: 'center' }}
+						>
+							<div className="mb-6">
+								<h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-1.5">Free</h3>
+								<p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-5">Trialling the quiz in class</p>
+								<div className="mb-1">
+									<span className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">$0</span>
+								</div>
+							</div>
+							
+							<ul className="space-y-2.5 sm:space-y-3 flex-1 mb-6">
+								<li className="flex items-start gap-2.5">
+									<span className="text-blue-600 dark:text-blue-400 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✓</span>
+									<span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">3 free quizzes (lifetime)</span>
+								</li>
+								<li className="flex items-start gap-2.5">
+									<span className="text-gray-300 dark:text-gray-600 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✗</span>
+									<span className="text-xs sm:text-sm text-gray-500 dark:text-gray-500 leading-relaxed">No premium features</span>
+								</li>
+								<li className="flex items-start gap-2.5">
+									<span className="text-gray-300 dark:text-gray-600 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✗</span>
+									<span className="text-xs sm:text-sm text-gray-500 dark:text-gray-500 leading-relaxed">No printing, no past quizzes</span>
+								</li>
+								<li className="flex items-start gap-2.5">
+									<span className="text-gray-300 dark:text-gray-600 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✗</span>
+									<span className="text-xs sm:text-sm text-gray-500 dark:text-gray-500 leading-relaxed">No achievements, no leaderboards</span>
+								</li>
+							</ul>
+							
+							<p className="text-xs text-gray-500 dark:text-gray-500 mb-6 italic">About three weeks of Monday mornings</p>
+							
+							<Link
+								href="/sign-up"
+								className="w-full inline-flex items-center justify-center h-11 px-4 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-full text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
+							>
+								Get started
+							</Link>
+						</motion.div>
+
+						{/* Premium Plan */}
+						<motion.div
+							initial={{ opacity: 0, y: 20, rotate: 0 }}
+							whileInView={{ opacity: 1, y: 0, rotate: 0 }}
+							viewport={{ once: true }}
+							transition={{ 
+								duration: 0.5, 
+								delay: 0.2,
+								type: "spring",
+								stiffness: 300,
+								damping: 25
+							}}
+							whileHover={{ rotate: 0, scale: 1.02, y: -4 }}
+							className="bg-white dark:bg-gray-900 rounded-2xl border-2 border-blue-500 dark:border-blue-600 p-6 sm:p-8 flex flex-col relative hover:shadow-xl transition-all"
+							style={{ transformOrigin: 'center' }}
+						>
+							{/* Glow effect */}
+							<div className="absolute -inset-1 bg-gradient-to-r from-blue-400 to-blue-600 rounded-2xl opacity-20 dark:opacity-30 blur-xl -z-10"></div>
+							<div className="absolute top-4 right-4">
+								<span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+									Popular
+								</span>
+							</div>
+							
+							<div className="mb-6">
+								<h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-1.5">Premium</h3>
+								<p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-5">Individual teachers running weekly quizzes</p>
+								<div className="mb-1">
+									{billingPeriod === 'monthly' ? (
+										<>
+											<span className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">$6</span>
+											<span className="text-base sm:text-lg text-gray-600 dark:text-gray-400"> AUD</span>
+										</>
+									) : (
+										<>
+											<span className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">$54</span>
+											<span className="text-base sm:text-lg text-gray-600 dark:text-gray-400"> AUD</span>
+										</>
+									)}
+								</div>
+								<p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-1">
+									per teacher / {billingPeriod === 'monthly' ? 'month' : 'year'}
+								</p>
+								{billingPeriod === 'monthly' ? (
+									<p className="text-xs text-blue-600 dark:text-blue-400 font-medium">$1.50 per week</p>
+								) : (
+									<p className="text-xs text-blue-600 dark:text-blue-400 font-medium">$4.50 per month</p>
+								)}
+							</div>
+							
+							<ul className="space-y-2.5 sm:space-y-3 flex-1 mb-6">
+								<li className="flex items-start gap-2.5">
+									<span className="text-blue-600 dark:text-blue-400 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✓</span>
+									<span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">Every weekly quiz, instantly on Monday mornings</span>
+								</li>
+								<li className="flex items-start gap-2.5">
+									<span className="text-blue-600 dark:text-blue-400 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✓</span>
+									<span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">Replay any quiz (past quizzes library)</span>
+								</li>
+								<li className="flex items-start gap-2.5">
+									<span className="text-blue-600 dark:text-blue-400 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✓</span>
+									<span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">Printable PDF packs</span>
+								</li>
+								<li className="flex items-start gap-2.5">
+									<span className="text-blue-600 dark:text-blue-400 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✓</span>
+									<span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">Achievements, streak tracking</span>
+								</li>
+								<li className="flex items-start gap-2.5">
+									<span className="text-blue-600 dark:text-blue-400 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✓</span>
+									<span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">Private leaderboards</span>
+								</li>
+								<li className="flex items-start gap-2.5">
+									<span className="text-blue-600 dark:text-blue-400 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✓</span>
+									<span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">The People's Round submissions</span>
+								</li>
+								<li className="flex items-start gap-2.5">
+									<span className="text-blue-600 dark:text-blue-400 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✓</span>
+									<span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">Early access to special editions</span>
+								</li>
+							</ul>
+							
+							<p className="text-xs text-gray-500 dark:text-gray-500 mb-6 italic">Cancel anytime, no lock-in</p>
+							
+							<Link
+								href="/sign-up"
+								className="w-full inline-flex items-center justify-center h-11 px-4 bg-[#3B82F6] text-white rounded-full text-sm font-medium hover:bg-[#2563EB] transition-colors focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:ring-offset-2"
+							>
+								Get started
+							</Link>
+						</motion.div>
+
+						{/* Organisation Plan */}
+						<motion.div
+							initial={{ opacity: 0, y: 20, rotate: 0.5 }}
+							whileInView={{ opacity: 1, y: 0, rotate: 0.5 }}
+							viewport={{ once: true }}
+							transition={{ 
+								duration: 0.5, 
+								delay: 0.3,
+								type: "spring",
+								stiffness: 300,
+								damping: 25
+							}}
+							whileHover={{ rotate: 0, scale: 1.02, y: -4 }}
+							className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 sm:p-8 flex flex-col hover:shadow-lg transition-all"
+							style={{ transformOrigin: 'center' }}
+						>
+							<div className="mb-6">
+								<h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-1.5">Organisation</h3>
+								<p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-5">Departments, faculties, whole schools</p>
+								<div className="mb-1">
+									{billingPeriod === 'monthly' ? (
+										<>
+											<span className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">$4.50</span>
+											<span className="text-base sm:text-lg text-gray-600 dark:text-gray-400"> AUD</span>
+										</>
+									) : (
+										<>
+											<span className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">$40.50</span>
+											<span className="text-base sm:text-lg text-gray-600 dark:text-gray-400"> AUD</span>
+										</>
+									)}
+								</div>
+								<p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-1">
+									per teacher / {billingPeriod === 'monthly' ? 'month' : 'year'}
+								</p>
+								<p className="text-xs text-green-600 dark:text-green-400 font-medium">25% off (minimum 5 teachers)</p>
+							</div>
+							
+							<ul className="space-y-2.5 sm:space-y-3 flex-1 mb-6">
+								<li className="flex items-start gap-2.5">
+									<span className="text-blue-600 dark:text-blue-400 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✓</span>
+									<span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed"><strong>All Premium features</strong></span>
+								</li>
+								<li className="flex items-start gap-2.5">
+									<span className="text-blue-600 dark:text-blue-400 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✓</span>
+									<span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">Central billing</span>
+								</li>
+								<li className="flex items-start gap-2.5">
+									<span className="text-blue-600 dark:text-blue-400 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✓</span>
+									<span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">Shared private leagues (houses, mentor groups, year groups)</span>
+								</li>
+								<li className="flex items-start gap-2.5">
+									<span className="text-blue-600 dark:text-blue-400 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✓</span>
+									<span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">School-wide data snapshots</span>
+								</li>
+								<li className="flex items-start gap-2.5">
+									<span className="text-blue-600 dark:text-blue-400 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✓</span>
+									<span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">Priority support</span>
+								</li>
+							</ul>
+							
+							<p className="text-xs text-gray-500 dark:text-gray-500 mb-6">
+								{billingPeriod === 'monthly' ? 'From $270/year for 5 teachers' : 'From $202.50/year for 5 teachers'}
+							</p>
+							
+							<Link
+								href="/sign-up"
+								className="w-full inline-flex items-center justify-center h-11 px-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-full text-sm font-medium hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
+							>
+								Get started
+							</Link>
+						</motion.div>
+					</div>
+
+					{/* Custom Quizzes Section */}
+					<motion.div
+						initial={{ opacity: 0, y: 20 }}
+						whileInView={{ opacity: 1, y: 0 }}
+						viewport={{ once: true, margin: "-50px" }}
+						transition={{ 
+							duration: 0.5, 
+							delay: 0.5,
+							type: "spring",
+							stiffness: 300,
+							damping: 25
+						}}
+						className="mt-16 sm:mt-20"
+					>
+						<div className="text-center mb-8">
+							<h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2">
+								Interested in custom quizzes?
+							</h3>
+							<p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-6">
+								You aren't the only one, please get in touch for pricing.
+							</p>
+							<Link
+								href="/contact"
+								className="inline-flex items-center justify-center h-12 px-4 sm:px-6 bg-[#3B82F6] text-white rounded-full text-sm sm:text-base font-medium hover:bg-[#2563EB] transition-colors focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:ring-offset-2"
+							>
+								Get in touch
+							</Link>
+						</div>
+					</motion.div>
+				</motion.div>
+			</section>
 
 				{/* Footer */}
 				<Footer />
