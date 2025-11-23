@@ -1,5 +1,23 @@
+'use client'
+
 import React from 'react';
-import { LineChart, Line, ResponsiveContainer, AreaChart, Area } from 'recharts';
+import dynamic from 'next/dynamic';
+
+// Lazy load recharts components - code-split to reduce initial bundle
+const ResponsiveContainer = dynamic(
+  () => import('recharts').then(mod => mod.ResponsiveContainer),
+  { ssr: false }
+);
+
+const AreaChart = dynamic(
+  () => import('recharts').then(mod => mod.AreaChart),
+  { ssr: false }
+);
+
+const Area = dynamic(
+  () => import('recharts').then(mod => mod.Area),
+  { ssr: false }
+);
 
 interface KPICardProps {
   title: string;
@@ -71,18 +89,20 @@ export function KPICard({ title, value, trend, icon, format = 'number', subtitle
       
       {/* Mini Sparkline */}
       <div className="h-12 w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={trend.data}>
-            <Area
-              type="monotone"
-              dataKey="value"
-              stroke={trend.direction === 'up' ? '#10B981' : trend.direction === 'down' ? '#EF4444' : '#6B7280'}
-              fill={trend.direction === 'up' ? '#10B981' : trend.direction === 'down' ? '#EF4444' : '#6B7280'}
-              fillOpacity={0.1}
-              strokeWidth={2}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
+        <React.Suspense fallback={<div className="h-full w-full bg-gray-100 dark:bg-gray-700 animate-pulse rounded" />}>
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={trend.data.map((value, index) => ({ value, index }))}>
+              <Area
+                type="monotone"
+                dataKey="value"
+                stroke={trend.direction === 'up' ? '#10B981' : trend.direction === 'down' ? '#EF4444' : '#6B7280'}
+                fill={trend.direction === 'up' ? '#10B981' : trend.direction === 'down' ? '#EF4444' : '#6B7280'}
+                fillOpacity={0.1}
+                strokeWidth={2}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </React.Suspense>
       </div>
     </div>
   );

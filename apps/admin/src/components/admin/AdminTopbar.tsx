@@ -55,7 +55,36 @@ export function AdminTopbar() {
   }, [])
 
   const handleSignOut = async () => {
-    await signOut({ callbackUrl: '/' })
+    // Set flag to prevent home page from redirecting back to admin
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('signingOut', 'true')
+      
+      // Clear localStorage FIRST before NextAuth sign out
+      // This prevents the home page from redirecting back to admin
+      localStorage.removeItem('authToken')
+      localStorage.removeItem('userId')
+      localStorage.removeItem('userName')
+      localStorage.removeItem('userEmail')
+      localStorage.removeItem('platformRole')
+      localStorage.removeItem('userTier')
+      localStorage.removeItem('isLoggedIn')
+      // Dispatch event to notify UserAccessContext
+      window.dispatchEvent(new Event('authChange'))
+    }
+    
+    try {
+      await signOut({ 
+        callbackUrl: '/',
+        redirect: true 
+      })
+    } catch (error) {
+      // If NextAuth signOut fails, we've already cleared localStorage
+      console.error('Sign out error:', error)
+      // Force redirect to home
+      if (typeof window !== 'undefined') {
+        window.location.href = '/'
+      }
+    }
   }
 
   return (

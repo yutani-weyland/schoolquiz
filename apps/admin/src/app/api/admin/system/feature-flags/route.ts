@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
-import { dummyFeatureFlags } from '@/lib/dummy-billing-data'
 
 /**
  * GET /api/admin/system/feature-flags
@@ -17,10 +16,10 @@ export async function GET(request: NextRequest) {
 
     // TODO: Add proper admin role check
 
-    // For testing: Always use dummy data
-    console.log('Using dummy data for feature flags')
+    // For testing: Return empty array
+    console.log('Using empty data for feature flags')
 
-    return NextResponse.json({ flags: dummyFeatureFlags })
+    return NextResponse.json({ flags: [] })
   } catch (error: any) {
     console.error('Error fetching feature flags:', error)
     return NextResponse.json(
@@ -29,4 +28,3 @@ export async function GET(request: NextRequest) {
     )
   }
 }
-

@@ -1,4 +1,48 @@
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, AreaChart, Area, Treemap, Cell } from 'recharts';
+'use client'
+
+import React from 'react';
+import dynamic from 'next/dynamic';
+
+// Lazy load recharts components - code-split to reduce initial bundle
+const ResponsiveContainer = dynamic(
+  () => import('recharts').then(mod => mod.ResponsiveContainer),
+  { ssr: false }
+);
+
+const AreaChart = dynamic(
+  () => import('recharts').then(mod => mod.AreaChart),
+  { ssr: false }
+);
+
+const Area = dynamic(
+  () => import('recharts').then(mod => mod.Area),
+  { ssr: false }
+);
+
+const LineChart = dynamic(
+  () => import('recharts').then(mod => mod.LineChart),
+  { ssr: false }
+);
+
+const Line = dynamic(
+  () => import('recharts').then(mod => mod.Line),
+  { ssr: false }
+);
+
+const Treemap = dynamic(
+  () => import('recharts').then(mod => mod.Treemap),
+  { ssr: false }
+);
+
+const Tooltip = dynamic(
+  () => import('recharts').then(mod => mod.Tooltip),
+  { ssr: false }
+);
+
+const Cell = dynamic(
+  () => import('recharts').then(mod => mod.Cell),
+  { ssr: false }
+);
 
 // Compact KPI Sparkline Card Component
 interface SparklineCardProps {
@@ -28,18 +72,20 @@ export function SparklineCard({ title, value, trend, trendLabel, data, color, ic
       </div>
       <div className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{value}</div>
       <div className="h-8 w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data.map((value, index) => ({ value, index }))}>
-            <Area 
-              type="monotone" 
-              dataKey="value" 
-              stroke={color} 
-              fill={color} 
-              fillOpacity={0.2}
-              strokeWidth={2}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
+        <React.Suspense fallback={<div className="h-full w-full bg-gray-100 dark:bg-gray-700 animate-pulse rounded" />}>
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={data.map((value, index) => ({ value, index }))}>
+              <Area 
+                type="monotone" 
+                dataKey="value" 
+                stroke={color} 
+                fill={color} 
+                fillOpacity={0.2}
+                strokeWidth={2}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </React.Suspense>
       </div>
       <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{trendLabel}</div>
     </div>
@@ -111,17 +157,19 @@ export function CategoryLeaderboard({ data }: CategoryLeaderboardProps) {
                 </td>
                 <td className="px-4 py-3">
                   <div className="h-6 w-16">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={item.trend.map((value, index) => ({ value, index }))}>
-                        <Line 
-                          type="monotone" 
-                          dataKey="value" 
-                          stroke="#3B82F6" 
-                          strokeWidth={2}
-                          dot={false}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
+                    <React.Suspense fallback={<div className="h-full w-full bg-gray-100 dark:bg-gray-700 animate-pulse rounded" />}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={item.trend.map((value, index) => ({ value, index }))}>
+                          <Line 
+                            type="monotone" 
+                            dataKey="value" 
+                            stroke="#3B82F6" 
+                            strokeWidth={2}
+                            dot={false}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </React.Suspense>
                   </div>
                 </td>
               </tr>
@@ -309,25 +357,27 @@ export function QuestionBankTreemap({ data }: QuestionBankTreemapProps) {
       </div>
       <div className="p-4">
         <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <Treemap
-              data={data}
-              dataKey="size"
-              aspectRatio={4/3}
-              stroke="#fff"
-              fill="#8884d8"
-            >
-              <Tooltip 
-                formatter={(value, name, props) => [
-                  `${value} questions`,
-                  props.payload.name
-                ]}
-              />
-              {data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-              ))}
-            </Treemap>
-          </ResponsiveContainer>
+          <React.Suspense fallback={<div className="h-full w-full bg-gray-100 dark:bg-gray-700 animate-pulse rounded" />}>
+            <ResponsiveContainer width="100%" height="100%">
+              <Treemap
+                data={data}
+                dataKey="size"
+                aspectRatio={4/3}
+                stroke="#fff"
+                fill="#8884d8"
+              >
+                <Tooltip 
+                  formatter={(value, name, props) => [
+                    `${value} questions`,
+                    props.payload.name
+                  ]}
+                />
+                {data.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Treemap>
+            </ResponsiveContainer>
+          </React.Suspense>
         </div>
       </div>
     </div>

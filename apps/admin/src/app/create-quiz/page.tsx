@@ -750,7 +750,8 @@ export default function CreateQuiz() {
         alert(`Quiz #${quiz.number} ${isEditing ? 'updated and ' : ''}${asDraft ? 'saved as draft' : 'published'} successfully!`);
       }
       
-      router.push('/dashboard');
+      // Redirect to admin quizzes page after saving
+      router.push('/admin/quizzes');
     } catch (error: any) {
       console.error('Error saving quiz:', error);
       setSaveError(error.message || 'Failed to save quiz');

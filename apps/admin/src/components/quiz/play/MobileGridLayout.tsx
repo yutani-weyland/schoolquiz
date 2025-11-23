@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useRef } from "react";
+import React, { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CalendarDays, Flag } from "lucide-react";
 import AnswerReveal from "../AnswerReveal";
@@ -61,48 +61,63 @@ export function MobileGridLayout({
     }, {});
   }, [rounds]);
 
-  // Track which round title is currently visible on screen
-  useEffect(() => {
-    const checkVisibleRoundTitles = () => {
-      const visibleRounds: number[] = [];
+  // Optimized: Track which round title is currently visible on screen
+  // Use throttling and memoization to reduce calculations
+  const checkVisibleRoundTitles = useCallback(() => {
+    const visibleRounds: number[] = [];
+    const viewportTop30 = window.innerHeight * 0.3;
+    const viewportTop50 = window.innerHeight * 0.5;
+    
+    roundTitleRefs.current.forEach((element, roundNumber) => {
+      if (!element) return;
       
-      roundTitleRefs.current.forEach((element, roundNumber) => {
-        if (!element) return;
-        
-        const rect = element.getBoundingClientRect();
-        const isVisible = rect.top >= 0 && rect.top <= window.innerHeight * 0.3; // Top 30% of viewport
-        
-        if (isVisible) {
-          visibleRounds.push(roundNumber);
-        }
-      });
+      const rect = element.getBoundingClientRect();
+      const isVisible = rect.top >= 0 && rect.top <= viewportTop30;
       
-      // If a round title is visible, hide the floating pill
-      // Otherwise, show the pill for the current round (based on first question in viewport)
-      if (visibleRounds.length > 0) {
-        setVisibleRoundTitle(null);
-      } else {
-        // Find the current round based on questions in viewport
-        const questionElements = document.querySelectorAll('[id^="mobile-question-"]');
-        let currentRound: number | null = null;
-        
-        questionElements.forEach((el) => {
-          const rect = el.getBoundingClientRect();
-          if (rect.top >= 0 && rect.top <= window.innerHeight * 0.5) {
-            const questionId = parseInt(el.id.replace('mobile-question-', ''));
-            const question = questions.find(q => q.id === questionId);
-            if (question) {
-              currentRound = question.roundNumber;
-            }
-          }
-        });
-        
-        setVisibleRoundTitle(currentRound);
+      if (isVisible) {
+        visibleRounds.push(roundNumber);
       }
-    };
+    });
+    
+    // If a round title is visible, hide the floating pill
+    if (visibleRounds.length > 0) {
+      setVisibleRoundTitle((prev) => prev !== null ? null : prev);
+      return;
+    }
+    
+    // Find the current round based on questions in viewport - optimized
+    // Only check questions that are likely in viewport
+    let currentRound: number | null = null;
+    const scrollY = window.scrollY;
+    const viewportHeight = window.innerHeight;
+    
+    // Binary search optimization: find first question in viewport
+    for (let i = 0; i < questions.length; i++) {
+      const question = questions[i];
+      const el = document.getElementById(`mobile-question-${question.id}`);
+      if (!el) continue;
+      
+      const rect = el.getBoundingClientRect();
+      if (rect.top >= 0 && rect.top <= viewportTop50) {
+        currentRound = question.roundNumber;
+        break; // Found first visible question, no need to continue
+      }
+    }
+    
+    setVisibleRoundTitle((prev) => prev !== currentRound ? currentRound : prev);
+  }, [questions]);
 
+  useEffect(() => {
+    // Throttle scroll handler to reduce calculations
+    let ticking = false;
     const handleScroll = () => {
-      requestAnimationFrame(checkVisibleRoundTitles);
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          checkVisibleRoundTitles();
+          ticking = false;
+        });
+        ticking = true;
+      }
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -111,9 +126,10 @@ export function MobileGridLayout({
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
-  }, [questions]);
+  }, [checkVisibleRoundTitles]);
 
-  const getRoundAccent = (roundNumber: number) => {
+  // Memoize round accent color calculation
+  const getRoundAccent = useMemo(() => {
     const palette = [
       "#2DD4BF", // Round 1 - teal (different from quiz color)
       "#F97316", // Round 2 - orange
@@ -121,17 +137,20 @@ export function MobileGridLayout({
       "#8B5CF6", // Round 4 - purple
       "#C084FC", // Finale - lavender
     ];
-    return roundNumber === finaleRoundNumber
-      ? palette[palette.length - 1]
-      : palette[(roundNumber - 1) % palette.length] || "#2DD4BF";
-  };
+    return (roundNumber: number) => {
+      return roundNumber === finaleRoundNumber
+        ? palette[palette.length - 1]
+        : palette[(roundNumber - 1) % palette.length] || "#2DD4BF";
+    };
+  }, [finaleRoundNumber]);
 
-  const getQuestionStatus = (question: QuizQuestion): "idle" | "revealed" | "correct" | "incorrect" => {
+  // Memoize question status calculation
+  const getQuestionStatus = useCallback((question: QuizQuestion): "idle" | "revealed" | "correct" | "incorrect" => {
     if (correctAnswers.has(question.id)) return "correct";
     if (incorrectAnswers.has(question.id)) return "incorrect";
     if (revealedAnswers.has(question.id)) return "revealed";
     return "idle";
-  };
+  }, [correctAnswers, incorrectAnswers, revealedAnswers]);
 
   const totalCorrect = correctAnswers.size;
   const textIsLight = textColor === "white";
@@ -276,6 +295,8 @@ export function MobileGridLayout({
           />
           <section className="quiz-grid-layout quiz-grid-single-column mx-auto max-w-5xl w-full">
             {questions.map((question, index) => {
+              // Early return optimization: skip rendering if question data is invalid
+              if (!question || !question.id) return null;
               const status = getQuestionStatus(question);
               const round = roundLookup[question.roundNumber];
               const accentColor = getRoundAccent(question.roundNumber);
@@ -293,17 +314,6 @@ export function MobileGridLayout({
               };
               
               const questionAngle = getQuestionAngle(index);
-              
-              // Enhanced shadow for round titles - creates a "lifted" effect
-              const getRoundShadow = (roundNum: number, accentColor: string): string => {
-                // Create a more pronounced shadow with slight variation between rounds
-                const shadowOpacity = 0.18 + (roundNum % 3) * 0.04;
-                const shadowColor = accentColor ? `${accentColor}${Math.round(shadowOpacity * 255).toString(16).padStart(2, '0')}` : 'rgba(17,17,17,0.18)';
-                const shadowColorSecondary = accentColor ? `${accentColor}${Math.round(shadowOpacity * 0.6 * 255).toString(16).padStart(2, '0')}` : 'rgba(17,17,17,0.1)';
-                return `0 20px 40px ${shadowColor}, 0 8px 16px ${shadowColorSecondary}, 0 0 0 1px ${accentColor?.concat("40") ?? "rgba(17,17,17,0.1)"}`;
-              };
-              
-              const roundShadow = showRoundIntro && round ? getRoundShadow(round.number, accentColor) : `0 12px 28px ${accentColor?.concat("2b") ?? "rgba(17,17,17,0.08)"}, 0 0 0 1px ${accentColor?.concat("40") ?? "rgba(17,17,17,0.1)"}`;
 
               const surfaceAccent = accentColor || "#ffffff";
               const baseSurface = `color-mix(in srgb, #ffffff 92%, ${surfaceAccent} 8%)`;
@@ -333,6 +343,15 @@ export function MobileGridLayout({
 
               const statusStyle: React.CSSProperties = {};
 
+              // Memoize expensive style calculations
+              const roundShadowMemo = useMemo(() => {
+                if (!showRoundIntro || !round) return `0 12px 28px ${accentColor?.concat("2b") ?? "rgba(17,17,17,0.08)"}, 0 0 0 1px ${accentColor?.concat("40") ?? "rgba(17,17,17,0.1)"}`;
+                const shadowOpacity = 0.18 + (round.number % 3) * 0.04;
+                const shadowColor = accentColor ? `${accentColor}${Math.round(shadowOpacity * 255).toString(16).padStart(2, '0')}` : 'rgba(17,17,17,0.18)';
+                const shadowColorSecondary = accentColor ? `${accentColor}${Math.round(shadowOpacity * 0.6 * 255).toString(16).padStart(2, '0')}` : 'rgba(17,17,17,0.1)';
+                return `0 20px 40px ${shadowColor}, 0 8px 16px ${shadowColorSecondary}, 0 0 0 1px ${accentColor?.concat("40") ?? "rgba(17,17,17,0.1)"}`;
+              }, [showRoundIntro, round, accentColor]);
+
               return (
                 <React.Fragment key={question.id}>
                   {showRoundIntro && round && (
@@ -357,7 +376,7 @@ export function MobileGridLayout({
                         background: `color-mix(in srgb, ${accentColor} 25%, rgba(255,255,255,0.95) 75%)`,
                         borderColor: `color-mix(in srgb, ${accentColor} 35%, rgba(255,255,255,0.7))`,
                         borderWidth: '2px',
-                        boxShadow: roundShadow,
+                        boxShadow: roundShadowMemo,
                         transition: "background-color 300ms ease-in-out, border-color 300ms ease-in-out, box-shadow 300ms ease-in-out",
                       }}
                       aria-label={`Round ${round.number} overview`}

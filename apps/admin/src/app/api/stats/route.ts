@@ -43,13 +43,21 @@ export async function GET(request: NextRequest) {
   try {
     console.log('[Stats API] Starting stats fetch...')
     
-    // Get headers for auth check
+    // Get headers for auth check (client-side requests)
     const userId = request.headers.get('x-user-id')
     const authHeader = request.headers.get('authorization')
     
+    // Also check cookies (server-side requests)
+    const cookieUserId = request.cookies.get('userId')?.value
+    const cookieToken = request.cookies.get('authToken')?.value
+    
+    // Use cookie values if headers not available (server-side fetch)
+    const finalUserId = userId || cookieUserId
+    const finalAuth = authHeader || (cookieToken ? `Bearer ${cookieToken}` : null)
+    
     // Check if user is authenticated (has userId and token)
-    if (!userId || !authHeader) {
-      console.log('[Stats API] No auth headers - unauthorized')
+    if (!finalUserId || !finalAuth) {
+      console.log('[Stats API] No auth - unauthorized')
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }

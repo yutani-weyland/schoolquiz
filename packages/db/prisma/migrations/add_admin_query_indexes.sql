@@ -39,3 +39,4 @@ CREATE INDEX IF NOT EXISTS "organisations_name_createdAt_idx" ON "organisations"
 -- Email domain is frequently searched
 CREATE INDEX IF NOT EXISTS "organisations_emailDomain_idx" ON "organisations"("emailDomain");
 
+

@@ -13,6 +13,7 @@
     "db:seed": "tsx src/seed.ts",
     "db:seed:admin": "tsx src/seed-admin.ts",
     "db:create-premium-user": "tsx src/create-premium-user.ts",
+    "db:make-admin": "tsx src/make-admin.ts",
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
     "db:reset": "prisma migrate reset",

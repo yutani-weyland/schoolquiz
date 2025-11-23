@@ -1,0 +1,10 @@
+To make a user a platform admin, run:
+
+cd packages/db
+pnpm db:make-admin <your-email@example.com>
+
+Or if the user doesn't exist yet:
+pnpm db:make-admin <your-email@example.com> --create
+
+Example:
+pnpm db:make-admin admin@schoolquiz.com --create

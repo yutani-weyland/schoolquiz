@@ -67,7 +67,7 @@ export default function AnalyticsPage() {
           const colors = getColorClasses(page.color)
           
           return (
-            <Link key={page.id} href={page.href}>
+            <Link key={page.id} href={page.href} prefetch={false}>
               <Card className="group hover:border-[hsl(var(--primary))] transition-all duration-200 cursor-pointer">
                 <div className="flex items-start justify-between mb-4">
                   <div className={`p-3 ${colors.bg} rounded-xl`}>
@@ -106,6 +106,7 @@ export default function AnalyticsPage() {
               <Link
                 key={page.id}
                 href={page.href}
+                prefetch={false}
                 className="flex items-center gap-3 p-4 bg-[hsl(var(--muted))] rounded-xl border border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))]/80 transition-all duration-200"
               >
                 <Icon className="w-5 h-5 text-[hsl(var(--muted-foreground))]" />

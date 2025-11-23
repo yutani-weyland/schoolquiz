@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mail, Phone, ArrowRight, Loader2, Lock } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ContentCard } from "@/components/layout/ContentCard";
 import { setUserTier } from "@/lib/storage";
 
@@ -12,6 +12,7 @@ type SigninMethod = "email" | "phone";
 
 export default function SignInForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [method, setMethod] = useState<SigninMethod>("email");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -58,14 +59,55 @@ export default function SignInForm() {
           console.log('[SignInForm] Stored userTier:', data.tier);
           console.log('[SignInForm] Verified:', localStorage.getItem('userTier'));
         }
+        // Store platformRole for redirect logic
+        if (data.platformRole) {
+          localStorage.setItem('platformRole', data.platformRole);
+          console.log('[SignInForm] Stored platformRole:', data.platformRole);
+        } else {
+          localStorage.removeItem('platformRole');
+        }
         
         // Dispatch custom event to notify UserAccessContext immediately
         console.log('[SignInForm] Dispatching authChange event');
         window.dispatchEvent(new Event("authChange"));
       }
 
-      // Redirect to quizzes page immediately - the page will check localStorage directly
-      router.push("/quizzes");
+      // Determine redirect destination
+      const callbackUrl = searchParams.get('callbackUrl');
+      const isPlatformAdmin = data.platformRole === 'PLATFORM_ADMIN';
+      
+      console.log('[SignInForm] Redirect check:', {
+        email: data.email,
+        platformRole: data.platformRole,
+        isPlatformAdmin,
+        callbackUrl,
+      });
+      
+      // Set cookies so middleware and server components can see the auth token
+      // This enables server-side data fetching
+      if (data.token) {
+        document.cookie = `authToken=${data.token}; path=/; max-age=86400; SameSite=Lax`;
+      }
+      if (data.userId) {
+        document.cookie = `userId=${data.userId}; path=/; max-age=86400; SameSite=Lax`;
+      }
+      
+      // Determine redirect destination
+      // Priority: callbackUrl > platformRole check > default
+      let redirectUrl = '/quizzes';
+      if (callbackUrl) {
+        redirectUrl = callbackUrl;
+        console.log('[SignInForm] Using callbackUrl:', callbackUrl);
+      } else if (isPlatformAdmin) {
+        redirectUrl = '/admin';
+        console.log('[SignInForm] Redirecting to /admin (platform admin)');
+      } else {
+        console.log('[SignInForm] Redirecting to /quizzes (default)');
+      }
+      
+      // Use window.location.href for full page reload to ensure middleware sees the cookie
+      // This ensures the cookie is sent with the request
+      window.location.href = redirectUrl;
     } catch (err: any) {
       setError(err.message || "Something went wrong. Please try again.");
       setLoading(false);

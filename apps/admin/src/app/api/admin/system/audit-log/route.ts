@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
-import { dummyAuditLogs } from '@/lib/dummy-billing-data'
 
 /**
  * GET /api/admin/system/audit-log
@@ -18,29 +17,19 @@ export async function GET(request: NextRequest) {
     // TODO: Add proper admin role check
 
     const searchParams = request.nextUrl.searchParams
-    const action = searchParams.get('action') || ''
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '50')
-    const skip = (page - 1) * limit
 
-    // For testing: Always use dummy data
-    console.log('Using dummy data for audit logs')
-    let filtered = [...dummyAuditLogs]
-
-    if (action) {
-      filtered = filtered.filter(log => log.action === action)
-    }
-
-    const total = filtered.length
-    const logs = filtered.slice(skip, skip + limit)
+    // For testing: Return empty array
+    console.log('Using empty data for audit logs')
 
     return NextResponse.json({
-      logs,
+      logs: [],
       pagination: {
         page,
         limit,
-        total,
-        totalPages: Math.ceil(total / limit),
+        total: 0,
+        totalPages: 0,
       },
     })
   } catch (error: any) {
@@ -51,4 +40,3 @@ export async function GET(request: NextRequest) {
     )
   }
 }
-

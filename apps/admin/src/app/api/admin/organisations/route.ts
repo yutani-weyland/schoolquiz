@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import { prisma } from '@schoolquiz/db'
-import { dummyOrganisations } from '@/lib/dummy-data'
+
 import { unstable_cache } from 'next/cache'
 import { CACHE_TTL, CACHE_TAGS, createCacheKey } from '@/lib/cache-config'
 
@@ -22,14 +22,14 @@ async function getOrganisationsInternal(params: {
   try {
     // Build where clause
     const where: any = {}
-    
+
     if (search) {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },
         { emailDomain: { contains: search, mode: 'insensitive' } },
       ]
     }
-    
+
     if (status) {
       where.status = status
     }
@@ -144,84 +144,8 @@ async function getOrganisationsInternal(params: {
     console.error('Error message:', dbError.message)
     console.error('Error code:', dbError.code)
     console.error('Error name:', dbError.name)
-    
-    // Check if it's a connection error
-    if (dbError.code === 'P1001' || dbError.message?.includes('Can\'t reach database server')) {
-      console.error('⚠️  Database connection failed. Please check:')
-      console.error('   1. DATABASE_URL is set in .env.local')
-      console.error('   2. Database server is running')
-      console.error('   3. Connection string is correct')
-      console.error('   4. Run: cd packages/db && pnpm db:generate && pnpm db:migrate')
-    }
-    
-    // Fallback to dummy data if database is not available
-    console.log('⚠️  Falling back to dummy data for organisations')
-    
-    let filtered = [...dummyOrganisations]
-    
-    if (search) {
-      filtered = filtered.filter(org => 
-        org.name.toLowerCase().includes(search.toLowerCase()) ||
-        org.emailDomain?.toLowerCase().includes(search.toLowerCase())
-      )
-    }
-    
-    if (status) {
-      filtered = filtered.filter(org => org.status === status)
-    }
-    
-    // Apply sorting
-    filtered.sort((a, b) => {
-      let aValue: any
-      let bValue: any
-      
-      switch (sortBy) {
-        case 'name':
-          aValue = a.name
-          bValue = b.name
-          break
-        case 'status':
-          aValue = a.status
-          bValue = b.status
-          break
-        case 'plan':
-          aValue = a.plan
-          bValue = b.plan
-          break
-        case 'members':
-          aValue = a._count.members
-          bValue = b._count.members
-          break
-        case 'createdAt':
-        default:
-          aValue = new Date(a.createdAt).getTime()
-          bValue = new Date(b.createdAt).getTime()
-          break
-      }
-      
-      if (aValue === bValue) return 0
-      if (aValue == null) return 1
-      if (bValue == null) return -1
-      
-      const comparison = typeof aValue === 'string' 
-        ? aValue.localeCompare(bValue)
-        : aValue - bValue
-      
-      return sortOrder === 'asc' ? comparison : -comparison
-    })
-    
-    const total = filtered.length
-    const organisations = filtered.slice(skip, skip + limit)
 
-    return {
-      organisations,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
-    }
+    throw dbError
   }
 }
 
@@ -266,7 +190,7 @@ export async function GET(request: NextRequest) {
           tags: [CACHE_TAGS.ORGANISATIONS],
         }
       )()
-      
+
       return NextResponse.json(result)
     }
 
@@ -276,12 +200,12 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('Error fetching organisations:', error)
     console.error('Error stack:', error.stack)
-    
+
     // Ensure we always return JSON, never HTML
     try {
       return NextResponse.json(
-        { 
-          error: 'Failed to fetch organisations', 
+        {
+          error: 'Failed to fetch organisations',
           details: error?.message || 'Unknown error',
           type: error?.name || 'Error'
         },
@@ -291,7 +215,7 @@ export async function GET(request: NextRequest) {
       // If even JSON serialization fails, return a simple error
       return new NextResponse(
         JSON.stringify({ error: 'Internal server error' }),
-        { 
+        {
           status: 500,
           headers: { 'Content-Type': 'application/json' }
         }
@@ -405,7 +329,7 @@ export async function POST(request: NextRequest) {
     }, { status: 201 })
   } catch (error: any) {
     console.error('Error creating organisation:', error)
-    
+
     // Handle unique constraint violations
     if (error.code === 'P2002') {
       return NextResponse.json(

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
-import { dummyWebhookEvents } from '@/lib/dummy-billing-data'
 
 /**
  * GET /api/admin/billing/webhooks
@@ -17,10 +16,10 @@ export async function GET(request: NextRequest) {
 
     // TODO: Add proper admin role check
 
-    // For testing: Always use dummy data
-    console.log('Using dummy data for webhook events')
+    // For testing: Return empty array as dummy data is removed
+    console.log('Using empty data for webhook events')
 
-    return NextResponse.json({ events: dummyWebhookEvents })
+    return NextResponse.json({ events: [] })
   } catch (error: any) {
     console.error('Error fetching webhook events:', error)
     return NextResponse.json(
@@ -29,4 +28,3 @@ export async function GET(request: NextRequest) {
     )
   }
 }
-

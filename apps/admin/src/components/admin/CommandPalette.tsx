@@ -5,7 +5,7 @@
 
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import {
   Search,
@@ -56,8 +56,12 @@ export function CommandPalette() {
   const [searchResults, setSearchResults] = useState<{
     quizzes: Array<{ id: string; title: string }>
     achievements: Array<{ id: string; name: string }>
-  }>({ quizzes: [], achievements: [] })
+    organisations: Array<{ id: string; name: string }>
+    users: Array<{ id: string; name: string; email: string }>
+  }>({ quizzes: [], achievements: [], organisations: [], users: [] })
   const [isSearching, setIsSearching] = useState(false)
+  const abortControllerRef = useRef<AbortController | null>(null)
+  const searchCacheRef = useRef<Map<string, typeof searchResults>>(new Map())
 
   // Load recent items from localStorage
   useEffect(() => {
@@ -75,47 +79,145 @@ export function CommandPalette() {
     }
   }, [])
 
-  // Search for quizzes and achievements when typing
+  // Search for quizzes, achievements, organisations, and users when typing
+  // Only search database for longer, specific queries to avoid unnecessary API calls
   useEffect(() => {
-    if (search.trim().length >= 2) {
+    const query = search.trim()
+    const queryLower = query.toLowerCase()
+    
+    // Cancel any in-flight requests
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
+    
+    // Common navigation/action keywords that shouldn't trigger database searches
+    // These match commands that should show instantly
+    const commonKeywords = [
+      'new', 'create', 'add', 'go', 'to', 'nav', 'page', 'home', 'dashboard',
+      'quiz', 'quizzes', 'achievement', 'achievements',
+      'analytics', 'stats', 'billing', 'support', 'system', 'settings',
+      'scheduling', 'schedule', 'calendar', 'draft', 'drafts', 'people',
+      'submission', 'submissions', 'help', 'ticket', 'tickets'
+    ]
+    
+    // Check if query matches common keywords (exact match, starts with, or is a prefix)
+    const isCommonKeyword = commonKeywords.some(keyword => 
+      queryLower === keyword || 
+      queryLower.startsWith(keyword) ||
+      keyword.startsWith(queryLower)
+    )
+    
+    // Special handling for user/org searches - allow 3+ chars for these
+    // Check if query starts with user/org prefixes or is clearly searching for them
+    const isUserOrOrgSearch = 
+      queryLower.startsWith('user:') ||
+      queryLower.startsWith('org:') ||
+      queryLower.startsWith('organisation:') ||
+      queryLower.startsWith('organization:') ||
+      (query.length >= 3 && (
+        queryLower.includes('@') || // Email search
+        queryLower.match(/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i) // Email pattern
+      ))
+    
+    // Only search database if:
+    // 1. Query is 3+ characters for user/org searches, OR 4+ for general searches
+    // 2. AND it doesn't match common navigation keywords (unless it's a user/org search)
+    // This ensures "new", "quiz", etc. show instant results, but "john" or "acme" search users/orgs
+    const shouldSearchDatabase = (
+      (isUserOrOrgSearch && query.length >= 3) ||
+      (query.length >= 4 && !isCommonKeyword)
+    )
+    
+    if (shouldSearchDatabase) {
+      // Extract actual search term if using prefixes (user:, org:, etc.)
+      let actualQuery = query
+      let searchTypes: string[] = ['quizzes', 'achievements', 'organisations', 'users']
+      
+      if (queryLower.startsWith('user:')) {
+        actualQuery = query.slice(5).trim()
+        searchTypes = ['users']
+      } else if (queryLower.startsWith('org:') || queryLower.startsWith('organisation:') || queryLower.startsWith('organization:')) {
+        actualQuery = query.replace(/^(org|organisation|organization):/i, '').trim()
+        searchTypes = ['organisations']
+      }
+      
+      // Don't search if prefix was used but no actual query
+      if (actualQuery.length < 2) {
+        setSearchResults({ quizzes: [], achievements: [], organisations: [], users: [] })
+        setIsSearching(false)
+        return
+      }
+      
+      // Check cache first
+      const cached = searchCacheRef.current.get(actualQuery)
+      if (cached) {
+        // Filter cached results by search type if using prefix
+        const filteredResults = {
+          quizzes: searchTypes.includes('quizzes') ? cached.quizzes : [],
+          achievements: searchTypes.includes('achievements') ? cached.achievements : [],
+          organisations: searchTypes.includes('organisations') ? cached.organisations : [],
+          users: searchTypes.includes('users') ? cached.users : [],
+        }
+        setSearchResults(filteredResults)
+        setIsSearching(false)
+        return
+      }
+      
       setIsSearching(true)
+      
+      // Create new AbortController for this request
+      const abortController = new AbortController()
+      abortControllerRef.current = abortController
+      
+      // Reduced debounce since we're using a faster unified endpoint
       const timeoutId = setTimeout(() => {
-        // Search quizzes
-        fetch(`/api/admin/quizzes?search=${encodeURIComponent(search.trim())}&limit=5`)
+        const searchParam = encodeURIComponent(actualQuery)
+        
+        // Use optimized unified search endpoint - much faster!
+        // Single request instead of 4 separate requests
+        // Only fetches minimal fields (id, name/title, email) - no counts, no relations
+        const typesParam = searchTypes.join(',')
+        fetch(`/api/admin/search?q=${searchParam}&types=${typesParam}&limit=5`, {
+          signal: abortController.signal,
+          // Add cache headers for better performance
+          cache: 'no-store', // Always fresh results
+        })
           .then((res) => res.json())
           .then((data) => {
-            setSearchResults((prev) => ({
-              ...prev,
-              quizzes: data.quizzes || [],
-            }))
-            setIsSearching(false)
+            // Only update if request wasn't aborted
+            if (!abortController.signal.aborted) {
+              const mergedResults = {
+                quizzes: data.quizzes || [],
+                achievements: data.achievements || [],
+                organisations: data.organisations || [],
+                users: data.users || [],
+              }
+              
+              // Cache results (limit cache size to 20 entries)
+              if (searchCacheRef.current.size >= 20) {
+                const firstKey = searchCacheRef.current.keys().next().value
+                searchCacheRef.current.delete(firstKey)
+              }
+              searchCacheRef.current.set(actualQuery, mergedResults)
+              
+              setSearchResults(mergedResults)
+              setIsSearching(false)
+            }
           })
-          .catch(() => setIsSearching(false))
-
-        // Search achievements (filter client-side for now since API doesn't support search)
-        fetch(`/api/admin/achievements`)
-          .then((res) => res.json())
-          .then((data) => {
-            const allAchievements = data.achievements || []
-            const query = search.trim().toLowerCase()
-            const filtered = allAchievements
-              .filter((a: any) => 
-                a.name?.toLowerCase().includes(query) ||
-                a.slug?.toLowerCase().includes(query) ||
-                a.shortDescription?.toLowerCase().includes(query)
-              )
-              .slice(0, 5)
-            setSearchResults((prev) => ({
-              ...prev,
-              achievements: filtered,
-            }))
+          .catch((err) => {
+            if (err.name !== 'AbortError') {
+              setIsSearching(false)
+            }
           })
-          .catch(() => {})
-      }, 300)
+      }, 250) // Reduced debounce - unified endpoint is much faster
 
-      return () => clearTimeout(timeoutId)
+      return () => {
+        clearTimeout(timeoutId)
+        abortController.abort()
+      }
     } else {
-      setSearchResults({ quizzes: [], achievements: [] })
+      // Clear database results for short/common queries - show only navigation commands
+      setSearchResults({ quizzes: [], achievements: [], organisations: [], users: [] })
       setIsSearching(false)
     }
   }, [search])
@@ -369,15 +471,58 @@ export function CommandPalette() {
       })
     })
 
+    // Organisation results
+    searchResults.organisations.forEach((org: any) => {
+      results.push({
+        id: `org-${org.id}`,
+        label: org.name,
+        keywords: [org.name.toLowerCase(), 'organisation', 'organization', 'org'],
+        icon: Building2,
+        action: () => {
+          router.push(`/admin/organisations/${org.id}`)
+          setIsOpen(false)
+        },
+        category: 'navigation',
+        url: `/admin/organisations/${org.id}`,
+      })
+    })
+
+    // User results - show with email for clarity
+    searchResults.users.forEach((user: any) => {
+      const displayName = user.name || user.email || 'Unknown User'
+      const displayLabel = user.name && user.email 
+        ? `${user.name} (${user.email})`
+        : displayName
+      
+      results.push({
+        id: `user-${user.id}`,
+        label: displayLabel,
+        keywords: [
+          user.name?.toLowerCase() || '', 
+          user.email?.toLowerCase() || '', 
+          'user',
+          'users'
+        ],
+        icon: Users,
+        action: () => {
+          router.push(`/admin/users/${user.id}`)
+          setIsOpen(false)
+        },
+        category: 'navigation',
+        url: `/admin/users/${user.id}`,
+      })
+    })
+
     return results
   }, [searchResults, router])
 
   // All commands (search results prioritized when searching)
   const allCommands = useMemo(() => {
-    if (search.trim().length >= 2) {
-      // When searching, prioritize search results
+    if (search.trim().length >= 2 && searchResultCommands.length > 0) {
+      // When searching with database results, prioritize search results
       return [...searchResultCommands, ...createCommands, ...navigationCommands]
     }
+    // For short queries or no database results, prioritize navigation/action commands
     return [...recentCommands, ...createCommands, ...navigationCommands]
   }, [recentCommands, createCommands, navigationCommands, searchResultCommands, search])
 
@@ -388,19 +533,35 @@ export function CommandPalette() {
       return [...recentCommands, ...createCommands, ...navigationCommands]
     }
 
-    // If we have search results, use those (already filtered by API)
-    if (search.trim().length >= 2) {
-      return allCommands
-    }
-
-    // Otherwise filter by keywords
     const query = search.toLowerCase().trim()
-    return allCommands.filter((cmd) => {
+    
+    // Always filter navigation/action commands by keywords for instant results
+    const filteredNavCommands = navigationCommands.filter((cmd) => {
       const labelMatch = cmd.label.toLowerCase().includes(query)
       const keywordMatch = cmd.keywords.some((kw) => kw.includes(query))
       return labelMatch || keywordMatch
     })
-  }, [search, allCommands, recentCommands, createCommands, navigationCommands])
+    
+    const filteredCreateCommands = createCommands.filter((cmd) => {
+      const labelMatch = cmd.label.toLowerCase().includes(query)
+      const keywordMatch = cmd.keywords.some((kw) => kw.includes(query))
+      return labelMatch || keywordMatch
+    })
+    
+    const filteredRecentCommands = recentCommands.filter((cmd) => {
+      const labelMatch = cmd.label.toLowerCase().includes(query)
+      const keywordMatch = cmd.keywords.some((kw) => kw.includes(query))
+      return labelMatch || keywordMatch
+    })
+
+    // If we have database search results, show them first, then filtered commands
+    if (searchResultCommands.length > 0) {
+      return [...searchResultCommands, ...filteredCreateCommands, ...filteredNavCommands]
+    }
+
+    // Otherwise show filtered navigation/action commands (instant, no database query)
+    return [...filteredRecentCommands, ...filteredCreateCommands, ...filteredNavCommands]
+  }, [search, searchResultCommands, recentCommands, createCommands, navigationCommands])
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -472,12 +633,16 @@ export function CommandPalette() {
               type="text"
               value={search}
               onChange={(e) => {
-                setSearch(e.target.value)
+                const newValue = e.target.value
+                setSearch(newValue)
+                // Reset selection when search changes
                 setSelectedIndex(0)
               }}
-              placeholder="Search commands, pages, or type a command..."
+              placeholder="Search commands, users, organisations, quizzes..."
               className="w-full pl-10 pr-10 py-3 bg-[hsl(var(--input))] border border-[hsl(var(--border))] rounded-xl text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] placeholder:text-[hsl(var(--muted-foreground))] text-lg"
               autoFocus
+              autoComplete="off"
+              spellCheck="false"
             />
             <button
               onClick={() => setIsOpen(false)}

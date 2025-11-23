@@ -1,4 +1,18 @@
-import { ResponsiveHeatMap } from '@nivo/heatmap';
+import dynamic from 'next/dynamic';
+import { Skeleton } from '@/components/ui/Skeleton';
+
+// Lazy load @nivo/heatmap - heavy library, only load when needed
+const ResponsiveHeatMap = dynamic(
+  () => import('@nivo/heatmap').then(mod => mod.ResponsiveHeatMap),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-80 flex items-center justify-center">
+        <Skeleton className="h-full w-full" />
+      </div>
+    ),
+  }
+);
 
 interface HeatmapProps {
   data: { id: string; data: { x: string; y: number }[] }[];

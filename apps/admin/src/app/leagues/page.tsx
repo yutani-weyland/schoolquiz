@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import dynamic from 'next/dynamic'
+import { motion } from 'framer-motion'
 import { Trophy, Users, Plus, Search, X, Copy, Mail, Calendar, Edit2, Trash2, LogOut, UserX } from 'lucide-react'
 import { useUserTier } from '@/hooks/useUserTier'
 import { useUserAccess } from '@/contexts/UserAccessContext'
@@ -67,8 +68,8 @@ interface LeagueStats {
 }
 
 export default function LeaguesPage() {
-  const { tier, isPremium } = useUserTier()
-  const { userName } = useUserAccess()
+  const { tier, isPremium, isLoading: tierLoading } = useUserTier()
+  const { userName, isLoading: accessLoading } = useUserAccess()
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [leagues, setLeagues] = useState<League[]>([])
   const [selectedLeague, setSelectedLeague] = useState<League | null>(null)
@@ -78,7 +79,7 @@ export default function LeaguesPage() {
     overallStats: LeagueStats[]
   } | null>(null)
   const [selectedQuiz, setSelectedQuiz] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false) // Start with false - don't block on initial load
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
@@ -105,7 +106,7 @@ export default function LeaguesPage() {
 
 
   // Mock data for prototype
-  const getMockLeagues = (): League[] => {
+  const getMockLeagues = useCallback((): League[] => {
     const userId = localStorage.getItem('userId') || 'user-1'
     return [
       {
@@ -159,9 +160,9 @@ export default function LeaguesPage() {
         }
       }
     ]
-  }
+  }, [userName])
 
-  const getMockStats = (leagueId: string, quizSlug: string | null) => {
+  const getMockStats = useCallback((leagueId: string, quizSlug: string | null) => {
     const userId = localStorage.getItem('userId') || 'user-1'
     const quizSlugs = ['12', '11', '10']
 
@@ -222,21 +223,44 @@ export default function LeaguesPage() {
       quizSlugs,
       overallStats: mockStats.sort((a, b) => b.totalCorrectAnswers - a.totalCorrectAnswers)
     }
-  }
+  }, [userName])
 
+  // Optimized: Render immediately using localStorage, then sync with API
   useEffect(() => {
-    if (isPremium) {
-      // Use mock data for prototype
+    // Check localStorage immediately for instant rendering (optimistic)
+    if (typeof window === 'undefined') return
+    
+    const storedTier = localStorage.getItem('userTier')
+    const optimisticPremium = storedTier === 'premium'
+    const platformRole = localStorage.getItem('platformRole')
+    const isAdmin = platformRole === 'PLATFORM_ADMIN' || platformRole === 'ORG_ADMIN'
+    
+    // Always render immediately based on localStorage - allow admins too
+    if (optimisticPremium || isAdmin) {
       const mockLeagues = getMockLeagues()
       setLeagues(mockLeagues)
       if (mockLeagues.length > 0 && !selectedLeague) {
         setSelectedLeague(mockLeagues[0])
       }
-      setLoading(false)
-    } else {
+    }
+    
+    // Then verify with actual API result (non-blocking update)
+    if (!tierLoading) {
+      // If admin or premium (from API), ensure leagues are loaded
+      if ((isPremium || isAdmin) && leagues.length === 0) {
+        const mockLeagues = getMockLeagues()
+        setLeagues(mockLeagues)
+        if (mockLeagues.length > 0 && !selectedLeague) {
+          setSelectedLeague(mockLeagues[0])
+        }
+      } else if (!isPremium && !isAdmin && optimisticPremium) {
+        // API says not premium and not admin, but localStorage did - clear (user downgraded)
+        setLeagues([])
+        setSelectedLeague(null)
+      }
       setLoading(false)
     }
-  }, [isPremium])
+  }, [isPremium, tierLoading, selectedLeague, userName, getMockLeagues])
 
   useEffect(() => {
     if (selectedLeague) {
@@ -244,7 +268,7 @@ export default function LeaguesPage() {
       const mockStats = getMockStats(selectedLeague.id, selectedQuiz)
       setLeagueStats(mockStats)
     }
-  }, [selectedLeague, selectedQuiz])
+  }, [selectedLeague, selectedQuiz, getMockStats])
 
   const handleCreateLeague = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -484,44 +508,10 @@ export default function LeaguesPage() {
     return `User ${user.id.slice(0, 8)}`
   }
 
-  if (!isPremium) {
-    return (
-      <>
-        <SiteHeader />
-        <main className="min-h-screen bg-white dark:bg-[#0F1419] text-gray-900 dark:text-white pt-32 pb-16 px-4 sm:px-8">
-          <div className="max-w-6xl mx-auto text-center py-16">
-            <Trophy className="w-16 h-16 text-gray-400 mx-auto mb-6" />
-            <h1 className="text-4xl font-bold mb-4">Private Leagues</h1>
-            <p className="text-lg text-gray-600 dark:text-gray-400 mb-8">
-              Private leagues are only available to premium subscribers.
-            </p>
-            <button
-              onClick={() => setShowUpgradeModal(true)}
-              className="inline-flex items-center justify-center h-12 px-6 bg-[#3B82F6] text-white rounded-full font-medium hover:bg-[#2563EB] transition-colors focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:ring-offset-2"
-            >
-              Upgrade to Premium
-            </button>
-          </div>
-          <UpgradeModal isOpen={showUpgradeModal} onClose={() => setShowUpgradeModal(false)} />
-        </main>
-        <Footer />
-      </>
-    )
-  }
+  // Removed blocking check - page renders immediately with optimistic premium status
 
-  if (loading) {
-    return (
-      <>
-        <SiteHeader />
-        <main className="min-h-screen bg-white dark:bg-[#0F1419] text-gray-900 dark:text-white pt-32 pb-16 px-4 sm:px-8">
-          <div className="max-w-6xl mx-auto text-center py-16">
-            <div className="text-gray-500 dark:text-gray-400">Loading leagues...</div>
-          </div>
-        </main>
-        <Footer />
-      </>
-    )
-  }
+  // Don't block on loading - render page structure immediately
+  // Show loading states inline instead of blocking entire page
 
   // Helper function to darken a color for hover states
   const darkenColor = (color: string, percent: number = 10): string => {
@@ -540,8 +530,21 @@ export default function LeaguesPage() {
     ? leagueStats?.stats || []
     : leagueStats?.overallStats || []
 
+  // Check if user is admin (admins have access to all features)
+  const platformRole = typeof window !== 'undefined' ? localStorage.getItem('platformRole') : null
+  const isAdmin = platformRole === 'PLATFORM_ADMIN' || platformRole === 'ORG_ADMIN'
+  
+  // Optimistic premium check - use localStorage first, then sync with API
+  // This allows immediate rendering without blocking on API calls
+  const storedTier = typeof window !== 'undefined' ? localStorage.getItem('userTier') : null
+  const optimisticPremium = storedTier === 'premium'
+  const showPremiumContent = optimisticPremium || isPremium || isAdmin
+  
+  // Show upgrade modal if definitely not premium AND not admin (after API confirms)
+  const shouldShowUpgrade = !tierLoading && !isPremium && !optimisticPremium && !isAdmin
+
   return (
-    <>
+    <div>
       <SiteHeader />
       <main className="min-h-screen bg-white dark:bg-[#0F1419] text-gray-900 dark:text-white pt-24 sm:pt-32 pb-16 px-4 sm:px-8">
         <div className="max-w-6xl mx-auto">
@@ -551,7 +554,26 @@ export default function LeaguesPage() {
             <p className="text-lg text-gray-600 dark:text-gray-400">Invite friends to your league and try to beat them</p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Show upgrade prompt if not premium (after API confirms) */}
+          {shouldShowUpgrade && (
+            <div className="mb-8 text-center py-8">
+              <Trophy className="w-16 h-16 mx-auto mb-6 text-gray-400" />
+              <p className="text-lg text-gray-600 dark:text-gray-400 mb-8">
+                Compete with friends in private leagues. Upgrade to Premium to unlock this feature.
+              </p>
+              <button
+                onClick={() => setShowUpgradeModal(true)}
+                className="inline-flex items-center justify-center h-12 px-6 bg-[#3B82F6] text-white rounded-full font-medium hover:bg-[#2563EB] transition-colors focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:ring-offset-2"
+              >
+                Upgrade to Premium
+              </button>
+              <UpgradeModal isOpen={showUpgradeModal} onClose={() => setShowUpgradeModal(false)} />
+            </div>
+          )}
+
+          {/* Show premium content if optimistic or confirmed premium */}
+          {showPremiumContent ? (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Leagues List */}
             <div className="lg:col-span-1">
               <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
@@ -915,6 +937,7 @@ export default function LeaguesPage() {
             </div>
           </div>
         </div>
+          ) : null}
 
         {/* Create League Modal */}
         {showCreateModal && (
@@ -1320,7 +1343,7 @@ export default function LeaguesPage() {
       </main>
       <Footer />
       <UpgradeModal isOpen={showUpgradeModal} onClose={() => setShowUpgradeModal(false)} />
-    </>
+    </div>
   )
 }
 

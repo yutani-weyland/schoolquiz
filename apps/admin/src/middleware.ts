@@ -1,49 +1,66 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-/**
- * Middleware for authentication and route protection
- * 
- * This runs before the request is completed, allowing us to:
- * - Check authentication without opting routes into dynamic rendering
- * - Redirect unauthenticated users
- * - Preserve static rendering for public pages
- */
+// Define public routes that don't require authentication
+const publicRoutes = [
+  '/',
+  '/sign-in',
+  '/sign-up',
+  '/forgot-password',
+  '/about',
+  '/pricing'
+]
+
+// Define routes that are always public (assets, api, etc)
+const isPublicStatic = (path: string) => {
+  return (
+    path.startsWith('/_next') ||
+    path.startsWith('/api') ||
+    path.startsWith('/static') ||
+    path.includes('.') // Files like favicon.ico, robots.txt
+  )
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Protect admin routes - require authentication
-  if (pathname.startsWith('/admin')) {
-    // Skip auth check if SKIP_ADMIN_AUTH is set (for development)
-    // Check both environment variable and NODE_ENV
-    const skipAuth = 
-      process.env.SKIP_ADMIN_AUTH === 'true' || 
-      (process.env.NODE_ENV && process.env.NODE_ENV !== 'production')
-    
-    if (!skipAuth) {
-      // Check for authentication token in cookies or headers
-      const authToken = request.cookies.get('next-auth.session-token') || 
-                       request.cookies.get('__Secure-next-auth.session-token') ||
-                       request.headers.get('authorization')?.replace('Bearer ', '')
-
-      // If no auth token, redirect to sign-in
-      if (!authToken) {
-        const signInUrl = new URL('/sign-in', request.url)
-        signInUrl.searchParams.set('callbackUrl', pathname)
-        return NextResponse.redirect(signInUrl)
-      }
-    }
-
-    // For admin routes, we could also check for platform admin role here
-    // But that requires a database query, which we want to avoid in middleware
-    // So we'll do the role check in the layout instead
+  // 1. Skip middleware for static files and API routes
+  if (isPublicStatic(pathname)) {
+    return NextResponse.next()
   }
 
-  // Allow the request to continue
+  // 2. Check for auth token (check multiple sources)
+  const authToken = request.cookies.get('next-auth.session-token') ||
+    request.cookies.get('__Secure-next-auth.session-token') ||
+    request.cookies.get('authToken') || // Custom auth token from localStorage-based auth
+    request.headers.get('authorization')?.replace('Bearer ', '')
+
+  const isAuthenticated = !!authToken
+  const isPublicPage = publicRoutes.some(route => pathname === route || pathname.startsWith(`${route}/`))
+
+  // 3. Handle Unauthenticated Users
+  if (!isAuthenticated && !isPublicPage) {
+    const signInUrl = new URL('/sign-in', request.url)
+    signInUrl.searchParams.set('callbackUrl', pathname)
+    return NextResponse.redirect(signInUrl)
+  }
+
+  // 4. Handle Authenticated Users on Public Auth Pages
+  // Let client-side handle redirects based on user role (admin -> /admin, others -> /quizzes)
+  // Don't redirect here - let the sign-in form or home page handle role-based redirects
+  if (isAuthenticated && (pathname === '/sign-in' || pathname === '/sign-up')) {
+    // Let client-side redirect handle this to check platformRole
+    return NextResponse.next()
+  }
+
+  // 5. Admin Route Protection
+  // Note: Detailed role checking (Teacher vs Admin) is best done in the Layout 
+  // or via a server-side utility since middleware has limited access to the DB.
+  // However, we can ensure they are at least logged in (handled above).
+
   return NextResponse.next()
 }
 
-// Configure which routes this middleware runs on
 export const config = {
   matcher: [
     /*
@@ -52,9 +69,8 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * - public files (public folder)
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico).*)',
   ],
 }
 

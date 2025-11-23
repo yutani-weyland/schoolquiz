@@ -270,6 +270,7 @@ function QuickActionsAndActivity() {
                 <Link
                   key={action.label}
                   href={action.href}
+                  prefetch={action.href === '/admin/analytics' ? false : undefined}
                   className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[hsl(var(--muted))] hover:bg-[hsl(var(--muted))]/80 transition-colors group"
                 >
                   <Icon className="w-5 h-5 text-[hsl(var(--muted-foreground))] group-hover:text-[hsl(var(--primary))] transition-colors" />

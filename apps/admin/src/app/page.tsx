@@ -559,23 +559,36 @@ export default function HomePage() {
 		};
 	}, [contentLoaded]);
 
-	// Redirect logged-in users to quizzes page (free users should go to quizzes, not home)
+	// Redirect logged-in users to appropriate page
 	useEffect(() => {
 		if (!mounted) return;
 
 		// Check localStorage as source of truth to avoid race conditions
 		if (typeof window === 'undefined') return;
 
+		// Check if we're coming from a sign out (check URL or session storage flag)
+		const isSigningOut = sessionStorage.getItem('signingOut') === 'true';
+		if (isSigningOut) {
+			sessionStorage.removeItem('signingOut');
+			return; // Don't redirect if user just signed out
+		}
+
 		const authToken = localStorage.getItem('authToken');
 		const userId = localStorage.getItem('userId');
 		const isActuallyLoggedIn = !!(authToken && userId);
 
-		// If user is logged in, redirect to quizzes (regardless of tier)
+		// If user is logged in, redirect based on role
 		// Don't wait for isLoading - use localStorage as source of truth
 		// Add a small delay to ensure page has rendered
 		if (isActuallyLoggedIn) {
 			const redirectTimer = setTimeout(() => {
-				window.location.href = '/quizzes';
+				// Check if user is platform admin (stored in localStorage from sign-in)
+				const platformRole = localStorage.getItem('platformRole');
+				if (platformRole === 'PLATFORM_ADMIN') {
+					window.location.href = '/admin';
+				} else {
+					window.location.href = '/quizzes';
+				}
 			}, 100);
 			return () => clearTimeout(redirectTimer);
 		}

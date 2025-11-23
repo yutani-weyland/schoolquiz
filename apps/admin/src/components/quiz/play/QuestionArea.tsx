@@ -228,113 +228,121 @@ function PresenterMode({
     setHasAnswered(false);
   }, [question.id]);
 
+  // Optimized: Memoize position update function and reduce DOM queries
+  const updatePosition = useCallback(() => {
+    const questionEl = questionTextRef.current;
+    if (!questionEl) return;
+
+    const questionRect = questionEl.getBoundingClientRect();
+    const computedLineHeight = parseFloat(window.getComputedStyle(questionEl).lineHeight || "0");
+    const approxLines = computedLineHeight > 0 ? Math.round(questionRect.height / computedLineHeight) : 1;
+
+    // Update scale based on line count
+    let newScale = 1;
+    if (approxLines > 6) {
+      newScale = 0.78;
+    } else if (approxLines > 5) {
+      newScale = 0.85;
+    } else if (approxLines > 4) {
+      newScale = 0.9;
+    }
+    setQuestionScale((prev) => prev !== newScale ? newScale : prev);
+
+    // Cache DOM queries - only query once per update
+    const scorePillEl = document.querySelector('[aria-label*="Score:"]') as HTMLElement | null;
+    let spacing = 60;
+
+    if (scorePillEl) {
+      const scorePillRect = scorePillEl.getBoundingClientRect();
+      const topSpacing = questionRect.top - scorePillRect.bottom;
+      spacing = Math.max(40, topSpacing);
+    }
+
+    // Get actual button element if it exists to measure real dimensions
+    const buttonEl = document.querySelector('[aria-pressed]') as HTMLElement | null;
+    const isMobile = window.innerWidth < 768;
+    let buttonHeight = isMobile ? 72 : 88; // Default estimate
+    let buttonWidth = 0;
+    
+    if (buttonEl) {
+      const buttonRect = buttonEl.getBoundingClientRect();
+      buttonHeight = buttonRect.height || buttonHeight;
+      buttonWidth = buttonRect.width || 0;
+    }
+
+    // Calculate position with cached values
+    const buttonPadding = 40;
+    const minBottomPadding = 20;
+    const viewportHeight = window.innerHeight;
+    const viewportWidth = window.innerWidth;
+    const maxTop = viewportHeight - buttonHeight - buttonPadding - minBottomPadding;
+    const desiredTop = questionRect.bottom + spacing;
+    const minTop = 100;
+    let finalTop = Math.max(minTop, Math.min(desiredTop, maxTop));
+    
+    const buttonLeft = viewportWidth / 2;
+    const halfButtonWidth = buttonWidth > 0 ? buttonWidth / 2 : 200;
+    const minLeft = halfButtonWidth + 20;
+    const maxLeft = viewportWidth - halfButtonWidth - 20;
+    const finalLeft = Math.max(minLeft, Math.min(maxLeft, buttonLeft));
+
+    setRevealButtonPosition((prev) => {
+      if (prev.top === finalTop && prev.left === finalLeft) return prev;
+      return { top: finalTop, left: finalLeft };
+    });
+
+    setIsPositionCalculated(true);
+  }, []);
+
   useEffect(() => {
     setIsPositionCalculated(false);
 
-    const updatePosition = () => {
-      const questionEl = questionTextRef.current;
-      if (!questionEl) return;
-
-      const questionRect = questionEl.getBoundingClientRect();
-      const computedLineHeight = parseFloat(window.getComputedStyle(questionEl).lineHeight || "0");
-      const approxLines = computedLineHeight > 0 ? Math.round(questionRect.height / computedLineHeight) : 1;
-
-      if (approxLines > 6) {
-        setQuestionScale(0.78);
-      } else if (approxLines > 5) {
-        setQuestionScale(0.85);
-      } else if (approxLines > 4) {
-        setQuestionScale(0.9);
-      } else {
-        setQuestionScale(1);
-      }
-
-      const scorePillEl = document.querySelector('[aria-label*="Score:"]') as HTMLElement | null;
-      let spacing = 60;
-
-      if (scorePillEl) {
-        const scorePillRect = scorePillEl.getBoundingClientRect();
-        const topSpacing = questionRect.top - scorePillRect.bottom;
-        spacing = Math.max(40, topSpacing);
-      }
-
-      // Get actual button element if it exists to measure real dimensions
-      const buttonEl = document.querySelector('[aria-pressed]') as HTMLElement | null;
-      let buttonHeight = window.innerWidth < 768 ? 72 : 88; // Default estimate
-      let buttonWidth = 0;
-      
-      if (buttonEl) {
-        const buttonRect = buttonEl.getBoundingClientRect();
-        buttonHeight = buttonRect.height || buttonHeight;
-        buttonWidth = buttonRect.width || 0;
-      }
-
-      // Account for button height plus padding
-      const buttonPadding = 40;
-      const minBottomPadding = 20;
-      const maxTop = window.innerHeight - buttonHeight - buttonPadding - minBottomPadding;
-      
-      // Calculate desired position
-      const desiredTop = questionRect.bottom + spacing;
-      
-      // Ensure button doesn't clip at bottom
-      let finalTop = Math.min(desiredTop, maxTop);
-      
-      // Also ensure button doesn't clip at top (with some margin)
-      const minTop = 100; // Leave space for header/score pill
-      finalTop = Math.max(finalTop, minTop);
-      
-      // Ensure button doesn't clip horizontally
-      const viewportWidth = window.innerWidth;
-      const maxButtonWidth = viewportWidth - 40; // 20px padding on each side
-      const buttonLeft = window.innerWidth / 2;
-      
-      // If button is too wide, we'll need to scale it down (handled by AnswerReveal component)
-      // But we can adjust position to ensure it fits
-      const halfButtonWidth = buttonWidth > 0 ? buttonWidth / 2 : 200; // Estimate if not measured
-      const minLeft = halfButtonWidth + 20;
-      const maxLeft = viewportWidth - halfButtonWidth - 20;
-      const finalLeft = Math.max(minLeft, Math.min(maxLeft, buttonLeft));
-
-      setRevealButtonPosition({
-        top: finalTop,
-        left: finalLeft,
-      });
-
-      setIsPositionCalculated(true);
-    };
-
-    // Debounce resize handler
+    // Throttled resize/scroll handler
     let resizeTimeout: ReturnType<typeof setTimeout> | null = null;
+    let ticking = false;
+    
     const debouncedUpdatePosition = () => {
       if (resizeTimeout) clearTimeout(resizeTimeout);
       resizeTimeout = setTimeout(() => {
-        requestAnimationFrame(updatePosition);
+        if (!ticking) {
+          requestAnimationFrame(() => {
+            updatePosition();
+            ticking = false;
+          });
+          ticking = true;
+        }
       }, 150);
     };
 
+    // Initial position calculations - reduced from 2 to 1
     const timer1 = setTimeout(updatePosition, 100);
-    const timer2 = setTimeout(updatePosition, 300);
 
     window.addEventListener("resize", debouncedUpdatePosition, { passive: true });
     window.addEventListener("scroll", debouncedUpdatePosition, { passive: true });
 
+    // Only observe question text element, not the entire container
     const observer = new ResizeObserver(() => {
-      requestAnimationFrame(updatePosition);
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          updatePosition();
+          ticking = false;
+        });
+        ticking = true;
+      }
     });
+    
     if (questionTextRef.current) {
       observer.observe(questionTextRef.current);
     }
 
     return () => {
       clearTimeout(timer1);
-      clearTimeout(timer2);
       if (resizeTimeout) clearTimeout(resizeTimeout);
       window.removeEventListener("resize", debouncedUpdatePosition);
       window.removeEventListener("scroll", debouncedUpdatePosition);
       observer.disconnect();
     };
-  }, [question.question]);
+  }, [question.question, updatePosition]);
 
   return (
     <motion.div

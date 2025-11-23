@@ -86,3 +86,4 @@ ORDER BY tablename, indexname;
 
 You should see all the new indexes listed.
 
+

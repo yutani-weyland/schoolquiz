@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
-import { dummyBillingData } from '@/lib/dummy-billing-data'
 
 /**
  * GET /api/admin/billing/invoices
@@ -17,10 +16,10 @@ export async function GET(request: NextRequest) {
 
     // TODO: Add proper admin role check
 
-    // For testing: Always use dummy data
-    console.log('Using dummy data for invoices')
+    // For testing: Return empty array as dummy data is removed
+    console.log('Using empty data for invoices')
 
-    return NextResponse.json({ invoices: dummyBillingData.invoices })
+    return NextResponse.json({ invoices: [] })
   } catch (error: any) {
     console.error('Error fetching invoices:', error)
     return NextResponse.json(
@@ -29,4 +28,3 @@ export async function GET(request: NextRequest) {
     )
   }
 }
-

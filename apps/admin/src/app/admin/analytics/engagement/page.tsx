@@ -1,9 +1,51 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import dynamic from 'next/dynamic'
 import { Users, TrendingUp, TrendingDown, Activity, Building2 } from 'lucide-react'
 import { ChartSkeleton, StatCardSkeleton } from '@/components/admin/ui/skeletons'
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
+
+// Lazy load recharts - code-split to reduce initial bundle
+const LineChart = dynamic(
+  () => import('recharts').then(mod => mod.LineChart),
+  { ssr: false, loading: () => <ChartSkeleton height={400} /> }
+)
+const BarChart = dynamic(
+  () => import('recharts').then(mod => mod.BarChart),
+  { ssr: false, loading: () => <ChartSkeleton height={300} /> }
+)
+const Line = dynamic(
+  () => import('recharts').then(mod => mod.Line),
+  { ssr: false }
+)
+const Bar = dynamic(
+  () => import('recharts').then(mod => mod.Bar),
+  { ssr: false }
+)
+const XAxis = dynamic(
+  () => import('recharts').then(mod => mod.XAxis),
+  { ssr: false }
+)
+const YAxis = dynamic(
+  () => import('recharts').then(mod => mod.YAxis),
+  { ssr: false }
+)
+const CartesianGrid = dynamic(
+  () => import('recharts').then(mod => mod.CartesianGrid),
+  { ssr: false }
+)
+const Tooltip = dynamic(
+  () => import('recharts').then(mod => mod.Tooltip),
+  { ssr: false }
+)
+const ResponsiveContainer = dynamic(
+  () => import('recharts').then(mod => mod.ResponsiveContainer),
+  { ssr: false }
+)
+const Cell = dynamic(
+  () => import('recharts').then(mod => mod.Cell),
+  { ssr: false }
+)
 
 interface EngagementData {
   dau: { current: number; previous: number; change: number; trend: 'up' | 'down' }

@@ -135,6 +135,7 @@ export async function POST(request: Request) {
             email: dbUser.email,
             name: dbUser.name || "",
             tier: dbUser.tier || "basic",
+            platformRole: dbUser.platformRole || null,
           });
         }
       } catch (error) {

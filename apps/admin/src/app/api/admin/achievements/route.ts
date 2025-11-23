@@ -5,6 +5,7 @@ import { prisma } from '@schoolquiz/db'
 /**
  * GET /api/admin/achievements
  * List all achievements (admin only)
+ * Supports search query parameter for filtering
  */
 export async function GET(request: NextRequest) {
   try {
@@ -16,8 +17,34 @@ export async function GET(request: NextRequest) {
     // TODO: Add proper admin role check
     // For now, allow any authenticated user (can be tightened later)
 
+    const searchParams = request.nextUrl.searchParams
+    const search = searchParams.get('search') || ''
+    const limit = parseInt(searchParams.get('limit') || '100', 10)
+
+    // Build where clause for search
+    const where: any = {}
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { slug: { contains: search, mode: 'insensitive' } },
+        { shortDescription: { contains: search, mode: 'insensitive' } },
+      ]
+    }
+
     const achievements = await prisma.achievement.findMany({
+      where,
+      take: limit,
       orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        shortDescription: true,
+        category: true,
+        rarity: true,
+        isActive: true,
+        createdAt: true,
+      },
     })
 
     return NextResponse.json({ achievements })

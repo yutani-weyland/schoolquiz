@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import { prisma } from '@schoolquiz/db'
-import { getDummyOrganisationDetail } from '@/lib/dummy-data'
+
 
 /**
  * GET /api/admin/organisations/[id]
@@ -162,18 +162,15 @@ export async function GET(
 
       return NextResponse.json({ organisation: formattedOrganisation })
     } catch (dbError: any) {
-      // Fallback to dummy data if database is not available
-      console.log('Database not available, using dummy data for organisation detail')
-      const organisation = getDummyOrganisationDetail(id)
-      
-      if (!organisation) {
-        return NextResponse.json(
-          { error: 'Organisation not found' },
-          { status: 404 }
-        )
-      }
+      // Log the actual database error for debugging
+      console.error('❌ Database query failed:', dbError)
+      console.error('Error message:', dbError.message)
+      console.error('Error code:', dbError.code)
 
-      return NextResponse.json({ organisation })
+      return NextResponse.json(
+        { error: 'Failed to fetch organisation', details: dbError.message },
+        { status: 500 }
+      )
     }
   } catch (error: any) {
     console.error('Error fetching organisation:', error)
@@ -217,7 +214,7 @@ export async function PATCH(
       'gracePeriodEnd',
     ]
     const updateData: any = {}
-    
+
     for (const field of allowedFields) {
       if (field in body) {
         updateData[field] = body[field]

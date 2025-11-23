@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import { prisma } from '@schoolquiz/db'
-import { getDummyUserDetail } from '@/lib/dummy-data'
+
 
 /**
  * GET /api/admin/users/[id]
@@ -230,18 +230,10 @@ export async function GET(
       console.error('Error message:', dbError.message)
       console.error('Error code:', dbError.code)
 
-      // Fallback to dummy data if database is not available
-      console.log('⚠️  Falling back to dummy data for user detail')
-      const targetUser = getDummyUserDetail(id)
-
-      if (!targetUser) {
-        return NextResponse.json(
-          { error: 'User not found', details: dbError.message },
-          { status: 404 }
-        )
-      }
-
-      return NextResponse.json({ user: targetUser })
+      return NextResponse.json(
+        { error: 'Failed to fetch user', details: dbError.message },
+        { status: 500 }
+      )
     }
   } catch (error: any) {
     console.error('Error fetching user:', error)

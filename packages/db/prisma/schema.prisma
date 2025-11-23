@@ -29,6 +29,8 @@ model Teacher {
   name        String
   role        String    @default("teacher") // admin, editor, teacher, viewer
   lastLoginAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
 
@@ -69,7 +71,7 @@ model Question {
   answer           String
   explanation      String?
   difficulty       Float // 0-1 scale
-  tags             String    @default("") // Comma-separated tags
+  tags             String?   @default("") // Comma-separated tags
   status           String    @default("draft") // draft, review, published, archived
   createdBy        String
   isPeopleQuestion Boolean   @default(false) // True if this is a people's question
@@ -277,6 +279,13 @@ model User {
   // User-submitted questions
   questionSubmissions UserQuestionSubmission[]
 
+  // Billing & Support relations
+  invoices             Invoice[]
+  subscriptions        Subscription[]
+  supportTickets       SupportTicket[]
+  supportTicketReplies SupportTicketReply[]
+  auditLogs            AuditLog[]
+
   // Note: Question/Quiz/Run still reference Teacher for backward compatibility
   // These can be migrated to User in a future migration
 
@@ -320,6 +329,9 @@ model Organisation {
   groups       OrganisationGroup[]
   leaderboards Leaderboard[]
   activity     OrganisationActivity[]
+  invoices     Invoice[]
+  subscriptions Subscription[]
+  supportTickets SupportTicket[]
 
   @@index([ownerUserId])
   @@index([status, currentPeriodEnd])
@@ -859,4 +871,106 @@ model ScheduledJob {
   @@index([type, status])
   @@index([scheduledFor])
   @@map("scheduled_jobs")
+}
+
+// ============================================================================
+// Billing & Support Models
+// ============================================================================
+
+model Invoice {
+  id                 String   @id @default(cuid())
+  userId             String?
+  organisationId     String?
+  stripeInvoiceId    String   @unique
+  amount             Int      // In cents
+  currency           String   @default("aud")
+  status             String   // paid, open, void, uncollectible
+  periodStart        DateTime
+  periodEnd          DateTime
+  pdfUrl             String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user         User?         @relation(fields: [userId], references: [id])
+  organisation Organisation? @relation(fields: [organisationId], references: [id])
+
+  @@index([userId])
+  @@index([organisationId])
+  @@map("invoices")
+}
+
+model Subscription {
+  id                   String   @id @default(cuid())
+  userId               String?
+  organisationId       String?
+  stripeSubscriptionId String   @unique
+  status               String   // active, trialing, canceled, incomplete, incomplete_expired, past_due, unpaid, paused
+  planId               String
+  currentPeriodStart   DateTime
+  currentPeriodEnd     DateTime
+  cancelAtPeriodEnd    Boolean  @default(false)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  user         User?         @relation(fields: [userId], references: [id])
+  organisation Organisation? @relation(fields: [organisationId], references: [id])
+
+  @@index([userId])
+  @@index([organisationId])
+  @@map("subscriptions")
+}
+
+model SupportTicket {
+  id             String   @id @default(cuid())
+  subject        String
+  status         String   @default("OPEN") // OPEN, IN_PROGRESS, CLOSED
+  priority       String   @default("MEDIUM") // HIGH, MEDIUM, LOW
+  category       String   // TECHNICAL, BILLING, FEATURE_REQUEST, etc.
+  organisationId String?
+  userId         String
+  message        String
+  assignedTo     String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id])
+  organisation Organisation? @relation(fields: [organisationId], references: [id])
+  replies      SupportTicketReply[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("support_tickets")
+}
+
+model SupportTicketReply {
+  id        String   @id @default(cuid())
+  ticketId  String
+  userId    String
+  message   String
+  createdAt DateTime @default(now())
+
+  ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id])
+
+  @@index([ticketId])
+  @@map("support_ticket_replies")
+}
+
+model AuditLog {
+  id             String   @id @default(cuid())
+  userId         String?
+  action         String
+  entityType     String
+  entityId       String?
+  details        String?  // JSON
+  ipAddress      String?
+  userAgent      String?
+  createdAt      DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
 }

@@ -18,42 +18,18 @@ type TabId = 'account' | 'referral' | 'subscription';
 export default function AccountPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabId>('account');
-  const [isPremium, setIsPremium] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const { tier, isPremium: isPremiumTier } = useUserTier();
+  // Use premium status from useUserTier hook (already fetches subscription data)
+  const { tier, isPremium: isPremiumTier, isLoading: tierLoading } = useUserTier();
 
+  // Redirect if not authenticated
   useEffect(() => {
-    const checkPremium = async () => {
-      try {
-        const token = localStorage.getItem('authToken');
-        if (!token) {
-          router.push('/sign-in');
-          return;
-        }
-
-        const response = await fetch('/api/user/subscription', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          const premiumStatuses = ['ACTIVE', 'TRIALING', 'FREE_TRIAL'];
-          setIsPremium(premiumStatuses.includes(data.status));
-        } else {
-          setIsPremium(false);
-        }
-      } catch (err) {
-        console.error('Failed to check premium status:', err);
-        setIsPremium(false);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkPremium();
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      router.push('/sign-in');
+    }
   }, [router]);
 
-  if (isLoading) {
+  if (tierLoading) {
     return (
       <PageLayout>
         <PageContainer maxWidth="2xl">
@@ -95,7 +71,7 @@ export default function AccountPage() {
                   </div>
                   <h2 className="text-xl font-bold text-gray-900 dark:text-white">Account</h2>
                 </div>
-                <AccountTab isPremium={isPremium} />
+                <AccountTab isPremium={isPremiumTier} />
               </ContentCard>
 
               <ContentCard padding="xl" rounded="3xl" hoverAnimation={false}>
@@ -155,7 +131,7 @@ export default function AccountPage() {
                     exit={{ opacity: 0, x: 20 }}
                     transition={{ duration: 0.2 }}
                   >
-                    {activeTab === 'account' && <AccountTab isPremium={isPremium} />}
+                    {activeTab === 'account' && <AccountTab isPremium={isPremiumTier} />}
                     {activeTab === 'referral' && <ReferralTab />}
                     {activeTab === 'subscription' && <SubscriptionTab />}
                   </motion.div>

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
-import { dummyBillingData } from '@/lib/dummy-billing-data'
 
 /**
  * GET /api/admin/billing/subscriptions/[id]
@@ -14,15 +13,10 @@ export async function GET(
     // Skip auth for testing
     const { id } = await params
 
-    const subscription = dummyBillingData.subscriptions.find(s => s.id === id)
-    if (!subscription) {
-      return NextResponse.json(
-        { error: 'Subscription not found' },
-        { status: 404 }
-      )
-    }
-
-    return NextResponse.json({ subscription })
+    return NextResponse.json(
+      { error: 'Subscription not found' },
+      { status: 404 }
+    )
   } catch (error: any) {
     console.error('Error fetching subscription:', error)
     return NextResponse.json(
@@ -76,4 +70,3 @@ export async function PUT(
     )
   }
 }
-

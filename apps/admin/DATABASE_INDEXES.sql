@@ -2,6 +2,52 @@
 -- Run this on your Supabase database to improve query performance
 -- Note: Column names use camelCase as per Prisma schema mapping
 
+-- Enable pg_trgm extension for text search (if not already enabled)
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+-- Text search indexes for Command Palette search (requires pg_trgm extension)
+-- These dramatically speed up ILIKE/contains queries with insensitive mode
+DO $$
+BEGIN
+  -- Quiz text search indexes
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'quizzes' AND column_name = 'title') THEN
+    CREATE INDEX IF NOT EXISTS idx_quizzes_title_trgm ON quizzes USING gin(title gin_trgm_ops);
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'quizzes' AND column_name = 'blurb') THEN
+    CREATE INDEX IF NOT EXISTS idx_quizzes_blurb_trgm ON quizzes USING gin(blurb gin_trgm_ops);
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'quizzes' AND column_name = 'slug') THEN
+    CREATE INDEX IF NOT EXISTS idx_quizzes_slug_trgm ON quizzes USING gin(slug gin_trgm_ops);
+  END IF;
+  
+  -- Achievement text search indexes
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'achievements' AND column_name = 'name') THEN
+    CREATE INDEX IF NOT EXISTS idx_achievements_name_trgm ON achievements USING gin(name gin_trgm_ops);
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'achievements' AND column_name = 'slug') THEN
+    CREATE INDEX IF NOT EXISTS idx_achievements_slug_trgm ON achievements USING gin(slug gin_trgm_ops);
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'achievements' AND column_name = 'shortDescription') THEN
+    CREATE INDEX IF NOT EXISTS idx_achievements_short_description_trgm ON achievements USING gin("shortDescription" gin_trgm_ops);
+  END IF;
+  
+  -- Organisation text search indexes
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'organisations' AND column_name = 'name') THEN
+    CREATE INDEX IF NOT EXISTS idx_organisations_name_trgm ON organisations USING gin(name gin_trgm_ops);
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'organisations' AND column_name = 'emailDomain') THEN
+    CREATE INDEX IF NOT EXISTS idx_organisations_email_domain_trgm ON organisations USING gin("emailDomain" gin_trgm_ops);
+  END IF;
+  
+  -- User text search indexes
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'name') THEN
+    CREATE INDEX IF NOT EXISTS idx_users_name_trgm ON users USING gin(name gin_trgm_ops);
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'email') THEN
+    CREATE INDEX IF NOT EXISTS idx_users_email_trgm ON users USING gin(email gin_trgm_ops);
+  END IF;
+END $$;
+
 -- Quiz indexes (for admin queries)
 -- Check if columns exist before creating indexes
 DO $$
