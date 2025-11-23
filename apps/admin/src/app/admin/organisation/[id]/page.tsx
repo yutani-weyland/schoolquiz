@@ -4,10 +4,10 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import * as Tabs from '@radix-ui/react-tabs';
 import { motion } from 'framer-motion';
-import { 
-  Users, 
-  Building2, 
-  Trophy, 
+import {
+  Users,
+  Building2,
+  Trophy,
   Settings,
   Plus,
   Mail,
@@ -42,6 +42,28 @@ interface SeatInfo {
   used: number;
   available: number;
 }
+
+const getStatusBadge = (status: string) => {
+  const statusMap: Record<string, 'success' | 'info' | 'warning' | 'error' | 'default'> = {
+    ACTIVE: 'success',
+    TRIALING: 'info',
+    PAST_DUE: 'warning',
+    EXPIRED: 'error',
+    CANCELLED: 'default',
+  };
+  const iconMap: Record<string, typeof CheckCircle2> = {
+    ACTIVE: CheckCircle2,
+    TRIALING: Clock,
+    PAST_DUE: AlertCircle,
+    EXPIRED: XCircle,
+    CANCELLED: XCircle,
+  };
+  return {
+    variant: statusMap[status] || 'default',
+    icon: iconMap[status] || XCircle,
+    label: status === 'TRIALING' ? 'Trialing' : status.charAt(0) + status.slice(1).toLowerCase().replace('_', ' '),
+  };
+};
 
 export default function OrganisationAdminPage() {
   const params = useParams();
@@ -85,27 +107,7 @@ export default function OrganisationAdminPage() {
     );
   }
 
-  const getStatusBadge = (status: string) => {
-    const statusMap: Record<string, 'success' | 'info' | 'warning' | 'error' | 'default'> = {
-      ACTIVE: 'success',
-      TRIALING: 'info',
-      PAST_DUE: 'warning',
-      EXPIRED: 'error',
-      CANCELLED: 'default',
-    };
-    const iconMap: Record<string, typeof CheckCircle2> = {
-      ACTIVE: CheckCircle2,
-      TRIALING: Clock,
-      PAST_DUE: AlertCircle,
-      EXPIRED: XCircle,
-      CANCELLED: XCircle,
-    };
-    return {
-      variant: statusMap[status] || 'default',
-      icon: iconMap[status] || XCircle,
-      label: status === 'TRIALING' ? 'Trialing' : status.charAt(0) + status.slice(1).toLowerCase().replace('_', ' '),
-    };
-  };
+
 
   const statusBadge = getStatusBadge(organisation.status);
   const StatusIcon = statusBadge.icon;
@@ -169,17 +171,17 @@ export default function OrganisationAdminPage() {
           </Tabs.Trigger>
         </Tabs.List>
 
-          <Tabs.Content value="overview">
-            <OverviewTab organisation={organisation} seats={seats} />
-          </Tabs.Content>
+        <Tabs.Content value="overview">
+          <OverviewTab organisation={organisation} seats={seats} />
+        </Tabs.Content>
 
-          <Tabs.Content value="members">
-            <MembersTab organisationId={organisationId} />
-          </Tabs.Content>
+        <Tabs.Content value="members">
+          <MembersTab organisationId={organisationId} />
+        </Tabs.Content>
 
-          <Tabs.Content value="groups">
-            <GroupsTab organisationId={organisationId} />
-          </Tabs.Content>
+        <Tabs.Content value="groups">
+          <GroupsTab organisationId={organisationId} />
+        </Tabs.Content>
 
         <Tabs.Content value="leaderboards">
           <LeaderboardsTab organisationId={organisationId} />
@@ -230,7 +232,7 @@ function OverviewTab({ organisation, seats }: { organisation: Organisation; seat
             </Badge>
             {organisation.currentPeriodEnd && (
               <p className="text-sm text-[hsl(var(--muted-foreground))] mt-2">
-                {organisation.status === 'ACTIVE' || organisation.status === 'TRIALING' 
+                {organisation.status === 'ACTIVE' || organisation.status === 'TRIALING'
                   ? `Renews ${new Date(organisation.currentPeriodEnd).toLocaleDateString()}`
                   : `Expired ${new Date(organisation.currentPeriodEnd).toLocaleDateString()}`
                 }
@@ -979,24 +981,21 @@ function InviteMemberModal({ organisationId, onClose }: { organisationId: string
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Seat availability info */}
           {!loadingSeats && seats && (
-            <div className={`p-3 rounded-lg border ${
-              seats.available > 0 
-                ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800' 
+            <div className={`p-3 rounded-lg border ${seats.available > 0
+                ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
                 : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'
-            }`}>
+              }`}>
               <div className="flex items-center justify-between text-sm">
-                <span className={`font-medium ${
-                  seats.available > 0 
-                    ? 'text-blue-900 dark:text-blue-100' 
+                <span className={`font-medium ${seats.available > 0
+                    ? 'text-blue-900 dark:text-blue-100'
                     : 'text-amber-900 dark:text-amber-100'
-                }`}>
+                  }`}>
                   Available Seats:
                 </span>
-                <span className={`font-semibold ${
-                  seats.available > 0 
-                    ? 'text-blue-900 dark:text-blue-100' 
+                <span className={`font-semibold ${seats.available > 0
+                    ? 'text-blue-900 dark:text-blue-100'
                     : 'text-amber-900 dark:text-amber-100'
-                }`}>
+                  }`}>
                   {seats.available} of {seats.total || '∞'} remaining
                 </span>
               </div>

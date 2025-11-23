@@ -50,8 +50,8 @@ interface QuizzesTableProps {
   initialStatus?: string
 }
 
-export function QuizzesTable({ 
-  initialQuizzes, 
+export function QuizzesTable({
+  initialQuizzes,
   initialPagination,
   initialSearch = '',
   initialStatus = ''
@@ -75,12 +75,12 @@ export function QuizzesTable({
     if (sortBy === 'createdAt' && sortOrder === 'desc') {
       return quizzes
     }
-    
+
     // Otherwise, sort client-side
     return [...quizzes].sort((a, b) => {
       let aVal: any
       let bVal: any
-      
+
       switch (sortBy) {
         case 'title':
           aVal = a.title.toLowerCase()
@@ -104,7 +104,7 @@ export function QuizzesTable({
           bVal = new Date(b.createdAt).getTime()
           break
       }
-      
+
       if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1
       if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1
       return 0
@@ -122,12 +122,12 @@ export function QuizzesTable({
 
   const handleSearch = (value: string) => {
     setSearchQuery(value)
-    
+
     // Clear existing timeout
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current)
     }
-    
+
     // Debounce search - update URL after 500ms of no typing
     searchTimeoutRef.current = setTimeout(() => {
       const params = new URLSearchParams()
@@ -139,11 +139,11 @@ export function QuizzesTable({
 
   const fetchSearchSuggestions = async (query: string): Promise<string[]> => {
     if (query.length < 2) return []
-    
+
     try {
       const response = await fetch(`/api/admin/quizzes?search=${encodeURIComponent(query)}&limit=10`)
       const data = await response.json()
-      
+
       if (response.ok && data.quizzes) {
         return data.quizzes
           .map((quiz: Quiz) => [
@@ -154,13 +154,13 @@ export function QuizzesTable({
           ])
           .flat()
           .filter((s: string | null | undefined): s is string => Boolean(s))
-          .filter((s, i, arr) => arr.indexOf(s) === i)
+          .filter((s: string, i: number, arr: string[]) => arr.indexOf(s) === i)
           .slice(0, 10)
       }
     } catch (error) {
       console.error('Error fetching suggestions:', error)
     }
-    
+
     return []
   }
 
@@ -689,13 +689,12 @@ export function QuizzesTable({
                   {sortedQuizzes.map((quiz) => {
                     const isSelected = selectedQuizIds.has(quiz.id)
                     const displayId = getDisplayId(quiz)
-                    
+
                     return (
                       <tr
                         key={quiz.id}
-                        className={`hover:bg-[hsl(var(--muted))]/50 transition-colors ${
-                          isSelected ? 'bg-[hsl(var(--primary))]/5' : ''
-                        }`}
+                        className={`hover:bg-[hsl(var(--muted))]/50 transition-colors ${isSelected ? 'bg-[hsl(var(--primary))]/5' : ''
+                          }`}
                       >
                         <td className="px-6 py-4 whitespace-nowrap">
                           <input

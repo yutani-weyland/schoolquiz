@@ -28,7 +28,7 @@ function ReasonsCarousel() {
 	const [currentIndex, setCurrentIndex] = useState(0);
 	const videoVersion = "v3"; // Update this when video changes
 	const [isAutoScrolling, setIsAutoScrolling] = useState(true);
-	
+
 	const reasons = [
 		{
 			title: "Born out of frustration",
@@ -161,11 +161,10 @@ function ReasonsCarousel() {
 						<button
 							onClick={goToPrevious}
 							disabled={currentIndex === 0}
-							className={`absolute -left-4 sm:-left-6 md:-left-8 top-1/2 -translate-y-1/2 p-2 sm:p-3 rounded-full border border-gray-200/60 dark:border-gray-700/60 bg-white dark:bg-gray-900 shadow-sm transition-all z-10 ${
-								currentIndex === 0
-									? "opacity-30 cursor-not-allowed"
-									: "hover:bg-gray-50 dark:hover:bg-gray-800 hover:shadow-md"
-							}`}
+							className={`absolute -left-4 sm:-left-6 md:-left-8 top-1/2 -translate-y-1/2 p-2 sm:p-3 rounded-full border border-gray-200/60 dark:border-gray-700/60 bg-white dark:bg-gray-900 shadow-sm transition-all z-10 ${currentIndex === 0
+								? "opacity-30 cursor-not-allowed"
+								: "hover:bg-gray-50 dark:hover:bg-gray-800 hover:shadow-md"
+								}`}
 							aria-label="Previous"
 						>
 							<ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6 text-gray-700 dark:text-gray-300" />
@@ -173,11 +172,10 @@ function ReasonsCarousel() {
 						<button
 							onClick={goToNext}
 							disabled={currentIndex >= maxIndex}
-							className={`absolute -right-4 sm:-right-6 md:-right-8 top-1/2 -translate-y-1/2 p-2 sm:p-3 rounded-full border border-gray-200/60 dark:border-gray-700/60 bg-white dark:bg-gray-900 shadow-sm transition-all z-10 ${
-								currentIndex >= maxIndex
-									? "opacity-30 cursor-not-allowed"
-									: "hover:bg-gray-50 dark:hover:bg-gray-800 hover:shadow-md"
-							}`}
+							className={`absolute -right-4 sm:-right-6 md:-right-8 top-1/2 -translate-y-1/2 p-2 sm:p-3 rounded-full border border-gray-200/60 dark:border-gray-700/60 bg-white dark:bg-gray-900 shadow-sm transition-all z-10 ${currentIndex >= maxIndex
+								? "opacity-30 cursor-not-allowed"
+								: "hover:bg-gray-50 dark:hover:bg-gray-800 hover:shadow-md"
+								}`}
 							aria-label="Next"
 						>
 							<ChevronRight className="h-5 w-5 sm:h-6 sm:w-6 text-gray-700 dark:text-gray-300" />
@@ -233,7 +231,7 @@ function ReasonsCarousel() {
 										)}>
 											{reason.title}
 										</h3>
-										
+
 										{/* Subline */}
 										<p className={cn(
 											"text-sm mb-4 leading-relaxed",
@@ -243,7 +241,7 @@ function ReasonsCarousel() {
 										)}>
 											{reason.subline}
 										</p>
-										
+
 										{/* Pills */}
 										<div className="mt-auto flex flex-wrap gap-1.5">
 											{reason.pills.map((pill) => (
@@ -254,8 +252,8 @@ function ReasonsCarousel() {
 														reason.aboriginalTheme
 															? "bg-red-600/20 text-red-900 dark:bg-red-500/30 dark:text-red-200 border border-red-300/30 dark:border-red-600/30"
 															: reason.hasFlag
-															? "bg-white/20 text-white border border-white/30 backdrop-blur-sm"
-															: "bg-gray-900/10 text-gray-900 dark:bg-white/20 dark:text-white"
+																? "bg-white/20 text-white border border-white/30 backdrop-blur-sm"
+																: "bg-gray-900/10 text-gray-900 dark:bg-white/20 dark:text-white"
 													)}
 												>
 													{pill}
@@ -274,11 +272,10 @@ function ReasonsCarousel() {
 						<button
 							onClick={goToPrevious}
 							disabled={currentIndex === 0}
-							className={`absolute -left-4 sm:-left-6 top-1/2 -translate-y-1/2 p-2 sm:p-3 rounded-full border border-gray-200/60 dark:border-gray-700/60 bg-white dark:bg-gray-900 shadow-sm transition-all z-10 ${
-								currentIndex === 0
-									? "opacity-30 cursor-not-allowed"
-									: "hover:bg-gray-50 dark:hover:bg-gray-800 hover:shadow-md"
-							}`}
+							className={`absolute -left-4 sm:-left-6 top-1/2 -translate-y-1/2 p-2 sm:p-3 rounded-full border border-gray-200/60 dark:border-gray-700/60 bg-white dark:bg-gray-900 shadow-sm transition-all z-10 ${currentIndex === 0
+								? "opacity-30 cursor-not-allowed"
+								: "hover:bg-gray-50 dark:hover:bg-gray-800 hover:shadow-md"
+								}`}
 							aria-label="Previous"
 						>
 							<ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6 text-gray-700 dark:text-gray-300" />
@@ -286,11 +283,10 @@ function ReasonsCarousel() {
 						<button
 							onClick={goToNext}
 							disabled={currentIndex >= maxIndex}
-							className={`absolute -right-4 sm:-right-6 top-1/2 -translate-y-1/2 p-2 sm:p-3 rounded-full border border-gray-200/60 dark:border-gray-700/60 bg-white dark:bg-gray-900 shadow-sm transition-all z-10 ${
-								currentIndex >= maxIndex
-									? "opacity-30 cursor-not-allowed"
-									: "hover:bg-gray-50 dark:hover:bg-gray-800 hover:shadow-md"
-							}`}
+							className={`absolute -right-4 sm:-right-6 top-1/2 -translate-y-1/2 p-2 sm:p-3 rounded-full border border-gray-200/60 dark:border-gray-700/60 bg-white dark:bg-gray-900 shadow-sm transition-all z-10 ${currentIndex >= maxIndex
+								? "opacity-30 cursor-not-allowed"
+								: "hover:bg-gray-50 dark:hover:bg-gray-800 hover:shadow-md"
+								}`}
 							aria-label="Next"
 						>
 							<ChevronRight className="h-5 w-5 sm:h-6 sm:w-6 text-gray-700 dark:text-gray-300" />
@@ -346,7 +342,7 @@ function ReasonsCarousel() {
 										)}>
 											{reason.title}
 										</h3>
-										
+
 										{/* Subline */}
 										<p className={cn(
 											"text-sm mb-4 leading-relaxed",
@@ -356,7 +352,7 @@ function ReasonsCarousel() {
 										)}>
 											{reason.subline}
 										</p>
-										
+
 										{/* Pills */}
 										<div className="mt-auto flex flex-wrap gap-1.5">
 											{reason.pills.map((pill) => (
@@ -367,8 +363,8 @@ function ReasonsCarousel() {
 														reason.aboriginalTheme
 															? "bg-red-600/20 text-red-900 dark:bg-red-500/30 dark:text-red-200 border border-red-300/30 dark:border-red-600/30"
 															: reason.hasFlag
-															? "bg-white/20 text-white border border-white/30 backdrop-blur-sm"
-															: "bg-gray-900/10 text-gray-900 dark:bg-white/20 dark:text-white"
+																? "bg-white/20 text-white border border-white/30 backdrop-blur-sm"
+																: "bg-gray-900/10 text-gray-900 dark:bg-white/20 dark:text-white"
 													)}
 												>
 													{pill}
@@ -387,18 +383,17 @@ function ReasonsCarousel() {
 							// Highlight dot if it's in the visible range
 							const isVisible = index >= currentIndex && index < currentIndex + cardsToShow;
 							const isFirstVisible = index === currentIndex;
-							
+
 							return (
 								<button
 									key={index}
 									onClick={() => goToIndex(index)}
-									className={`h-2 rounded-full transition-all duration-200 ${
-										isFirstVisible
-											? "w-8 bg-gray-900 dark:bg-gray-100"
-											: isVisible
+									className={`h-2 rounded-full transition-all duration-200 ${isFirstVisible
+										? "w-8 bg-gray-900 dark:bg-gray-100"
+										: isVisible
 											? "w-3 bg-gray-500 dark:bg-gray-400"
 											: "w-2 bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500"
-									}`}
+										}`}
 									aria-label={`Go to reason ${index + 1}`}
 								/>
 							);
@@ -567,14 +562,14 @@ export default function HomePage() {
 	// Redirect logged-in users to quizzes page (free users should go to quizzes, not home)
 	useEffect(() => {
 		if (!mounted) return;
-		
+
 		// Check localStorage as source of truth to avoid race conditions
 		if (typeof window === 'undefined') return;
-		
+
 		const authToken = localStorage.getItem('authToken');
 		const userId = localStorage.getItem('userId');
 		const isActuallyLoggedIn = !!(authToken && userId);
-		
+
 		// If user is logged in, redirect to quizzes (regardless of tier)
 		// Don't wait for isLoading - use localStorage as source of truth
 		// Add a small delay to ensure page has rendered
@@ -585,11 +580,11 @@ export default function HomePage() {
 			return () => clearTimeout(redirectTimer);
 		}
 	}, [mounted]);
-	
+
 	return (
 		<>
 			<div id="header-section">
-			<SiteHeader fadeLogo={true} />
+				<SiteHeader fadeLogo={true} />
 			</div>
 			<main className="min-h-screen">
 				{/* Notch Component */}
@@ -618,8 +613,8 @@ export default function HomePage() {
 							</motion.h1>
 						) : (
 							<div className="mb-6 sm:mb-8 md:mb-10 pb-2 sm:pb-4 px-4 sm:px-6 md:px-8 lg:px-12">
-								<Skeleton variant="text" height={120} className="w-full mb-4" />
-								<Skeleton variant="text" height={80} className="w-3/4 mx-auto" />
+								<div className="w-full mb-4 h-[120px] bg-[hsl(var(--muted))] rounded-lg animate-pulse" />
+								<div className="w-3/4 mx-auto h-[80px] bg-[hsl(var(--muted))] rounded-lg animate-pulse" />
 							</div>
 						)}
 
@@ -634,25 +629,25 @@ export default function HomePage() {
 								{/* Desktop version */}
 								<div className="hidden sm:block space-y-4">
 									<p>
-									A great quiz brings out shared laughs, inside jokes, and those easy moments that help you build stronger connections with your students.
+										A great quiz brings out shared laughs, inside jokes, and those easy moments that help you build stronger connections with your students.
 									</p>
 									<p>
-									The School Quiz is built for exactly that.
+										The School Quiz is built for exactly that.
 									</p>
 									<p>
-									Each week it blends general knowledge with school-friendly fun — music, sport, movies, current affairs, pop culture, and whatever's actually trending with teenagers in Australia. No trick questions. No AI slop. Just a solid, reliable quiz landing every Monday morning.
+										Each week it blends general knowledge with school-friendly fun — music, sport, movies, current affairs, pop culture, and whatever's actually trending with teenagers in Australia. No trick questions. No AI slop. Just a solid, reliable quiz landing every Monday morning.
 									</p>
 								</div>
 								{/* Mobile version */}
 								<div className="block sm:hidden space-y-3">
 									<p>
-									A great quiz brings out shared laughs, inside jokes, and those easy moments that help you build stronger connections with your students.
+										A great quiz brings out shared laughs, inside jokes, and those easy moments that help you build stronger connections with your students.
 									</p>
 									<p>
-									The School Quiz is built for exactly that.
+										The School Quiz is built for exactly that.
 									</p>
 									<p>
-									Each week it blends general knowledge with school-friendly fun — music, sport, movies, current affairs, pop culture, and whatever's actually trending with teenagers in Australia. No trick questions. No AI slop. Just a solid, reliable quiz landing every Monday morning.
+										Each week it blends general knowledge with school-friendly fun — music, sport, movies, current affairs, pop culture, and whatever's actually trending with teenagers in Australia. No trick questions. No AI slop. Just a solid, reliable quiz landing every Monday morning.
 									</p>
 								</div>
 							</motion.div>
@@ -662,27 +657,27 @@ export default function HomePage() {
 							</div>
 						)}
 
-					{contentLoaded ? (
-						<motion.div 
-							id="buttons" 
-							className="px-2 sm:px-0"
-							initial={{ opacity: 0, y: 10 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{ duration: 0.4, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-						>
-							<HeroCTA />
-						</motion.div>
-					) : (
-						<div className="px-2 sm:px-0 flex justify-center gap-4">
-							<Skeleton variant="rectangular" width={180} height={48} className="rounded-full" />
-							<Skeleton variant="rectangular" width={180} height={48} className="rounded-full" />
-						</div>
-					)}
-				</div>
+						{contentLoaded ? (
+							<motion.div
+								id="buttons"
+								className="px-2 sm:px-0"
+								initial={{ opacity: 0, y: 10 }}
+								animate={{ opacity: 1, y: 0 }}
+								transition={{ duration: 0.4, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+							>
+								<HeroCTA />
+							</motion.div>
+						) : (
+							<div className="px-2 sm:px-0 flex justify-center gap-4">
+								<div className="w-[180px] h-[48px] bg-[hsl(var(--muted))] rounded-full animate-pulse" />
+								<div className="w-[180px] h-[48px] bg-[hsl(var(--muted))] rounded-full animate-pulse" />
+							</div>
+						)}
+					</div>
 
 					{/* A new quiz every week heading */}
 					{contentLoaded ? (
-						<motion.div 
+						<motion.div
 							className="w-full px-4 mt-8 mb-4"
 							initial={{ opacity: 0, y: 20 }}
 							animate={{ opacity: 1, y: 0 }}
@@ -718,7 +713,7 @@ export default function HomePage() {
 
 					{/* Interactive Quiz Preview heading */}
 					{contentLoaded ? (
-						<motion.div 
+						<motion.div
 							className="w-full px-4 mt-12 mb-6"
 							initial={{ opacity: 0, y: 20 }}
 							animate={{ opacity: 1, y: 0 }}
@@ -737,7 +732,7 @@ export default function HomePage() {
 
 					{/* Safari Preview Peeking from Bottom */}
 					{contentLoaded ? (
-						<motion.div 
+						<motion.div
 							className="w-full px-8 sm:px-12 md:px-16 lg:px-20 xl:px-24 mt-4 mb-8"
 							initial={{ opacity: 0, y: 30 }}
 							animate={{ opacity: 1, y: 0 }}
@@ -750,14 +745,14 @@ export default function HomePage() {
 					) : (
 						<div className="w-full px-8 sm:px-12 md:px-16 lg:px-20 xl:px-24 mt-4 mb-8">
 							<div className="max-w-5xl mx-auto">
-								<Skeleton variant="rectangular" height={400} className="w-full rounded-2xl" />
+								<div className="w-full h-[400px] bg-[hsl(var(--muted))] rounded-2xl animate-pulse" />
 							</div>
 						</div>
 					)}
 
 					{/* Achievements Preview heading */}
 					{contentLoaded ? (
-						<motion.div 
+						<motion.div
 							className="w-full px-4 mt-16 mb-6"
 							initial={{ opacity: 0, y: 20 }}
 							animate={{ opacity: 1, y: 0 }}
@@ -776,7 +771,7 @@ export default function HomePage() {
 
 					{/* Achievements Preview Cards */}
 					{contentLoaded ? (
-						<motion.div 
+						<motion.div
 							className="w-full px-4 mt-6 mb-12"
 							initial={{ opacity: 0, y: 30 }}
 							animate={{ opacity: 1, y: 0 }}
@@ -871,19 +866,19 @@ export default function HomePage() {
 									const isUnlocked = achievement.status === 'unlocked';
 									// Subtle tilt: -1.5, -1, -0.5, 0, 0.5, 1, 1.5 degrees
 									const rotation = (index % 7 - 3) * 0.5;
-									
+
 									return (
 										<motion.div
 											key={achievement.id}
 											initial={{ opacity: 0, y: 20, scale: 0.9 }}
-											animate={{ 
-												opacity: 1, 
-												y: 0, 
+											animate={{
+												opacity: 1,
+												y: 0,
 												scale: 1,
 												rotate: isFlipped ? 0 : rotation,
 											}}
-											transition={{ 
-												duration: 0.4, 
+											transition={{
+												duration: 0.4,
 												delay: 0.6 + (index * 0.05),
 												ease: [0.22, 1, 0.36, 1]
 											}}
@@ -891,7 +886,7 @@ export default function HomePage() {
 											style={{
 												zIndex: isFlipped ? 1000 : 5 - index,
 											}}
-											whileHover={{ 
+											whileHover={{
 												zIndex: 1000,
 												scale: 1.05,
 												rotate: 0,
@@ -923,7 +918,7 @@ export default function HomePage() {
 									);
 								})}
 							</div>
-							
+
 							{/* Explore Achievements Button */}
 							<div className="text-center mt-4 sm:mt-5">
 								<p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
@@ -938,1003 +933,1003 @@ export default function HomePage() {
 							</div>
 						</motion.div>
 					) : null}
-			</section>
+				</section>
 
-			{/* Premium Features - Mobbin Style */}
-			<section className="w-full py-16 sm:py-20 md:py-24 px-6 sm:px-8 md:px-12 lg:px-16">
-				<motion.div
-					initial={{ opacity: 0, y: 20 }}
-					whileInView={{ opacity: 1, y: 0 }}
-					viewport={{ once: true, margin: "-100px" }}
-					transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-					className="max-w-7xl mx-auto"
-				>
-					<div className="text-center mb-12">
-						<h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
-							Do more with Premium
-						</h2>
-						<p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-							Premium adds the tools that turn a good Monday quiz into a term-long routine students actually look forward to.
-						</p>
-					</div>
+				{/* Premium Features - Mobbin Style */}
+				<section className="w-full py-16 sm:py-20 md:py-24 px-6 sm:px-8 md:px-12 lg:px-16">
+					<motion.div
+						initial={{ opacity: 0, y: 20 }}
+						whileInView={{ opacity: 1, y: 0 }}
+						viewport={{ once: true, margin: "-100px" }}
+						transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+						className="max-w-7xl mx-auto"
+					>
+						<div className="text-center mb-12">
+							<h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
+								Do more with Premium
+							</h2>
+							<p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+								Premium adds the tools that turn a good Monday quiz into a term-long routine students actually look forward to.
+							</p>
+						</div>
 
-					{/* Premium Feature Cards - Mobbin Style (2 rows, 3 columns) */}
-					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
-						{/* The People's Round - with spotlight and typing animation */}
-						<motion.div
-							initial={{ opacity: 0, y: 20, rotate: -0.5 }}
-							whileInView={{ opacity: 1, y: 0 }}
-							viewport={{ once: true }}
-							whileHover={{ rotate: 0.5, scale: 1.02, y: -4 }}
-							transition={{ 
-								duration: 0.5, 
-								delay: 0.1,
-								type: "spring",
-								stiffness: 300,
-								damping: 20
-							}}
-							className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden group hover:shadow-lg transition-shadow"
-							style={{ transformOrigin: 'center' }}
-						>
-							{/* UI Preview Area */}
-							<div className="bg-gray-50 dark:bg-gray-800 px-4 py-6 border-b border-gray-200 dark:border-gray-700">
-								{/* Form mockup with typing animation */}
-								<div className="space-y-3">
-									<div className="bg-white dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
-										<div className="space-y-2.5">
-											<div>
-												<label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">Your question</label>
-												<div className="min-h-[60px] bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 p-3 text-sm text-gray-700 dark:text-gray-300">
-													<TypingAnimation 
-														text="What Australian city is known as the 'City of Churches'?"
-														speed={40}
-														delay={500}
-														className="text-sm"
-													/>
-												</div>
-											</div>
-											<div className="grid grid-cols-2 gap-2">
+						{/* Premium Feature Cards - Mobbin Style (2 rows, 3 columns) */}
+						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+							{/* The People's Round - with spotlight and typing animation */}
+							<motion.div
+								initial={{ opacity: 0, y: 20, rotate: -0.5 }}
+								whileInView={{ opacity: 1, y: 0 }}
+								viewport={{ once: true }}
+								whileHover={{ rotate: 0.5, scale: 1.02, y: -4 }}
+								transition={{
+									duration: 0.5,
+									delay: 0.1,
+									type: "spring",
+									stiffness: 300,
+									damping: 20
+								}}
+								className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden group hover:shadow-lg transition-shadow"
+								style={{ transformOrigin: 'center' }}
+							>
+								{/* UI Preview Area */}
+								<div className="bg-gray-50 dark:bg-gray-800 px-4 py-6 border-b border-gray-200 dark:border-gray-700">
+									{/* Form mockup with typing animation */}
+									<div className="space-y-3">
+										<div className="bg-white dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+											<div className="space-y-2.5">
 												<div>
-													<label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Teacher name</label>
-													<div className="h-7 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 px-2 text-xs text-gray-600 dark:text-gray-400 flex items-center">Mr F</div>
+													<label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">Your question</label>
+													<div className="min-h-[60px] bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 p-3 text-sm text-gray-700 dark:text-gray-300">
+														<TypingAnimation
+															text="What Australian city is known as the 'City of Churches'?"
+															speed={40}
+															delay={500}
+															className="text-sm"
+														/>
+													</div>
 												</div>
-												<div>
-													<label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">School</label>
-													<div className="h-7 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 px-2 text-xs text-gray-600 dark:text-gray-400 flex items-center truncate">Stanton Road HS</div>
+												<div className="grid grid-cols-2 gap-2">
+													<div>
+														<label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Teacher name</label>
+														<div className="h-7 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 px-2 text-xs text-gray-600 dark:text-gray-400 flex items-center">Mr F</div>
+													</div>
+													<div>
+														<label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">School</label>
+														<div className="h-7 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 px-2 text-xs text-gray-600 dark:text-gray-400 flex items-center truncate">Stanton Road HS</div>
+													</div>
 												</div>
-											</div>
-											<div className="flex items-center gap-2">
-												<input type="checkbox" id="shoutout" className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500" defaultChecked />
-												<label htmlFor="shoutout" className="text-xs font-medium text-gray-700 dark:text-gray-300">Include shoutout in quiz</label>
-											</div>
-											<button className="w-full h-8 bg-purple-600 text-white rounded-full font-medium text-sm hover:bg-purple-700 transition-colors">Submit question</button>
-										</div>
-									</div>
-								</div>
-							</div>
-							{/* Content below */}
-							<div className="p-5">
-								<h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
-									Be featured in the quiz
-								</h3>
-								<p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-									Submit to The People's Round and get a shoutout when your question appears. You and your school get a shoutout.
-								</p>
-							</div>
-						</motion.div>
-
-						{/* Private Leaderboards */}
-						<motion.div
-							initial={{ opacity: 0, y: 20, rotate: 0.4 }}
-							whileInView={{ opacity: 1, y: 0 }}
-							viewport={{ once: true }}
-							whileHover={{ rotate: -0.4, scale: 1.02, y: -4 }}
-							transition={{ 
-								duration: 0.5, 
-								delay: 0.2,
-								type: "spring",
-								stiffness: 300,
-								damping: 20
-							}}
-							className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden group hover:shadow-lg transition-shadow"
-							style={{ transformOrigin: 'center' }}
-						>
-							{/* UI Preview Area */}
-							<div className="bg-gray-50 dark:bg-gray-800 px-4 py-6 border-b border-gray-200 dark:border-gray-700">
-								{/* Leaderboard mockup with multiple leagues */}
-								<div className="space-y-3">
-									{/* League 1 */}
-									<div className="space-y-1.5">
-										<div className="flex items-center gap-1.5 mb-1">
-											<Trophy className="w-3 h-3 text-orange-500 dark:text-orange-400" />
-											<div className="text-xs font-semibold text-gray-900 dark:text-white">School Houses</div>
-										</div>
-										<div className="space-y-1">
-											<div className="flex items-center justify-between p-2 bg-white dark:bg-gray-900 rounded-md border border-gray-200 dark:border-gray-700">
-												<div className="flex items-center gap-2 flex-1">
-													<div className="w-5 h-5 rounded-full bg-red-500 flex-shrink-0"></div>
-													<div className="text-xs font-medium text-gray-900 dark:text-white">Red House</div>
+												<div className="flex items-center gap-2">
+													<input type="checkbox" id="shoutout" className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500" defaultChecked />
+													<label htmlFor="shoutout" className="text-xs font-medium text-gray-700 dark:text-gray-300">Include shoutout in quiz</label>
 												</div>
-												<div className="text-xs font-semibold text-gray-900 dark:text-white">245</div>
-											</div>
-											<div className="flex items-center justify-between p-2 bg-white dark:bg-gray-900 rounded-md border border-gray-200 dark:border-gray-700">
-												<div className="flex items-center gap-2 flex-1">
-													<div className="w-5 h-5 rounded-full bg-blue-500 flex-shrink-0"></div>
-													<div className="text-xs font-medium text-gray-900 dark:text-white">Blue House</div>
-												</div>
-												<div className="text-xs font-semibold text-gray-900 dark:text-white">198</div>
-											</div>
-										</div>
-									</div>
-									{/* League 2 */}
-									<div className="space-y-1.5">
-										<div className="flex items-center gap-1.5 mb-1">
-											<Users className="w-3 h-3 text-blue-500 dark:text-blue-400" />
-											<div className="text-xs font-semibold text-gray-900 dark:text-white">Year 9 Teachers</div>
-										</div>
-										<div className="space-y-1">
-											<div className="flex items-center justify-between p-2 bg-white dark:bg-gray-900 rounded-md border border-gray-200 dark:border-gray-700">
-												<div className="flex items-center gap-2 flex-1">
-													<div className="w-5 h-5 rounded-full bg-green-500 flex-shrink-0"></div>
-													<div className="text-xs font-medium text-gray-900 dark:text-white">Mr P</div>
-												</div>
-												<div className="text-xs font-semibold text-gray-900 dark:text-white">156</div>
-											</div>
-											<div className="flex items-center justify-between p-2 bg-white dark:bg-gray-900 rounded-md border border-gray-200 dark:border-gray-700">
-												<div className="flex items-center gap-2 flex-1">
-													<div className="w-5 h-5 rounded-full bg-purple-500 flex-shrink-0"></div>
-													<div className="text-xs font-medium text-gray-900 dark:text-white">Ms K</div>
-												</div>
-												<div className="text-xs font-semibold text-gray-900 dark:text-white">142</div>
+												<button className="w-full h-8 bg-purple-600 text-white rounded-full font-medium text-sm hover:bg-purple-700 transition-colors">Submit question</button>
 											</div>
 										</div>
 									</div>
 								</div>
-							</div>
-							{/* Content */}
-							<div className="p-5">
-								<h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
-									Private Leaderboards
-								</h3>
-								<p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-									Create exclusive leaderboards for your class or school. Compete with colleagues and friends in private competitions.
-								</p>
-							</div>
-						</motion.div>
+								{/* Content below */}
+								<div className="p-5">
+									<h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+										Be featured in the quiz
+									</h3>
+									<p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+										Submit to The People's Round and get a shoutout when your question appears. You and your school get a shoutout.
+									</p>
+								</div>
+							</motion.div>
 
-						{/* Stats & Streaks */}
-						<motion.div
-							initial={{ opacity: 0, y: 20, rotate: -0.4 }}
-							whileInView={{ opacity: 1, y: 0 }}
-							viewport={{ once: true }}
-							whileHover={{ rotate: 0.5, scale: 1.02, y: -4 }}
-							transition={{ 
-								duration: 0.5, 
-								delay: 0.3,
-								type: "spring",
-								stiffness: 300,
-								damping: 20
-							}}
-							className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden group hover:shadow-lg transition-shadow"
-							style={{ transformOrigin: 'center' }}
-						>
-							{/* UI Preview Area */}
-							<div className="bg-gray-50 dark:bg-gray-800 px-4 py-6 border-b border-gray-200 dark:border-gray-700">
-								{/* Stats mockup */}
-								<div className="space-y-3">
-									<div className="grid grid-cols-2 gap-2.5">
-										<motion.div 
-											className="bg-white dark:bg-gray-900 rounded-lg p-3 border border-gray-200 dark:border-gray-700"
-											initial={{ opacity: 0, scale: 0.9 }}
-											animate={{ opacity: 1, scale: 1 }}
-											transition={{ duration: 0.3, delay: 0.1 }}
-										>
-											<motion.div 
-												className="text-xl font-bold text-gray-900 dark:text-white mb-0.5"
-												initial={{ opacity: 0 }}
-												animate={{ opacity: 1 }}
-												transition={{ duration: 0.5, delay: 0.2 }}
-											>
-												42
-											</motion.div>
-											<div className="text-xs text-gray-500 dark:text-gray-400">Perfect scores</div>
-										</motion.div>
-										<motion.div 
-											className="bg-white dark:bg-gray-900 rounded-lg p-3 border border-gray-200 dark:border-gray-700"
-											initial={{ opacity: 0, scale: 0.9 }}
-											animate={{ opacity: 1, scale: 1 }}
-											transition={{ duration: 0.3, delay: 0.2 }}
-										>
-											<motion.div 
-												className="text-xl font-bold text-purple-600 dark:text-purple-400 mb-0.5"
-												initial={{ opacity: 0 }}
-												animate={{ opacity: 1 }}
-												transition={{ duration: 0.5, delay: 0.3 }}
-											>
-												12
-											</motion.div>
-											<div className="text-xs text-gray-500 dark:text-gray-400">Week streak</div>
-										</motion.div>
+							{/* Private Leaderboards */}
+							<motion.div
+								initial={{ opacity: 0, y: 20, rotate: 0.4 }}
+								whileInView={{ opacity: 1, y: 0 }}
+								viewport={{ once: true }}
+								whileHover={{ rotate: -0.4, scale: 1.02, y: -4 }}
+								transition={{
+									duration: 0.5,
+									delay: 0.2,
+									type: "spring",
+									stiffness: 300,
+									damping: 20
+								}}
+								className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden group hover:shadow-lg transition-shadow"
+								style={{ transformOrigin: 'center' }}
+							>
+								{/* UI Preview Area */}
+								<div className="bg-gray-50 dark:bg-gray-800 px-4 py-6 border-b border-gray-200 dark:border-gray-700">
+									{/* Leaderboard mockup with multiple leagues */}
+									<div className="space-y-3">
+										{/* League 1 */}
+										<div className="space-y-1.5">
+											<div className="flex items-center gap-1.5 mb-1">
+												<Trophy className="w-3 h-3 text-orange-500 dark:text-orange-400" />
+												<div className="text-xs font-semibold text-gray-900 dark:text-white">School Houses</div>
+											</div>
+											<div className="space-y-1">
+												<div className="flex items-center justify-between p-2 bg-white dark:bg-gray-900 rounded-md border border-gray-200 dark:border-gray-700">
+													<div className="flex items-center gap-2 flex-1">
+														<div className="w-5 h-5 rounded-full bg-red-500 flex-shrink-0"></div>
+														<div className="text-xs font-medium text-gray-900 dark:text-white">Red House</div>
+													</div>
+													<div className="text-xs font-semibold text-gray-900 dark:text-white">245</div>
+												</div>
+												<div className="flex items-center justify-between p-2 bg-white dark:bg-gray-900 rounded-md border border-gray-200 dark:border-gray-700">
+													<div className="flex items-center gap-2 flex-1">
+														<div className="w-5 h-5 rounded-full bg-blue-500 flex-shrink-0"></div>
+														<div className="text-xs font-medium text-gray-900 dark:text-white">Blue House</div>
+													</div>
+													<div className="text-xs font-semibold text-gray-900 dark:text-white">198</div>
+												</div>
+											</div>
+										</div>
+										{/* League 2 */}
+										<div className="space-y-1.5">
+											<div className="flex items-center gap-1.5 mb-1">
+												<Users className="w-3 h-3 text-blue-500 dark:text-blue-400" />
+												<div className="text-xs font-semibold text-gray-900 dark:text-white">Year 9 Teachers</div>
+											</div>
+											<div className="space-y-1">
+												<div className="flex items-center justify-between p-2 bg-white dark:bg-gray-900 rounded-md border border-gray-200 dark:border-gray-700">
+													<div className="flex items-center gap-2 flex-1">
+														<div className="w-5 h-5 rounded-full bg-green-500 flex-shrink-0"></div>
+														<div className="text-xs font-medium text-gray-900 dark:text-white">Mr P</div>
+													</div>
+													<div className="text-xs font-semibold text-gray-900 dark:text-white">156</div>
+												</div>
+												<div className="flex items-center justify-between p-2 bg-white dark:bg-gray-900 rounded-md border border-gray-200 dark:border-gray-700">
+													<div className="flex items-center gap-2 flex-1">
+														<div className="w-5 h-5 rounded-full bg-purple-500 flex-shrink-0"></div>
+														<div className="text-xs font-medium text-gray-900 dark:text-white">Ms K</div>
+													</div>
+													<div className="text-xs font-semibold text-gray-900 dark:text-white">142</div>
+												</div>
+											</div>
+										</div>
 									</div>
-									{/* Bar chart preview */}
-									<div className="bg-white dark:bg-gray-900 rounded-lg p-3 border border-gray-200 dark:border-gray-700 h-16 flex items-end justify-center gap-1 relative overflow-hidden">
-										{[3, 5, 4, 6, 5, 7, 6, 8].map((baseHeight, i) => {
-											// Vary the animation slightly for each bar
-											const variation = 0.3;
-											const minHeight = baseHeight - variation;
-											const maxHeight = baseHeight + variation;
-											return (
+								</div>
+								{/* Content */}
+								<div className="p-5">
+									<h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+										Private Leaderboards
+									</h3>
+									<p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+										Create exclusive leaderboards for your class or school. Compete with colleagues and friends in private competitions.
+									</p>
+								</div>
+							</motion.div>
+
+							{/* Stats & Streaks */}
+							<motion.div
+								initial={{ opacity: 0, y: 20, rotate: -0.4 }}
+								whileInView={{ opacity: 1, y: 0 }}
+								viewport={{ once: true }}
+								whileHover={{ rotate: 0.5, scale: 1.02, y: -4 }}
+								transition={{
+									duration: 0.5,
+									delay: 0.3,
+									type: "spring",
+									stiffness: 300,
+									damping: 20
+								}}
+								className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden group hover:shadow-lg transition-shadow"
+								style={{ transformOrigin: 'center' }}
+							>
+								{/* UI Preview Area */}
+								<div className="bg-gray-50 dark:bg-gray-800 px-4 py-6 border-b border-gray-200 dark:border-gray-700">
+									{/* Stats mockup */}
+									<div className="space-y-3">
+										<div className="grid grid-cols-2 gap-2.5">
+											<motion.div
+												className="bg-white dark:bg-gray-900 rounded-lg p-3 border border-gray-200 dark:border-gray-700"
+												initial={{ opacity: 0, scale: 0.9 }}
+												animate={{ opacity: 1, scale: 1 }}
+												transition={{ duration: 0.3, delay: 0.1 }}
+											>
 												<motion.div
-													key={i}
-													className="flex-1 bg-purple-500 rounded-t max-w-[8px]"
-													initial={{ height: 0, opacity: 0 }}
-													animate={{ 
-														height: [
-															`${Math.max(15, (minHeight / 8) * 100)}%`,
-															`${Math.max(15, (maxHeight / 8) * 100)}%`,
-															`${Math.max(15, (baseHeight / 8) * 100)}%`,
-															`${Math.max(15, (minHeight / 8) * 100)}%`
-														],
-														opacity: 1
+													className="text-xl font-bold text-gray-900 dark:text-white mb-0.5"
+													initial={{ opacity: 0 }}
+													animate={{ opacity: 1 }}
+													transition={{ duration: 0.5, delay: 0.2 }}
+												>
+													42
+												</motion.div>
+												<div className="text-xs text-gray-500 dark:text-gray-400">Perfect scores</div>
+											</motion.div>
+											<motion.div
+												className="bg-white dark:bg-gray-900 rounded-lg p-3 border border-gray-200 dark:border-gray-700"
+												initial={{ opacity: 0, scale: 0.9 }}
+												animate={{ opacity: 1, scale: 1 }}
+												transition={{ duration: 0.3, delay: 0.2 }}
+											>
+												<motion.div
+													className="text-xl font-bold text-purple-600 dark:text-purple-400 mb-0.5"
+													initial={{ opacity: 0 }}
+													animate={{ opacity: 1 }}
+													transition={{ duration: 0.5, delay: 0.3 }}
+												>
+													12
+												</motion.div>
+												<div className="text-xs text-gray-500 dark:text-gray-400">Week streak</div>
+											</motion.div>
+										</div>
+										{/* Bar chart preview */}
+										<div className="bg-white dark:bg-gray-900 rounded-lg p-3 border border-gray-200 dark:border-gray-700 h-16 flex items-end justify-center gap-1 relative overflow-hidden">
+											{[3, 5, 4, 6, 5, 7, 6, 8].map((baseHeight, i) => {
+												// Vary the animation slightly for each bar
+												const variation = 0.3;
+												const minHeight = baseHeight - variation;
+												const maxHeight = baseHeight + variation;
+												return (
+													<motion.div
+														key={i}
+														className="flex-1 bg-purple-500 rounded-t max-w-[8px]"
+														initial={{ height: 0, opacity: 0 }}
+														animate={{
+															height: [
+																`${Math.max(15, (minHeight / 8) * 100)}%`,
+																`${Math.max(15, (maxHeight / 8) * 100)}%`,
+																`${Math.max(15, (baseHeight / 8) * 100)}%`,
+																`${Math.max(15, (minHeight / 8) * 100)}%`
+															],
+															opacity: 1
+														}}
+														transition={{
+															duration: 6,
+															delay: 0.4 + (i * 0.1),
+															repeat: Infinity,
+															repeatType: "loop",
+															ease: "easeInOut"
+														}}
+													/>
+												);
+											})}
+										</div>
+										{/* Line graph preview - separate */}
+										<div className="bg-white dark:bg-gray-900 rounded-lg p-3 border border-gray-200 dark:border-gray-700 h-16 relative overflow-hidden">
+											<svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ padding: '12px' }}>
+												<motion.path
+													stroke="rgb(168, 85, 247)"
+													strokeWidth="2"
+													fill="none"
+													opacity="0.6"
+													initial={{ pathLength: 0, opacity: 0 }}
+													animate={{
+														pathLength: [0, 1, 1, 0],
+														opacity: [0, 0.6, 0.6, 0],
+														d: [
+															"M 0 50 Q 30 45, 60 40 T 120 35 T 180 30 T 240 25",
+															"M 0 48 Q 30 43, 60 38 T 120 33 T 180 28 T 240 23",
+															"M 0 52 Q 30 47, 60 42 T 120 37 T 180 32 T 240 27",
+															"M 0 50 Q 30 45, 60 40 T 120 35 T 180 30 T 240 25"
+														]
 													}}
-													transition={{ 
+													transition={{
 														duration: 6,
-														delay: 0.4 + (i * 0.1),
 														repeat: Infinity,
 														repeatType: "loop",
 														ease: "easeInOut"
 													}}
 												/>
+											</svg>
+										</div>
+										<motion.div
+											className="bg-white dark:bg-gray-900 rounded-lg p-2.5 border border-gray-200 dark:border-gray-700"
+											initial={{ opacity: 0, y: 10 }}
+											animate={{ opacity: 1, y: 0 }}
+											transition={{ duration: 0.3, delay: 0.5 }}
+										>
+											<div className="text-[10px] font-medium text-gray-700 dark:text-gray-300 mb-1.5">Compare performance</div>
+											<div className="space-y-1.5">
+												<motion.div
+													className="flex items-center justify-between"
+													initial={{ opacity: 0, x: -10 }}
+													animate={{ opacity: 1, x: 0 }}
+													transition={{ duration: 0.3, delay: 0.6 }}
+												>
+													<div className="text-[10px] text-gray-500 dark:text-gray-400">vs National avg</div>
+													<motion.div
+														className="text-xs font-semibold text-green-600 dark:text-green-400"
+														animate={{ scale: [1, 1.05, 1] }}
+														transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+													>
+														+8%
+													</motion.div>
+												</motion.div>
+												<motion.div
+													className="flex items-center justify-between"
+													initial={{ opacity: 0, x: -10 }}
+													animate={{ opacity: 1, x: 0 }}
+													transition={{ duration: 0.3, delay: 0.7 }}
+												>
+													<div className="text-[10px] text-gray-500 dark:text-gray-400">vs Your leaderboard</div>
+													<div className="text-xs font-semibold text-blue-600 dark:text-blue-400">#3</div>
+												</motion.div>
+											</div>
+										</motion.div>
+									</div>
+								</div>
+								{/* Content */}
+								<div className="p-5">
+									<h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+										Stats & Streaks
+									</h3>
+									<p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+										Track your performance with detailed analytics and build impressive streaks.
+									</p>
+								</div>
+							</motion.div>
+
+							{/* Printable PDFs */}
+							<motion.div
+								initial={{ opacity: 0, y: 20, rotate: 0.3 }}
+								whileInView={{ opacity: 1, y: 0 }}
+								viewport={{ once: true }}
+								whileHover={{ rotate: -0.5, scale: 1.02, y: -4 }}
+								transition={{
+									duration: 0.5,
+									delay: 0.4,
+									type: "spring",
+									stiffness: 300,
+									damping: 20
+								}}
+								className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden group hover:shadow-lg transition-shadow"
+								style={{ transformOrigin: 'center' }}
+							>
+								{/* UI Preview Area */}
+								<div className="bg-gray-50 dark:bg-gray-800 px-4 py-6 border-b border-gray-200 dark:border-gray-700">
+									{/* PDF mockup - quiz layout */}
+									<div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden text-left">
+										{/* PDF header */}
+										<div className="bg-emerald-50 dark:bg-emerald-900/20 px-3 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+											<div className="flex items-center gap-2">
+												<FileText className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+												<div className="text-xs font-semibold text-gray-900 dark:text-white">Quiz #12</div>
+											</div>
+											<Download className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
+										</div>
+										{/* PDF content - quiz preview */}
+										<div className="p-3 space-y-3 text-left">
+											{/* Title */}
+											<div>
+												<div className="h-3 bg-gray-800/80 dark:bg-gray-200/80 rounded w-3/4 mb-1"></div>
+												<div className="h-2 bg-gray-400/60 dark:bg-gray-500/60 rounded w-1/4"></div>
+											</div>
+											{/* Round 1 */}
+											<div className="space-y-1.5 pt-2 border-t border-gray-200 dark:border-gray-700">
+												<div className="flex items-center gap-2">
+													<div className="h-2.5 w-16 bg-teal-500/80 rounded"></div>
+													<div className="h-1.5 w-20 bg-gray-300/70 dark:bg-gray-600/70 rounded"></div>
+												</div>
+												<div className="space-y-1 pl-2 border-l-2 border-teal-500/80">
+													<div className="h-1.5 bg-gray-400/70 dark:bg-gray-500/70 rounded w-full"></div>
+													<div className="h-1 bg-gray-500/60 dark:bg-gray-400/60 rounded w-3/4 ml-3"></div>
+													<div className="h-1.5 bg-gray-400/70 dark:bg-gray-500/70 rounded w-full"></div>
+													<div className="h-1 bg-gray-500/60 dark:bg-gray-400/60 rounded w-2/3 ml-3"></div>
+												</div>
+											</div>
+											{/* Round 2 */}
+											<div className="space-y-1.5 pt-2 border-t border-gray-200 dark:border-gray-700">
+												<div className="flex items-center gap-2">
+													<div className="h-2.5 w-16 bg-orange-500/80 rounded"></div>
+													<div className="h-1.5 w-24 bg-gray-300/70 dark:bg-gray-600/70 rounded"></div>
+												</div>
+												<div className="space-y-1 pl-2 border-l-2 border-orange-500/80">
+													<div className="h-1.5 bg-gray-400/70 dark:bg-gray-500/70 rounded w-full"></div>
+													<div className="h-1 bg-gray-500/60 dark:bg-gray-400/60 rounded w-4/5 ml-3"></div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+								{/* Content */}
+								<div className="p-5">
+									<h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+										Printable PDFs
+									</h3>
+									<p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+										Download quizzes as clean PDFs for offline use or paper copies.
+									</p>
+								</div>
+							</motion.div>
+
+							{/* Replay Old Quizzes */}
+							<motion.div
+								initial={{ opacity: 0, y: 20, rotate: -0.3 }}
+								whileInView={{ opacity: 1, y: 0 }}
+								viewport={{ once: true }}
+								whileHover={{ rotate: 0.4, scale: 1.02, y: -4 }}
+								transition={{
+									duration: 0.5,
+									delay: 0.5,
+									type: "spring",
+									stiffness: 300,
+									damping: 20
+								}}
+								className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden group hover:shadow-lg transition-shadow"
+								style={{ transformOrigin: 'center' }}
+							>
+								{/* UI Preview Area */}
+								<div className="bg-gray-50 dark:bg-gray-800 px-4 py-6 border-b border-gray-200 dark:border-gray-700">
+									{/* Quiz cards mockup - styled like actual quiz cards with rotation */}
+									<div className="grid grid-cols-3 gap-2">
+										{[...Array(6)].map((_, i) => {
+											// Use different colors for variety
+											const colors = [
+												'rgb(59, 130, 246)', // blue
+												'rgb(168, 85, 247)', // purple
+												'rgb(236, 72, 153)', // pink
+												'rgb(34, 197, 94)', // green
+												'rgb(251, 146, 60)', // orange
+												'rgb(99, 102, 241)', // indigo
+											];
+											const color = colors[i % colors.length];
+											const textColor = i % 3 === 0 ? 'white' : 'gray-900';
+											// Vary rotation angles for each card
+											const rotations = [-1.5, 1.2, -1.8, 1.5, -1.2, 1.8];
+											const rotation = rotations[i % rotations.length];
+											return (
+												<div
+													key={i}
+													className="aspect-[5/8] rounded-2xl p-2.5 flex flex-col justify-between shadow-sm"
+													style={{
+														backgroundColor: color,
+														transform: `rotate(${rotation}deg)`,
+														transformOrigin: 'center'
+													}}
+												>
+													<div className="flex items-center gap-1">
+														<span className={`text-xs font-bold ${textColor === 'white' ? 'text-white' : 'text-gray-900'} bg-black/10 px-2 py-0.5 rounded-full`}>
+															#{i + 1}
+														</span>
+													</div>
+													<div className={`text-sm font-extrabold ${textColor === 'white' ? 'text-white' : 'text-gray-900'} leading-tight line-clamp-2`}>
+														Quiz {i + 1}
+													</div>
+												</div>
 											);
 										})}
 									</div>
-									{/* Line graph preview - separate */}
-									<div className="bg-white dark:bg-gray-900 rounded-lg p-3 border border-gray-200 dark:border-gray-700 h-16 relative overflow-hidden">
-										<svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ padding: '12px' }}>
-											<motion.path
-												stroke="rgb(168, 85, 247)"
-												strokeWidth="2"
-												fill="none"
-												opacity="0.6"
-												initial={{ pathLength: 0, opacity: 0 }}
-												animate={{ 
-													pathLength: [0, 1, 1, 0],
-													opacity: [0, 0.6, 0.6, 0],
-													d: [
-														"M 0 50 Q 30 45, 60 40 T 120 35 T 180 30 T 240 25",
-														"M 0 48 Q 30 43, 60 38 T 120 33 T 180 28 T 240 23",
-														"M 0 52 Q 30 47, 60 42 T 120 37 T 180 32 T 240 27",
-														"M 0 50 Q 30 45, 60 40 T 120 35 T 180 30 T 240 25"
-													]
-												}}
-												transition={{ 
-													duration: 6,
-													repeat: Infinity,
-													repeatType: "loop",
-													ease: "easeInOut"
-												}}
-											/>
-										</svg>
-									</div>
-									<motion.div 
-										className="bg-white dark:bg-gray-900 rounded-lg p-2.5 border border-gray-200 dark:border-gray-700"
-										initial={{ opacity: 0, y: 10 }}
-										animate={{ opacity: 1, y: 0 }}
-										transition={{ duration: 0.3, delay: 0.5 }}
-									>
-										<div className="text-[10px] font-medium text-gray-700 dark:text-gray-300 mb-1.5">Compare performance</div>
-										<div className="space-y-1.5">
-											<motion.div 
-												className="flex items-center justify-between"
-												initial={{ opacity: 0, x: -10 }}
-												animate={{ opacity: 1, x: 0 }}
-												transition={{ duration: 0.3, delay: 0.6 }}
-											>
-												<div className="text-[10px] text-gray-500 dark:text-gray-400">vs National avg</div>
-												<motion.div 
-													className="text-xs font-semibold text-green-600 dark:text-green-400"
-													animate={{ scale: [1, 1.05, 1] }}
-													transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-												>
-													+8%
-												</motion.div>
-											</motion.div>
-											<motion.div 
-												className="flex items-center justify-between"
-												initial={{ opacity: 0, x: -10 }}
-												animate={{ opacity: 1, x: 0 }}
-												transition={{ duration: 0.3, delay: 0.7 }}
-											>
-												<div className="text-[10px] text-gray-500 dark:text-gray-400">vs Your leaderboard</div>
-												<div className="text-xs font-semibold text-blue-600 dark:text-blue-400">#3</div>
-											</motion.div>
-										</div>
-									</motion.div>
 								</div>
-							</div>
-							{/* Content */}
-							<div className="p-5">
-								<h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
-									Stats & Streaks
-								</h3>
-								<p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-									Track your performance with detailed analytics and build impressive streaks.
-								</p>
-							</div>
-						</motion.div>
+								{/* Content */}
+								<div className="p-5">
+									<h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+										Replay Old Quizzes
+									</h3>
+									<p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+										Access the full back catalogue and replay any quiz from the archives.
+									</p>
+								</div>
+							</motion.div>
 
-						{/* Printable PDFs */}
+							{/* Special Editions */}
+							<motion.div
+								initial={{ opacity: 0, y: 20, rotate: 0.5 }}
+								whileInView={{ opacity: 1, y: 0 }}
+								viewport={{ once: true }}
+								whileHover={{ rotate: -0.4, scale: 1.02, y: -4 }}
+								transition={{
+									duration: 0.5,
+									delay: 0.6,
+									type: "spring",
+									stiffness: 300,
+									damping: 20
+								}}
+								className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden group hover:shadow-lg transition-shadow"
+								style={{ transformOrigin: 'center' }}
+							>
+								{/* UI Preview Area */}
+								<div className="relative bg-gradient-to-br from-red-50 via-green-50 to-red-50 dark:from-red-950/20 dark:via-green-950/20 dark:to-red-950/20 px-4 py-6 border-b border-gray-200 dark:border-gray-700 overflow-hidden">
+									{/* Snow overlay */}
+									<SnowOverlay />
+
+									{/* Christmas-themed quiz card */}
+									<div className="relative z-20 flex items-center justify-center">
+										<div
+											className="aspect-[5/8] rounded-3xl shadow-lg flex flex-col relative overflow-hidden p-4 sm:p-5"
+											style={{
+												backgroundColor: '#dc2626', // Christmas red
+												maxWidth: '200px',
+												width: '100%'
+											}}
+										>
+											{/* Snowflakes on card */}
+											<div className="absolute inset-0 pointer-events-none">
+												{Array.from({ length: 6 }).map((_, i) => (
+													<div
+														key={i}
+														className="absolute text-white/30"
+														style={{
+															left: `${20 + i * 15}%`,
+															top: `${15 + (i % 3) * 30}%`,
+															fontSize: '12px',
+														}}
+													>
+														❄
+													</div>
+												))}
+											</div>
+
+											{/* Card content */}
+											<div className="relative z-10 flex flex-col h-full justify-between">
+												<div className="flex items-center gap-2">
+													<span className="text-xs font-bold text-white bg-white/20 px-2 py-1 rounded-full">
+														#Special
+													</span>
+													<Sparkles className="w-3.5 h-3.5 text-white/90" />
+												</div>
+
+												<div className="flex-1 flex flex-col justify-center items-center gap-2">
+													<div className="text-4xl mb-2">🎄</div>
+													<div className="text-sm font-extrabold text-white text-center leading-tight">
+														Christmas 2025
+													</div>
+													<div className="text-xs text-white/90 mt-1 text-center">
+														Holiday Special Edition
+													</div>
+												</div>
+
+												<div className="text-xs font-bold text-white/80 text-center">
+													Dec 2025
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+								{/* Content */}
+								<div className="p-5">
+									<h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+										Special Editions
+									</h3>
+									<p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+										Access exclusive holiday and special edition quizzes throughout the year.
+									</p>
+								</div>
+							</motion.div>
+						</div>
+
+						{/* CTA Button */}
 						<motion.div
-							initial={{ opacity: 0, y: 20, rotate: 0.3 }}
+							initial={{ opacity: 0, y: 20 }}
 							whileInView={{ opacity: 1, y: 0 }}
 							viewport={{ once: true }}
-							whileHover={{ rotate: -0.5, scale: 1.02, y: -4 }}
-							transition={{ 
-								duration: 0.5, 
-								delay: 0.4,
-								type: "spring",
-								stiffness: 300,
-								damping: 20
-							}}
-							className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden group hover:shadow-lg transition-shadow"
-							style={{ transformOrigin: 'center' }}
+							transition={{ duration: 0.5, delay: 0.7 }}
+							className="text-center mt-12"
 						>
-							{/* UI Preview Area */}
-							<div className="bg-gray-50 dark:bg-gray-800 px-4 py-6 border-b border-gray-200 dark:border-gray-700">
-								{/* PDF mockup - quiz layout */}
-								<div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden text-left">
-									{/* PDF header */}
-									<div className="bg-emerald-50 dark:bg-emerald-900/20 px-3 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-										<div className="flex items-center gap-2">
-											<FileText className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-											<div className="text-xs font-semibold text-gray-900 dark:text-white">Quiz #12</div>
-										</div>
-										<Download className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
-									</div>
-									{/* PDF content - quiz preview */}
-									<div className="p-3 space-y-3 text-left">
-										{/* Title */}
-										<div>
-											<div className="h-3 bg-gray-800/80 dark:bg-gray-200/80 rounded w-3/4 mb-1"></div>
-											<div className="h-2 bg-gray-400/60 dark:bg-gray-500/60 rounded w-1/4"></div>
-										</div>
-										{/* Round 1 */}
-										<div className="space-y-1.5 pt-2 border-t border-gray-200 dark:border-gray-700">
-											<div className="flex items-center gap-2">
-												<div className="h-2.5 w-16 bg-teal-500/80 rounded"></div>
-												<div className="h-1.5 w-20 bg-gray-300/70 dark:bg-gray-600/70 rounded"></div>
-											</div>
-											<div className="space-y-1 pl-2 border-l-2 border-teal-500/80">
-												<div className="h-1.5 bg-gray-400/70 dark:bg-gray-500/70 rounded w-full"></div>
-												<div className="h-1 bg-gray-500/60 dark:bg-gray-400/60 rounded w-3/4 ml-3"></div>
-												<div className="h-1.5 bg-gray-400/70 dark:bg-gray-500/70 rounded w-full"></div>
-												<div className="h-1 bg-gray-500/60 dark:bg-gray-400/60 rounded w-2/3 ml-3"></div>
-											</div>
-										</div>
-										{/* Round 2 */}
-										<div className="space-y-1.5 pt-2 border-t border-gray-200 dark:border-gray-700">
-											<div className="flex items-center gap-2">
-												<div className="h-2.5 w-16 bg-orange-500/80 rounded"></div>
-												<div className="h-1.5 w-24 bg-gray-300/70 dark:bg-gray-600/70 rounded"></div>
-											</div>
-											<div className="space-y-1 pl-2 border-l-2 border-orange-500/80">
-												<div className="h-1.5 bg-gray-400/70 dark:bg-gray-500/70 rounded w-full"></div>
-												<div className="h-1 bg-gray-500/60 dark:bg-gray-400/60 rounded w-4/5 ml-3"></div>
-											</div>
-										</div>
-									</div>
-								</div>
-							</div>
-							{/* Content */}
-							<div className="p-5">
-								<h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
-									Printable PDFs
-								</h3>
-								<p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-									Download quizzes as clean PDFs for offline use or paper copies.
-								</p>
-							</div>
+							<a
+								href="/premium"
+								className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-[#3B82F6] text-white font-medium hover:bg-[#2563EB] transition-colors"
+							>
+								<Crown className="w-4 h-4" />
+								Upgrade to Premium
+							</a>
 						</motion.div>
+					</motion.div>
+				</section>
 
-						{/* Replay Old Quizzes */}
+				{/* Testimonials Section - Mobbin Style */}
+				<section className="w-full py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8">
+					<motion.div
+						initial={{ opacity: 0, y: 20 }}
+						whileInView={{ opacity: 1, y: 0 }}
+						viewport={{ once: true, margin: "-100px" }}
+						transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+						className="max-w-7xl mx-auto"
+					>
+						<div className="text-center mb-12">
+							<h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
+								What teachers are saying
+							</h2>
+							<p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+								Teachers across Australia use The School Quiz to spark conversation, build routines, and make pastoral time a bit easier.
+							</p>
+						</div>
+
+						{/* Testimonials Infinite Scroll Carousel */}
+						<div className="relative overflow-visible pb-6 mb-12 group/testimonials">
+							{/* Fade gradients at edges */}
+							<div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-gray-50 dark:from-[#0F1419] to-transparent z-20 pointer-events-none"></div>
+							<div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-gray-50 dark:from-[#0F1419] to-transparent z-20 pointer-events-none"></div>
+
+							<div className="flex gap-6 animate-infinite-scroll group-hover/testimonials:pause-animation px-8 sm:px-12 md:px-16" style={{ width: 'max-content' }}>
+								{/* First set of testimonials */}
+								{[
+									{ name: "Sarah L.", role: "Year 10 Adviser — NSW", quote: "Private leaderboards have created the healthiest bit of competition I've seen in pastoral time. The boys race to beat last week's score and actually cheer each other on.", rotate: -0.3 },
+									{ name: "Tom B.", role: "Homeroom Teacher — VIC", quote: "It's refreshingly social. Kids aren't buried in laptops — they're talking, guessing, arguing, laughing. It feels like old-school trivia but sharper.", rotate: 0.4 },
+									{ name: "Michelle R.", role: "Assistant Head of Wellbeing — QLD", quote: "The difficulty sits in a sweet spot. Easy wins early, a few curveballs later, and enough variety that everyone gets to feel clever at least once.", rotate: -0.4 },
+									{ name: "Mark P.", role: "Digital Technologies Teacher — SA", quote: "Honestly, it's just simple. One quiz a week, well-written questions, no setup dramas, and the class actually looks forward to Monday mornings.", rotate: 0.3 },
+								].map((testimonial, index) => (
+									<motion.div
+										key={`testimonial-1-${index}`}
+										initial={{ opacity: 0, y: 20, rotate: testimonial.rotate }}
+										whileInView={{ opacity: 1, y: 0 }}
+										viewport={{ once: true }}
+										whileHover={{ rotate: -testimonial.rotate, scale: 1.02, y: -4 }}
+										transition={{
+											duration: 0.5,
+											delay: index * 0.1,
+											type: "spring",
+											stiffness: 300,
+											damping: 20
+										}}
+										className="bg-white dark:bg-gray-800 rounded-2xl border-[1px] border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg transition-shadow flex-shrink-0"
+										style={{
+											transformOrigin: 'center',
+											width: '320px',
+											minWidth: '320px',
+											borderWidth: '1px',
+											borderStyle: 'solid'
+										}}
+									>
+										<div className="mb-4">
+											<div className="font-bold text-gray-900 dark:text-white mb-1">{testimonial.name}</div>
+											<div className="text-xs text-gray-500 dark:text-gray-400">{testimonial.role}</div>
+										</div>
+										<p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+											{testimonial.quote}
+										</p>
+									</motion.div>
+								))}
+								{/* Duplicate set for infinite scroll */}
+								{[
+									{ name: "Sarah L.", role: "Year 10 Adviser — NSW", quote: "Private leaderboards have created the healthiest bit of competition I've seen in pastoral time. The boys race to beat last week's score and actually cheer each other on.", rotate: -0.3 },
+									{ name: "Tom B.", role: "Homeroom Teacher — VIC", quote: "It's refreshingly social. Kids aren't buried in laptops — they're talking, guessing, arguing, laughing. It feels like old-school trivia but sharper.", rotate: 0.4 },
+									{ name: "Michelle R.", role: "Assistant Head of Wellbeing — QLD", quote: "The difficulty sits in a sweet spot. Easy wins early, a few curveballs later, and enough variety that everyone gets to feel clever at least once.", rotate: -0.4 },
+									{ name: "Mark P.", role: "Digital Technologies Teacher — SA", quote: "Honestly, it's just simple. One quiz a week, well-written questions, no setup dramas, and the class actually looks forward to Monday mornings.", rotate: 0.3 },
+								].map((testimonial, index) => (
+									<motion.div
+										key={`testimonial-2-${index}`}
+										initial={{ opacity: 0, y: 20, rotate: testimonial.rotate }}
+										whileInView={{ opacity: 1, y: 0 }}
+										viewport={{ once: true }}
+										whileHover={{ rotate: -testimonial.rotate, scale: 1.02, y: -4 }}
+										transition={{
+											duration: 0.5,
+											delay: index * 0.1,
+											type: "spring",
+											stiffness: 300,
+											damping: 20
+										}}
+										className="bg-white dark:bg-gray-800 rounded-2xl border-[1px] border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg transition-shadow flex-shrink-0"
+										style={{
+											transformOrigin: 'center',
+											width: '320px',
+											minWidth: '320px',
+											borderWidth: '1px',
+											borderStyle: 'solid'
+										}}
+									>
+										<div className="mb-4">
+											<div className="font-bold text-gray-900 dark:text-white mb-1">{testimonial.name}</div>
+											<div className="text-xs text-gray-500 dark:text-gray-400">{testimonial.role}</div>
+										</div>
+										<p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+											{testimonial.quote}
+										</p>
+									</motion.div>
+								))}
+							</div>
+						</div>
+
+						{/* CTA */}
 						<motion.div
-							initial={{ opacity: 0, y: 20, rotate: -0.3 }}
+							initial={{ opacity: 0, y: 20 }}
 							whileInView={{ opacity: 1, y: 0 }}
 							viewport={{ once: true }}
-							whileHover={{ rotate: 0.4, scale: 1.02, y: -4 }}
-							transition={{ 
-								duration: 0.5, 
+							transition={{ duration: 0.5, delay: 0.6 }}
+							className="text-center"
+						>
+							<a
+								href="/contact"
+								className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-[#3B82F6] text-white font-medium hover:bg-[#2563EB] transition-colors mb-2"
+							>
+								Submit a comment →
+							</a>
+							<p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
+								Share your experience — you might even unlock an achievement 😉
+							</p>
+						</motion.div>
+					</motion.div>
+				</section>
+
+				{/* Pricing Section */}
+				<section className="w-full py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-gray-50 dark:bg-[#0F1419]">
+					<motion.div
+						initial={{ opacity: 0, y: 20 }}
+						whileInView={{ opacity: 1, y: 0 }}
+						viewport={{ once: true, margin: "-100px" }}
+						transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+						className="max-w-7xl mx-auto"
+					>
+						<div className="text-center mb-12">
+							<h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
+								Simple, sensible pricing
+							</h2>
+							<p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto mb-6">
+								Start free, upgrade when you're ready. Cancel anytime.
+							</p>
+
+							{/* Billing Period Toggle */}
+							<div className="inline-flex items-center gap-2 p-1 bg-gray-100 dark:bg-gray-800 rounded-full">
+								<button
+									onClick={() => setBillingPeriod('monthly')}
+									className={cn(
+										"px-4 py-2 rounded-full text-sm font-medium transition-all",
+										billingPeriod === 'monthly'
+											? "bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm"
+											: "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+									)}
+								>
+									Monthly
+								</button>
+								<button
+									onClick={() => setBillingPeriod('yearly')}
+									className={cn(
+										"px-4 py-2 rounded-full text-sm font-medium transition-all",
+										billingPeriod === 'yearly'
+											? "bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm"
+											: "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+									)}
+								>
+									Yearly
+								</button>
+							</div>
+							{billingPeriod === 'yearly' && (
+								<p className="text-sm text-blue-600 dark:text-blue-400 mt-3 font-medium">
+									Save 25% on yearly subscription
+								</p>
+							)}
+						</div>
+
+						{/* Pricing Cards */}
+						<div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 max-w-6xl mx-auto">
+							{/* Free Plan */}
+							<motion.div
+								initial={{ opacity: 0, y: 20, rotate: -0.5 }}
+								whileInView={{ opacity: 1, y: 0, rotate: -0.5 }}
+								viewport={{ once: true }}
+								transition={{
+									duration: 0.5,
+									delay: 0.1,
+									type: "spring",
+									stiffness: 300,
+									damping: 25
+								}}
+								whileHover={{ rotate: 0, scale: 1.02, y: -4 }}
+								className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 sm:p-8 flex flex-col hover:shadow-lg transition-all"
+								style={{ transformOrigin: 'center' }}
+							>
+								<div className="mb-6">
+									<h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-1.5">Free</h3>
+									<p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-5">Trialling the quiz in class</p>
+									<div className="mb-1">
+										<span className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">$0</span>
+									</div>
+								</div>
+
+								<ul className="space-y-2.5 sm:space-y-3 flex-1 mb-6">
+									<li className="flex items-start gap-2.5">
+										<span className="text-blue-600 dark:text-blue-400 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✓</span>
+										<span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">3 free quizzes (lifetime)</span>
+									</li>
+									<li className="flex items-start gap-2.5">
+										<span className="text-gray-300 dark:text-gray-600 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✗</span>
+										<span className="text-xs sm:text-sm text-gray-500 dark:text-gray-500 leading-relaxed">No premium features</span>
+									</li>
+									<li className="flex items-start gap-2.5">
+										<span className="text-gray-300 dark:text-gray-600 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✗</span>
+										<span className="text-xs sm:text-sm text-gray-500 dark:text-gray-500 leading-relaxed">No printing, no past quizzes</span>
+									</li>
+									<li className="flex items-start gap-2.5">
+										<span className="text-gray-300 dark:text-gray-600 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✗</span>
+										<span className="text-xs sm:text-sm text-gray-500 dark:text-gray-500 leading-relaxed">No achievements, no leaderboards</span>
+									</li>
+								</ul>
+
+								<p className="text-xs text-gray-500 dark:text-gray-500 mb-6 italic">About three weeks of Monday mornings</p>
+
+								<Link
+									href="/sign-up"
+									className="w-full inline-flex items-center justify-center h-11 px-4 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-full text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
+								>
+									Get started
+								</Link>
+							</motion.div>
+
+							{/* Premium Plan */}
+							<motion.div
+								initial={{ opacity: 0, y: 20, rotate: 0 }}
+								whileInView={{ opacity: 1, y: 0, rotate: 0 }}
+								viewport={{ once: true }}
+								transition={{
+									duration: 0.5,
+									delay: 0.2,
+									type: "spring",
+									stiffness: 300,
+									damping: 25
+								}}
+								whileHover={{ rotate: 0, scale: 1.02, y: -4 }}
+								className="bg-white dark:bg-gray-900 rounded-2xl border-2 border-blue-500 dark:border-blue-600 p-6 sm:p-8 flex flex-col relative hover:shadow-xl transition-all"
+								style={{ transformOrigin: 'center' }}
+							>
+								{/* Glow effect */}
+								<div className="absolute -inset-1 bg-gradient-to-r from-blue-400 to-blue-600 rounded-2xl opacity-20 dark:opacity-30 blur-xl -z-10"></div>
+								<div className="absolute top-4 right-4">
+									<span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+										Popular
+									</span>
+								</div>
+
+								<div className="mb-6">
+									<h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-1.5">Premium</h3>
+									<p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-5">Individual teachers running weekly quizzes</p>
+									<div className="mb-1">
+										{billingPeriod === 'monthly' ? (
+											<>
+												<span className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">$6</span>
+												<span className="text-base sm:text-lg text-gray-600 dark:text-gray-400"> AUD</span>
+											</>
+										) : (
+											<>
+												<span className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">$54</span>
+												<span className="text-base sm:text-lg text-gray-600 dark:text-gray-400"> AUD</span>
+											</>
+										)}
+									</div>
+									<p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-1">
+										per teacher / {billingPeriod === 'monthly' ? 'month' : 'year'}
+									</p>
+									{billingPeriod === 'monthly' ? (
+										<p className="text-xs text-blue-600 dark:text-blue-400 font-medium">$1.50 per week</p>
+									) : (
+										<p className="text-xs text-blue-600 dark:text-blue-400 font-medium">$4.50 per month</p>
+									)}
+								</div>
+
+								<ul className="space-y-2.5 sm:space-y-3 flex-1 mb-6">
+									<li className="flex items-start gap-2.5">
+										<span className="text-blue-600 dark:text-blue-400 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✓</span>
+										<span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">Every weekly quiz, instantly on Monday mornings</span>
+									</li>
+									<li className="flex items-start gap-2.5">
+										<span className="text-blue-600 dark:text-blue-400 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✓</span>
+										<span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">Replay any quiz (past quizzes library)</span>
+									</li>
+									<li className="flex items-start gap-2.5">
+										<span className="text-blue-600 dark:text-blue-400 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✓</span>
+										<span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">Printable PDF packs</span>
+									</li>
+									<li className="flex items-start gap-2.5">
+										<span className="text-blue-600 dark:text-blue-400 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✓</span>
+										<span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">Achievements, streak tracking</span>
+									</li>
+									<li className="flex items-start gap-2.5">
+										<span className="text-blue-600 dark:text-blue-400 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✓</span>
+										<span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">Private leaderboards</span>
+									</li>
+									<li className="flex items-start gap-2.5">
+										<span className="text-blue-600 dark:text-blue-400 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✓</span>
+										<span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">The People's Round submissions</span>
+									</li>
+									<li className="flex items-start gap-2.5">
+										<span className="text-blue-600 dark:text-blue-400 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✓</span>
+										<span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">Early access to special editions</span>
+									</li>
+								</ul>
+
+								<p className="text-xs text-gray-500 dark:text-gray-500 mb-6 italic">Cancel anytime, no lock-in</p>
+
+								<Link
+									href="/sign-up"
+									className="w-full inline-flex items-center justify-center h-11 px-4 bg-[#3B82F6] text-white rounded-full text-sm font-medium hover:bg-[#2563EB] transition-colors focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:ring-offset-2"
+								>
+									Get started
+								</Link>
+							</motion.div>
+
+							{/* Organisation Plan */}
+							<motion.div
+								initial={{ opacity: 0, y: 20, rotate: 0.5 }}
+								whileInView={{ opacity: 1, y: 0, rotate: 0.5 }}
+								viewport={{ once: true }}
+								transition={{
+									duration: 0.5,
+									delay: 0.3,
+									type: "spring",
+									stiffness: 300,
+									damping: 25
+								}}
+								whileHover={{ rotate: 0, scale: 1.02, y: -4 }}
+								className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 sm:p-8 flex flex-col hover:shadow-lg transition-all"
+								style={{ transformOrigin: 'center' }}
+							>
+								<div className="mb-6">
+									<h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-1.5">Organisation</h3>
+									<p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-5">Departments, faculties, whole schools</p>
+									<div className="mb-1">
+										{billingPeriod === 'monthly' ? (
+											<>
+												<span className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">$4.50</span>
+												<span className="text-base sm:text-lg text-gray-600 dark:text-gray-400"> AUD</span>
+											</>
+										) : (
+											<>
+												<span className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">$40.50</span>
+												<span className="text-base sm:text-lg text-gray-600 dark:text-gray-400"> AUD</span>
+											</>
+										)}
+									</div>
+									<p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-1">
+										per teacher / {billingPeriod === 'monthly' ? 'month' : 'year'}
+									</p>
+									<p className="text-xs text-green-600 dark:text-green-400 font-medium">25% off (minimum 5 teachers)</p>
+								</div>
+
+								<ul className="space-y-2.5 sm:space-y-3 flex-1 mb-6">
+									<li className="flex items-start gap-2.5">
+										<span className="text-blue-600 dark:text-blue-400 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✓</span>
+										<span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed"><strong>All Premium features</strong></span>
+									</li>
+									<li className="flex items-start gap-2.5">
+										<span className="text-blue-600 dark:text-blue-400 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✓</span>
+										<span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">Central billing</span>
+									</li>
+									<li className="flex items-start gap-2.5">
+										<span className="text-blue-600 dark:text-blue-400 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✓</span>
+										<span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">Shared private leagues (houses, mentor groups, year groups)</span>
+									</li>
+									<li className="flex items-start gap-2.5">
+										<span className="text-blue-600 dark:text-blue-400 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✓</span>
+										<span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">School-wide data snapshots</span>
+									</li>
+									<li className="flex items-start gap-2.5">
+										<span className="text-blue-600 dark:text-blue-400 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✓</span>
+										<span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">Priority support</span>
+									</li>
+								</ul>
+
+								<p className="text-xs text-gray-500 dark:text-gray-500 mb-6">
+									{billingPeriod === 'monthly' ? 'From $270/year for 5 teachers' : 'From $202.50/year for 5 teachers'}
+								</p>
+
+								<Link
+									href="/sign-up"
+									className="w-full inline-flex items-center justify-center h-11 px-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-full text-sm font-medium hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
+								>
+									Get started
+								</Link>
+							</motion.div>
+						</div>
+
+						{/* Custom Quizzes Section */}
+						<motion.div
+							initial={{ opacity: 0, y: 20 }}
+							whileInView={{ opacity: 1, y: 0 }}
+							viewport={{ once: true, margin: "-50px" }}
+							transition={{
+								duration: 0.5,
 								delay: 0.5,
 								type: "spring",
 								stiffness: 300,
-								damping: 20
+								damping: 25
 							}}
-							className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden group hover:shadow-lg transition-shadow"
-							style={{ transformOrigin: 'center' }}
+							className="mt-16 sm:mt-20"
 						>
-							{/* UI Preview Area */}
-							<div className="bg-gray-50 dark:bg-gray-800 px-4 py-6 border-b border-gray-200 dark:border-gray-700">
-								{/* Quiz cards mockup - styled like actual quiz cards with rotation */}
-								<div className="grid grid-cols-3 gap-2">
-									{[...Array(6)].map((_, i) => {
-										// Use different colors for variety
-										const colors = [
-											'rgb(59, 130, 246)', // blue
-											'rgb(168, 85, 247)', // purple
-											'rgb(236, 72, 153)', // pink
-											'rgb(34, 197, 94)', // green
-											'rgb(251, 146, 60)', // orange
-											'rgb(99, 102, 241)', // indigo
-										];
-										const color = colors[i % colors.length];
-										const textColor = i % 3 === 0 ? 'white' : 'gray-900';
-										// Vary rotation angles for each card
-										const rotations = [-1.5, 1.2, -1.8, 1.5, -1.2, 1.8];
-										const rotation = rotations[i % rotations.length];
-										return (
-											<div 
-												key={i} 
-												className="aspect-[5/8] rounded-2xl p-2.5 flex flex-col justify-between shadow-sm"
-												style={{ 
-													backgroundColor: color,
-													transform: `rotate(${rotation}deg)`,
-													transformOrigin: 'center'
-												}}
-											>
-												<div className="flex items-center gap-1">
-													<span className={`text-xs font-bold ${textColor === 'white' ? 'text-white' : 'text-gray-900'} bg-black/10 px-2 py-0.5 rounded-full`}>
-														#{i + 1}
-													</span>
-												</div>
-												<div className={`text-sm font-extrabold ${textColor === 'white' ? 'text-white' : 'text-gray-900'} leading-tight line-clamp-2`}>
-													Quiz {i + 1}
-												</div>
-											</div>
-										);
-									})}
-								</div>
-							</div>
-							{/* Content */}
-							<div className="p-5">
-								<h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
-									Replay Old Quizzes
+							<div className="text-center mb-8">
+								<h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2">
+									Interested in custom quizzes?
 								</h3>
-								<p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-									Access the full back catalogue and replay any quiz from the archives.
+								<p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-6">
+									You aren't the only one, please get in touch for pricing.
 								</p>
-							</div>
-						</motion.div>
-
-						{/* Special Editions */}
-						<motion.div
-							initial={{ opacity: 0, y: 20, rotate: 0.5 }}
-							whileInView={{ opacity: 1, y: 0 }}
-							viewport={{ once: true }}
-							whileHover={{ rotate: -0.4, scale: 1.02, y: -4 }}
-							transition={{ 
-								duration: 0.5, 
-								delay: 0.6,
-								type: "spring",
-								stiffness: 300,
-								damping: 20
-							}}
-							className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden group hover:shadow-lg transition-shadow"
-							style={{ transformOrigin: 'center' }}
-						>
-							{/* UI Preview Area */}
-							<div className="relative bg-gradient-to-br from-red-50 via-green-50 to-red-50 dark:from-red-950/20 dark:via-green-950/20 dark:to-red-950/20 px-4 py-6 border-b border-gray-200 dark:border-gray-700 overflow-hidden">
-								{/* Snow overlay */}
-								<SnowOverlay />
-								
-								{/* Christmas-themed quiz card */}
-								<div className="relative z-20 flex items-center justify-center">
-									<div 
-										className="aspect-[5/8] rounded-3xl shadow-lg flex flex-col relative overflow-hidden p-4 sm:p-5"
-										style={{ 
-											backgroundColor: '#dc2626', // Christmas red
-											maxWidth: '200px',
-											width: '100%'
-										}}
-									>
-										{/* Snowflakes on card */}
-										<div className="absolute inset-0 pointer-events-none">
-											{Array.from({ length: 6 }).map((_, i) => (
-												<div
-													key={i}
-													className="absolute text-white/30"
-													style={{
-														left: `${20 + i * 15}%`,
-														top: `${15 + (i % 3) * 30}%`,
-														fontSize: '12px',
-													}}
-												>
-													❄
-												</div>
-											))}
-										</div>
-
-										{/* Card content */}
-										<div className="relative z-10 flex flex-col h-full justify-between">
-											<div className="flex items-center gap-2">
-												<span className="text-xs font-bold text-white bg-white/20 px-2 py-1 rounded-full">
-													#Special
-												</span>
-												<Sparkles className="w-3.5 h-3.5 text-white/90" />
-											</div>
-											
-											<div className="flex-1 flex flex-col justify-center items-center gap-2">
-												<div className="text-4xl mb-2">🎄</div>
-												<div className="text-sm font-extrabold text-white text-center leading-tight">
-													Christmas 2025
-												</div>
-												<div className="text-xs text-white/90 mt-1 text-center">
-													Holiday Special Edition
-												</div>
-											</div>
-
-											<div className="text-xs font-bold text-white/80 text-center">
-												Dec 2025
-											</div>
-										</div>
-									</div>
-								</div>
-							</div>
-							{/* Content */}
-							<div className="p-5">
-								<h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
-									Special Editions
-								</h3>
-								<p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-									Access exclusive holiday and special edition quizzes throughout the year.
-								</p>
-							</div>
-						</motion.div>
-					</div>
-
-					{/* CTA Button */}
-					<motion.div
-						initial={{ opacity: 0, y: 20 }}
-						whileInView={{ opacity: 1, y: 0 }}
-						viewport={{ once: true }}
-						transition={{ duration: 0.5, delay: 0.7 }}
-						className="text-center mt-12"
-					>
-						<a
-							href="/premium"
-							className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-[#3B82F6] text-white font-medium hover:bg-[#2563EB] transition-colors"
-						>
-							<Crown className="w-4 h-4" />
-							Upgrade to Premium
-						</a>
-					</motion.div>
-				</motion.div>
-			</section>
-
-			{/* Testimonials Section - Mobbin Style */}
-			<section className="w-full py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8">
-				<motion.div
-					initial={{ opacity: 0, y: 20 }}
-					whileInView={{ opacity: 1, y: 0 }}
-					viewport={{ once: true, margin: "-100px" }}
-					transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-					className="max-w-7xl mx-auto"
-				>
-					<div className="text-center mb-12">
-						<h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
-							What teachers are saying
-						</h2>
-						<p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-							Teachers across Australia use The School Quiz to spark conversation, build routines, and make pastoral time a bit easier.
-						</p>
-					</div>
-
-					{/* Testimonials Infinite Scroll Carousel */}
-					<div className="relative overflow-visible pb-6 mb-12 group/testimonials">
-						{/* Fade gradients at edges */}
-						<div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-gray-50 dark:from-[#0F1419] to-transparent z-20 pointer-events-none"></div>
-						<div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-gray-50 dark:from-[#0F1419] to-transparent z-20 pointer-events-none"></div>
-						
-						<div className="flex gap-6 animate-infinite-scroll group-hover/testimonials:pause-animation px-8 sm:px-12 md:px-16" style={{ width: 'max-content' }}>
-							{/* First set of testimonials */}
-							{[
-								{ name: "Sarah L.", role: "Year 10 Adviser — NSW", quote: "Private leaderboards have created the healthiest bit of competition I've seen in pastoral time. The boys race to beat last week's score and actually cheer each other on.", rotate: -0.3 },
-								{ name: "Tom B.", role: "Homeroom Teacher — VIC", quote: "It's refreshingly social. Kids aren't buried in laptops — they're talking, guessing, arguing, laughing. It feels like old-school trivia but sharper.", rotate: 0.4 },
-								{ name: "Michelle R.", role: "Assistant Head of Wellbeing — QLD", quote: "The difficulty sits in a sweet spot. Easy wins early, a few curveballs later, and enough variety that everyone gets to feel clever at least once.", rotate: -0.4 },
-								{ name: "Mark P.", role: "Digital Technologies Teacher — SA", quote: "Honestly, it's just simple. One quiz a week, well-written questions, no setup dramas, and the class actually looks forward to Monday mornings.", rotate: 0.3 },
-							].map((testimonial, index) => (
-								<motion.div
-									key={`testimonial-1-${index}`}
-									initial={{ opacity: 0, y: 20, rotate: testimonial.rotate }}
-									whileInView={{ opacity: 1, y: 0 }}
-									viewport={{ once: true }}
-									whileHover={{ rotate: -testimonial.rotate, scale: 1.02, y: -4 }}
-									transition={{ 
-										duration: 0.5, 
-										delay: index * 0.1,
-										type: "spring",
-										stiffness: 300,
-										damping: 20
-									}}
-									className="bg-white dark:bg-gray-800 rounded-2xl border-[1px] border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg transition-shadow flex-shrink-0"
-									style={{ 
-										transformOrigin: 'center',
-										width: '320px',
-										minWidth: '320px',
-										borderWidth: '1px',
-										borderStyle: 'solid'
-									}}
+								<Link
+									href="/contact"
+									className="inline-flex items-center justify-center h-12 px-4 sm:px-6 bg-[#3B82F6] text-white rounded-full text-sm sm:text-base font-medium hover:bg-[#2563EB] transition-colors focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:ring-offset-2"
 								>
-									<div className="mb-4">
-										<div className="font-bold text-gray-900 dark:text-white mb-1">{testimonial.name}</div>
-										<div className="text-xs text-gray-500 dark:text-gray-400">{testimonial.role}</div>
-									</div>
-									<p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-										{testimonial.quote}
-									</p>
-								</motion.div>
-							))}
-							{/* Duplicate set for infinite scroll */}
-							{[
-								{ name: "Sarah L.", role: "Year 10 Adviser — NSW", quote: "Private leaderboards have created the healthiest bit of competition I've seen in pastoral time. The boys race to beat last week's score and actually cheer each other on.", rotate: -0.3 },
-								{ name: "Tom B.", role: "Homeroom Teacher — VIC", quote: "It's refreshingly social. Kids aren't buried in laptops — they're talking, guessing, arguing, laughing. It feels like old-school trivia but sharper.", rotate: 0.4 },
-								{ name: "Michelle R.", role: "Assistant Head of Wellbeing — QLD", quote: "The difficulty sits in a sweet spot. Easy wins early, a few curveballs later, and enough variety that everyone gets to feel clever at least once.", rotate: -0.4 },
-								{ name: "Mark P.", role: "Digital Technologies Teacher — SA", quote: "Honestly, it's just simple. One quiz a week, well-written questions, no setup dramas, and the class actually looks forward to Monday mornings.", rotate: 0.3 },
-							].map((testimonial, index) => (
-								<motion.div
-									key={`testimonial-2-${index}`}
-									initial={{ opacity: 0, y: 20, rotate: testimonial.rotate }}
-									whileInView={{ opacity: 1, y: 0 }}
-									viewport={{ once: true }}
-									whileHover={{ rotate: -testimonial.rotate, scale: 1.02, y: -4 }}
-									transition={{ 
-										duration: 0.5, 
-										delay: index * 0.1,
-										type: "spring",
-										stiffness: 300,
-										damping: 20
-									}}
-									className="bg-white dark:bg-gray-800 rounded-2xl border-[1px] border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg transition-shadow flex-shrink-0"
-									style={{ 
-										transformOrigin: 'center',
-										width: '320px',
-										minWidth: '320px',
-										borderWidth: '1px',
-										borderStyle: 'solid'
-									}}
-								>
-									<div className="mb-4">
-										<div className="font-bold text-gray-900 dark:text-white mb-1">{testimonial.name}</div>
-										<div className="text-xs text-gray-500 dark:text-gray-400">{testimonial.role}</div>
-									</div>
-									<p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-										{testimonial.quote}
-									</p>
-								</motion.div>
-							))}
-						</div>
-					</div>
-
-					{/* CTA */}
-					<motion.div
-						initial={{ opacity: 0, y: 20 }}
-						whileInView={{ opacity: 1, y: 0 }}
-						viewport={{ once: true }}
-						transition={{ duration: 0.5, delay: 0.6 }}
-						className="text-center"
-					>
-						<a
-							href="/contact"
-							className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-[#3B82F6] text-white font-medium hover:bg-[#2563EB] transition-colors mb-2"
-						>
-							Submit a comment →
-						</a>
-						<p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
-							Share your experience — you might even unlock an achievement 😉
-						</p>
+									Get in touch
+								</Link>
+							</div>
+						</motion.div>
 					</motion.div>
-				</motion.div>
-			</section>
-
-			{/* Pricing Section */}
-			<section className="w-full py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-gray-50 dark:bg-[#0F1419]">
-				<motion.div
-					initial={{ opacity: 0, y: 20 }}
-					whileInView={{ opacity: 1, y: 0 }}
-					viewport={{ once: true, margin: "-100px" }}
-					transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-					className="max-w-7xl mx-auto"
-				>
-					<div className="text-center mb-12">
-						<h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
-							Simple, sensible pricing
-						</h2>
-						<p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto mb-6">
-							Start free, upgrade when you're ready. Cancel anytime.
-						</p>
-						
-						{/* Billing Period Toggle */}
-						<div className="inline-flex items-center gap-2 p-1 bg-gray-100 dark:bg-gray-800 rounded-full">
-							<button
-								onClick={() => setBillingPeriod('monthly')}
-								className={cn(
-									"px-4 py-2 rounded-full text-sm font-medium transition-all",
-									billingPeriod === 'monthly'
-										? "bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm"
-										: "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-								)}
-							>
-								Monthly
-							</button>
-							<button
-								onClick={() => setBillingPeriod('yearly')}
-								className={cn(
-									"px-4 py-2 rounded-full text-sm font-medium transition-all",
-									billingPeriod === 'yearly'
-										? "bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm"
-										: "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-								)}
-							>
-								Yearly
-							</button>
-						</div>
-						{billingPeriod === 'yearly' && (
-							<p className="text-sm text-blue-600 dark:text-blue-400 mt-3 font-medium">
-								Save 25% on yearly subscription
-							</p>
-						)}
-					</div>
-
-					{/* Pricing Cards */}
-					<div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 max-w-6xl mx-auto">
-						{/* Free Plan */}
-						<motion.div
-							initial={{ opacity: 0, y: 20, rotate: -0.5 }}
-							whileInView={{ opacity: 1, y: 0, rotate: -0.5 }}
-							viewport={{ once: true }}
-							transition={{ 
-								duration: 0.5, 
-								delay: 0.1,
-								type: "spring",
-								stiffness: 300,
-								damping: 25
-							}}
-							whileHover={{ rotate: 0, scale: 1.02, y: -4 }}
-							className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 sm:p-8 flex flex-col hover:shadow-lg transition-all"
-							style={{ transformOrigin: 'center' }}
-						>
-							<div className="mb-6">
-								<h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-1.5">Free</h3>
-								<p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-5">Trialling the quiz in class</p>
-								<div className="mb-1">
-									<span className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">$0</span>
-								</div>
-							</div>
-							
-							<ul className="space-y-2.5 sm:space-y-3 flex-1 mb-6">
-								<li className="flex items-start gap-2.5">
-									<span className="text-blue-600 dark:text-blue-400 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✓</span>
-									<span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">3 free quizzes (lifetime)</span>
-								</li>
-								<li className="flex items-start gap-2.5">
-									<span className="text-gray-300 dark:text-gray-600 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✗</span>
-									<span className="text-xs sm:text-sm text-gray-500 dark:text-gray-500 leading-relaxed">No premium features</span>
-								</li>
-								<li className="flex items-start gap-2.5">
-									<span className="text-gray-300 dark:text-gray-600 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✗</span>
-									<span className="text-xs sm:text-sm text-gray-500 dark:text-gray-500 leading-relaxed">No printing, no past quizzes</span>
-								</li>
-								<li className="flex items-start gap-2.5">
-									<span className="text-gray-300 dark:text-gray-600 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✗</span>
-									<span className="text-xs sm:text-sm text-gray-500 dark:text-gray-500 leading-relaxed">No achievements, no leaderboards</span>
-								</li>
-							</ul>
-							
-							<p className="text-xs text-gray-500 dark:text-gray-500 mb-6 italic">About three weeks of Monday mornings</p>
-							
-							<Link
-								href="/sign-up"
-								className="w-full inline-flex items-center justify-center h-11 px-4 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-full text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
-							>
-								Get started
-							</Link>
-						</motion.div>
-
-						{/* Premium Plan */}
-						<motion.div
-							initial={{ opacity: 0, y: 20, rotate: 0 }}
-							whileInView={{ opacity: 1, y: 0, rotate: 0 }}
-							viewport={{ once: true }}
-							transition={{ 
-								duration: 0.5, 
-								delay: 0.2,
-								type: "spring",
-								stiffness: 300,
-								damping: 25
-							}}
-							whileHover={{ rotate: 0, scale: 1.02, y: -4 }}
-							className="bg-white dark:bg-gray-900 rounded-2xl border-2 border-blue-500 dark:border-blue-600 p-6 sm:p-8 flex flex-col relative hover:shadow-xl transition-all"
-							style={{ transformOrigin: 'center' }}
-						>
-							{/* Glow effect */}
-							<div className="absolute -inset-1 bg-gradient-to-r from-blue-400 to-blue-600 rounded-2xl opacity-20 dark:opacity-30 blur-xl -z-10"></div>
-							<div className="absolute top-4 right-4">
-								<span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
-									Popular
-								</span>
-							</div>
-							
-							<div className="mb-6">
-								<h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-1.5">Premium</h3>
-								<p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-5">Individual teachers running weekly quizzes</p>
-								<div className="mb-1">
-									{billingPeriod === 'monthly' ? (
-										<>
-											<span className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">$6</span>
-											<span className="text-base sm:text-lg text-gray-600 dark:text-gray-400"> AUD</span>
-										</>
-									) : (
-										<>
-											<span className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">$54</span>
-											<span className="text-base sm:text-lg text-gray-600 dark:text-gray-400"> AUD</span>
-										</>
-									)}
-								</div>
-								<p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-1">
-									per teacher / {billingPeriod === 'monthly' ? 'month' : 'year'}
-								</p>
-								{billingPeriod === 'monthly' ? (
-									<p className="text-xs text-blue-600 dark:text-blue-400 font-medium">$1.50 per week</p>
-								) : (
-									<p className="text-xs text-blue-600 dark:text-blue-400 font-medium">$4.50 per month</p>
-								)}
-							</div>
-							
-							<ul className="space-y-2.5 sm:space-y-3 flex-1 mb-6">
-								<li className="flex items-start gap-2.5">
-									<span className="text-blue-600 dark:text-blue-400 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✓</span>
-									<span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">Every weekly quiz, instantly on Monday mornings</span>
-								</li>
-								<li className="flex items-start gap-2.5">
-									<span className="text-blue-600 dark:text-blue-400 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✓</span>
-									<span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">Replay any quiz (past quizzes library)</span>
-								</li>
-								<li className="flex items-start gap-2.5">
-									<span className="text-blue-600 dark:text-blue-400 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✓</span>
-									<span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">Printable PDF packs</span>
-								</li>
-								<li className="flex items-start gap-2.5">
-									<span className="text-blue-600 dark:text-blue-400 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✓</span>
-									<span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">Achievements, streak tracking</span>
-								</li>
-								<li className="flex items-start gap-2.5">
-									<span className="text-blue-600 dark:text-blue-400 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✓</span>
-									<span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">Private leaderboards</span>
-								</li>
-								<li className="flex items-start gap-2.5">
-									<span className="text-blue-600 dark:text-blue-400 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✓</span>
-									<span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">The People's Round submissions</span>
-								</li>
-								<li className="flex items-start gap-2.5">
-									<span className="text-blue-600 dark:text-blue-400 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✓</span>
-									<span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">Early access to special editions</span>
-								</li>
-							</ul>
-							
-							<p className="text-xs text-gray-500 dark:text-gray-500 mb-6 italic">Cancel anytime, no lock-in</p>
-							
-							<Link
-								href="/sign-up"
-								className="w-full inline-flex items-center justify-center h-11 px-4 bg-[#3B82F6] text-white rounded-full text-sm font-medium hover:bg-[#2563EB] transition-colors focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:ring-offset-2"
-							>
-								Get started
-							</Link>
-						</motion.div>
-
-						{/* Organisation Plan */}
-						<motion.div
-							initial={{ opacity: 0, y: 20, rotate: 0.5 }}
-							whileInView={{ opacity: 1, y: 0, rotate: 0.5 }}
-							viewport={{ once: true }}
-							transition={{ 
-								duration: 0.5, 
-								delay: 0.3,
-								type: "spring",
-								stiffness: 300,
-								damping: 25
-							}}
-							whileHover={{ rotate: 0, scale: 1.02, y: -4 }}
-							className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 sm:p-8 flex flex-col hover:shadow-lg transition-all"
-							style={{ transformOrigin: 'center' }}
-						>
-							<div className="mb-6">
-								<h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-1.5">Organisation</h3>
-								<p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-5">Departments, faculties, whole schools</p>
-								<div className="mb-1">
-									{billingPeriod === 'monthly' ? (
-										<>
-											<span className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">$4.50</span>
-											<span className="text-base sm:text-lg text-gray-600 dark:text-gray-400"> AUD</span>
-										</>
-									) : (
-										<>
-											<span className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">$40.50</span>
-											<span className="text-base sm:text-lg text-gray-600 dark:text-gray-400"> AUD</span>
-										</>
-									)}
-								</div>
-								<p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-1">
-									per teacher / {billingPeriod === 'monthly' ? 'month' : 'year'}
-								</p>
-								<p className="text-xs text-green-600 dark:text-green-400 font-medium">25% off (minimum 5 teachers)</p>
-							</div>
-							
-							<ul className="space-y-2.5 sm:space-y-3 flex-1 mb-6">
-								<li className="flex items-start gap-2.5">
-									<span className="text-blue-600 dark:text-blue-400 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✓</span>
-									<span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed"><strong>All Premium features</strong></span>
-								</li>
-								<li className="flex items-start gap-2.5">
-									<span className="text-blue-600 dark:text-blue-400 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✓</span>
-									<span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">Central billing</span>
-								</li>
-								<li className="flex items-start gap-2.5">
-									<span className="text-blue-600 dark:text-blue-400 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✓</span>
-									<span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">Shared private leagues (houses, mentor groups, year groups)</span>
-								</li>
-								<li className="flex items-start gap-2.5">
-									<span className="text-blue-600 dark:text-blue-400 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✓</span>
-									<span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">School-wide data snapshots</span>
-								</li>
-								<li className="flex items-start gap-2.5">
-									<span className="text-blue-600 dark:text-blue-400 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✓</span>
-									<span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">Priority support</span>
-								</li>
-							</ul>
-							
-							<p className="text-xs text-gray-500 dark:text-gray-500 mb-6">
-								{billingPeriod === 'monthly' ? 'From $270/year for 5 teachers' : 'From $202.50/year for 5 teachers'}
-							</p>
-							
-							<Link
-								href="/sign-up"
-								className="w-full inline-flex items-center justify-center h-11 px-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-full text-sm font-medium hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
-							>
-								Get started
-							</Link>
-						</motion.div>
-					</div>
-
-					{/* Custom Quizzes Section */}
-					<motion.div
-						initial={{ opacity: 0, y: 20 }}
-						whileInView={{ opacity: 1, y: 0 }}
-						viewport={{ once: true, margin: "-50px" }}
-						transition={{ 
-							duration: 0.5, 
-							delay: 0.5,
-							type: "spring",
-							stiffness: 300,
-							damping: 25
-						}}
-						className="mt-16 sm:mt-20"
-					>
-						<div className="text-center mb-8">
-							<h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2">
-								Interested in custom quizzes?
-							</h3>
-							<p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-6">
-								You aren't the only one, please get in touch for pricing.
-							</p>
-							<Link
-								href="/contact"
-								className="inline-flex items-center justify-center h-12 px-4 sm:px-6 bg-[#3B82F6] text-white rounded-full text-sm sm:text-base font-medium hover:bg-[#2563EB] transition-colors focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:ring-offset-2"
-							>
-								Get in touch
-							</Link>
-						</div>
-					</motion.div>
-				</motion.div>
-			</section>
+				</section>
 
 				{/* Footer */}
 				<Footer />

@@ -4,7 +4,7 @@ import React, { createContext, useContext, useEffect, useState, useRef, useLayou
 import { motion, useSpring, useMotionValue, useTransform, SpringOptions, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
-type Align = 
+type Align =
   | "center"
   | "top"
   | "top-left"
@@ -24,11 +24,11 @@ interface CursorContextType {
 
 const CursorContext = createContext<CursorContextType | null>(null);
 
-export function CursorProvider({ 
-  children, 
-  className 
-}: { 
-  children: React.ReactNode; 
+export function CursorProvider({
+  children,
+  className
+}: {
+  children: React.ReactNode;
   className?: string;
 }) {
   const mouseX = useMotionValue(0);
@@ -42,12 +42,12 @@ export function CursorProvider({
       const hasFinePointer = window.matchMedia("(pointer: fine)").matches;
       setHasPointer(hasFinePointer);
     };
-    
+
     checkPointer();
     const mediaQuery = window.matchMedia("(pointer: fine)");
     const handleChange = () => checkPointer();
     mediaQuery.addEventListener("change", handleChange);
-    
+
     return () => mediaQuery.removeEventListener("change", handleChange);
   }, []);
 
@@ -88,7 +88,7 @@ export function Cursor({ children, className }: CursorProps) {
   const { mouseX, mouseY, isActive } = useCursor();
   const cursorX = useSpring(mouseX, { stiffness: 500, damping: 50 });
   const cursorY = useSpring(mouseY, { stiffness: 500, damping: 50 });
-  
+
   // Always call hooks - don't conditionally return before hooks
   // For pointer cursor, position tip at cursor (top-left corner of SVG)
   const xTransform = useTransform(cursorX, (x) => x);
@@ -134,10 +134,10 @@ export function CursorFollow({
   const offsetX = useMotionValue(0);
   const offsetY = useMotionValue(0);
   const [isMounted, setIsMounted] = useState(false);
-  
+
   // Always call hooks - use motion values for offset to avoid closure issues
-  const xTransform = useTransform([followX, offsetX], ([x, ox]) => x + ox);
-  const yTransform = useTransform([followY, offsetY], ([y, oy]) => y + oy);
+  const xTransform = useTransform([followX, offsetX], (values: number[]) => values[0] + values[1]);
+  const yTransform = useTransform([followY, offsetY], (values: number[]) => values[0] + values[1]);
 
   // Measure element and calculate offset
   useLayoutEffect(() => {

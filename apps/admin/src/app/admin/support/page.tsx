@@ -42,7 +42,7 @@ function SupportPageContent() {
   const [isLoading, setIsLoading] = useState(true)
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
-  
+
   // Get initial values from URL params
   const [searchInput, setSearchInput] = useState('')
   const debouncedSearch = useDebounce(searchInput, 300)
@@ -51,7 +51,7 @@ function SupportPageContent() {
   const [page, setPage] = useState(1)
   const [sortBy, setSortBy] = useState<string>('createdAt')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
-  
+
   // Initialize from URL params on mount (client-side only)
   useEffect(() => {
     setMounted(true)
@@ -62,7 +62,7 @@ function SupportPageContent() {
       const pageParam = parseInt(searchParams.get('page') || '1', 10)
       const sortByParam = searchParams.get('sortBy') || 'createdAt'
       const sortOrderParam = (searchParams.get('sortOrder') as 'asc' | 'desc') || 'desc'
-      
+
       setSearchInput(search)
       setStatusFilter(status)
       setPriorityFilter(priority)
@@ -71,7 +71,7 @@ function SupportPageContent() {
       setSortOrder(sortOrderParam)
     }
   }, [searchParams])
-  
+
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 50,
@@ -88,7 +88,7 @@ function SupportPageContent() {
     if (page > 1) params.set('page', page.toString())
     if (sortBy !== 'createdAt') params.set('sortBy', sortBy)
     if (sortOrder !== 'desc') params.set('sortOrder', sortOrder)
-    
+
     router.push(`?${params.toString()}`, { scroll: false })
   }, [debouncedSearch, statusFilter, priorityFilter, page, sortBy, sortOrder, router])
 
@@ -105,11 +105,11 @@ function SupportPageContent() {
 
   const fetchSearchSuggestions = async (query: string): Promise<string[]> => {
     if (query.length < 2) return []
-    
+
     try {
       const response = await fetch(`/api/admin/support?search=${encodeURIComponent(query)}&limit=10`)
       const data = await response.json()
-      
+
       if (response.ok && data.tickets) {
         return data.tickets
           .map((ticket: SupportTicket) => [
@@ -119,13 +119,13 @@ function SupportPageContent() {
           ])
           .flat()
           .filter((s: string | null | undefined): s is string => Boolean(s))
-          .filter((s, i, arr) => arr.indexOf(s) === i)
+          .filter((s: string, i: number, arr: string[]) => arr.indexOf(s) === i)
           .slice(0, 10)
       }
     } catch (error) {
       console.error('Error fetching suggestions:', error)
     }
-    
+
     return []
   }
 
@@ -143,7 +143,7 @@ function SupportPageContent() {
       if (priorityFilter) params.append('priority', priorityFilter)
 
       const response = await fetch(`/api/admin/support/tickets?${params}`)
-      
+
       if (response.ok) {
         const contentType = response.headers.get('content-type')
         if (!contentType || !contentType.includes('application/json')) {
@@ -193,8 +193,8 @@ function SupportPageContent() {
   }
 
   const getPriorityBadge = (priority: string) => {
-    const priorityMap: Record<string, 'danger' | 'warning' | 'default'> = {
-      HIGH: 'danger',
+    const priorityMap: Record<string, 'error' | 'warning' | 'default'> = {
+      HIGH: 'error',
       MEDIUM: 'warning',
       LOW: 'default',
     }
@@ -281,19 +281,19 @@ function SupportPageContent() {
         <DataTable>
           <DataTableHeader>
             <tr>
-              <DataTableHeaderCell onClick={() => handleSort('subject')} sortable sortDirection={sortBy === 'subject' ? sortOrder : undefined}>
+              <DataTableHeaderCell sortable sorted={sortBy === 'subject' ? sortOrder : undefined} onSort={() => handleSort('subject')}>
                 Subject
               </DataTableHeaderCell>
-              <DataTableHeaderCell onClick={() => handleSort('status')} sortable sortDirection={sortBy === 'status' ? sortOrder : undefined}>
+              <DataTableHeaderCell sortable sorted={sortBy === 'status' ? sortOrder : undefined} onSort={() => handleSort('status')}>
                 Status
               </DataTableHeaderCell>
-              <DataTableHeaderCell onClick={() => handleSort('priority')} sortable sortDirection={sortBy === 'priority' ? sortOrder : undefined}>
+              <DataTableHeaderCell sortable sorted={sortBy === 'priority' ? sortOrder : undefined} onSort={() => handleSort('priority')}>
                 Priority
               </DataTableHeaderCell>
-              <DataTableHeaderCell onClick={() => handleSort('userName')} sortable sortDirection={sortBy === 'userName' ? sortOrder : undefined}>
+              <DataTableHeaderCell sortable sorted={sortBy === 'userName' ? sortOrder : undefined} onSort={() => handleSort('userName')}>
                 User
               </DataTableHeaderCell>
-              <DataTableHeaderCell onClick={() => handleSort('createdAt')} sortable sortDirection={sortBy === 'createdAt' ? sortOrder : undefined}>
+              <DataTableHeaderCell sortable sorted={sortBy === 'createdAt' ? sortOrder : undefined} onSort={() => handleSort('createdAt')}>
                 Created
               </DataTableHeaderCell>
               <DataTableHeaderCell>
@@ -304,12 +304,12 @@ function SupportPageContent() {
           <DataTableBody>
             {isLoading ? (
               <tr>
-                <DataTableCell colSpan={6} className="p-0">
+                <td colSpan={6} className="p-0">
                   <TableSkeleton rows={10} columns={6} />
-                </DataTableCell>
+                </td>
               </tr>
             ) : tickets.length === 0 ? (
-              <DataTableEmpty colSpan={6} message="No support tickets found" />
+              <DataTableEmpty message="No support tickets found" />
             ) : (
               tickets.map((ticket) => {
                 const statusBadge = getStatusBadge(ticket.status)

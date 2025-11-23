@@ -6,7 +6,7 @@ import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Users, Search, Filter, Building2, Trophy, BookOpen, Edit2, X, KeyRound, ChevronLeft, ChevronRight, Download, Trash2, CheckSquare, Square, MoreVertical, Plus, Trash2 as TrashIcon, ChevronDown, FileText, Key, Ban, CheckCircle, Crown, UserCog, Copy, Eye } from 'lucide-react'
 import { Spinner } from '@/components/ui/spinner'
-import { PageHeader, Card, DataTable, DataTableHeader, DataTableHeaderCell, DataTableBody, DataTableRow, DataTableCell, DataTableEmpty, Badge, Button, StatusStrip, TableSkeleton } from '@/components/admin/ui'
+import { PageHeader, Card, DataTable, DataTableHeader, DataTableHeaderCell, DataTableBody, DataTableRow, DataTableCell, DataTableEmpty, Badge, Button, StatusStrip, TableSkeleton, Input, Select as AdminSelect } from '@/components/admin/ui'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { AutocompleteSearch } from '@/components/admin/AutocompleteSearch'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
@@ -39,7 +39,7 @@ export default function AdminUsersPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [isBulkActionLoading, setIsBulkActionLoading] = useState(false)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
-  
+
   // Get initial values from URL params
   const [searchInput, setSearchInput] = useState(searchParams.get('search') || '')
   const debouncedSearch = useDebounce(searchInput, 300)
@@ -64,10 +64,10 @@ export default function AdminUsersPage() {
     if (page > 1) params.set('page', page.toString())
     if (sortBy !== 'createdAt') params.set('sortBy', sortBy)
     if (sortOrder !== 'desc') params.set('sortOrder', sortOrder)
-    
+
     // Update URL without scrolling
     router.push(`?${params.toString()}`, { scroll: false })
-    
+
     // Save to localStorage
     if (typeof window !== 'undefined') {
       localStorage.setItem('admin-users-filters', JSON.stringify({
@@ -104,7 +104,7 @@ export default function AdminUsersPage() {
 
       const response = await fetch(`/api/admin/users?${params}`)
       const data = await response.json()
-      
+
       if (response.ok) {
         setUsers(data.users || [])
         setPagination(data.pagination || pagination)
@@ -121,11 +121,11 @@ export default function AdminUsersPage() {
 
   const fetchSearchSuggestions = async (query: string): Promise<string[]> => {
     if (query.length < 2) return []
-    
+
     try {
       const response = await fetch(`/api/admin/users?search=${encodeURIComponent(query)}&limit=10`)
       const data = await response.json()
-      
+
       if (response.ok && data.users) {
         // Return user names and emails as suggestions
         return data.users
@@ -135,13 +135,13 @@ export default function AdminUsersPage() {
           ])
           .flat()
           .filter((s: string | null | undefined): s is string => Boolean(s))
-          .filter((s, i, arr) => arr.indexOf(s) === i) // Remove duplicates
+          .filter((s: string, i: number, arr: string[]) => arr.indexOf(s) === i) // Remove duplicates
           .slice(0, 10)
       }
     } catch (error) {
       console.error('Error fetching suggestions:', error)
     }
-    
+
     return []
   }
 
@@ -198,7 +198,7 @@ export default function AdminUsersPage() {
       })
 
       const result = await response.json()
-      
+
       if (!response.ok) {
         throw new Error(result.error || 'Failed to delete users')
       }
@@ -246,14 +246,14 @@ export default function AdminUsersPage() {
       })
 
       const result = await response.json()
-      
+
       if (!response.ok) {
         throw new Error(result.error || 'Failed to perform action')
       }
 
       // Show success message
       alert(result.message || 'Action completed successfully')
-      
+
       // Refresh user data
       await fetchUsers()
     } catch (error: any) {
@@ -282,7 +282,7 @@ export default function AdminUsersPage() {
       })
 
       const result = await response.json()
-      
+
       if (!response.ok) {
         throw new Error(result.error || 'Failed to update users')
       }
@@ -461,76 +461,76 @@ export default function AdminUsersPage() {
               transition={{ type: 'spring', damping: 30, stiffness: 300 }}
               className="fixed right-0 top-0 bottom-0 z-[60] w-80 bg-[hsl(var(--card))] border-l border-[hsl(var(--border))] flex flex-col"
             >
-            {/* Header - matches sidebar header style */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-[hsl(var(--border))] bg-[hsl(var(--card))] h-[60px]">
-              <div className="flex items-center gap-2 flex-1 min-w-0">
-                <div className="w-2 h-2 rounded-full bg-[hsl(var(--primary))] animate-pulse flex-shrink-0" />
-                <h3 className="text-sm font-semibold text-[hsl(var(--foreground))] whitespace-nowrap">
-                  Bulk Actions
-                </h3>
+              {/* Header - matches sidebar header style */}
+              <div className="flex items-center justify-between px-4 py-3 border-b border-[hsl(var(--border))] bg-[hsl(var(--card))] h-[60px]">
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <div className="w-2 h-2 rounded-full bg-[hsl(var(--primary))] animate-pulse flex-shrink-0" />
+                  <h3 className="text-sm font-semibold text-[hsl(var(--foreground))] whitespace-nowrap">
+                    Bulk Actions
+                  </h3>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearSelection}
+                  className="p-2 rounded-xl hover:bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] transition-all duration-200 flex-shrink-0"
+                  title="Clear selection"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={clearSelection}
-                className="p-2 rounded-xl hover:bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] transition-all duration-200 flex-shrink-0"
-                title="Clear selection"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
 
-            {/* Selection count */}
-            <div className="px-4 py-3 border-b border-[hsl(var(--border))] bg-[hsl(var(--muted))]/30">
-              <div className="px-3 py-1.5 bg-[hsl(var(--primary))]/10 rounded-lg border border-[hsl(var(--primary))]/20 inline-block">
-                <span className="text-xs font-medium text-[hsl(var(--foreground))]">
-                  {selectedIds.size} {selectedIds.size === 1 ? 'item' : 'items'} selected
-                </span>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-[hsl(var(--muted-foreground))] mb-3 uppercase tracking-wide">
-                  Update Tier
-                </label>
-                <div className="space-y-2">
-                  {[
-                    { value: 'basic', label: 'Basic', variant: 'default' as const },
-                    { value: 'premium', label: 'Premium', variant: 'info' as const },
-                  ].map((tier) => (
-                    <Button
-                      key={tier.value}
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => handleBulkTierUpdate(tier.value)}
-                      disabled={isBulkActionLoading}
-                      className="w-full justify-start gap-2 text-xs h-9 hover:bg-[hsl(var(--muted))]"
-                    >
-                      <Badge variant={tier.variant} className="text-xs px-2 py-0.5">
-                        {tier.label}
-                      </Badge>
-                      <span className="text-[hsl(var(--muted-foreground))]">Set to {tier.label}</span>
-                    </Button>
-                  ))}
+              {/* Selection count */}
+              <div className="px-4 py-3 border-b border-[hsl(var(--border))] bg-[hsl(var(--muted))]/30">
+                <div className="px-3 py-1.5 bg-[hsl(var(--primary))]/10 rounded-lg border border-[hsl(var(--primary))]/20 inline-block">
+                  <span className="text-xs font-medium text-[hsl(var(--foreground))]">
+                    {selectedIds.size} {selectedIds.size === 1 ? 'item' : 'items'} selected
+                  </span>
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-[hsl(var(--border))]">
-                <Button
-                  variant="danger"
-                  size="sm"
-                  onClick={handleBulkDelete}
-                  disabled={isBulkActionLoading}
-                  className="w-full gap-2 text-xs h-9"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  Delete {selectedIds.size} {selectedIds.size === 1 ? 'item' : 'items'}
-                </Button>
+              {/* Actions */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                <div>
+                  <label className="block text-xs font-medium text-[hsl(var(--muted-foreground))] mb-3 uppercase tracking-wide">
+                    Update Tier
+                  </label>
+                  <div className="space-y-2">
+                    {[
+                      { value: 'basic', label: 'Basic', variant: 'default' as const },
+                      { value: 'premium', label: 'Premium', variant: 'info' as const },
+                    ].map((tier) => (
+                      <Button
+                        key={tier.value}
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleBulkTierUpdate(tier.value)}
+                        disabled={isBulkActionLoading}
+                        className="w-full justify-start gap-2 text-xs h-9 hover:bg-[hsl(var(--muted))]"
+                      >
+                        <Badge variant={tier.variant} className="text-xs px-2 py-0.5">
+                          {tier.label}
+                        </Badge>
+                        <span className="text-[hsl(var(--muted-foreground))]">Set to {tier.label}</span>
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t border-[hsl(var(--border))]">
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={handleBulkDelete}
+                    disabled={isBulkActionLoading}
+                    className="w-full gap-2 text-xs h-9"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete {selectedIds.size} {selectedIds.size === 1 ? 'item' : 'items'}
+                  </Button>
+                </div>
               </div>
-            </div>
-          </motion.div>
+            </motion.div>
           )}
         </AnimatePresence>,
         document.body
@@ -576,29 +576,28 @@ export default function AdminUsersPage() {
       {isLoading ? (
         <TableSkeleton rows={5} columns={7} />
       ) : (
-      <DataTable
-        emptyState={{
-          icon: <Users className="mx-auto h-12 w-12 text-[hsl(var(--muted-foreground))]" />,
-          message: 'No users found'
-        }}
-      >
-        {users.length > 0 && (
-          <>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <DataTableHeader>
-                  <tr>
+        <DataTable
+          emptyState={{
+            icon: <Users className="mx-auto h-12 w-12 text-[hsl(var(--muted-foreground))]" />,
+            message: 'No users found'
+          }}
+        >
+          {users.length > 0 && (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <DataTableHeader>
+                    <tr>
                       <DataTableHeaderCell className="w-12">
                         <button
                           onClick={(e) => {
                             e.stopPropagation()
                             toggleSelectAll()
                           }}
-                          className={`p-1.5 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95 ${
-                            selectedIds.size === users.length && users.length > 0
-                              ? 'bg-[hsl(var(--primary))]/10 hover:bg-[hsl(var(--primary))]/20' 
-                              : 'hover:bg-[hsl(var(--muted))]'
-                          }`}
+                          className={`p-1.5 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95 ${selectedIds.size === users.length && users.length > 0
+                            ? 'bg-[hsl(var(--primary))]/10 hover:bg-[hsl(var(--primary))]/20'
+                            : 'hover:bg-[hsl(var(--muted))]'
+                            }`}
                           title={selectedIds.size === users.length ? 'Deselect all' : 'Select all'}
                         >
                           {selectedIds.size === users.length && users.length > 0 ? (
@@ -608,45 +607,45 @@ export default function AdminUsersPage() {
                           )}
                         </button>
                       </DataTableHeaderCell>
-                    <DataTableHeaderCell
-                      sortable
-                      sorted={sortBy === 'name' ? sortOrder : false}
-                      onSort={() => handleSort('name')}
-                    >
-                      User
-                    </DataTableHeaderCell>
-                    <DataTableHeaderCell
-                      sortable
-                      sorted={sortBy === 'tier' ? sortOrder : false}
-                      onSort={() => handleSort('tier')}
-                    >
-                      Tier
-                    </DataTableHeaderCell>
-                    <DataTableHeaderCell>Organisations</DataTableHeaderCell>
-                    <DataTableHeaderCell>Activity</DataTableHeaderCell>
-                    <DataTableHeaderCell
-                      sortable
-                      sorted={sortBy === 'lastLoginAt' ? sortOrder : false}
-                      onSort={() => handleSort('lastLoginAt')}
-                    >
-                      Last Login
-                    </DataTableHeaderCell>
-                    <DataTableHeaderCell
-                      sortable
-                      sorted={sortBy === 'createdAt' ? sortOrder : false}
-                      onSort={() => handleSort('createdAt')}
-                    >
-                      Joined
-                    </DataTableHeaderCell>
-                    <DataTableHeaderCell className="w-20">Actions</DataTableHeaderCell>
-                  </tr>
-                </DataTableHeader>
-                <DataTableBody>
+                      <DataTableHeaderCell
+                        sortable
+                        sorted={sortBy === 'name' ? sortOrder : false}
+                        onSort={() => handleSort('name')}
+                      >
+                        User
+                      </DataTableHeaderCell>
+                      <DataTableHeaderCell
+                        sortable
+                        sorted={sortBy === 'tier' ? sortOrder : false}
+                        onSort={() => handleSort('tier')}
+                      >
+                        Tier
+                      </DataTableHeaderCell>
+                      <DataTableHeaderCell>Organisations</DataTableHeaderCell>
+                      <DataTableHeaderCell>Activity</DataTableHeaderCell>
+                      <DataTableHeaderCell
+                        sortable
+                        sorted={sortBy === 'lastLoginAt' ? sortOrder : false}
+                        onSort={() => handleSort('lastLoginAt')}
+                      >
+                        Last Login
+                      </DataTableHeaderCell>
+                      <DataTableHeaderCell
+                        sortable
+                        sorted={sortBy === 'createdAt' ? sortOrder : false}
+                        onSort={() => handleSort('createdAt')}
+                      >
+                        Joined
+                      </DataTableHeaderCell>
+                      <DataTableHeaderCell className="w-20">Actions</DataTableHeaderCell>
+                    </tr>
+                  </DataTableHeader>
+                  <DataTableBody>
                     {users.map((user) => {
                       const isSelected = selectedIds.has(user.id)
                       const tierConfig = getUserTierBadge(user.tier)
                       return (
-                        <DataTableRow 
+                        <DataTableRow
                           key={user.id}
                           onClick={() => router.push(`/admin/users/${user.id}`)}
                           className={isSelected ? 'bg-[hsl(var(--primary))]/5' : ''}
@@ -657,11 +656,10 @@ export default function AdminUsersPage() {
                                 e.stopPropagation()
                                 toggleSelect(user.id)
                               }}
-                              className={`p-1.5 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95 ${
-                                isSelected 
-                                  ? 'bg-[hsl(var(--primary))]/10 hover:bg-[hsl(var(--primary))]/20' 
-                                  : 'hover:bg-[hsl(var(--muted))]'
-                              }`}
+                              className={`p-1.5 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95 ${isSelected
+                                ? 'bg-[hsl(var(--primary))]/10 hover:bg-[hsl(var(--primary))]/20'
+                                : 'hover:bg-[hsl(var(--muted))]'
+                                }`}
                               title={isSelected ? 'Deselect' : 'Select'}
                             >
                               {isSelected ? (
@@ -671,237 +669,237 @@ export default function AdminUsersPage() {
                               )}
                             </button>
                           </DataTableCell>
-                      <DataTableCell>
-                        <div className="flex items-center">
-                          <div>
-                            <div className="text-sm font-medium text-[hsl(var(--foreground))]">
-                              {user.name || 'No name'}
+                          <DataTableCell>
+                            <div className="flex items-center">
+                              <div>
+                                <div className="text-sm font-medium text-[hsl(var(--foreground))]">
+                                  {user.name || 'No name'}
+                                </div>
+                                <div className="text-sm text-[hsl(var(--muted-foreground))]">
+                                  {user.email}
+                                </div>
+                              </div>
                             </div>
-                            <div className="text-sm text-[hsl(var(--muted-foreground))]">
-                              {user.email}
-                            </div>
-                          </div>
-                        </div>
-                      </DataTableCell>
-                      <DataTableCell>
+                          </DataTableCell>
+                          <DataTableCell>
                             <Badge variant={tierConfig.variant}>
                               {tierConfig.label}
-                        </Badge>
-                      </DataTableCell>
-                      <DataTableCell>
-                        <div className="flex items-center text-sm text-[hsl(var(--foreground))]">
-                          <Building2 className="w-4 h-4 mr-1 text-[hsl(var(--muted-foreground))]" />
-                          {user._count?.organisations || 0}
-                        </div>
-                      </DataTableCell>
-                      <DataTableCell>
-                        <div className="flex items-center gap-4 text-sm text-[hsl(var(--foreground))]">
-                          <div className="flex items-center">
-                            <BookOpen className="w-4 h-4 mr-1 text-[hsl(var(--muted-foreground))]" />
-                            {user._count?.quizCompletions || 0}
-                          </div>
-                          <div className="flex items-center">
-                            <Trophy className="w-4 h-4 mr-1 text-[hsl(var(--muted-foreground))]" />
-                            {user._count?.achievements || 0}
-                          </div>
-                        </div>
-                      </DataTableCell>
-                      <DataTableCell className="text-sm text-[hsl(var(--muted-foreground))]">
+                            </Badge>
+                          </DataTableCell>
+                          <DataTableCell>
+                            <div className="flex items-center text-sm text-[hsl(var(--foreground))]">
+                              <Building2 className="w-4 h-4 mr-1 text-[hsl(var(--muted-foreground))]" />
+                              {user._count?.organisations || 0}
+                            </div>
+                          </DataTableCell>
+                          <DataTableCell>
+                            <div className="flex items-center gap-4 text-sm text-[hsl(var(--foreground))]">
+                              <div className="flex items-center">
+                                <BookOpen className="w-4 h-4 mr-1 text-[hsl(var(--muted-foreground))]" />
+                                {user._count?.quizCompletions || 0}
+                              </div>
+                              <div className="flex items-center">
+                                <Trophy className="w-4 h-4 mr-1 text-[hsl(var(--muted-foreground))]" />
+                                {user._count?.achievements || 0}
+                              </div>
+                            </div>
+                          </DataTableCell>
+                          <DataTableCell className="text-sm text-[hsl(var(--muted-foreground))]">
                             <span title={user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : 'Never'}>
                               {formatDate(user.lastLoginAt)}
                             </span>
-                      </DataTableCell>
-                      <DataTableCell className="text-sm text-[hsl(var(--muted-foreground))]">
+                          </DataTableCell>
+                          <DataTableCell className="text-sm text-[hsl(var(--muted-foreground))]">
                             <span title={new Date(user.createdAt).toLocaleString()}>
                               {formatDate(user.createdAt)}
                             </span>
-                      </DataTableCell>
-                      <DataTableCell>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => e.stopPropagation()}
-                              title="Actions"
-                              disabled={actionLoading === user.id}
-                            >
-                              {actionLoading === user.id ? (
-                                <Spinner className="size-4" />
-                              ) : (
-                                <MoreVertical className="w-4 h-4" />
-                              )}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-56 p-2" align="end" onClick={(e) => e.stopPropagation()}>
-                            <div className="space-y-1">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  router.push(`/admin/users/${user.id}`)
-                                }}
-                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg transition-colors text-left"
-                              >
-                                <Eye className="w-4 h-4" />
-                                View Details
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleUserAction(user.id, 'resetPassword')
-                                }}
-                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg transition-colors text-left"
-                              >
-                                <Key className="w-4 h-4" />
-                                Reset Password
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleUserAction(user.id, 'generateReferralCode')
-                                }}
-                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg transition-colors text-left"
-                              >
-                                <Copy className="w-4 h-4" />
-                                Generate Referral Code
-                              </button>
-                              <div className="border-t border-[hsl(var(--border))] my-1" />
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleUserAction(user.id, user.subscriptionStatus === 'CANCELLED' ? 'activate' : 'suspend')
-                                }}
-                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg transition-colors text-left"
-                              >
-                                {user.subscriptionStatus === 'CANCELLED' ? (
-                                  <>
-                                    <CheckCircle className="w-4 h-4" />
-                                    Activate Account
-                                  </>
-                                ) : (
-                                  <>
-                                    <Ban className="w-4 h-4" />
-                                    Suspend Account
-                                  </>
-                                )}
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleUserAction(user.id, 'changeTier', { tier: user.tier === 'premium' ? 'basic' : 'premium' })
-                                }}
-                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg transition-colors text-left"
-                              >
-                                <Crown className="w-4 h-4" />
-                                {user.tier === 'premium' ? 'Downgrade to Basic' : 'Upgrade to Premium'}
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleUserAction(user.id, 'changeRole')
-                                }}
-                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg transition-colors text-left"
-                              >
-                                <UserCog className="w-4 h-4" />
-                                Change Platform Role
-                              </button>
-                              <div className="border-t border-[hsl(var(--border))] my-1" />
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  if (confirm(`Are you sure you want to delete ${user.name || user.email}? This action cannot be undone.`)) {
-                                    handleUserAction(user.id, 'delete')
-                                  }
-                                }}
-                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10 rounded-lg transition-colors text-left"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                                Delete User
-                              </button>
-                            </div>
-                          </PopoverContent>
-                        </Popover>
-                      </DataTableCell>
-                    </DataTableRow>
+                          </DataTableCell>
+                          <DataTableCell>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => e.stopPropagation()}
+                                  title="Actions"
+                                  disabled={actionLoading === user.id}
+                                >
+                                  {actionLoading === user.id ? (
+                                    <Spinner className="size-4" />
+                                  ) : (
+                                    <MoreVertical className="w-4 h-4" />
+                                  )}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-56 p-2" align="end" onClick={(e) => e.stopPropagation()}>
+                                <div className="space-y-1">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      router.push(`/admin/users/${user.id}`)
+                                    }}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg transition-colors text-left"
+                                  >
+                                    <Eye className="w-4 h-4" />
+                                    View Details
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleUserAction(user.id, 'resetPassword')
+                                    }}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg transition-colors text-left"
+                                  >
+                                    <Key className="w-4 h-4" />
+                                    Reset Password
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleUserAction(user.id, 'generateReferralCode')
+                                    }}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg transition-colors text-left"
+                                  >
+                                    <Copy className="w-4 h-4" />
+                                    Generate Referral Code
+                                  </button>
+                                  <div className="border-t border-[hsl(var(--border))] my-1" />
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleUserAction(user.id, user.subscriptionStatus === 'CANCELLED' ? 'activate' : 'suspend')
+                                    }}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg transition-colors text-left"
+                                  >
+                                    {user.subscriptionStatus === 'CANCELLED' ? (
+                                      <>
+                                        <CheckCircle className="w-4 h-4" />
+                                        Activate Account
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Ban className="w-4 h-4" />
+                                        Suspend Account
+                                      </>
+                                    )}
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleUserAction(user.id, 'changeTier', { tier: user.tier === 'premium' ? 'basic' : 'premium' })
+                                    }}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg transition-colors text-left"
+                                  >
+                                    <Crown className="w-4 h-4" />
+                                    {user.tier === 'premium' ? 'Downgrade to Basic' : 'Upgrade to Premium'}
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleUserAction(user.id, 'changeRole')
+                                    }}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg transition-colors text-left"
+                                  >
+                                    <UserCog className="w-4 h-4" />
+                                    Change Platform Role
+                                  </button>
+                                  <div className="border-t border-[hsl(var(--border))] my-1" />
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      if (confirm(`Are you sure you want to delete ${user.name || user.email}? This action cannot be undone.`)) {
+                                        handleUserAction(user.id, 'delete')
+                                      }
+                                    }}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10 rounded-lg transition-colors text-left"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                    Delete User
+                                  </button>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
+                          </DataTableCell>
+                        </DataTableRow>
                       )
                     })}
-                </DataTableBody>
-              </table>
-            </div>
-
-            {/* Pagination */}
-            {pagination.totalPages > 1 && (
-              <div className="px-6 py-4 border-t border-[hsl(var(--border))] flex flex-col sm:flex-row items-center justify-between gap-4 bg-[hsl(var(--muted))]">
-                <div className="text-sm text-[hsl(var(--foreground))]">
-                  Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
-                  {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} results
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setPage(1)}
-                    disabled={pagination.page === 1}
-                    title="First page"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                    <ChevronLeft className="w-4 h-4 -ml-2" />
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={pagination.page === 1}
-                    title="Previous page"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </Button>
-                  
-                  <div className="flex items-center gap-1">
-                    {getPageNumbers().map((pageNum, idx) => (
-                      pageNum === '...' ? (
-                        <span key={`ellipsis-${idx}`} className="px-2 text-[hsl(var(--muted-foreground))]">
-                          ...
-                        </span>
-                      ) : (
-                        <Button
-                          key={pageNum}
-                          variant={pagination.page === pageNum ? "primary" : "ghost"}
-                          size="sm"
-                          onClick={() => setPage(pageNum as number)}
-                          className="min-w-[2.5rem]"
-                        >
-                          {pageNum}
-                        </Button>
-                      )
-                    ))}
-                  </div>
-
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
-                    disabled={pagination.page === pagination.totalPages}
-                    title="Next page"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setPage(pagination.totalPages)}
-                    disabled={pagination.page === pagination.totalPages}
-                    title="Last page"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                    <ChevronRight className="w-4 h-4 -ml-2" />
-                  </Button>
-                </div>
+                  </DataTableBody>
+                </table>
               </div>
-            )}
-          </>
-        )}
-      </DataTable>
+
+              {/* Pagination */}
+              {pagination.totalPages > 1 && (
+                <div className="px-6 py-4 border-t border-[hsl(var(--border))] flex flex-col sm:flex-row items-center justify-between gap-4 bg-[hsl(var(--muted))]">
+                  <div className="text-sm text-[hsl(var(--foreground))]">
+                    Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
+                    {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} results
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setPage(1)}
+                      disabled={pagination.page === 1}
+                      title="First page"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                      <ChevronLeft className="w-4 h-4 -ml-2" />
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      disabled={pagination.page === 1}
+                      title="Previous page"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </Button>
+
+                    <div className="flex items-center gap-1">
+                      {getPageNumbers().map((pageNum, idx) => (
+                        pageNum === '...' ? (
+                          <span key={`ellipsis-${idx}`} className="px-2 text-[hsl(var(--muted-foreground))]">
+                            ...
+                          </span>
+                        ) : (
+                          <Button
+                            key={pageNum}
+                            variant={pagination.page === pageNum ? "primary" : "ghost"}
+                            size="sm"
+                            onClick={() => setPage(pageNum as number)}
+                            className="min-w-[2.5rem]"
+                          >
+                            {pageNum}
+                          </Button>
+                        )
+                      ))}
+                    </div>
+
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
+                      disabled={pagination.page === pagination.totalPages}
+                      title="Next page"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setPage(pagination.totalPages)}
+                      disabled={pagination.page === pagination.totalPages}
+                      title="Last page"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                      <ChevronRight className="w-4 h-4 -ml-2" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </DataTable>
       )}
 
       {/* Edit User Modal */}
@@ -1037,19 +1035,19 @@ function CreateUserModal({ onClose, onSave }: { onClose: () => void; onSave: () 
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             />
 
-            <Select
+            <AdminSelect
               label="Tier"
               value={formData.tier}
-              onChange={(e) => setFormData({ ...formData, tier: e.target.value })}
+              onChange={(e: any) => setFormData({ ...formData, tier: e.target.value })}
             >
               <option value="basic">Basic</option>
               <option value="premium">Premium</option>
-            </Select>
+            </AdminSelect>
 
-            <Select
+            <AdminSelect
               label="Platform Role"
               value={formData.platformRole}
-              onChange={(e) => setFormData({ ...formData, platformRole: e.target.value })}
+              onChange={(e: any) => setFormData({ ...formData, platformRole: e.target.value })}
             >
               <option value="">None</option>
               <option value="PLATFORM_ADMIN">Platform Admin</option>
@@ -1057,18 +1055,18 @@ function CreateUserModal({ onClose, onSave }: { onClose: () => void; onSave: () 
               <option value="TEACHER">Teacher</option>
               <option value="STUDENT">Student</option>
               <option value="PARENT">Parent</option>
-            </Select>
+            </AdminSelect>
 
-            <Select
+            <AdminSelect
               label="Subscription Status"
               value={formData.subscriptionStatus}
-              onChange={(e) => setFormData({ ...formData, subscriptionStatus: e.target.value })}
+              onChange={(e: any) => setFormData({ ...formData, subscriptionStatus: e.target.value })}
             >
               <option value="FREE_TRIAL">Free Trial</option>
               <option value="ACTIVE">Active</option>
               <option value="EXPIRED">Expired</option>
               <option value="CANCELLED">Cancelled</option>
-            </Select>
+            </AdminSelect>
 
             {error && (
               <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-600 dark:text-red-400">
@@ -1347,25 +1345,25 @@ function EditUserModal({ user, onClose, onSave }: { user: User; onClose: () => v
               required
             />
 
-            <Select
+            <AdminSelect
               label="Tier"
               value={formData.tier}
-              onChange={(e) => setFormData({ ...formData, tier: e.target.value })}
+              onChange={(e: any) => setFormData({ ...formData, tier: e.target.value })}
             >
               <option value="basic">Basic</option>
               <option value="premium">Premium</option>
-            </Select>
+            </AdminSelect>
 
-            <Select
+            <AdminSelect
               label="Subscription Status"
               value={formData.subscriptionStatus}
-              onChange={(e) => setFormData({ ...formData, subscriptionStatus: e.target.value })}
+              onChange={(e: any) => setFormData({ ...formData, subscriptionStatus: e.target.value })}
             >
               <option value="FREE_TRIAL">Free Trial</option>
               <option value="ACTIVE">Active</option>
               <option value="EXPIRED">Expired</option>
               <option value="CANCELLED">Cancelled</option>
-            </Select>
+            </AdminSelect>
 
             {/* Organisations Section */}
             <div className="pt-4 border-t border-[hsl(var(--border))]">
@@ -1412,10 +1410,10 @@ function EditUserModal({ user, onClose, onSave }: { user: User; onClose: () => v
               {/* Add Organisation */}
               <div className="flex items-end gap-2">
                 <div className="flex-1">
-                  <Select
+                  <AdminSelect
                     label="Add to Organisation"
                     value={selectedOrgId}
-                    onChange={(e) => setSelectedOrgId(e.target.value)}
+                    onChange={(e: any) => setSelectedOrgId(e.target.value)}
                   >
                     <option value="">Select an organisation...</option>
                     {allOrganisations
@@ -1423,7 +1421,7 @@ function EditUserModal({ user, onClose, onSave }: { user: User; onClose: () => v
                       .map(org => (
                         <option key={org.id} value={org.id}>{org.name}</option>
                       ))}
-                  </Select>
+                  </AdminSelect>
                 </div>
                 <Button
                   type="button"

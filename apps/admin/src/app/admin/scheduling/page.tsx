@@ -47,7 +47,7 @@ export default function AdminSchedulingPage() {
 
       const response = await fetch(`/api/admin/scheduling/jobs?${params}`)
       const data = await response.json()
-      
+
       if (response.ok) {
         setJobs(data.jobs || [])
       } else {
@@ -64,12 +64,12 @@ export default function AdminSchedulingPage() {
   }
 
   const getStatusBadge = (status: string) => {
-    const statusMap: Record<string, 'default' | 'info' | 'warning' | 'success' | 'danger'> = {
+    const statusMap: Record<string, 'default' | 'info' | 'warning' | 'success' | 'error'> = {
       PENDING: 'default',
       SCHEDULED: 'info',
       RUNNING: 'warning',
       COMPLETED: 'success',
-      FAILED: 'danger',
+      FAILED: 'error',
       CANCELLED: 'default',
     }
     const iconMap: Record<string, typeof Clock> = {
@@ -115,7 +115,7 @@ export default function AdminSchedulingPage() {
       <PageHeader
         title="Scheduling"
         description="Manage scheduled jobs, quiz publications, and maintenance windows"
-        actions={
+        action={
           <Button variant="primary" size="sm" onClick={() => setIsCreateModalOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Create Job
@@ -170,7 +170,7 @@ export default function AdminSchedulingPage() {
       </Card>
 
       {/* Jobs Table */}
-      <DataTable isLoading={isLoading} emptyMessage="No scheduled jobs found">
+      <DataTable isLoading={isLoading}>
         {!isLoading && jobs.length > 0 && (
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -293,7 +293,7 @@ export default function AdminSchedulingPage() {
           </div>
         )}
         {!isLoading && jobs.length === 0 && (
-          <DataTableEmpty colSpan={7} message="No scheduled jobs found" icon={Calendar} />
+          <DataTableEmpty message="No scheduled jobs found" />
         )}
       </DataTable>
 

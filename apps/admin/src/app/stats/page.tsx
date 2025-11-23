@@ -1,18 +1,41 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import dynamic from 'next/dynamic';
+import { useQuery } from '@tanstack/react-query';
 import { useUserTier } from '@/hooks/useUserTier';
 import { LockedFeature } from '@/components/access/LockedFeature';
 import { SiteHeader } from '@/components/SiteHeader';
 import { Footer } from '@/components/Footer';
+
+// Keep lightweight components as static imports
 import { SummaryStats } from '@/components/stats/SummaryStats';
-import { CategoryPerformance } from '@/components/stats/CategoryPerformance';
-import { StreakOverview } from '@/components/stats/StreakOverview';
-import { StreakCards } from '@/components/stats/StreakCards';
-import { PerformanceChart } from '@/components/stats/PerformanceChart';
-import { ComparisonCharts } from '@/components/stats/ComparisonCharts';
-import { RecentAchievements } from '@/components/stats/RecentAchievements';
+
+// Dynamic imports for heavy components - loads only when needed
+const CategoryPerformance = dynamic(() => import('@/components/stats/CategoryPerformance').then(mod => ({ default: mod.CategoryPerformance })), {
+  loading: () => <div className="h-64 bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse" />,
+});
+
+const StreakOverview = dynamic(() => import('@/components/stats/StreakOverview').then(mod => ({ default: mod.StreakOverview })), {
+  loading: () => <div className="h-48 bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse" />,
+});
+
+const StreakCards = dynamic(() => import('@/components/stats/StreakCards').then(mod => ({ default: mod.StreakCards })), {
+  loading: () => <div className="grid grid-cols-1 md:grid-cols-2 gap-6"><div className="h-32 bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse" /><div className="h-32 bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse" /></div>,
+});
+
+const PerformanceChart = dynamic(() => import('@/components/stats/PerformanceChart').then(mod => ({ default: mod.PerformanceChart })), {
+  loading: () => <div className="h-80 bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse" />,
+  ssr: false, // Charts don't work well with SSR
+});
+
+const ComparisonCharts = dynamic(() => import('@/components/stats/ComparisonCharts').then(mod => ({ default: mod.ComparisonCharts })), {
+  loading: () => <div className="h-64 bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse" />,
+  ssr: false,
+});
+
+const RecentAchievements = dynamic(() => import('@/components/stats/RecentAchievements').then(mod => ({ default: mod.RecentAchievements })), {
+  loading: () => <div className="h-48 bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse" />,
+});
 
 interface StatsData {
   summary: {
@@ -58,89 +81,73 @@ interface StatsData {
   } | null;
 }
 
+// Fetch function for React Query
+async function fetchStats(): Promise<StatsData> {
+  const token = localStorage.getItem('authToken');
+  const userId = localStorage.getItem('userId');
+
+  const response = await fetch('/api/stats', {
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(userId ? { 'X-User-Id': userId } : {}),
+    },
+  });
+
+  if (!response.ok) {
+    // For prototyping, return empty stats instead of throwing error
+    if (response.status === 500 || response.status === 503) {
+      console.warn('Stats API returned error, using empty stats for prototyping');
+      return {
+        summary: {
+          averageScore: 0,
+          totalQuestionsAttempted: 0,
+          totalQuizzesPlayed: 0,
+          totalCorrectAnswers: 0,
+          perfectScores: 0,
+        },
+        streaks: {
+          currentQuestionStreak: 0,
+          bestQuestionStreak: 0,
+          currentQuizStreak: 0,
+          bestQuizStreak: 0,
+        },
+        categories: {
+          strongest: [],
+          weakest: [],
+          all: [],
+        },
+        weeklyStreak: [],
+        performanceOverTime: [],
+        comparisons: {
+          public: {
+            averageScore: 0,
+            totalUsers: 0,
+          },
+          leagues: [],
+        },
+        seasonStats: null,
+      };
+    }
+
+    const errorData = await response.json().catch(() => ({}));
+    const errorMessage = errorData.details || errorData.error || `Failed to fetch stats: ${response.status}`;
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+}
+
 export default function StatsPage() {
   const { tier, isPremium, isLoading: tierLoading } = useUserTier();
-  const [stats, setStats] = useState<StatsData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      if (!isPremium) {
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        const token = localStorage.getItem('authToken');
-        const userId = localStorage.getItem('userId');
-        
-        const response = await fetch('/api/stats', {
-          headers: {
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            ...(userId ? { 'X-User-Id': userId } : {}),
-          },
-        });
-
-                if (!response.ok) {
-                  // For prototyping, return empty stats instead of throwing error
-                  if (response.status === 500 || response.status === 503) {
-                    console.warn('Stats API returned error, using empty stats for prototyping');
-                    setStats({
-                      summary: {
-                        averageScore: 0,
-                        totalQuestionsAttempted: 0,
-                        totalQuizzesPlayed: 0,
-                        totalCorrectAnswers: 0,
-                        perfectScores: 0,
-                      },
-                      streaks: {
-                        currentQuestionStreak: 0,
-                        bestQuestionStreak: 0,
-                        currentQuizStreak: 0,
-                        bestQuizStreak: 0,
-                      },
-                      categories: {
-                        strongest: [],
-                        weakest: [],
-                        all: [],
-                      },
-                      weeklyStreak: [],
-                      performanceOverTime: [],
-                      comparisons: {
-                        public: {
-                          averageScore: 0,
-                          totalUsers: 0,
-                        },
-                        leagues: [],
-                      },
-                      seasonStats: null,
-                    });
-                    return;
-                  }
-                  
-                  const errorData = await response.json().catch(() => ({}));
-                  const errorMessage = errorData.details || errorData.error || `Failed to fetch stats: ${response.status}`;
-                  const errorWithStack = errorData.stack 
-                    ? `${errorMessage}\n\nStack trace:\n${errorData.stack}`
-                    : errorMessage;
-                  throw new Error(errorWithStack);
-                }
-
-        const data = await response.json();
-        setStats(data);
-      } catch (err: any) {
-        console.error('Error fetching stats:', err);
-        setError(err.message || 'Failed to load stats');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (!tierLoading) {
-      fetchStats();
-    }
-  }, [isPremium, tierLoading]);
+  // Use React Query for data fetching with caching
+  const { data: stats, isLoading, error } = useQuery({
+    queryKey: ['stats'],
+    queryFn: fetchStats,
+    enabled: isPremium && !tierLoading,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    retry: 1,
+  });
 
   if (tierLoading || isLoading) {
     return (
@@ -193,13 +200,9 @@ export default function StatsPage() {
               <h2 className="text-xl font-semibold text-red-600 dark:text-red-400 mb-2">
                 Error Loading Stats
               </h2>
-              <p className="text-red-600 dark:text-red-400 mb-4">{error}</p>
+              <p className="text-red-600 dark:text-red-400 mb-4">{error.message}</p>
               <button
-                onClick={() => {
-                  setError(null);
-                  setIsLoading(true);
-                  window.location.reload();
-                }}
+                onClick={() => window.location.reload()}
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
               >
                 Retry
@@ -210,7 +213,7 @@ export default function StatsPage() {
                 Technical Details
               </summary>
               <pre className="mt-2 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg text-xs overflow-auto">
-                {error}
+                {error.message}
               </pre>
             </details>
           </div>
@@ -245,31 +248,31 @@ export default function StatsPage() {
             <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400 px-4">Track your progress, analyze your performance, and see how you compare</p>
           </div>
 
-      {/* Summary Stats */}
-      <SummaryStats summary={stats.summary} />
+          {/* Summary Stats */}
+          <SummaryStats summary={stats.summary} />
 
-      {/* Recent Achievements & In Progress */}
-      <RecentAchievements />
+          {/* Recent Achievements & In Progress */}
+          <RecentAchievements />
 
-      {/* Streak Cards */}
-      <StreakCards streaks={stats.streaks} />
+          {/* Streak Cards */}
+          <StreakCards streaks={stats.streaks} />
 
-      {/* Performance Over Time */}
-      {stats.performanceOverTime.length > 0 && (
-        <PerformanceChart data={stats.performanceOverTime} />
-      )}
+          {/* Performance Over Time */}
+          {stats.performanceOverTime.length > 0 && (
+            <PerformanceChart data={stats.performanceOverTime} />
+          )}
 
-      {/* Category Performance */}
-      <CategoryPerformance 
-        strongest={stats.categories.strongest}
-        weakest={stats.categories.weakest}
-      />
+          {/* Category Performance */}
+          <CategoryPerformance
+            strongest={stats.categories.strongest}
+            weakest={stats.categories.weakest}
+          />
 
-      {/* Weekly Streak Overview */}
-      <StreakOverview weeklyStreak={stats.weeklyStreak} />
+          {/* Weekly Streak Overview */}
+          <StreakOverview weeklyStreak={stats.weeklyStreak} />
 
           {/* Comparisons */}
-          <ComparisonCharts 
+          <ComparisonCharts
             publicStats={stats.comparisons.public}
             leagueComparisons={stats.comparisons.leagues}
             userAverage={stats.summary.averageScore}

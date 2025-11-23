@@ -6,7 +6,7 @@ import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Building2, Search, Filter, Users, Calendar, Edit2, X, ChevronLeft, ChevronRight, Download, Trash2, CheckSquare, Square, MoreVertical, ChevronDown, FileText, Eye, Ban, CheckCircle, CreditCard, UserPlus, Plus } from 'lucide-react'
 import { Spinner } from '@/components/ui/spinner'
-import { PageHeader, Card, DataTable, DataTableHeader, DataTableHeaderCell, DataTableBody, DataTableRow, DataTableCell, DataTableEmpty, Badge, Button, StatusStrip } from '@/components/admin/ui'
+import { PageHeader, Card, DataTable, DataTableHeader, DataTableHeaderCell, DataTableBody, DataTableRow, DataTableCell, DataTableEmpty, Badge, Button, StatusStrip, Input, Select as AdminSelect, Textarea } from '@/components/admin/ui'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { AutocompleteSearch } from '@/components/admin/AutocompleteSearch'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
@@ -45,7 +45,7 @@ export default function AdminOrganisationsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [isBulkActionLoading, setIsBulkActionLoading] = useState(false)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
-  
+
   // Get initial values from URL params
   const [searchInput, setSearchInput] = useState(searchParams.get('search') || '')
   const debouncedSearch = useDebounce(searchInput, 300)
@@ -70,10 +70,10 @@ export default function AdminOrganisationsPage() {
     if (page > 1) params.set('page', page.toString())
     if (sortBy !== 'createdAt') params.set('sortBy', sortBy)
     if (sortOrder !== 'desc') params.set('sortOrder', sortOrder)
-    
+
     // Update URL without scrolling
     router.push(`?${params.toString()}`, { scroll: false })
-    
+
     // Save to localStorage
     if (typeof window !== 'undefined') {
       localStorage.setItem('admin-organisations-filters', JSON.stringify({
@@ -110,7 +110,7 @@ export default function AdminOrganisationsPage() {
 
       const response = await fetch(`/api/admin/organisations?${params}`)
       const data = await response.json()
-      
+
       if (response.ok) {
         setOrganisations(data.organisations || [])
         setPagination(data.pagination || pagination)
@@ -127,11 +127,11 @@ export default function AdminOrganisationsPage() {
 
   const fetchSearchSuggestions = async (query: string): Promise<string[]> => {
     if (query.length < 2) return []
-    
+
     try {
       const response = await fetch(`/api/admin/organisations?search=${encodeURIComponent(query)}&limit=10`)
       const data = await response.json()
-      
+
       if (response.ok && data.organisations) {
         return data.organisations
           .map((org: Organisation) => [
@@ -140,13 +140,13 @@ export default function AdminOrganisationsPage() {
           ])
           .flat()
           .filter((s: string | null | undefined): s is string => Boolean(s))
-          .filter((s, i, arr) => arr.indexOf(s) === i)
+          .filter((s: string, i: number, arr: string[]) => arr.indexOf(s) === i)
           .slice(0, 10)
       }
     } catch (error) {
       console.error('Error fetching suggestions:', error)
     }
-    
+
     return []
   }
 
@@ -203,7 +203,7 @@ export default function AdminOrganisationsPage() {
       })
 
       const result = await response.json()
-      
+
       if (!response.ok) {
         throw new Error(result.error || 'Failed to delete organisations')
       }
@@ -268,14 +268,14 @@ export default function AdminOrganisationsPage() {
       })
 
       const result = await response.json()
-      
+
       if (!response.ok) {
         throw new Error(result.error || 'Failed to perform action')
       }
 
       // Show success message
       alert(result.message || 'Action completed successfully')
-      
+
       // Refresh organisation data
       await fetchOrganisations()
     } catch (error: any) {
@@ -304,7 +304,7 @@ export default function AdminOrganisationsPage() {
       })
 
       const result = await response.json()
-      
+
       if (!response.ok) {
         throw new Error(result.error || 'Failed to update organisations')
       }
@@ -483,79 +483,79 @@ export default function AdminOrganisationsPage() {
               transition={{ type: 'spring', damping: 30, stiffness: 300 }}
               className="fixed right-0 top-0 bottom-0 z-[60] w-80 bg-[hsl(var(--card))] border-l border-[hsl(var(--border))] flex flex-col"
             >
-            {/* Header - matches sidebar header style */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-[hsl(var(--border))] bg-[hsl(var(--card))] h-[60px]">
-              <div className="flex items-center gap-2 flex-1 min-w-0">
-                <div className="w-2 h-2 rounded-full bg-[hsl(var(--primary))] animate-pulse flex-shrink-0" />
-                <h3 className="text-sm font-semibold text-[hsl(var(--foreground))] whitespace-nowrap">
-                  Bulk Actions
-                </h3>
+              {/* Header - matches sidebar header style */}
+              <div className="flex items-center justify-between px-4 py-3 border-b border-[hsl(var(--border))] bg-[hsl(var(--card))] h-[60px]">
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <div className="w-2 h-2 rounded-full bg-[hsl(var(--primary))] animate-pulse flex-shrink-0" />
+                  <h3 className="text-sm font-semibold text-[hsl(var(--foreground))] whitespace-nowrap">
+                    Bulk Actions
+                  </h3>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearSelection}
+                  className="p-2 rounded-xl hover:bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] transition-all duration-200 flex-shrink-0"
+                  title="Clear selection"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={clearSelection}
-                className="p-2 rounded-xl hover:bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] transition-all duration-200 flex-shrink-0"
-                title="Clear selection"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
 
-            {/* Selection count */}
-            <div className="px-4 py-3 border-b border-[hsl(var(--border))] bg-[hsl(var(--muted))]/30">
-              <div className="px-3 py-1.5 bg-[hsl(var(--primary))]/10 rounded-lg border border-[hsl(var(--primary))]/20 inline-block">
-                <span className="text-xs font-medium text-[hsl(var(--foreground))]">
-                  {selectedIds.size} {selectedIds.size === 1 ? 'item' : 'items'} selected
-                </span>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-[hsl(var(--muted-foreground))] mb-3 uppercase tracking-wide">
-                  Update Status
-                </label>
-                <div className="space-y-2">
-                  {[
-                    { value: 'ACTIVE', label: 'Active', variant: 'success' as const },
-                    { value: 'TRIALING', label: 'Trialing', variant: 'info' as const },
-                    { value: 'PAST_DUE', label: 'Past Due', variant: 'warning' as const },
-                    { value: 'CANCELLED', label: 'Cancelled', variant: 'default' as const },
-                    { value: 'EXPIRED', label: 'Expired', variant: 'error' as const },
-                  ].map((status) => (
-                    <Button
-                      key={status.value}
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => handleBulkStatusUpdate(status.value)}
-                      disabled={isBulkActionLoading}
-                      className="w-full justify-start gap-2 text-xs h-9 hover:bg-[hsl(var(--muted))]"
-                    >
-                      <Badge variant={status.variant} className="text-xs px-2 py-0.5">
-                        {status.label}
-                      </Badge>
-                      <span className="text-[hsl(var(--muted-foreground))]">Set to {status.label}</span>
-                    </Button>
-                  ))}
+              {/* Selection count */}
+              <div className="px-4 py-3 border-b border-[hsl(var(--border))] bg-[hsl(var(--muted))]/30">
+                <div className="px-3 py-1.5 bg-[hsl(var(--primary))]/10 rounded-lg border border-[hsl(var(--primary))]/20 inline-block">
+                  <span className="text-xs font-medium text-[hsl(var(--foreground))]">
+                    {selectedIds.size} {selectedIds.size === 1 ? 'item' : 'items'} selected
+                  </span>
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-[hsl(var(--border))]">
-                <Button
-                  variant="danger"
-                  size="sm"
-                  onClick={handleBulkDelete}
-                  disabled={isBulkActionLoading}
-                  className="w-full gap-2 text-xs h-9"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  Delete {selectedIds.size} {selectedIds.size === 1 ? 'item' : 'items'}
-                </Button>
+              {/* Actions */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                <div>
+                  <label className="block text-xs font-medium text-[hsl(var(--muted-foreground))] mb-3 uppercase tracking-wide">
+                    Update Status
+                  </label>
+                  <div className="space-y-2">
+                    {[
+                      { value: 'ACTIVE', label: 'Active', variant: 'success' as const },
+                      { value: 'TRIALING', label: 'Trialing', variant: 'info' as const },
+                      { value: 'PAST_DUE', label: 'Past Due', variant: 'warning' as const },
+                      { value: 'CANCELLED', label: 'Cancelled', variant: 'default' as const },
+                      { value: 'EXPIRED', label: 'Expired', variant: 'error' as const },
+                    ].map((status) => (
+                      <Button
+                        key={status.value}
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleBulkStatusUpdate(status.value)}
+                        disabled={isBulkActionLoading}
+                        className="w-full justify-start gap-2 text-xs h-9 hover:bg-[hsl(var(--muted))]"
+                      >
+                        <Badge variant={status.variant} className="text-xs px-2 py-0.5">
+                          {status.label}
+                        </Badge>
+                        <span className="text-[hsl(var(--muted-foreground))]">Set to {status.label}</span>
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t border-[hsl(var(--border))]">
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={handleBulkDelete}
+                    disabled={isBulkActionLoading}
+                    className="w-full gap-2 text-xs h-9"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete {selectedIds.size} {selectedIds.size === 1 ? 'item' : 'items'}
+                  </Button>
+                </div>
               </div>
-            </div>
-          </motion.div>
+            </motion.div>
           )}
         </AnimatePresence>,
         document.body
@@ -604,29 +604,28 @@ export default function AdminOrganisationsPage() {
       {isLoading ? (
         <TableSkeleton rows={5} columns={7} />
       ) : (
-      <DataTable
-        emptyState={{
-          icon: <Building2 className="mx-auto h-12 w-12 text-[hsl(var(--muted-foreground))]" />,
-          message: 'No organisations found'
-        }}
-      >
-        {organisations.length > 0 && (
-          <>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <DataTableHeader>
-                  <tr>
+        <DataTable
+          emptyState={{
+            icon: <Building2 className="mx-auto h-12 w-12 text-[hsl(var(--muted-foreground))]" />,
+            message: 'No organisations found'
+          }}
+        >
+          {organisations.length > 0 && (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <DataTableHeader>
+                    <tr>
                       <DataTableHeaderCell className="w-12">
                         <button
                           onClick={(e) => {
                             e.stopPropagation()
                             toggleSelectAll()
                           }}
-                          className={`p-1.5 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95 ${
-                            selectedIds.size === organisations.length && organisations.length > 0
-                              ? 'bg-[hsl(var(--primary))]/10 hover:bg-[hsl(var(--primary))]/20' 
-                              : 'hover:bg-[hsl(var(--muted))]'
-                          }`}
+                          className={`p-1.5 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95 ${selectedIds.size === organisations.length && organisations.length > 0
+                            ? 'bg-[hsl(var(--primary))]/10 hover:bg-[hsl(var(--primary))]/20'
+                            : 'hover:bg-[hsl(var(--muted))]'
+                            }`}
                           title={selectedIds.size === organisations.length ? 'Deselect all' : 'Select all'}
                         >
                           {selectedIds.size === organisations.length && organisations.length > 0 ? (
@@ -636,52 +635,52 @@ export default function AdminOrganisationsPage() {
                           )}
                         </button>
                       </DataTableHeaderCell>
-                    <DataTableHeaderCell
-                      column="name"
-                      sortable
-                      sorted={sortBy === 'name' ? sortOrder : false}
-                      onSort={() => handleSort('name')}
-                    >
-                      Organisation
-                    </DataTableHeaderCell>
-                    <DataTableHeaderCell>Owner</DataTableHeaderCell>
-                    <DataTableHeaderCell
-                      sortable
-                      sorted={sortBy === 'status' ? sortOrder : false}
-                      onSort={() => handleSort('status')}
-                    >
-                      Status
-                    </DataTableHeaderCell>
-                    <DataTableHeaderCell
-                      sortable
-                      sorted={sortBy === 'members' ? sortOrder : false}
-                      onSort={() => handleSort('members')}
-                    >
-                      Members
-                    </DataTableHeaderCell>
-                    <DataTableHeaderCell
-                      sortable
-                      sorted={sortBy === 'plan' ? sortOrder : false}
-                      onSort={() => handleSort('plan')}
-                    >
-                      Plan
-                    </DataTableHeaderCell>
-                    <DataTableHeaderCell
-                      sortable
-                      sorted={sortBy === 'createdAt' ? sortOrder : false}
-                      onSort={() => handleSort('createdAt')}
-                    >
-                      Created
-                    </DataTableHeaderCell>
-                    <DataTableHeaderCell className="w-20">Actions</DataTableHeaderCell>
-                  </tr>
-                </DataTableHeader>
-                <DataTableBody>
+                      <DataTableHeaderCell
+                        column="name"
+                        sortable
+                        sorted={sortBy === 'name' ? sortOrder : false}
+                        onSort={() => handleSort('name')}
+                      >
+                        Organisation
+                      </DataTableHeaderCell>
+                      <DataTableHeaderCell>Owner</DataTableHeaderCell>
+                      <DataTableHeaderCell
+                        sortable
+                        sorted={sortBy === 'status' ? sortOrder : false}
+                        onSort={() => handleSort('status')}
+                      >
+                        Status
+                      </DataTableHeaderCell>
+                      <DataTableHeaderCell
+                        sortable
+                        sorted={sortBy === 'members' ? sortOrder : false}
+                        onSort={() => handleSort('members')}
+                      >
+                        Members
+                      </DataTableHeaderCell>
+                      <DataTableHeaderCell
+                        sortable
+                        sorted={sortBy === 'plan' ? sortOrder : false}
+                        onSort={() => handleSort('plan')}
+                      >
+                        Plan
+                      </DataTableHeaderCell>
+                      <DataTableHeaderCell
+                        sortable
+                        sorted={sortBy === 'createdAt' ? sortOrder : false}
+                        onSort={() => handleSort('createdAt')}
+                      >
+                        Created
+                      </DataTableHeaderCell>
+                      <DataTableHeaderCell className="w-20">Actions</DataTableHeaderCell>
+                    </tr>
+                  </DataTableHeader>
+                  <DataTableBody>
                     {organisations.map((org) => {
                       const isSelected = selectedIds.has(org.id)
                       const statusConfig = getOrganisationStatusBadge(org.status)
                       return (
-                        <DataTableRow 
+                        <DataTableRow
                           key={org.id}
                           onClick={() => router.push(`/admin/organisations/${org.id}`)}
                           className={isSelected ? 'bg-[hsl(var(--primary))]/5' : ''}
@@ -692,11 +691,10 @@ export default function AdminOrganisationsPage() {
                                 e.stopPropagation()
                                 toggleSelect(org.id)
                               }}
-                              className={`p-1.5 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95 ${
-                                isSelected 
-                                  ? 'bg-[hsl(var(--primary))]/10 hover:bg-[hsl(var(--primary))]/20' 
-                                  : 'hover:bg-[hsl(var(--muted))]'
-                              }`}
+                              className={`p-1.5 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95 ${isSelected
+                                ? 'bg-[hsl(var(--primary))]/10 hover:bg-[hsl(var(--primary))]/20'
+                                : 'hover:bg-[hsl(var(--muted))]'
+                                }`}
                               title={isSelected ? 'Deselect' : 'Select'}
                             >
                               {isSelected ? (
@@ -706,227 +704,227 @@ export default function AdminOrganisationsPage() {
                               )}
                             </button>
                           </DataTableCell>
-                      <DataTableCell>
-                        <div className="flex items-center">
-                          <Building2 className="w-5 h-5 text-[hsl(var(--muted-foreground))] mr-3" />
-                          <div>
-                            <div className="text-sm font-medium text-[hsl(var(--foreground))]">
-                              {org.name}
-                            </div>
-                            {org.emailDomain && (
-                              <div className="text-sm text-[hsl(var(--muted-foreground))]">
-                                @{org.emailDomain}
+                          <DataTableCell>
+                            <div className="flex items-center">
+                              <Building2 className="w-5 h-5 text-[hsl(var(--muted-foreground))] mr-3" />
+                              <div>
+                                <div className="text-sm font-medium text-[hsl(var(--foreground))]">
+                                  {org.name}
+                                </div>
+                                {org.emailDomain && (
+                                  <div className="text-sm text-[hsl(var(--muted-foreground))]">
+                                    @{org.emailDomain}
+                                  </div>
+                                )}
                               </div>
-                            )}
-                          </div>
-                        </div>
-                      </DataTableCell>
-                      <DataTableCell>
-                        <div className="text-sm text-[hsl(var(--foreground))]">
-                          {org.owner.name || 'N/A'}
-                        </div>
-                        <div className="text-sm text-[hsl(var(--muted-foreground))]">
-                          {org.owner.email}
-                        </div>
-                      </DataTableCell>
-                      <DataTableCell>
+                            </div>
+                          </DataTableCell>
+                          <DataTableCell>
+                            <div className="text-sm text-[hsl(var(--foreground))]">
+                              {org.owner.name || 'N/A'}
+                            </div>
+                            <div className="text-sm text-[hsl(var(--muted-foreground))]">
+                              {org.owner.email}
+                            </div>
+                          </DataTableCell>
+                          <DataTableCell>
                             <Badge variant={statusConfig.variant}>
                               {statusConfig.label}
-                        </Badge>
-                      </DataTableCell>
-                      <DataTableCell>
-                        <div className="flex items-center text-sm text-[hsl(var(--foreground))]">
-                          <Users className="w-4 h-4 mr-1 text-[hsl(var(--muted-foreground))]" />
-                          {org._count.members} / {org.maxSeats || '∞'}
-                        </div>
-                        <div className="text-xs text-[hsl(var(--muted-foreground))]">
-                          {org._count.groups} groups
-                        </div>
-                      </DataTableCell>
-                      <DataTableCell className="text-sm text-[hsl(var(--foreground))]">
-                        {org.plan}
-                      </DataTableCell>
-                      <DataTableCell className="text-sm text-[hsl(var(--muted-foreground))]">
+                            </Badge>
+                          </DataTableCell>
+                          <DataTableCell>
+                            <div className="flex items-center text-sm text-[hsl(var(--foreground))]">
+                              <Users className="w-4 h-4 mr-1 text-[hsl(var(--muted-foreground))]" />
+                              {org._count.members} / {org.maxSeats || '∞'}
+                            </div>
+                            <div className="text-xs text-[hsl(var(--muted-foreground))]">
+                              {org._count.groups} groups
+                            </div>
+                          </DataTableCell>
+                          <DataTableCell className="text-sm text-[hsl(var(--foreground))]">
+                            {org.plan}
+                          </DataTableCell>
+                          <DataTableCell className="text-sm text-[hsl(var(--muted-foreground))]">
                             <span title={new Date(org.createdAt).toLocaleString()}>
                               {formatDate(org.createdAt)}
                             </span>
-                      </DataTableCell>
-                      <DataTableCell>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => e.stopPropagation()}
-                              title="Actions"
-                              disabled={actionLoading === org.id}
-                            >
-                              {actionLoading === org.id ? (
-                                <Spinner className="size-4" />
-                              ) : (
-                                <MoreVertical className="w-4 h-4" />
-                              )}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-56 p-2" align="end" onClick={(e) => e.stopPropagation()}>
-                            <div className="space-y-1">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  router.push(`/admin/organisations/${org.id}`)
-                                }}
-                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg transition-colors text-left"
-                              >
-                                <Eye className="w-4 h-4" />
-                                View Details
-                              </button>
-                              <div className="border-t border-[hsl(var(--border))] my-1" />
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleOrgAction(org.id, org.status === 'CANCELLED' ? 'activate' : 'suspend')
-                                }}
-                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg transition-colors text-left"
-                              >
-                                {org.status === 'CANCELLED' ? (
-                                  <>
-                                    <CheckCircle className="w-4 h-4" />
-                                    Activate Organisation
-                                  </>
-                                ) : (
-                                  <>
-                                    <Ban className="w-4 h-4" />
-                                    Suspend Organisation
-                                  </>
-                                )}
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleOrgAction(org.id, 'changePlan')
-                                }}
-                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg transition-colors text-left"
-                              >
-                                <CreditCard className="w-4 h-4" />
-                                Change Plan
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleOrgAction(org.id, 'changeMaxSeats')
-                                }}
-                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg transition-colors text-left"
-                              >
-                                <UserPlus className="w-4 h-4" />
-                                Change Max Seats
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleOrgAction(org.id, 'transferOwnership')
-                                }}
-                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg transition-colors text-left"
-                              >
-                                <Users className="w-4 h-4" />
-                                Transfer Ownership
-                              </button>
-                              <div className="border-t border-[hsl(var(--border))] my-1" />
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  if (confirm(`Are you sure you want to delete ${org.name}? This action cannot be undone.`)) {
-                                    handleOrgAction(org.id, 'delete')
-                                  }
-                                }}
-                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10 rounded-lg transition-colors text-left"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                                Delete Organisation
-                              </button>
-                            </div>
-                          </PopoverContent>
-                        </Popover>
-                      </DataTableCell>
-                    </DataTableRow>
+                          </DataTableCell>
+                          <DataTableCell>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => e.stopPropagation()}
+                                  title="Actions"
+                                  disabled={actionLoading === org.id}
+                                >
+                                  {actionLoading === org.id ? (
+                                    <Spinner className="size-4" />
+                                  ) : (
+                                    <MoreVertical className="w-4 h-4" />
+                                  )}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-56 p-2" align="end" onClick={(e) => e.stopPropagation()}>
+                                <div className="space-y-1">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      router.push(`/admin/organisations/${org.id}`)
+                                    }}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg transition-colors text-left"
+                                  >
+                                    <Eye className="w-4 h-4" />
+                                    View Details
+                                  </button>
+                                  <div className="border-t border-[hsl(var(--border))] my-1" />
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleOrgAction(org.id, org.status === 'CANCELLED' ? 'activate' : 'suspend')
+                                    }}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg transition-colors text-left"
+                                  >
+                                    {org.status === 'CANCELLED' ? (
+                                      <>
+                                        <CheckCircle className="w-4 h-4" />
+                                        Activate Organisation
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Ban className="w-4 h-4" />
+                                        Suspend Organisation
+                                      </>
+                                    )}
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleOrgAction(org.id, 'changePlan')
+                                    }}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg transition-colors text-left"
+                                  >
+                                    <CreditCard className="w-4 h-4" />
+                                    Change Plan
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleOrgAction(org.id, 'changeMaxSeats')
+                                    }}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg transition-colors text-left"
+                                  >
+                                    <UserPlus className="w-4 h-4" />
+                                    Change Max Seats
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleOrgAction(org.id, 'transferOwnership')
+                                    }}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg transition-colors text-left"
+                                  >
+                                    <Users className="w-4 h-4" />
+                                    Transfer Ownership
+                                  </button>
+                                  <div className="border-t border-[hsl(var(--border))] my-1" />
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      if (confirm(`Are you sure you want to delete ${org.name}? This action cannot be undone.`)) {
+                                        handleOrgAction(org.id, 'delete')
+                                      }
+                                    }}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10 rounded-lg transition-colors text-left"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                    Delete Organisation
+                                  </button>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
+                          </DataTableCell>
+                        </DataTableRow>
                       )
                     })}
-                </DataTableBody>
-              </table>
-            </div>
-
-            {/* Pagination */}
-            {pagination.totalPages > 1 && (
-              <div className="px-6 py-4 border-t border-[hsl(var(--border))] flex flex-col sm:flex-row items-center justify-between gap-4 bg-[hsl(var(--muted))]">
-                <div className="text-sm text-[hsl(var(--foreground))]">
-                  Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
-                  {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} results
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setPage(1)}
-                    disabled={pagination.page === 1}
-                    title="First page"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                    <ChevronLeft className="w-4 h-4 -ml-2" />
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={pagination.page === 1}
-                    title="Previous page"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </Button>
-                  
-                  <div className="flex items-center gap-1">
-                    {getPageNumbers().map((pageNum, idx) => (
-                      pageNum === '...' ? (
-                        <span key={`ellipsis-${idx}`} className="px-2 text-[hsl(var(--muted-foreground))]">
-                          ...
-                        </span>
-                      ) : (
-                        <Button
-                          key={pageNum}
-                          variant={pagination.page === pageNum ? "primary" : "ghost"}
-                          size="sm"
-                          onClick={() => setPage(pageNum as number)}
-                          className="min-w-[2.5rem]"
-                        >
-                          {pageNum}
-                        </Button>
-                      )
-                    ))}
-                  </div>
-
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
-                    disabled={pagination.page === pagination.totalPages}
-                    title="Next page"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setPage(pagination.totalPages)}
-                    disabled={pagination.page === pagination.totalPages}
-                    title="Last page"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                    <ChevronRight className="w-4 h-4 -ml-2" />
-                  </Button>
-                </div>
+                  </DataTableBody>
+                </table>
               </div>
-            )}
-          </>
-        )}
-      </DataTable>
+
+              {/* Pagination */}
+              {pagination.totalPages > 1 && (
+                <div className="px-6 py-4 border-t border-[hsl(var(--border))] flex flex-col sm:flex-row items-center justify-between gap-4 bg-[hsl(var(--muted))]">
+                  <div className="text-sm text-[hsl(var(--foreground))]">
+                    Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
+                    {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} results
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setPage(1)}
+                      disabled={pagination.page === 1}
+                      title="First page"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                      <ChevronLeft className="w-4 h-4 -ml-2" />
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      disabled={pagination.page === 1}
+                      title="Previous page"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </Button>
+
+                    <div className="flex items-center gap-1">
+                      {getPageNumbers().map((pageNum, idx) => (
+                        pageNum === '...' ? (
+                          <span key={`ellipsis-${idx}`} className="px-2 text-[hsl(var(--muted-foreground))]">
+                            ...
+                          </span>
+                        ) : (
+                          <Button
+                            key={pageNum}
+                            variant={pagination.page === pageNum ? "primary" : "ghost"}
+                            size="sm"
+                            onClick={() => setPage(pageNum as number)}
+                            className="min-w-[2.5rem]"
+                          >
+                            {pageNum}
+                          </Button>
+                        )
+                      ))}
+                    </div>
+
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
+                      disabled={pagination.page === pagination.totalPages}
+                      title="Next page"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setPage(pagination.totalPages)}
+                      disabled={pagination.page === pagination.totalPages}
+                      title="Last page"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                      <ChevronRight className="w-4 h-4 -ml-2" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </DataTable>
       )}
 
       {/* Edit Organisation Modal */}
@@ -1086,10 +1084,10 @@ function CreateOrganisationModal({ onClose, onSave }: { onClose: () => void; onS
               placeholder="e.g., example.com (without @)"
             />
 
-            <Select
+            <AdminSelect
               label="Owner"
               value={formData.ownerUserId}
-              onChange={(e) => setFormData({ ...formData, ownerUserId: e.target.value })}
+              onChange={(e: any) => setFormData({ ...formData, ownerUserId: e.target.value })}
               required
             >
               <option value="">Select an owner</option>
@@ -1098,7 +1096,7 @@ function CreateOrganisationModal({ onClose, onSave }: { onClose: () => void; onS
                   {user.name || user.email} ({user.email})
                 </option>
               ))}
-            </Select>
+            </AdminSelect>
 
             <Input
               label="Max Seats"
@@ -1108,27 +1106,27 @@ function CreateOrganisationModal({ onClose, onSave }: { onClose: () => void; onS
               min="0"
             />
 
-            <Select
+            <AdminSelect
               label="Plan"
               value={formData.plan}
-              onChange={(e) => setFormData({ ...formData, plan: e.target.value })}
+              onChange={(e: any) => setFormData({ ...formData, plan: e.target.value })}
             >
               <option value="INDIVIDUAL">Individual</option>
               <option value="ORG_MONTHLY">Organisation Monthly</option>
               <option value="ORG_ANNUAL">Organisation Annual</option>
-            </Select>
+            </AdminSelect>
 
-            <Select
+            <AdminSelect
               label="Status"
               value={formData.status}
-              onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+              onChange={(e: any) => setFormData({ ...formData, status: e.target.value })}
             >
               <option value="TRIALING">Trialing</option>
               <option value="ACTIVE">Active</option>
               <option value="PAST_DUE">Past Due</option>
               <option value="CANCELLED">Cancelled</option>
               <option value="EXPIRED">Expired</option>
-            </Select>
+            </AdminSelect>
 
             {error && (
               <div className="p-3 bg-[hsl(var(--destructive))]/10 border border-[hsl(var(--destructive))]/30 rounded-lg text-sm text-[hsl(var(--destructive))]">
@@ -1277,27 +1275,26 @@ function EditOrganisationModal({ organisation, onClose, onSave }: { organisation
               placeholder="example.com"
             />
 
-            <Select
+            <AdminSelect
               label="Status"
               value={formData.status}
-              onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+              onChange={(e: any) => setFormData({ ...formData, status: e.target.value })}
             >
-              <option value="TRIALING">Trial</option>
+              <option value="TRIALING">Trialing</option>
               <option value="ACTIVE">Active</option>
               <option value="PAST_DUE">Past Due</option>
               <option value="CANCELLED">Cancelled</option>
               <option value="EXPIRED">Expired</option>
-            </Select>
-
-            <Select
+            </AdminSelect>
+            <AdminSelect
               label="Plan"
               value={formData.plan}
-              onChange={(e) => setFormData({ ...formData, plan: e.target.value })}
+              onChange={(e: any) => setFormData({ ...formData, plan: e.target.value })}
             >
               <option value="INDIVIDUAL">Individual</option>
               <option value="ORG_MONTHLY">Organisation Monthly</option>
               <option value="ORG_ANNUAL">Organisation Annual</option>
-            </Select>
+            </AdminSelect>
 
             <Input
               label="Max Seats"

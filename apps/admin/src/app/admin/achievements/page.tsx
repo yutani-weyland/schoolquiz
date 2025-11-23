@@ -84,120 +84,120 @@ function AdminAchievementsPageContent() {
         try {
           const data = await response.json()
           const apiAchievements = data.achievements || []
-        
-        // Add example achievements for demonstration if none exist
-        if (apiAchievements.length === 0) {
-          const exampleAchievements: Achievement[] = [
-            {
-              id: 'example-1',
-              slug: 'hail-caesar',
-              name: 'HAIL, CAESAR!',
-              shortDescription: 'Get 5/5 in a History round',
-              longDescription: 'Achieve a perfect score in a round focused on historical topics',
-              category: 'performance',
-              rarity: 'common',
-              isPremiumOnly: false,
-              seasonTag: null,
-              iconKey: '/achievements/hail-caesar.png',
-              unlockConditionType: 'score_5_of_5',
-              unlockConditionConfig: JSON.stringify({ category: 'history' }),
-              appearance: JSON.stringify({ cardVariant: 'foil' }),
-              isActive: true,
-              points: 10,
-              series: 'Roman History',
-              cardVariant: 'foil',
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            },
-            {
-              id: 'example-2',
-              slug: 'blitzkrieg',
-              name: 'Blitzkrieg!',
-              shortDescription: 'Get 5/5 in a History round under 2 minutes',
-              longDescription: 'Complete a history-themed round perfectly in less than 2 minutes - lightning fast!',
-              category: 'performance',
-              rarity: 'uncommon',
-              isPremiumOnly: false,
-              seasonTag: null,
-              iconKey: '/achievements/blitzkreig.png',
-              unlockConditionType: 'score_5_of_5_time',
-              unlockConditionConfig: JSON.stringify({ category: 'history', timeLimit: 120 }),
-              appearance: JSON.stringify({}),
-              isActive: true,
-              points: 25,
-              series: null,
-              cardVariant: 'standard',
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            },
-            {
-              id: 'example-3',
-              slug: 'perfect-quiz',
-              name: 'Perfect Quiz',
-              shortDescription: 'Get all questions correct',
-              longDescription: 'Achieve perfection by answering every question correctly in a quiz',
-              category: 'performance',
-              rarity: 'epic',
-              isPremiumOnly: false,
-              seasonTag: null,
-              iconKey: null,
-              unlockConditionType: 'perfect_score',
-              unlockConditionConfig: JSON.stringify({}),
-              appearance: JSON.stringify({ cardVariant: 'fullArt' }),
-              isActive: true,
-              points: 100,
-              series: null,
-              cardVariant: 'fullArt',
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            },
-            {
-              id: 'example-4',
-              slug: 'addicted',
-              name: 'Addicted',
-              shortDescription: 'Play 3 quizzes in a single day',
-              longDescription: 'Show your dedication by playing multiple quizzes in one day',
-              category: 'engagement',
-              rarity: 'uncommon',
-              isPremiumOnly: false,
-              seasonTag: null,
-              iconKey: null,
-              unlockConditionType: 'play_n_quizzes',
-              unlockConditionConfig: JSON.stringify({ count: 3, timeframe: 'day' }),
-              appearance: JSON.stringify({ cardVariant: 'shiny' }),
-              isActive: true,
-              points: 15,
-              series: null,
-              cardVariant: 'shiny',
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            },
-            {
-              id: 'example-5',
-              slug: 'ace',
-              name: 'Ace',
-              shortDescription: 'Get 5/5 in a sports-themed round',
-              longDescription: 'Show your sports knowledge by achieving a perfect score',
-              category: 'performance',
-              rarity: 'rare',
-              isPremiumOnly: true,
-              seasonTag: null,
-              iconKey: null,
-              unlockConditionType: 'score_5_of_5',
-              unlockConditionConfig: JSON.stringify({ category: 'sports' }),
-              appearance: JSON.stringify({}),
-              isActive: true,
-              points: 50,
-              series: null,
-              cardVariant: 'standard',
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            },
-          ]
-          setAchievements(exampleAchievements)
-        } else {
-          setAchievements(apiAchievements)
-        }
+
+          // Add example achievements for demonstration if none exist
+          if (apiAchievements.length === 0) {
+            const exampleAchievements: Achievement[] = [
+              {
+                id: 'example-1',
+                slug: 'hail-caesar',
+                name: 'HAIL, CAESAR!',
+                shortDescription: 'Get 5/5 in a History round',
+                longDescription: 'Achieve a perfect score in a round focused on historical topics',
+                category: 'performance',
+                rarity: 'common',
+                isPremiumOnly: false,
+                seasonTag: null,
+                iconKey: '/achievements/hail-caesar.png',
+                unlockConditionType: 'score_5_of_5',
+                unlockConditionConfig: JSON.stringify({ category: 'history' }),
+                appearance: JSON.stringify({ cardVariant: 'foil' }),
+                isActive: true,
+                points: 10,
+                series: 'Roman History',
+                cardVariant: 'foil',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              },
+              {
+                id: 'example-2',
+                slug: 'blitzkrieg',
+                name: 'Blitzkrieg!',
+                shortDescription: 'Get 5/5 in a History round under 2 minutes',
+                longDescription: 'Complete a history-themed round perfectly in less than 2 minutes - lightning fast!',
+                category: 'performance',
+                rarity: 'uncommon',
+                isPremiumOnly: false,
+                seasonTag: null,
+                iconKey: '/achievements/blitzkreig.png',
+                unlockConditionType: 'score_5_of_5_time',
+                unlockConditionConfig: JSON.stringify({ category: 'history', timeLimit: 120 }),
+                appearance: JSON.stringify({}),
+                isActive: true,
+                points: 25,
+                series: null,
+                cardVariant: 'standard',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              },
+              {
+                id: 'example-3',
+                slug: 'perfect-quiz',
+                name: 'Perfect Quiz',
+                shortDescription: 'Get all questions correct',
+                longDescription: 'Achieve perfection by answering every question correctly in a quiz',
+                category: 'performance',
+                rarity: 'epic',
+                isPremiumOnly: false,
+                seasonTag: null,
+                iconKey: null,
+                unlockConditionType: 'perfect_score',
+                unlockConditionConfig: JSON.stringify({}),
+                appearance: JSON.stringify({ cardVariant: 'fullArt' }),
+                isActive: true,
+                points: 100,
+                series: null,
+                cardVariant: 'fullArt',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              },
+              {
+                id: 'example-4',
+                slug: 'addicted',
+                name: 'Addicted',
+                shortDescription: 'Play 3 quizzes in a single day',
+                longDescription: 'Show your dedication by playing multiple quizzes in one day',
+                category: 'engagement',
+                rarity: 'uncommon',
+                isPremiumOnly: false,
+                seasonTag: null,
+                iconKey: null,
+                unlockConditionType: 'play_n_quizzes',
+                unlockConditionConfig: JSON.stringify({ count: 3, timeframe: 'day' }),
+                appearance: JSON.stringify({ cardVariant: 'shiny' }),
+                isActive: true,
+                points: 15,
+                series: null,
+                cardVariant: 'shiny',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              },
+              {
+                id: 'example-5',
+                slug: 'ace',
+                name: 'Ace',
+                shortDescription: 'Get 5/5 in a sports-themed round',
+                longDescription: 'Show your sports knowledge by achieving a perfect score',
+                category: 'performance',
+                rarity: 'rare',
+                isPremiumOnly: true,
+                seasonTag: null,
+                iconKey: null,
+                unlockConditionType: 'score_5_of_5',
+                unlockConditionConfig: JSON.stringify({ category: 'sports' }),
+                appearance: JSON.stringify({}),
+                isActive: true,
+                points: 50,
+                series: null,
+                cardVariant: 'standard',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              },
+            ]
+            setAchievements(exampleAchievements)
+          } else {
+            setAchievements(apiAchievements)
+          }
         } catch (parseError) {
           console.error('Failed to parse JSON response:', parseError)
         }
@@ -518,7 +518,7 @@ function AdminAchievementsPageContent() {
   // Create form hook at the top level to avoid conditional hook calls
   const formHook = useAchievementForm(selectedAchievement)
   const { formData, updateField, updateAppearance, saveAchievement } = formHook
-  
+
   // Autosave hook
   // Note: saveAchievement doesn't take data param, it uses formData from the hook's closure
   const {
@@ -534,7 +534,6 @@ function AdminAchievementsPageContent() {
       if (!success) {
         throw new Error('Failed to save achievement')
       }
-      return success
     },
     delay: 10000, // 10 seconds
     enabled: (isCreating || !!selectedAchievement) && !!formData.name, // Only autosave if editing/creating and has name
@@ -545,7 +544,7 @@ function AdminAchievementsPageContent() {
 
   // Warn before leaving with unsaved changes
   useUnsavedChangesWarning(hasUnsavedChanges)
-  
+
   // Combine autosave state with manual save state from formHook
   const isSaving = isAutosaving || formHook.isSaving
 
@@ -554,13 +553,13 @@ function AdminAchievementsPageContent() {
     if (success) {
       await handleSave()
       // Clear unsaved changes after successful save
-      triggerAutosave().catch(() => {})
+      triggerAutosave().catch(() => { })
     }
   }
 
   if (isCreating || selectedAchievement) {
     return (
-      <AchievementFormProvider 
+      <AchievementFormProvider
         formData={formData}
         updateField={updateField as (field: string | keyof any, value: any) => void}
         updateAppearance={updateAppearance}
@@ -781,7 +780,7 @@ function AdminAchievementsPageContent() {
                         ? JSON.parse(achievement.appearance)
                         : achievement.appearance
                       : {}
-                    
+
                     const achievementForCard = {
                       id: achievement.id,
                       slug: achievement.slug,
@@ -801,9 +800,8 @@ function AdminAchievementsPageContent() {
                     return (
                       <tr
                         key={achievement.id}
-                        className={`hover:bg-[hsl(var(--muted))] transition-colors ${
-                          isSelected ? 'bg-[hsl(var(--primary))]/5' : ''
-                        }`}
+                        className={`hover:bg-[hsl(var(--muted))] transition-colors ${isSelected ? 'bg-[hsl(var(--primary))]/5' : ''
+                          }`}
                       >
                         <td className="px-6 py-4 whitespace-nowrap">
                           <input
@@ -850,13 +848,13 @@ function AdminAchievementsPageContent() {
                           {achievement.category}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <Badge 
+                          <Badge
                             variant={
                               achievement.rarity === 'legendary' ? 'warning' :
-                              achievement.rarity === 'epic' ? 'info' :
-                              achievement.rarity === 'rare' ? 'info' :
-                              achievement.rarity === 'uncommon' ? 'success' :
-                              'default'
+                                achievement.rarity === 'epic' ? 'info' :
+                                  achievement.rarity === 'rare' ? 'info' :
+                                    achievement.rarity === 'uncommon' ? 'success' :
+                                      'default'
                             }
                           >
                             {achievement.rarity}

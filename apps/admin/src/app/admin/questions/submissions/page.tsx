@@ -34,7 +34,7 @@ function UserQuestionSubmissionsPageContent() {
   const [isLoading, setIsLoading] = useState(true)
   const [selectedSubmission, setSelectedSubmission] = useState<UserQuestionSubmission | null>(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
-  
+
   // Get initial values from URL params
   const [searchInput, setSearchInput] = useState('')
   const debouncedSearch = useDebounce(searchInput, 300)
@@ -42,7 +42,7 @@ function UserQuestionSubmissionsPageContent() {
   const [page, setPage] = useState(1)
   const [sortBy, setSortBy] = useState<string>('createdAt')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
-  
+
   // Initialize from URL params on mount (client-side only)
   useEffect(() => {
     setMounted(true)
@@ -52,7 +52,7 @@ function UserQuestionSubmissionsPageContent() {
       const pageParam = parseInt(searchParams.get('page') || '1', 10)
       const sortByParam = searchParams.get('sortBy') || 'createdAt'
       const sortOrderParam = (searchParams.get('sortOrder') as 'asc' | 'desc') || 'desc'
-      
+
       setSearchInput(search)
       setStatusFilter(status)
       setPage(pageParam)
@@ -75,7 +75,7 @@ function UserQuestionSubmissionsPageContent() {
     if (page > 1) params.set('page', page.toString())
     if (sortBy !== 'createdAt') params.set('sortBy', sortBy)
     if (sortOrder !== 'desc') params.set('sortOrder', sortOrder)
-    
+
     router.push(`?${params.toString()}`, { scroll: false })
   }, [debouncedSearch, statusFilter, page, sortBy, sortOrder, router])
 
@@ -101,7 +101,7 @@ function UserQuestionSubmissionsPageContent() {
       if (statusFilter) params.append('status', statusFilter)
 
       const response = await fetch(`/api/admin/questions/submissions?${params}`)
-      
+
       if (response.ok) {
         const contentType = response.headers.get('content-type')
         if (!contentType || !contentType.includes('application/json')) {
@@ -110,7 +110,7 @@ function UserQuestionSubmissionsPageContent() {
         }
         try {
           const data = await response.json()
-        setSubmissions(data.submissions || [])
+          setSubmissions(data.submissions || [])
           setPagination(data.pagination || { page: 1, limit: 50, total: 0, totalPages: 0 })
         } catch (parseError) {
           console.error('Failed to parse JSON response:', parseError)
@@ -250,20 +250,20 @@ function UserQuestionSubmissionsPageContent() {
               className="pl-10 text-xs"
             />
           </div>
-        <div className="relative">
+          <div className="relative">
             <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[hsl(var(--muted-foreground))] z-10" />
             <Select
-            value={statusFilter}
+              value={statusFilter}
               onChange={(e) => {
                 setStatusFilter(e.target.value)
                 setPage(1)
               }}
               className="pl-10 text-xs"
-          >
-            <option value="">All Statuses</option>
-            <option value="PENDING">Pending</option>
-            <option value="APPROVED">Approved</option>
-            <option value="REJECTED">Rejected</option>
+            >
+              <option value="">All Statuses</option>
+              <option value="PENDING">Pending</option>
+              <option value="APPROVED">Approved</option>
+              <option value="REJECTED">Rejected</option>
             </Select>
           </div>
         </div>
@@ -285,23 +285,23 @@ function UserQuestionSubmissionsPageContent() {
                 <table className="w-full">
                   <DataTableHeader>
                     <tr>
-                      <DataTableHeaderCell 
-                        sortable 
+                      <DataTableHeaderCell
+                        sortable
                         sorted={sortBy === 'createdAt' ? sortOrder : undefined}
                         onSort={() => handleSort('createdAt')}
                       >
                         Date
                       </DataTableHeaderCell>
-                      <DataTableHeaderCell 
-                        sortable 
+                      <DataTableHeaderCell
+                        sortable
                         sorted={sortBy === 'status' ? sortOrder : undefined}
                         onSort={() => handleSort('status')}
                       >
                         Status
                       </DataTableHeaderCell>
                       <DataTableHeaderCell>User</DataTableHeaderCell>
-                      <DataTableHeaderCell 
-                        sortable 
+                      <DataTableHeaderCell
+                        sortable
                         sorted={sortBy === 'question' ? sortOrder : undefined}
                         onSort={() => handleSort('question')}
                       >
@@ -313,19 +313,19 @@ function UserQuestionSubmissionsPageContent() {
                   </DataTableHeader>
                   <DataTableBody>
                     {submissions.map((submission) => {
-            const statusBadge = getStatusBadge(submission.status)
-            const StatusIcon = statusBadge.icon
-            
-            return (
+                      const statusBadge = getStatusBadge(submission.status)
+                      const StatusIcon = statusBadge.icon
+
+                      return (
                         <DataTableRow key={submission.id}>
                           <DataTableCell>
                             <div className="text-xs text-[hsl(var(--muted-foreground))]">
-                          {formatDate(submission.createdAt)}
-                        </div>
+                              {formatDate(submission.createdAt)}
+                            </div>
                           </DataTableCell>
                           <DataTableCell>
-                            <Badge 
-                              variant={submission.status === 'PENDING' ? 'warning' : submission.status === 'APPROVED' ? 'success' : 'danger'}
+                            <Badge
+                              variant={submission.status === 'PENDING' ? 'warning' : submission.status === 'APPROVED' ? 'success' : 'error'}
                               className="text-xs"
                             >
                               <StatusIcon className="w-3 h-3 mr-1" />
@@ -338,11 +338,11 @@ function UserQuestionSubmissionsPageContent() {
                               {submission.schoolName && (
                                 <div className="text-[hsl(var(--muted-foreground))]">{submission.schoolName}</div>
                               )}
-                      </div>
+                            </div>
                           </DataTableCell>
                           <DataTableCell>
                             <div className="text-xs text-[hsl(var(--foreground))] max-w-md line-clamp-2">
-                          {submission.question}
+                              {submission.question}
                             </div>
                           </DataTableCell>
                           <DataTableCell>
@@ -384,14 +384,14 @@ function UserQuestionSubmissionsPageContent() {
                     })}
                   </DataTableBody>
                 </table>
-                      </div>
-                      
+              </div>
+
               {/* Pagination */}
               {pagination.totalPages > 1 && (
                 <div className="px-6 py-4 border-t border-[hsl(var(--border))] flex items-center justify-between">
                   <div className="text-xs text-[hsl(var(--muted-foreground))]">
                     Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} results
-                      </div>
+                  </div>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setPage(p => Math.max(1, p - 1))}
@@ -452,14 +452,14 @@ function SubmissionDetailModal({
     try {
       const date = new Date(dateString)
       if (isNaN(date.getTime())) return dateString
-      
+
       // Use consistent formatting to avoid hydration mismatches
       const day = String(date.getDate()).padStart(2, '0')
       const month = String(date.getMonth() + 1).padStart(2, '0')
       const year = date.getFullYear()
       const hours = String(date.getHours()).padStart(2, '0')
       const minutes = String(date.getMinutes()).padStart(2, '0')
-      
+
       return `${day}/${month}/${year}, ${hours}:${minutes}`
     } catch {
       return dateString
@@ -483,8 +483,8 @@ function SubmissionDetailModal({
           <div className="space-y-4">
             {/* Status and User Info */}
             <div className="flex items-center gap-3 flex-wrap">
-              <Badge 
-                variant={submission.status === 'PENDING' ? 'warning' : submission.status === 'APPROVED' ? 'success' : 'danger'}
+              <Badge
+                variant={submission.status === 'PENDING' ? 'warning' : submission.status === 'APPROVED' ? 'success' : 'error'}
                 className="text-xs"
               >
                 <StatusIcon className="w-3 h-3 mr-1" />
@@ -492,9 +492,9 @@ function SubmissionDetailModal({
               </Badge>
               <div className="text-xs text-[hsl(var(--muted-foreground))]">
                 Submitted {formatDate(submission.createdAt)}
-                        </div>
-                      </div>
-                      
+              </div>
+            </div>
+
             {/* User Details */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-[hsl(var(--muted))]/30 rounded-xl">
               <div>
@@ -505,32 +505,32 @@ function SubmissionDetailModal({
                 <div className="text-xs font-medium text-[hsl(var(--muted-foreground))] mb-1">Email</div>
                 <div className="text-sm text-[hsl(var(--foreground))]">{submission.userEmail}</div>
               </div>
-                      {submission.teacherName && (
+              {submission.teacherName && (
                 <div>
                   <div className="text-xs font-medium text-[hsl(var(--muted-foreground))] mb-1">Teacher</div>
                   <div className="text-sm text-[hsl(var(--foreground))]">{submission.teacherName}</div>
-                        </div>
-                      )}
-                      {submission.schoolName && (
+                </div>
+              )}
+              {submission.schoolName && (
                 <div>
                   <div className="text-xs font-medium text-[hsl(var(--muted-foreground))] mb-1">School</div>
                   <div className="text-sm text-[hsl(var(--foreground))]">{submission.schoolName}</div>
-                        </div>
-                      )}
-                      {submission.category && (
+                </div>
+              )}
+              {submission.category && (
                 <div>
                   <div className="text-xs font-medium text-[hsl(var(--muted-foreground))] mb-1">Suggested Category</div>
                   <div className="text-sm text-[hsl(var(--foreground))]">{submission.category}</div>
-                          </div>
+                </div>
               )}
               {submission.consentForShoutout && (
                 <div>
                   <div className="text-xs font-medium text-[hsl(var(--muted-foreground))] mb-1">Consent</div>
                   <Badge variant="success" className="text-xs">✓ Consent for shoutout</Badge>
-                        </div>
-                      )}
-                    </div>
-                    
+                </div>
+              )}
+            </div>
+
             {/* Question */}
             <div>
               <div className="text-xs font-medium text-[hsl(var(--muted-foreground))] mb-2">Question</div>
@@ -544,43 +544,43 @@ function SubmissionDetailModal({
               <div className="text-xs font-medium text-[hsl(var(--muted-foreground))] mb-2">Answer</div>
               <div className="text-sm font-medium text-[hsl(var(--foreground))] p-4 bg-[hsl(var(--muted))]/50 rounded-xl">
                 {submission.answer}
-                      </div>
-                  </div>
+              </div>
+            </div>
 
             {/* Explanation */}
-                {submission.explanation && (
+            {submission.explanation && (
               <div>
                 <div className="text-xs font-medium text-[hsl(var(--muted-foreground))] mb-2">Explanation</div>
                 <div className="text-sm text-[hsl(var(--foreground))] leading-relaxed p-4 bg-[hsl(var(--muted))]/30 rounded-xl">
                   {submission.explanation}
                 </div>
-                  </div>
-                )}
+              </div>
+            )}
 
             {/* Actions */}
-                {submission.status === 'PENDING' && (
+            {submission.status === 'PENDING' && (
               <div className="flex items-center gap-3 pt-4 border-t border-[hsl(var(--border))]">
                 <Button
                   onClick={onApprove}
-                  variant="success"
+                  variant="primary"
                   size="sm"
                   className="gap-2"
-                    >
-                      <CheckCircle2 className="w-4 h-4" />
-                      Approve & Create Question
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  Approve & Create Question
                 </Button>
                 <Button
                   onClick={onReject}
                   variant="danger"
                   size="sm"
                   className="gap-2"
-                    >
-                      <XCircle className="w-4 h-4" />
-                      Reject
+                >
+                  <XCircle className="w-4 h-4" />
+                  Reject
                 </Button>
-                  </div>
-                )}
               </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

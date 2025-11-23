@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { BookOpen, Plus, Save, Eye, FileDown, ArrowLeft, Import, CheckCircle2, XCircle, Sparkles, Upload } from 'lucide-react'
+import { BookOpen, Plus, Save, Eye, FileDown, ArrowLeft, Import, CheckCircle2, XCircle, Sparkles, Upload, X } from 'lucide-react'
 import { Spinner } from '@/components/ui/spinner'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select'
 import Link from 'next/link'
@@ -54,7 +54,7 @@ export default function QuizBuilderPage() {
   const router = useRouter()
   const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
   const editQuizId = searchParams?.get('edit')
-  
+
   const [quiz, setQuiz] = useState<QuizBuilderData>({
     title: '',
     status: 'draft',
@@ -111,11 +111,11 @@ export default function QuizBuilderPage() {
       const data = await response.json()
       if (response.ok && data.quiz) {
         const quizData = data.quiz
-        
+
         // Transform database format to builder format
         const transformedRounds: Round[] = (quizData.rounds || []).map((round: any) => {
           const isPeoplesRound = round.isPeoplesRound || false
-          
+
           // Transform questions
           const transformedQuestions: Question[] = (round.questions || []).map((rq: any) => ({
             id: rq.question?.id || `q-${Date.now()}-${Math.random()}`,
@@ -125,7 +125,7 @@ export default function QuizBuilderPage() {
             categoryId: round.categoryId || round.category?.id || '',
             categoryName: round.category?.name || '',
           }))
-          
+
           // Ensure correct number of questions for each round
           const expectedQuestionCount = isPeoplesRound ? 1 : QUESTIONS_PER_ROUND
           while (transformedQuestions.length < expectedQuestionCount) {
@@ -138,7 +138,7 @@ export default function QuizBuilderPage() {
               categoryName: round.category?.name || '',
             })
           }
-          
+
           return {
             id: round.id || `round-${round.index}`,
             index: round.index,
@@ -150,11 +150,11 @@ export default function QuizBuilderPage() {
             isPeoplesRound,
           }
         })
-        
+
         // Ensure we have the correct number of rounds (4 standard + 1 peoples)
         const standardRounds = transformedRounds.filter(r => !r.isPeoplesRound)
         const peoplesRounds = transformedRounds.filter(r => r.isPeoplesRound)
-        
+
         // Fill in missing standard rounds
         while (standardRounds.length < STANDARD_ROUNDS) {
           const nextIndex = standardRounds.length
@@ -174,7 +174,7 @@ export default function QuizBuilderPage() {
             isPeoplesRound: false,
           })
         }
-        
+
         // Ensure we have exactly one peoples round
         if (peoplesRounds.length === 0) {
           peoplesRounds.push({
@@ -193,10 +193,10 @@ export default function QuizBuilderPage() {
             isPeoplesRound: true,
           })
         }
-        
+
         // Combine rounds in correct order
         const allRounds = [...standardRounds, ...peoplesRounds].sort((a, b) => a.index - b.index)
-        
+
         setQuiz({
           id: quizData.id,
           title: quizData.title,
@@ -219,7 +219,7 @@ export default function QuizBuilderPage() {
         .filter(r => !r.isPeoplesRound && r.title)
         .map(r => r.title)
         .filter(Boolean)
-      
+
       if (roundTitles.length > 0) {
         setQuiz(prev => ({
           ...prev,
@@ -247,7 +247,7 @@ export default function QuizBuilderPage() {
   const getCategoryDisplayName = (categoryId: string) => {
     const category = categories.find(c => c.id === categoryId)
     if (!category) return ''
-    
+
     if (category.parentId) {
       const parent = categories.find(c => c.id === category.parentId)
       return parent ? `${parent.name} > ${category.name}` : category.name
@@ -258,7 +258,7 @@ export default function QuizBuilderPage() {
   const updateRound = (roundIndex: number, updates: Partial<Round>) => {
     setQuiz(prev => ({
       ...prev,
-      rounds: prev.rounds.map((r, i) => 
+      rounds: prev.rounds.map((r, i) =>
         i === roundIndex ? { ...r, ...updates } : r
       ),
     }))
@@ -267,14 +267,14 @@ export default function QuizBuilderPage() {
   const updateQuestion = (roundIndex: number, questionIndex: number, updates: Partial<Question>) => {
     setQuiz(prev => ({
       ...prev,
-      rounds: prev.rounds.map((r, i) => 
-        i === roundIndex 
+      rounds: prev.rounds.map((r, i) =>
+        i === roundIndex
           ? {
-              ...r,
-              questions: r.questions.map((q, qi) => 
-                qi === questionIndex ? { ...q, ...updates } : q
-              ),
-            }
+            ...r,
+            questions: r.questions.map((q, qi) =>
+              qi === questionIndex ? { ...q, ...updates } : q
+            ),
+          }
           : r
       ),
     }))
@@ -287,21 +287,21 @@ export default function QuizBuilderPage() {
 
     setQuiz(prev => ({
       ...prev,
-      rounds: prev.rounds.map((r, i) => 
-        i === roundIndex 
+      rounds: prev.rounds.map((r, i) =>
+        i === roundIndex
           ? {
-              ...r,
-              questions: [
-                ...r.questions,
-                {
-                  id: `q-${Date.now()}-${Math.random()}`,
-                  text: '',
-                  answer: '',
-                  explanation: '',
-                  categoryId: r.categoryId,
-                },
-              ],
-            }
+            ...r,
+            questions: [
+              ...r.questions,
+              {
+                id: `q-${Date.now()}-${Math.random()}`,
+                text: '',
+                answer: '',
+                explanation: '',
+                categoryId: r.categoryId,
+              },
+            ],
+          }
           : r
       ),
     }))
@@ -310,12 +310,12 @@ export default function QuizBuilderPage() {
   const removeQuestion = (roundIndex: number, questionIndex: number) => {
     setQuiz(prev => ({
       ...prev,
-      rounds: prev.rounds.map((r, i) => 
-        i === roundIndex 
+      rounds: prev.rounds.map((r, i) =>
+        i === roundIndex
           ? {
-              ...r,
-              questions: r.questions.filter((_, qi) => qi !== questionIndex),
-            }
+            ...r,
+            questions: r.questions.filter((_, qi) => qi !== questionIndex),
+          }
           : r
       ),
     }))
@@ -327,17 +327,17 @@ export default function QuizBuilderPage() {
     if (!data.id && !data.title?.trim()) {
       throw new Error('Cannot autosave: Quiz needs a title first')
     }
-    
+
     // For new quizzes, skip autosave - require manual save first to get an ID
     // This prevents issues with quiz number conflicts
     if (!data.id) {
       // Silently skip autosave for new quizzes
       return { skipped: true, reason: 'New quiz needs manual save first' }
     }
-    
+
     const isUpdate = !!data.id
     const url = `/api/admin/quizzes/${data.id}`
-    
+
     // For updates, use PATCH instead of PUT to avoid recreating rounds
     // Transform builder format to API format
     const apiData = {
@@ -356,7 +356,7 @@ export default function QuizBuilderPage() {
           // Get category name from categoryId
           const category = categories.find(c => c.id === round.categoryId)
           const categoryName = category?.name || round.categoryName || 'General Knowledge'
-          
+
           return {
             id: round.id,
             category: categoryName,
@@ -375,14 +375,14 @@ export default function QuizBuilderPage() {
           }
         }),
     }
-    
+
     // Use PUT for full update (includes rounds)
     const response = await fetch(url, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(apiData),
     })
-    
+
     const responseData = await response.json()
     if (!response.ok) {
       // Log the error for debugging
@@ -393,7 +393,7 @@ export default function QuizBuilderPage() {
       })
       throw new Error(responseData.error || responseData.details || 'Failed to save quiz')
     }
-    
+
     return responseData
   }, [categories])
 
@@ -482,10 +482,10 @@ export default function QuizBuilderPage() {
   const handleSave = useCallback(async () => {
     try {
       const isUpdate = !!quiz.id
-      const url = isUpdate 
+      const url = isUpdate
         ? `/api/admin/quizzes/${quiz.id}`
         : '/api/admin/quizzes'
-      
+
       // Transform builder format to API format
       const apiData = {
         number: isUpdate ? undefined : 0, // For new quizzes, use 0 (will be auto-generated)
@@ -496,7 +496,7 @@ export default function QuizBuilderPage() {
           // Get category name from categoryId
           const category = categories.find(c => c.id === round.categoryId)
           const categoryName = category?.name || round.categoryName || 'General Knowledge'
-          
+
           return {
             id: round.id,
             category: categoryName,
@@ -515,18 +515,18 @@ export default function QuizBuilderPage() {
           }
         }),
       }
-      
+
       const response = await fetch(url, {
         method: isUpdate ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(apiData),
       })
-      
+
       const data = await response.json()
       if (!response.ok) {
         throw new Error(data.error || data.details || 'Failed to save quiz')
       }
-      
+
       // Update quiz ID if this is a new quiz
       if (!isUpdate && data.quiz?.id) {
         setQuiz(prev => ({ ...prev, id: data.quiz.id }))
@@ -536,7 +536,7 @@ export default function QuizBuilderPage() {
         // Clear unsaved changes after successful update
         clearUnsavedChanges()
       }
-      
+
       // Show success message (but not via alert - use a toast or notification system if available)
       console.log('Quiz saved successfully')
     } catch (error: any) {
@@ -556,12 +556,12 @@ export default function QuizBuilderPage() {
       alert('Please save the quiz first before generating PDF')
       return
     }
-    
+
     try {
       const response = await fetch(`/api/admin/quizzes/${quiz.id}/pdf`, {
         method: 'POST',
       })
-      
+
       const data = await response.json()
       if (response.ok) {
         // Open PDF in new tab
@@ -575,9 +575,9 @@ export default function QuizBuilderPage() {
     }
   }
 
-  const canSave = quiz.rounds.every(r => 
-    r.title && 
-    r.categoryId && 
+  const canSave = quiz.rounds.every(r =>
+    r.title &&
+    r.categoryId &&
     r.questions.every(q => q.text && q.answer)
   )
 
@@ -620,7 +620,7 @@ export default function QuizBuilderPage() {
             lastSaved={lastSaved}
             error={saveError}
           />
-          
+
           <button
             onClick={handlePreview}
             disabled={!canSave}
@@ -676,11 +676,10 @@ export default function QuizBuilderPage() {
             <button
               key={round.id}
               onClick={() => setActiveRound(index)}
-              className={`flex-shrink-0 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                activeRound === index
+              className={`flex-shrink-0 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${activeRound === index
                   ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]'
                   : 'bg-[hsl(var(--muted))] text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/80'
-              }`}
+                }`}
             >
               {round.isPeoplesRound ? "People's Question" : `Round ${index + 1}`}
               {round.title && `: ${round.title}`}
@@ -710,20 +709,20 @@ export default function QuizBuilderPage() {
               // Add new question slot with imported question
               setQuiz(prev => ({
                 ...prev,
-                rounds: prev.rounds.map((r, i) => 
-                  i === activeRound 
+                rounds: prev.rounds.map((r, i) =>
+                  i === activeRound
                     ? {
-                        ...r,
-                        questions: [
-                          ...r.questions,
-                          {
-                            ...question,
-                            id: `q-${Date.now()}-${Math.random()}`,
-                            isImported: true,
-                            originalQuestionId: question.id,
-                          },
-                        ],
-                      }
+                      ...r,
+                      questions: [
+                        ...r.questions,
+                        {
+                          ...question,
+                          id: `q-${Date.now()}-${Math.random()}`,
+                          isImported: true,
+                          originalQuestionId: question.id,
+                        },
+                      ],
+                    }
                     : r
                 ),
               }))
@@ -908,11 +907,10 @@ function RoundEditor({
           {round.questions.map((question, qIndex) => (
             <div
               key={question.id}
-              className={`p-4 bg-[hsl(var(--card))] rounded-lg border ${
-                question.isImported 
-                  ? 'border-purple-300 dark:border-purple-700' 
+              className={`p-4 bg-[hsl(var(--card))] rounded-lg border ${question.isImported
+                  ? 'border-purple-300 dark:border-purple-700'
                   : 'border-[hsl(var(--border))]'
-              }`}
+                }`}
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-2">
@@ -942,7 +940,7 @@ function RoundEditor({
                     answer: question.answer,
                     explanation: question.explanation,
                   }))
-                  
+
                   return (
                     <>
                       {!validation.valid && validation.errors.length > 0 && (
@@ -978,7 +976,7 @@ function RoundEditor({
                     </>
                   )
                 })()}
-                
+
                 <div>
                   <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
                     Question
@@ -1027,7 +1025,7 @@ function RoundEditor({
           onSelect={(question) => {
             const normalized = normalizeQuestion(question)
             const validation = validateQuestion(normalized)
-            
+
             if (validation.valid) {
               const emptySlot = round.questions.findIndex(q => !q.text)
               if (emptySlot >= 0) {
@@ -1049,7 +1047,7 @@ function RoundEditor({
               alert(`Question has validation errors:\n${validation.errors.map(e => e.message).join('\n')}`)
               return
             }
-            
+
             setShowTemplateModal(false)
           }}
           onClose={() => setShowTemplateModal(false)}
@@ -1062,12 +1060,12 @@ function RoundEditor({
           onImport={(questions) => {
             const normalized = questions.map(normalizeQuestion)
             const validated = normalized.filter(q => validateQuestion(q).valid)
-            
+
             if (validated.length === 0) {
               alert('No valid questions to import')
               return
             }
-            
+
             // Add all validated questions
             validated.forEach((question) => {
               const emptySlot = round.questions.findIndex(q => !q.text)
@@ -1087,7 +1085,7 @@ function RoundEditor({
                 })
               }
             })
-            
+
             setShowBulkImportModal(false)
             alert(`Imported ${validated.length} question${validated.length > 1 ? 's' : ''}`)
           }}

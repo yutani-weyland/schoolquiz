@@ -90,7 +90,7 @@ export async function GET(
             },
           },
         })
-        
+
         // Try to add achievements if the table exists
         try {
           const userWithAchievements = await prisma.user.findUnique({
@@ -118,7 +118,7 @@ export async function GET(
               },
             },
           })
-          
+
           if (userWithAchievements) {
             user.achievements = userWithAchievements.achievements || []
             user._count.achievements = userWithAchievements._count?.achievements || 0
@@ -137,91 +137,91 @@ export async function GET(
         throw userError
       }
 
-    if (!user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      )
-    }
+      if (!user) {
+        return NextResponse.json(
+          { error: 'User not found' },
+          { status: 404 }
+        )
+      }
 
-    // Transform to match expected format
-    const formattedUser = {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      phone: user.phone,
-      tier: user.tier,
-      platformRole: user.platformRole,
-      subscriptionStatus: user.subscriptionStatus,
-      subscriptionPlan: user.subscriptionPlan,
-      subscriptionEndsAt: user.subscriptionEndsAt?.toISOString() || null,
-      freeTrialStartedAt: user.freeTrialStartedAt?.toISOString() || null,
-      freeTrialEndsAt: user.freeTrialEndsAt?.toISOString() || null,
-      referralCode: user.referralCode,
-      referredBy: user.referredBy,
-      referralCount: user.referralCount,
-      freeTrialUntil: user.freeTrialUntil?.toISOString() || null,
-      emailVerified: user.emailVerified,
-      phoneVerified: user.phoneVerified,
-      lastLoginAt: user.lastLoginAt?.toISOString() || null,
-      createdAt: user.createdAt.toISOString(),
-      updatedAt: user.updatedAt.toISOString(),
-      organisationMembers: user.organisationMembers.map(m => ({
-        id: m.id,
-        role: m.role,
-        status: m.status,
-        organisation: {
-          id: m.organisation.id,
-          name: m.organisation.name,
-          status: m.organisation.status,
+      // Transform to match expected format
+      const formattedUser = {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        phone: user.phone,
+        tier: user.tier,
+        platformRole: user.platformRole,
+        subscriptionStatus: user.subscriptionStatus,
+        subscriptionPlan: user.subscriptionPlan,
+        subscriptionEndsAt: user.subscriptionEndsAt?.toISOString() || null,
+        freeTrialStartedAt: user.freeTrialStartedAt?.toISOString() || null,
+        freeTrialEndsAt: user.freeTrialEndsAt?.toISOString() || null,
+        referralCode: user.referralCode,
+        referredBy: user.referredBy,
+        referralCount: user.referralCount,
+        freeTrialUntil: user.freeTrialUntil?.toISOString() || null,
+        emailVerified: user.emailVerified,
+        phoneVerified: user.phoneVerified,
+        lastLoginAt: user.lastLoginAt?.toISOString() || null,
+        createdAt: user.createdAt.toISOString(),
+        updatedAt: user.updatedAt.toISOString(),
+        organisationMembers: user.organisationMembers.map((m: any) => ({
+          id: m.id,
+          role: m.role,
+          status: m.status,
+          organisation: {
+            id: m.organisation.id,
+            name: m.organisation.name,
+            status: m.organisation.status,
+          },
+          createdAt: m.createdAt.toISOString(),
+        })),
+        createdOrganisations: user.createdOrganisations.map((org: any) => ({
+          id: org.id,
+          name: org.name,
+          status: org.status,
+        })),
+        quizCompletions: user.quizCompletions.map((qc: any) => ({
+          id: qc.id,
+          completedAt: qc.completedAt.toISOString(),
+          quiz: {
+            id: qc.quizSlug,
+            slug: qc.quizSlug,
+            title: qc.quizSlug, // Use slug as title if title not available
+          },
+          score: qc.score,
+          totalQuestions: qc.totalQuestions,
+        })),
+        achievements: (user.achievements || []).map((ach: any) => ({
+          id: ach.id,
+          unlockedAt: ach.unlockedAt.toISOString(),
+          achievement: {
+            id: ach.achievement.id,
+            name: ach.achievement.name,
+            rarity: ach.achievement.rarity,
+          },
+        })),
+        referrer: user.referrer ? {
+          id: user.referrer.id,
+          name: user.referrer.name,
+          email: user.referrer.email,
+          referralCode: user.referrer.referralCode,
+        } : null,
+        referrals: user.referrals.map((r: any) => ({
+          id: r.id,
+          name: r.name,
+          email: r.email,
+          createdAt: r.createdAt.toISOString(),
+        })),
+        _count: {
+          organisationMembers: user._count.organisationMembers,
+          quizCompletions: user._count.quizCompletions,
+          achievements: user._count.achievements || 0,
+          referrals: user._count.referrals,
+          createdOrganisations: user._count.createdOrganisations,
         },
-        createdAt: m.createdAt.toISOString(),
-      })),
-      createdOrganisations: user.createdOrganisations.map(org => ({
-        id: org.id,
-        name: org.name,
-        status: org.status,
-      })),
-      quizCompletions: user.quizCompletions.map(qc => ({
-        id: qc.id,
-        completedAt: qc.completedAt.toISOString(),
-        quiz: {
-          id: qc.quizSlug,
-          slug: qc.quizSlug,
-          title: qc.quizSlug, // Use slug as title if title not available
-        },
-        score: qc.score,
-        totalQuestions: qc.totalQuestions,
-      })),
-      achievements: (user.achievements || []).map((ach: any) => ({
-        id: ach.id,
-        unlockedAt: ach.unlockedAt.toISOString(),
-        achievement: {
-          id: ach.achievement.id,
-          name: ach.achievement.name,
-          rarity: ach.achievement.rarity,
-        },
-      })),
-      referrer: user.referrer ? {
-        id: user.referrer.id,
-        name: user.referrer.name,
-        email: user.referrer.email,
-        referralCode: user.referrer.referralCode,
-      } : null,
-      referrals: user.referrals.map(r => ({
-        id: r.id,
-        name: r.name,
-        email: r.email,
-        createdAt: r.createdAt.toISOString(),
-      })),
-      _count: {
-        organisationMembers: user._count.organisationMembers,
-        quizCompletions: user._count.quizCompletions,
-        achievements: user._count.achievements || 0,
-        referrals: user._count.referrals,
-        createdOrganisations: user._count.createdOrganisations,
-      },
-    }
+      }
 
       return NextResponse.json({ user: formattedUser })
     } catch (dbError: any) {
@@ -229,11 +229,11 @@ export async function GET(
       console.error('❌ Database query failed:', dbError)
       console.error('Error message:', dbError.message)
       console.error('Error code:', dbError.code)
-      
+
       // Fallback to dummy data if database is not available
       console.log('⚠️  Falling back to dummy data for user detail')
       const targetUser = getDummyUserDetail(id)
-      
+
       if (!targetUser) {
         return NextResponse.json(
           { error: 'User not found', details: dbError.message },
@@ -283,7 +283,7 @@ export async function PATCH(
       'subscriptionEndsAt',
     ]
     const updateData: any = {}
-    
+
     for (const field of allowedFields) {
       if (field in body) {
         updateData[field] = body[field]

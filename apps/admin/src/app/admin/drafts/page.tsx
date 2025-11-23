@@ -193,31 +193,28 @@ export default function DraftsPage() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setFilterType('all')}
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                filterType === 'all'
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${filterType === 'all'
                   ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]'
                   : 'bg-[hsl(var(--muted))] text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/80'
-              }`}
+                }`}
             >
               All ({draftCounts.all})
             </button>
             <button
               onClick={() => setFilterType('quiz')}
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                filterType === 'quiz'
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${filterType === 'quiz'
                   ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]'
                   : 'bg-[hsl(var(--muted))] text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/80'
-              }`}
+                }`}
             >
               Quizzes ({draftCounts.quiz})
             </button>
             <button
               onClick={() => setFilterType('achievement')}
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                filterType === 'achievement'
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${filterType === 'achievement'
                   ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]'
                   : 'bg-[hsl(var(--muted))] text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/80'
-              }`}
+                }`}
             >
               Achievements ({draftCounts.achievement})
             </button>
@@ -245,23 +242,23 @@ export default function DraftsPage() {
                 <table className="w-full">
                   <DataTableHeader>
                     <tr>
-                      <DataTableHeaderCell 
-                        sortable 
+                      <DataTableHeaderCell
+                        sortable
                         sorted={sortBy === 'type' ? sortOrder : undefined}
                         onSort={() => handleSort('type')}
                       >
                         Type
                       </DataTableHeaderCell>
-                      <DataTableHeaderCell 
-                        sortable 
+                      <DataTableHeaderCell
+                        sortable
                         sorted={sortBy === 'title' ? sortOrder : undefined}
                         onSort={() => handleSort('title')}
                       >
                         Title
                       </DataTableHeaderCell>
                       <DataTableHeaderCell>Preview</DataTableHeaderCell>
-                      <DataTableHeaderCell 
-                        sortable 
+                      <DataTableHeaderCell
+                        sortable
                         sorted={sortBy === 'timestamp' ? sortOrder : undefined}
                         onSort={() => handleSort('timestamp')}
                       >
@@ -274,7 +271,7 @@ export default function DraftsPage() {
                     {filteredAndSortedDrafts.map((draft) => (
                       <DataTableRow key={`${draft.type}_${draft.id}_${draft.timestamp}`}>
                         <DataTableCell>
-                          <Badge variant="secondary" className="text-xs">
+                          <Badge variant="default" className="text-xs">
                             {getDraftTypeLabel(draft.type)}
                           </Badge>
                         </DataTableCell>

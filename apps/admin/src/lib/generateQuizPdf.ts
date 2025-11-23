@@ -48,7 +48,7 @@ export async function generateQuizPdf(
   const appBaseUrl = baseUrl
   let page: Page | null = null
   let context: any = null
-  
+
   try {
     // Check if Playwright browsers are installed
     let browser: Browser
@@ -56,33 +56,42 @@ export async function generateQuizPdf(
       browser = await getBrowser()
     } catch (browserError: any) {
       // Check if it's a browser installation error
-      if (browserError.message?.includes('Executable doesn\'t exist') || 
-          browserError.message?.includes('BrowserType.launch') ||
-          browserError.message?.includes('chromium')) {
+      if (browserError.message?.includes('Executable doesn\'t exist') ||
+        browserError.message?.includes('BrowserType.launch') ||
+        browserError.message?.includes('chromium')) {
         throw new Error(
           'Playwright browsers are not installed. Please run: pnpm exec playwright install chromium'
         )
       }
       throw browserError
     }
-    
+
     context = await browser.newContext({
       viewport: { width: 1920, height: 1080 }, // Large viewport to capture full content
     })
-    
+
     page = await context.newPage()
-    
+
     // Navigate to the printable page (use route that bypasses admin layout)
     const url = `${appBaseUrl}/printable/quizzes/${quizId}?pdf=1`
     console.log('[PDF Generator] Loading printable page:', url)
-    
+
+    if (!page) {
+      throw new Error('Failed to create browser page')
+    }
+
     await page.goto(url, {
       waitUntil: 'networkidle',
       timeout: 30000,
     })
-    
-    console.log('[PDF Generator] Page navigation complete, waiting for content...')
-    
+
+    console.log('[PDF Generator] Page loaded, waiting for rendering...')
+
+    // Wait for page to be fully rendered
+    await page.waitForSelector('body', { timeout: 10000 })
+
+    console.log('[PDF Generator] Generating PDF...')
+
     // Wait for React Server Components to finish streaming
     // The page shows "Loading..." initially, so wait for actual content
     await page.waitForFunction(
@@ -91,13 +100,13 @@ export async function generateQuizPdf(
         if (!body) return false
         const text = body.textContent || ''
         // Wait until we have actual quiz content, not just "Loading..."
-        return text.includes('printable-quiz') || 
-               (text.includes('Round') && text.includes('Question')) ||
-               (!text.includes('Loading...') && text.length > 500)
+        return text.includes('printable-quiz') ||
+          (text.includes('Round') && text.includes('Question')) ||
+          (!text.includes('Loading...') && text.length > 500)
       },
       { timeout: 20000 }
     )
-    
+
     // Wait for the main content to be visible
     try {
       await page.waitForSelector('.printable-quiz', { timeout: 10000, state: 'visible' })
@@ -108,7 +117,7 @@ export async function generateQuizPdf(
         const main = document.querySelector('main')
         return main && (main.textContent || '').length > 500
       })
-      
+
       if (!hasContent) {
         const bodyText = await page.evaluate(() => document.body.textContent?.substring(0, 500))
         console.error('[PDF Generator] No content found. Body preview:', bodyText)
@@ -116,7 +125,7 @@ export async function generateQuizPdf(
       }
       console.log('[PDF Generator] Using main content area (no .printable-quiz selector)')
     }
-    
+
     // If we're in the admin layout, try to scroll to the content
     await page.evaluate(() => {
       const printableQuiz = document.querySelector('.printable-quiz')
@@ -124,12 +133,12 @@ export async function generateQuizPdf(
         printableQuiz.scrollIntoView({ behavior: 'instant', block: 'start' })
       }
     })
-    
+
     // Wait for fonts to load
     await page.evaluate(() => {
       return document.fonts.ready
     })
-    
+
     // Wait for all images to load
     await page.evaluate(() => {
       return Promise.all(
@@ -142,10 +151,10 @@ export async function generateQuizPdf(
           }))
       )
     })
-    
+
     // Wait for any animations or transitions to complete
     await page.waitForTimeout(1000)
-    
+
     // Ensure the page has fully rendered by checking scroll height
     await page.evaluate(() => {
       return new Promise<void>((resolve) => {
@@ -162,21 +171,21 @@ export async function generateQuizPdf(
         checkHeight()
       })
     })
-    
+
     // Scroll to bottom to ensure all content is rendered
     await page.evaluate(() => {
       window.scrollTo(0, document.documentElement.scrollHeight)
     })
     await page.waitForTimeout(500)
-    
+
     // Scroll back to top
     await page.evaluate(() => {
       window.scrollTo(0, 0)
     })
     await page.waitForTimeout(300)
-    
+
     console.log('[PDF Generator] Page fully loaded, generating PDF...')
-    
+
     // Get the full page height to verify content is loaded
     const fullHeight = await page.evaluate(() => {
       return Math.max(
@@ -187,9 +196,9 @@ export async function generateQuizPdf(
         document.documentElement.offsetHeight
       )
     })
-    
+
     console.log('[PDF Generator] Page height:', fullHeight, 'px')
-    
+
     // Ensure body and html have no height restrictions
     await page.evaluate(() => {
       document.body.style.height = 'auto'
@@ -197,10 +206,10 @@ export async function generateQuizPdf(
       document.documentElement.style.height = 'auto'
       document.documentElement.style.minHeight = '100%'
     })
-    
+
     // Wait a bit more to ensure all content is rendered
     await page.waitForTimeout(500)
-    
+
     // Get the actual full height of the content
     const actualHeight = await page.evaluate(() => {
       const body = document.body
@@ -213,9 +222,9 @@ export async function generateQuizPdf(
         html.offsetHeight
       )
     })
-    
+
     console.log('[PDF Generator] Actual content height:', actualHeight, 'px')
-    
+
     // Generate PDF - Playwright will automatically handle multi-page PDFs
     // Use the full document height, not just viewport
     const pdfBuffer = await page.pdf({
@@ -228,24 +237,22 @@ export async function generateQuizPdf(
       },
       printBackground: true,
       preferCSSPageSize: false,
-      // Ensure we capture the full page, not just viewport
-      fullPage: true,
     })
-    
+
     await context.close()
-    
+
     console.log('[PDF Generator] PDF generated successfully, size:', pdfBuffer.length, 'bytes')
-    
+
     return pdfBuffer
   } catch (error) {
     console.error('[PDF Generator] Error generating PDF:', error)
     throw error
   } finally {
     if (page) {
-      await page.close().catch(() => {})
+      await page.close().catch(() => { })
     }
     if (context) {
-      await context.close().catch(() => {})
+      await context.close().catch(() => { })
     }
   }
 }

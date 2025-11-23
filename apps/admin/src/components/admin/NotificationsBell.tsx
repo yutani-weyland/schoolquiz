@@ -30,7 +30,7 @@ export function NotificationsBell() {
     try {
       const response = await fetch('/api/admin/support/tickets?status=OPEN')
       const data = await response.json()
-      
+
       if (response.ok) {
         // Get open tickets, prioritize HIGH priority
         const openTickets = (data.tickets || []).filter((t: SupportTicket) => t.status === 'OPEN')
@@ -86,64 +86,64 @@ export function NotificationsBell() {
         sideOffset={8}
         align="end"
       >
-          <div className="p-4 border-b border-[hsl(var(--border))]">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-[hsl(var(--foreground))]">Notifications</h3>
-              {unreadCount > 0 && (
-                <Badge variant="danger" className="text-xs">
-                  {unreadCount} {unreadCount === 1 ? 'ticket' : 'tickets'}
-                </Badge>
-              )}
-            </div>
-          </div>
-          <div className="overflow-y-auto max-h-[320px]">
-            {isLoading ? (
-              <div className="p-8 text-center">
-                <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-[hsl(var(--primary))]"></div>
-              </div>
-            ) : notifications.length === 0 ? (
-              <div className="p-8 text-center text-sm text-[hsl(var(--muted-foreground))]">
-                <Bell className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                <p>No new notifications</p>
-              </div>
-            ) : (
-              <div className="divide-y divide-[hsl(var(--border))]">
-                {notifications.map((ticket) => (
-                  <Link
-                    key={ticket.id}
-                    href="/admin/support"
-                    onClick={() => setIsOpen(false)}
-                    className="block p-4 hover:bg-[hsl(var(--muted))] transition-colors"
-                  >
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <p className="text-sm font-medium text-[hsl(var(--foreground))] line-clamp-1">
-                        {ticket.subject}
-                      </p>
-                      {ticket.priority === 'HIGH' && (
-                        <Badge variant="danger" className="text-xs flex-shrink-0">
-                          High
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-xs text-[hsl(var(--muted-foreground))]">
-                      {formatTimeAgo(ticket.createdAt)}
-                    </p>
-                  </Link>
-                ))}
-              </div>
+        <div className="p-4 border-b border-[hsl(var(--border))]">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-[hsl(var(--foreground))]">Notifications</h3>
+            {unreadCount > 0 && (
+              <Badge variant="error" className="text-xs">
+                {unreadCount} {unreadCount === 1 ? 'ticket' : 'tickets'}
+              </Badge>
             )}
           </div>
-          {notifications.length > 0 && (
-            <div className="p-3 border-t border-[hsl(var(--border))]">
-              <Link
-                href="/admin/support"
-                onClick={() => setIsOpen(false)}
-                className="block text-center text-sm text-[hsl(var(--primary))] hover:underline"
-              >
-                View all tickets
-              </Link>
+        </div>
+        <div className="overflow-y-auto max-h-[320px]">
+          {isLoading ? (
+            <div className="p-8 text-center">
+              <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-[hsl(var(--primary))]"></div>
+            </div>
+          ) : notifications.length === 0 ? (
+            <div className="p-8 text-center text-sm text-[hsl(var(--muted-foreground))]">
+              <Bell className="w-8 h-8 mx-auto mb-2 opacity-50" />
+              <p>No new notifications</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-[hsl(var(--border))]">
+              {notifications.map((ticket) => (
+                <Link
+                  key={ticket.id}
+                  href="/admin/support"
+                  onClick={() => setIsOpen(false)}
+                  className="block p-4 hover:bg-[hsl(var(--muted))] transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <p className="text-sm font-medium text-[hsl(var(--foreground))] line-clamp-1">
+                      {ticket.subject}
+                    </p>
+                    {ticket.priority === 'HIGH' && (
+                      <Badge variant="error" className="text-xs flex-shrink-0">
+                        High
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-xs text-[hsl(var(--muted-foreground))]">
+                    {formatTimeAgo(ticket.createdAt)}
+                  </p>
+                </Link>
+              ))}
             </div>
           )}
+        </div>
+        {notifications.length > 0 && (
+          <div className="p-3 border-t border-[hsl(var(--border))]">
+            <Link
+              href="/admin/support"
+              onClick={() => setIsOpen(false)}
+              className="block text-center text-sm text-[hsl(var(--primary))] hover:underline"
+            >
+              View all tickets
+            </Link>
+          </div>
+        )}
       </PopoverContent>
     </Popover>
   )

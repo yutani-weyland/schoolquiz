@@ -35,7 +35,7 @@ function RoundCreatorPageContent() {
   const [categories, setCategories] = useState<Array<{ id: string; name: string; parentId?: string | null }>>([])
   const [sortBy, setSortBy] = useState<string>('updatedAt')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
-  
+
   // Modal state
   const [showModal, setShowModal] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -133,10 +133,10 @@ function RoundCreatorPageContent() {
     }
 
     try {
-      const url = editingId 
+      const url = editingId
         ? `/api/admin/rounds/templates/${editingId}`
         : '/api/admin/rounds/templates'
-      
+
       const method = editingId ? 'PUT' : 'POST'
 
       const response = await fetch(url, {
@@ -183,17 +183,17 @@ function RoundCreatorPageContent() {
       title: round.title,
       categoryId: round.categoryId,
       blurb: round.blurb || '',
-      questions: round.questions.length > 0 
+      questions: round.questions.length > 0
         ? round.questions.map((q, i) => ({
-            ...q,
-            id: q.id || `temp-${i}`,
-          }))
+          ...q,
+          id: q.id || `temp-${i}`,
+        }))
         : Array.from({ length: 6 }, (_, i) => ({
-            id: `temp-${i}`,
-            text: '',
-            answer: '',
-            explanation: '',
-          })),
+          id: `temp-${i}`,
+          text: '',
+          answer: '',
+          explanation: '',
+        })),
     })
     setShowModal(true)
   }
@@ -228,7 +228,7 @@ function RoundCreatorPageContent() {
   const updateQuestion = (index: number, field: keyof Question, value: string) => {
     setFormData(prev => ({
       ...prev,
-      questions: prev.questions.map((q, i) => 
+      questions: prev.questions.map((q, i) =>
         i === index ? { ...q, [field]: value } : q
       ),
     }))
@@ -237,7 +237,7 @@ function RoundCreatorPageContent() {
   const getCategoryDisplayName = (categoryId: string) => {
     const category = categories.find(c => c.id === categoryId)
     if (!category) return ''
-    
+
     if (category.parentId) {
       const parent = categories.find(c => c.id === category.parentId)
       return parent ? `${parent.name} > ${category.name}` : category.name
@@ -276,7 +276,7 @@ function RoundCreatorPageContent() {
         return (
           r.title.toLowerCase().includes(searchLower) ||
           (r.blurb && r.blurb.toLowerCase().includes(searchLower)) ||
-          r.questions.some(q => 
+          r.questions.some(q =>
             q.text.toLowerCase().includes(searchLower) ||
             q.answer.toLowerCase().includes(searchLower)
           )
@@ -401,29 +401,29 @@ function RoundCreatorPageContent() {
               <table className="w-full">
                 <DataTableHeader>
                   <tr>
-                    <DataTableHeaderCell 
-                      sortable 
+                    <DataTableHeaderCell
+                      sortable
                       sorted={sortBy === 'title' ? sortOrder : undefined}
                       onSort={() => handleSort('title')}
                     >
                       Round Title
                     </DataTableHeaderCell>
-                    <DataTableHeaderCell 
-                      sortable 
+                    <DataTableHeaderCell
+                      sortable
                       sorted={sortBy === 'categoryId' ? sortOrder : undefined}
                       onSort={() => handleSort('categoryId')}
                     >
                       Category
                     </DataTableHeaderCell>
-                    <DataTableHeaderCell 
-                      sortable 
+                    <DataTableHeaderCell
+                      sortable
                       sorted={sortBy === 'questions' ? sortOrder : undefined}
                       onSort={() => handleSort('questions')}
                     >
                       Questions
                     </DataTableHeaderCell>
-                    <DataTableHeaderCell 
-                      sortable 
+                    <DataTableHeaderCell
+                      sortable
                       sorted={sortBy === 'updatedAt' ? sortOrder : undefined}
                       onSort={() => handleSort('updatedAt')}
                     >
@@ -446,7 +446,7 @@ function RoundCreatorPageContent() {
                         </div>
                       </DataTableCell>
                       <DataTableCell>
-                        <Badge variant="secondary" className="text-xs">
+                        <Badge variant="default" className="text-xs">
                           {getCategoryDisplayName(round.categoryId)}
                         </Badge>
                       </DataTableCell>
@@ -562,11 +562,11 @@ function RoundCreatorPageContent() {
                     {formData.questions.map((question, index) => (
                       <div key={question.id} className="p-4 border border-[hsl(var(--border))] rounded-lg bg-[hsl(var(--muted))]/30">
                         <div className="flex items-center gap-2 mb-3">
-                          <Badge variant="secondary" className="text-xs">
+                          <Badge variant="default" className="text-xs">
                             Question {index + 1}
                           </Badge>
                         </div>
-                        
+
                         <div className="space-y-3">
                           <div>
                             <label className="block text-xs font-medium text-[hsl(var(--muted-foreground))] mb-1.5">

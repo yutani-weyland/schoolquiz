@@ -9,7 +9,7 @@ import { useEffect, useState } from 'react'
 import { FileText } from 'lucide-react'
 import Link from 'next/link'
 import * as Tooltip from '@radix-ui/react-tooltip'
-import { checkDraft, getAllDrafts, type Draft } from '@/hooks/useDraft'
+import { getAllDrafts, type Draft } from '@/hooks/useDraft'
 
 interface DraftIndicatorProps {
   /** Type of draft to check */

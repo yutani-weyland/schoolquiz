@@ -1,30 +1,25 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { motion } from 'framer-motion'
-import { Trophy, Users, Plus, Search, X, Copy, Mail, Calendar, Edit2, Trash2, LogOut, UserX, GripVertical } from 'lucide-react'
+import dynamic from 'next/dynamic'
+import { Trophy, Users, Plus, Search, X, Copy, Mail, Calendar, Edit2, Trash2, LogOut, UserX } from 'lucide-react'
 import { useUserTier } from '@/hooks/useUserTier'
 import { useUserAccess } from '@/contexts/UserAccessContext'
 import { UpgradeModal } from '@/components/premium/UpgradeModal'
 import { SiteHeader } from '@/components/SiteHeader'
 import { Footer } from '@/components/Footer'
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-} from '@dnd-kit/core'
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
+
+// Dynamic import for DnD Kit components - loads only when needed (saves ~100KB)
+const DraggableLeaguesList = dynamic(() => import('./DraggableLeaguesList').then(mod => ({ default: mod.DraggableLeaguesList })), {
+  loading: () => (
+    <div className="space-y-2">
+      {[...Array(3)].map((_, i) => (
+        <div key={i} className="h-20 bg-gray-100 dark:bg-gray-700/50 rounded-xl animate-pulse" />
+      ))}
+    </div>
+  ),
+  ssr: false, // DnD Kit doesn't work with SSR
+})
 
 interface League {
   id: string
@@ -71,64 +66,6 @@ interface LeagueStats {
   }
 }
 
-// Sortable League Item Component
-function SortableLeagueItem({ 
-  league, 
-  isSelected, 
-  onSelect, 
-  leagueAccentColor 
-}: { 
-  league: League
-  isSelected: boolean
-  onSelect: () => void
-  leagueAccentColor: string
-}) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: league.id })
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  }
-
-  return (
-    <div ref={setNodeRef} style={style}>
-      <button
-        onClick={onSelect}
-        className={`w-full text-left p-4 rounded-xl transition-all relative group ${
-          isSelected
-            ? 'text-white shadow-md'
-            : 'bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
-        }`}
-        style={isSelected ? { backgroundColor: league.color || leagueAccentColor } : {}}
-      >
-        <div className="flex items-center gap-3">
-          <div
-            {...attributes}
-            {...listeners}
-            className="cursor-grab active:cursor-grabbing text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity"
-          >
-            <GripVertical className="w-4 h-4" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="font-medium mb-1 truncate">{league.name}</div>
-            <div className={`text-sm ${isSelected ? 'opacity-90' : 'opacity-75'}`}>
-              {league._count.members} member{league._count.members !== 1 ? 's' : ''}
-            </div>
-          </div>
-        </div>
-      </button>
-    </div>
-  )
-}
-
 export default function LeaguesPage() {
   const { tier, isPremium } = useUserTier()
   const { userName } = useUserAccess()
@@ -158,37 +95,6 @@ export default function LeaguesPage() {
   const [leaving, setLeaving] = useState(false)
   const [kicking, setKicking] = useState(false)
 
-  // Drag and drop sensors
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  )
-
-  // Load saved league order from localStorage
-  useEffect(() => {
-    if (typeof window !== 'undefined' && leagues.length > 0) {
-      const savedOrder = localStorage.getItem('league-order')
-      if (savedOrder) {
-        try {
-          const order = JSON.parse(savedOrder)
-          const ordered = [...leagues].sort((a, b) => {
-            const aIndex = order.indexOf(a.id)
-            const bIndex = order.indexOf(b.id)
-            if (aIndex === -1 && bIndex === -1) return 0
-            if (aIndex === -1) return 1
-            if (bIndex === -1) return -1
-            return aIndex - bIndex
-          })
-          setLeagues(ordered)
-        } catch (e) {
-          console.error('Failed to load league order:', e)
-        }
-      }
-    }
-  }, [])
-
   // Save league order to localStorage
   const saveLeagueOrder = useCallback((newOrder: League[]) => {
     if (typeof window !== 'undefined') {
@@ -197,20 +103,6 @@ export default function LeaguesPage() {
     }
   }, [])
 
-  // Handle drag end
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event
-
-    if (over && active.id !== over.id) {
-      setLeagues((items) => {
-        const oldIndex = items.findIndex((item) => item.id === active.id)
-        const newIndex = items.findIndex((item) => item.id === over.id)
-        const newOrder = arrayMove(items, oldIndex, newIndex)
-        saveLeagueOrder(newOrder)
-        return newOrder
-      })
-    }
-  }
 
   // Mock data for prototype
   const getMockLeagues = (): League[] => {
@@ -272,7 +164,7 @@ export default function LeaguesPage() {
   const getMockStats = (leagueId: string, quizSlug: string | null) => {
     const userId = localStorage.getItem('userId') || 'user-1'
     const quizSlugs = ['12', '11', '10']
-    
+
     const mockStats: LeagueStats[] = [
       {
         id: 'stat-1',
@@ -357,7 +249,7 @@ export default function LeaguesPage() {
   const handleCreateLeague = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setCreating(true)
-    
+
     try {
       const formData = new FormData(e.currentTarget)
       const name = formData.get('name') as string
@@ -411,9 +303,9 @@ export default function LeaguesPage() {
   const handleInvite = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!selectedLeague) return
-    
+
     setInviting(true)
-    
+
     try {
       // Mock invite for prototype - just show success message
       // In a real implementation, this would send an API request
@@ -433,21 +325,21 @@ export default function LeaguesPage() {
   const handleEditLeague = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!selectedLeague) return
-    
+
     setEditing(true)
-    
+
     try {
       const formData = new FormData(e.currentTarget)
       const name = formData.get('name') as string
       const description = formData.get('description') as string
 
       // Update league in local state for prototype
-      const updatedLeagues = leagues.map(league => 
+      const updatedLeagues = leagues.map(league =>
         league.id === selectedLeague.id
           ? { ...league, name, description: description || null, color: leagueColor }
           : league
       )
-      
+
       setLeagues(updatedLeagues)
       setSelectedLeague({ ...selectedLeague, name, description: description || null, color: leagueColor })
       setShowEditModal(false)
@@ -462,14 +354,14 @@ export default function LeaguesPage() {
 
   const handleDeleteLeague = async () => {
     if (!selectedLeague) return
-    
+
     setDeleting(true)
-    
+
     try {
       // Remove league from local state for prototype
       const updatedLeagues = leagues.filter(league => league.id !== selectedLeague.id)
       setLeagues(updatedLeagues)
-      
+
       // Select first league if available, otherwise clear selection
       if (updatedLeagues.length > 0) {
         setSelectedLeague(updatedLeagues[0])
@@ -477,7 +369,7 @@ export default function LeaguesPage() {
         setSelectedLeague(null)
         setLeagueStats(null)
       }
-      
+
       setShowDeleteModal(false)
     } catch (error) {
       console.error('Error deleting league:', error)
@@ -499,12 +391,12 @@ export default function LeaguesPage() {
 
   const handleLeaveLeague = async () => {
     if (!selectedLeague) return
-    
+
     setLeaving(true)
-    
+
     try {
       const userId = localStorage.getItem('userId')
-      
+
       // Remove user from league members for prototype
       const updatedLeagues = leagues.map(league => {
         if (league.id === selectedLeague.id) {
@@ -518,9 +410,9 @@ export default function LeaguesPage() {
         }
         return league
       })
-      
+
       setLeagues(updatedLeagues)
-      
+
       // Select first league if available, otherwise clear selection
       const updatedLeague = updatedLeagues.find(l => l.id === selectedLeague.id)
       if (updatedLeague && updatedLeague.members.length > 0) {
@@ -534,7 +426,7 @@ export default function LeaguesPage() {
           setLeagueStats(null)
         }
       }
-      
+
       setShowLeaveModal(false)
     } catch (error) {
       console.error('Error leaving league:', error)
@@ -546,9 +438,9 @@ export default function LeaguesPage() {
 
   const handleKickMember = async () => {
     if (!selectedLeague || !memberToKick) return
-    
+
     setKicking(true)
-    
+
     try {
       // Remove member from league for prototype
       const updatedLeagues = leagues.map(league => {
@@ -563,7 +455,7 @@ export default function LeaguesPage() {
         }
         return league
       })
-      
+
       setLeagues(updatedLeagues)
       setSelectedLeague(updatedLeagues.find(l => l.id === selectedLeague.id) || null)
       setShowKickModal(false)
@@ -644,7 +536,7 @@ export default function LeaguesPage() {
   const leagueAccentColor = selectedLeague?.color || '#3B82F6'
   const leagueHoverColor = darkenColor(leagueAccentColor, 10)
 
-  const currentStats = selectedQuiz 
+  const currentStats = selectedQuiz
     ? leagueStats?.stats || []
     : leagueStats?.overallStats || []
 
@@ -688,31 +580,19 @@ export default function LeaguesPage() {
                     </button>
                   </div>
                 ) : (
-                  <DndContext
-                    sensors={sensors}
-                    collisionDetection={closestCenter}
-                    onDragEnd={handleDragEnd}
-                  >
-                    <SortableContext
-                      items={leagues.map(l => l.id)}
-                      strategy={verticalListSortingStrategy}
-                    >
-                      <div className="space-y-2">
-                        {leagues.map((league) => (
-                          <SortableLeagueItem
-                            key={league.id}
-                            league={league}
-                            isSelected={selectedLeague?.id === league.id}
-                            onSelect={() => {
-                              setSelectedLeague(league)
-                              setSelectedQuiz(null)
-                            }}
-                            leagueAccentColor={leagueAccentColor}
-                          />
-                        ))}
-                      </div>
-                    </SortableContext>
-                  </DndContext>
+                  <DraggableLeaguesList
+                    leagues={leagues}
+                    selectedLeague={selectedLeague}
+                    onSelectLeague={(league) => {
+                      setSelectedLeague(league)
+                      setSelectedQuiz(null)
+                    }}
+                    onReorderLeagues={(newOrder) => {
+                      setLeagues(newOrder)
+                      saveLeagueOrder(newOrder)
+                    }}
+                    leagueAccentColor={leagueAccentColor}
+                  />
                 )}
               </div>
             </div>
@@ -765,7 +645,7 @@ export default function LeaguesPage() {
                         <button
                           onClick={() => setShowInviteModal(true)}
                           className="inline-flex items-center justify-center gap-2 h-10 px-4 text-white rounded-full font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2"
-                          style={{ 
+                          style={{
                             backgroundColor: leagueAccentColor
                           }}
                           onMouseEnter={(e) => e.currentTarget.style.backgroundColor = leagueHoverColor}
@@ -803,11 +683,10 @@ export default function LeaguesPage() {
                         return (
                           <div
                             key={member.id}
-                            className={`flex items-center justify-between p-3 rounded-xl ${
-                              isYou
-                                ? 'border'
-                                : 'bg-gray-50 dark:bg-gray-700/50'
-                            }`}
+                            className={`flex items-center justify-between p-3 rounded-xl ${isYou
+                              ? 'border'
+                              : 'bg-gray-50 dark:bg-gray-700/50'
+                              }`}
                           >
                             <div className="flex items-center gap-3">
                               <div className="w-8 h-8 rounded-full text-white flex items-center justify-center font-semibold text-sm" style={{ backgroundColor: leagueAccentColor }}>
@@ -849,11 +728,10 @@ export default function LeaguesPage() {
                       <div className="flex items-center gap-2 flex-wrap">
                         <button
                           onClick={() => setSelectedQuiz(null)}
-                          className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                            selectedQuiz === null
-                              ? 'text-white shadow-sm'
-                              : 'bg-gray-100 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                          }`}
+                          className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${selectedQuiz === null
+                            ? 'text-white shadow-sm'
+                            : 'bg-gray-100 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                            }`}
                           style={selectedQuiz === null ? { backgroundColor: leagueAccentColor } : {}}
                         >
                           Overall
@@ -862,11 +740,10 @@ export default function LeaguesPage() {
                           <button
                             key={slug}
                             onClick={() => setSelectedQuiz(slug)}
-                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                              selectedQuiz === slug
-                                ? 'text-white shadow-sm'
-                                : 'bg-gray-100 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                            }`}
+                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${selectedQuiz === slug
+                              ? 'text-white shadow-sm'
+                              : 'bg-gray-100 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                              }`}
                             style={selectedQuiz === slug ? { backgroundColor: leagueAccentColor } : {}}
                           >
                             Quiz #{slug}
@@ -883,7 +760,7 @@ export default function LeaguesPage() {
                         {selectedQuiz ? `Quiz #${selectedQuiz} Results` : 'Overall Leaderboard'}
                       </h3>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {selectedQuiz 
+                        {selectedQuiz
                           ? 'Ranked by score for this quiz'
                           : 'Ranked by total correct answers across all quizzes'}
                       </p>
@@ -919,27 +796,25 @@ export default function LeaguesPage() {
                         {currentStats.map((stat, index) => {
                           const isYou = stat.user.id === localStorage.getItem('userId')
                           const rank = index + 1
-                          const accuracy = selectedQuiz && stat.totalQuestions 
+                          const accuracy = selectedQuiz && stat.totalQuestions
                             ? Math.round((stat.score || 0) / stat.totalQuestions * 100)
                             : null
-                          
+
                           return (
                             <div
                               key={stat.id}
-                              className={`grid grid-cols-12 gap-4 items-center px-4 py-3.5 rounded-xl transition-all ${
-                                isYou
-                                  ? 'text-white shadow-md'
-                                  : 'bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 border border-transparent hover:border-gray-200 dark:hover:border-gray-600'
-                              }`}
+                              className={`grid grid-cols-12 gap-4 items-center px-4 py-3.5 rounded-xl transition-all ${isYou
+                                ? 'text-white shadow-md'
+                                : 'bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 border border-transparent hover:border-gray-200 dark:hover:border-gray-600'
+                                }`}
                               style={isYou ? { backgroundColor: leagueAccentColor } : {}}
                             >
                               {/* Rank */}
                               <div className="col-span-1 flex items-center justify-center">
-                                <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm tabular-nums ${
-                                  isYou 
-                                    ? 'bg-white/20 text-white'
-                                    : 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
-                                }`}>
+                                <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm tabular-nums ${isYou
+                                  ? 'bg-white/20 text-white'
+                                  : 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
+                                  }`}>
                                   {rank}
                                 </div>
                               </div>
@@ -973,7 +848,7 @@ export default function LeaguesPage() {
                                       score
                                     </div>
                                   </div>
-                                  
+
                                   {/* Accuracy */}
                                   <div className="col-span-4 md:col-span-2 text-right">
                                     <div className="font-bold text-lg md:text-xl tabular-nums">
@@ -983,7 +858,7 @@ export default function LeaguesPage() {
                                       accuracy
                                     </div>
                                   </div>
-                                  
+
                                   <div className="col-span-4 hidden md:block"></div>
                                 </>
                               ) : (
@@ -997,7 +872,7 @@ export default function LeaguesPage() {
                                       correct
                                     </div>
                                   </div>
-                                  
+
                                   {/* Quizzes Played */}
                                   <div className="col-span-2 md:col-span-2 text-right">
                                     <div className="font-bold text-lg md:text-xl tabular-nums">
@@ -1007,11 +882,11 @@ export default function LeaguesPage() {
                                       quizzes
                                     </div>
                                   </div>
-                                  
+
                                   {/* Average Score */}
                                   <div className="col-span-2 md:col-span-3 text-right">
                                     <div className="font-bold text-lg md:text-xl tabular-nums">
-                                      {stat.quizzesPlayed > 0 
+                                      {stat.quizzesPlayed > 0
                                         ? (stat.totalCorrectAnswers / stat.quizzesPlayed).toFixed(1)
                                         : '0.0'}
                                       <span className="text-sm font-normal opacity-70 ml-1.5">
@@ -1106,11 +981,10 @@ export default function LeaguesPage() {
                           key={color}
                           type="button"
                           onClick={() => setLeagueColor(color)}
-                          className={`w-10 h-10 rounded-lg border-2 transition-all ${
-                            leagueColor === color
-                              ? 'border-gray-900 dark:border-white scale-110 ring-2 ring-offset-2'
-                              : 'border-gray-200 dark:border-gray-600 hover:scale-105'
-                          }`}
+                          className={`w-10 h-10 rounded-lg border-2 transition-all ${leagueColor === color
+                            ? 'border-gray-900 dark:border-white scale-110 ring-2 ring-offset-2'
+                            : 'border-gray-200 dark:border-gray-600 hover:scale-105'
+                            }`}
                           style={{ backgroundColor: color }}
                           aria-label={`Select color ${color}`}
                         />
@@ -1209,11 +1083,10 @@ export default function LeaguesPage() {
                           key={color}
                           type="button"
                           onClick={() => setLeagueColor(color)}
-                          className={`w-10 h-10 rounded-lg border-2 transition-all ${
-                            leagueColor === color
-                              ? 'border-gray-900 dark:border-white scale-110 ring-2 ring-offset-2'
-                              : 'border-gray-200 dark:border-gray-600 hover:scale-105'
-                          }`}
+                          className={`w-10 h-10 rounded-lg border-2 transition-all ${leagueColor === color
+                            ? 'border-gray-900 dark:border-white scale-110 ring-2 ring-offset-2'
+                            : 'border-gray-200 dark:border-gray-600 hover:scale-105'
+                            }`}
                           style={{ backgroundColor: color }}
                           aria-label={`Select color ${color}`}
                         />
@@ -1225,7 +1098,7 @@ export default function LeaguesPage() {
                       type="submit"
                       disabled={editing}
                       className="flex-1 inline-flex items-center justify-center h-11 px-4 text-white rounded-full font-medium transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-offset-2"
-                      style={{ 
+                      style={{
                         backgroundColor: leagueColor,
                         '--tw-ring-color': leagueColor,
                       } as React.CSSProperties}

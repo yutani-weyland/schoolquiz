@@ -30,12 +30,12 @@ interface PlatformStats {
 /**
  * Time Period Toggle Component
  */
-function TimePeriodToggle({ 
-  value, 
-  onChange 
-}: { 
+function TimePeriodToggle({
+  value,
+  onChange
+}: {
   value: TimePeriod
-  onChange: (period: TimePeriod) => void 
+  onChange: (period: TimePeriod) => void
 }) {
   const periods: { label: string; value: TimePeriod }[] = [
     { label: 'Week', value: 'week' },
@@ -49,11 +49,10 @@ function TimePeriodToggle({
         <button
           key={period.value}
           onClick={() => onChange(period.value)}
-          className={`px-2.5 py-1 text-xs font-medium rounded transition-all duration-150 ${
-            value === period.value
+          className={`px-2.5 py-1 text-xs font-medium rounded transition-all duration-150 ${value === period.value
               ? 'bg-[hsl(var(--background))] text-[hsl(var(--foreground))] shadow-sm font-semibold'
               : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]/50'
-          }`}
+            }`}
         >
           {period.label}
         </button>
@@ -238,7 +237,7 @@ export default function AdminOverviewPage() {
       <PageHeader
         title="Overview"
         description="Platform statistics and key metrics"
-        actions={
+        action={
           <div className="flex items-center gap-2 text-sm text-[hsl(var(--muted-foreground))]">
             <Clock className="w-4 h-4" />
             <span>Last updated: {currentTime || '--:--:--'}</span>
@@ -353,72 +352,72 @@ export default function AdminOverviewPage() {
           ))
         ) : (
           statCards.map((stat) => {
-          const Icon = stat.icon
-          const cardTimePeriod = stat.hasTimeToggle ? (timePeriods[stat.id] || 'month') : 'month'
-          const data = stat.hasTimeToggle && stat.getData ? stat.getData(cardTimePeriod) : {
-            value: stat.value!,
-            trend: stat.trend!,
-            description: stat.description!,
-          }
-          const trendDirection = stat.hasTimeToggle 
-            ? (data.trend.startsWith('+') ? 'up' : data.trend.startsWith('-') ? 'down' : 'neutral')
-            : stat.trendDirection
-          const trendColor = 
-            trendDirection === 'up' ? 'text-green-500' :
-            trendDirection === 'down' ? 'text-red-500' :
-            'text-[hsl(var(--muted-foreground))]'
-          
-          return (
-            <div
-              key={stat.id}
-              className="group relative bg-[hsl(var(--card))] rounded-2xl p-4 sm:p-6 border border-[hsl(var(--border))] hover:border-[hsl(var(--primary))] transition-all duration-200 hover:-translate-y-0.5"
-            >
-              <div className="flex items-start justify-between gap-3 sm:gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2 mb-1.5 sm:mb-2 flex-wrap">
-                    <p className="text-[10px] sm:text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider truncate">
-                      {stat.title}
+            const Icon = stat.icon
+            const cardTimePeriod = stat.hasTimeToggle ? (timePeriods[stat.id] || 'month') : 'month'
+            const data = stat.hasTimeToggle && stat.getData ? stat.getData(cardTimePeriod) : {
+              value: stat.value!,
+              trend: stat.trend!,
+              description: stat.description!,
+            }
+            const trendDirection = stat.hasTimeToggle
+              ? (data.trend.startsWith('+') ? 'up' : data.trend.startsWith('-') ? 'down' : 'neutral')
+              : stat.trendDirection
+            const trendColor =
+              trendDirection === 'up' ? 'text-green-500' :
+                trendDirection === 'down' ? 'text-red-500' :
+                  'text-[hsl(var(--muted-foreground))]'
+
+            return (
+              <div
+                key={stat.id}
+                className="group relative bg-[hsl(var(--card))] rounded-2xl p-4 sm:p-6 border border-[hsl(var(--border))] hover:border-[hsl(var(--primary))] transition-all duration-200 hover:-translate-y-0.5"
+              >
+                <div className="flex items-start justify-between gap-3 sm:gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2 mb-1.5 sm:mb-2 flex-wrap">
+                      <p className="text-[10px] sm:text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider truncate">
+                        {stat.title}
+                      </p>
+                      {stat.hasTimeToggle && (
+                        <div className="hidden sm:block">
+                          <TimePeriodToggle
+                            value={cardTimePeriod}
+                            onChange={(period) => setTimePeriods(prev => ({ ...prev, [stat.id]: period }))}
+                          />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-baseline gap-1.5 sm:gap-2 mb-1 sm:mb-2">
+                      <p className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[hsl(var(--foreground))] tracking-tight">
+                        {data.value}
+                      </p>
+                      {data.trend && (
+                        <span className={`text-xs sm:text-sm font-medium ${trendColor} flex items-center gap-0.5 sm:gap-1`}>
+                          <TrendingUp className={`w-2.5 h-2.5 sm:w-3 sm:h-3 ${trendDirection === 'down' ? 'rotate-180' : ''}`} />
+                          <span className="hidden sm:inline">{data.trend}</span>
+                          <span className="sm:hidden">{data.trend.replace(/[^+\-%]/g, '')}</span>
+                        </span>
+                      )}
+                    </div>
+                    <p className="hidden sm:block text-xs font-normal text-[hsl(var(--muted-foreground))] leading-relaxed opacity-90">
+                      {data.description}
                     </p>
                     {stat.hasTimeToggle && (
-                      <div className="hidden sm:block">
-                        <TimePeriodToggle 
-                          value={cardTimePeriod} 
-                          onChange={(period) => setTimePeriods(prev => ({ ...prev, [stat.id]: period }))} 
+                      <div className="sm:hidden mt-1.5">
+                        <TimePeriodToggle
+                          value={cardTimePeriod}
+                          onChange={(period) => setTimePeriods(prev => ({ ...prev, [stat.id]: period }))}
                         />
                       </div>
                     )}
                   </div>
-                  <div className="flex items-baseline gap-1.5 sm:gap-2 mb-1 sm:mb-2">
-                    <p className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[hsl(var(--foreground))] tracking-tight">
-                      {data.value}
-                    </p>
-                    {data.trend && (
-                      <span className={`text-xs sm:text-sm font-medium ${trendColor} flex items-center gap-0.5 sm:gap-1`}>
-                        <TrendingUp className={`w-2.5 h-2.5 sm:w-3 sm:h-3 ${trendDirection === 'down' ? 'rotate-180' : ''}`} />
-                        <span className="hidden sm:inline">{data.trend}</span>
-                        <span className="sm:hidden">{data.trend.replace(/[^+\-%]/g, '')}</span>
-                      </span>
-                    )}
+                  <div className="p-2 sm:p-3 bg-[hsl(var(--muted))] rounded-lg sm:rounded-xl flex-shrink-0">
+                    <Icon className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-[hsl(var(--primary))]" />
                   </div>
-                  <p className="hidden sm:block text-xs font-normal text-[hsl(var(--muted-foreground))] leading-relaxed opacity-90">
-                    {data.description}
-                  </p>
-                  {stat.hasTimeToggle && (
-                    <div className="sm:hidden mt-1.5">
-                      <TimePeriodToggle 
-                        value={cardTimePeriod} 
-                        onChange={(period) => setTimePeriods(prev => ({ ...prev, [stat.id]: period }))} 
-                      />
-                    </div>
-                  )}
-                </div>
-                <div className="p-2 sm:p-3 bg-[hsl(var(--muted))] rounded-lg sm:rounded-xl flex-shrink-0">
-                  <Icon className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-[hsl(var(--primary))]" />
                 </div>
               </div>
-            </div>
-          )
-        })
+            )
+          })
         )}
       </div>
 

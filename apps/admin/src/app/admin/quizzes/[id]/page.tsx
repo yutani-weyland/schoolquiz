@@ -8,6 +8,7 @@ import { requireAdmin } from '@/lib/auth-helpers'
 import { headers } from 'next/headers'
 import { unstable_cache } from 'next/cache'
 import { notFound } from 'next/navigation'
+import { NextRequest } from 'next/server'
 import { AdminQuizDetailClient } from './AdminQuizDetailClient'
 import { CACHE_TTL, CACHE_TAGS } from '@/lib/cache-config'
 
@@ -111,12 +112,15 @@ async function getQuizInternal(id: string) {
   // Questions are already included in rounds query - no separate query needed
   const rounds = roundsBasic
 
-  const averageAudienceSize = runsStats.count > 0 
-    ? Math.round(runsStats.totalParticipants / runsStats.count) 
+  const averageAudienceSize = runsStats.count > 0
+    ? Math.round(runsStats.totalParticipants / runsStats.count)
     : 0
 
   return {
     ...quiz,
+    publicationDate: quiz.publicationDate?.toISOString() || null,
+    createdAt: quiz.createdAt.toISOString(),
+    updatedAt: quiz.updatedAt.toISOString(),
     rounds,
     runs: [], // Empty array - not needed for detail view
     analytics: {
@@ -134,7 +138,7 @@ async function getQuiz(id: string) {
   return unstable_cache(
     async () => getQuizInternal(id),
     [CACHE_TAGS.QUIZ_DETAIL(id)],
-    { 
+    {
       revalidate: CACHE_TTL.DETAIL,
       tags: [CACHE_TAGS.QUIZZES, CACHE_TAGS.QUIZ_DETAIL(id)],
     }
@@ -149,12 +153,12 @@ export default async function AdminQuizDetailPage({
   searchParams: Promise<{ tab?: string }>
 }) {
   const startTime = Date.now()
-  
+
   // Require admin access (with fallback for development)
   // Skip auth check in development to avoid blocking
   if (process.env.SKIP_ADMIN_AUTH !== 'true' && process.env.NODE_ENV === 'production') {
     const headersList = await headers()
-    const request = new Request('http://localhost', {
+    const request = new NextRequest('http://localhost', {
       headers: headersList,
     })
     await requireAdmin(request).catch(() => {
@@ -164,9 +168,9 @@ export default async function AdminQuizDetailPage({
 
   const { id } = await params
   const { tab } = await searchParams
-  
+
   const quiz = await getQuiz(id)
-  
+
   if (process.env.NODE_ENV === 'development') {
     console.log(`[Quiz Detail] Loaded in ${Date.now() - startTime}ms`)
   }

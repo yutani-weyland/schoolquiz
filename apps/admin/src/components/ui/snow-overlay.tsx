@@ -27,13 +27,15 @@ export function SnowOverlay() {
       radius: number;
       speed: number;
       opacity: number;
+      drift: number;
 
       constructor() {
-        this.x = Math.random() * canvas.width;
-        this.y = Math.random() * canvas.height;
+        this.x = Math.random() * (canvas?.width || 0);
+        this.y = Math.random() * (canvas?.height || 0);
         this.radius = Math.random() * 2 + 1;
         this.speed = Math.random() * 0.5 + 0.2;
         this.opacity = Math.random() * 0.5 + 0.3;
+        this.drift = Math.random() * 0.5 - 0.25;
       }
 
       draw() {
@@ -49,12 +51,12 @@ export function SnowOverlay() {
         this.x += Math.sin(this.y * 0.01) * 0.3; // Slight horizontal drift
 
         // Reset if off screen
-        if (this.y > canvas.height) {
+        if (this.y > (canvas?.height || 0)) {
           this.y = 0;
-          this.x = Math.random() * canvas.width;
+          this.x = Math.random() * (canvas?.width || 0);
         }
-        if (this.x > canvas.width) this.x = 0;
-        if (this.x < 0) this.x = canvas.width;
+        if (this.x > (canvas?.width || 0)) this.x = 0;
+        if (this.x < 0) this.x = canvas?.width || 0;
       }
     }
 

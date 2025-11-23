@@ -103,7 +103,7 @@ export default function AdminUserDetailPage() {
     try {
       setIsLoading(true)
       setError(null)
-      
+
       let response: Response
       try {
         response = await fetch(`/api/admin/users/${userId}`)
@@ -114,7 +114,7 @@ export default function AdminUserDetailPage() {
         setIsLoading(false)
         return
       }
-      
+
       const contentType = response.headers.get('content-type')
       if (!contentType || !contentType.includes('application/json')) {
         console.warn('Expected JSON but got:', contentType)
@@ -129,7 +129,7 @@ export default function AdminUserDetailPage() {
         setIsLoading(false)
         return
       }
-      
+
       let data: any
       try {
         data = await response.json()
@@ -139,7 +139,7 @@ export default function AdminUserDetailPage() {
         setIsLoading(false)
         return
       }
-      
+
       if (response.ok) {
         if (data.user) {
           setUser(data.user)
@@ -296,7 +296,7 @@ export default function AdminUserDetailPage() {
         </div>
         <div className="flex items-center gap-3">
           {user.platformRole && (
-            <Badge variant="danger" icon={UserCog}>
+            <Badge variant="error" icon={UserCog}>
               {user.platformRole.replace('_', ' ')}
             </Badge>
           )}
@@ -428,7 +428,7 @@ function OverviewTab({ user, onRoleChange }: { user: UserDetail; onRoleChange: (
               )}
             </div>
           </div>
-          
+
           {user.phone && (
             <div>
               <p className="text-sm text-[hsl(var(--muted-foreground))] mb-1">Phone</p>
@@ -442,7 +442,7 @@ function OverviewTab({ user, onRoleChange }: { user: UserDetail; onRoleChange: (
               </div>
             </div>
           )}
-          
+
           <div>
             <p className="text-sm text-[hsl(var(--muted-foreground))] mb-2">Platform Role</p>
             <Select
@@ -462,27 +462,27 @@ function OverviewTab({ user, onRoleChange }: { user: UserDetail; onRoleChange: (
               </SelectContent>
             </Select>
           </div>
-          
+
           <div>
             <p className="text-sm text-[hsl(var(--muted-foreground))] mb-1">Subscription Status</p>
-            <Badge 
+            <Badge
               variant={
                 user.subscriptionStatus === 'ACTIVE' ? 'success' :
-                user.subscriptionStatus === 'TRIALING' ? 'warning' :
-                user.subscriptionStatus === 'PAST_DUE' ? 'danger' : 'default'
+                  user.subscriptionStatus === 'TRIALING' ? 'warning' :
+                    user.subscriptionStatus === 'PAST_DUE' ? 'error' : 'default'
               }
             >
               {user.subscriptionStatus}
             </Badge>
           </div>
-          
+
           {user.subscriptionPlan && (
             <div>
               <p className="text-sm text-[hsl(var(--muted-foreground))] mb-1">Subscription Plan</p>
               <p className="text-sm font-medium text-[hsl(var(--foreground))]">{user.subscriptionPlan}</p>
             </div>
           )}
-          
+
           {user.subscriptionEndsAt && (
             <div>
               <p className="text-sm text-[hsl(var(--muted-foreground))] mb-1">Subscription Ends</p>
@@ -491,7 +491,7 @@ function OverviewTab({ user, onRoleChange }: { user: UserDetail; onRoleChange: (
               </p>
             </div>
           )}
-          
+
           {user.referralCode && (
             <div>
               <p className="text-sm text-[hsl(var(--muted-foreground))] mb-1">Referral Code</p>
@@ -500,7 +500,7 @@ function OverviewTab({ user, onRoleChange }: { user: UserDetail; onRoleChange: (
               </p>
             </div>
           )}
-          
+
           {user.referralCount !== undefined && user.referralCount > 0 && (
             <div>
               <p className="text-sm text-[hsl(var(--muted-foreground))] mb-1">Successful Referrals</p>
@@ -509,14 +509,14 @@ function OverviewTab({ user, onRoleChange }: { user: UserDetail; onRoleChange: (
               </p>
             </div>
           )}
-          
+
           <div>
             <p className="text-sm text-[hsl(var(--muted-foreground))] mb-1">Last Login</p>
             <p className="text-sm font-medium text-[hsl(var(--foreground))]">
               {user.lastLoginAt ? formatDate(user.lastLoginAt) : 'Never'}
             </p>
           </div>
-          
+
           <div>
             <p className="text-sm text-[hsl(var(--muted-foreground))] mb-1">Joined</p>
             <p className="text-sm font-medium text-[hsl(var(--foreground))]">
@@ -567,11 +567,11 @@ function OrganisationsTab({ user }: { user: UserDetail }) {
                       </button>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <Badge 
+                      <Badge
                         variant={
                           org.status === 'ACTIVE' ? 'success' :
-                          org.status === 'TRIALING' ? 'warning' :
-                          org.status === 'PAST_DUE' ? 'danger' : 'default'
+                            org.status === 'TRIALING' ? 'warning' :
+                              org.status === 'PAST_DUE' ? 'error' : 'default'
                         }
                       >
                         {org.status}
@@ -640,17 +640,17 @@ function OrganisationsTab({ user }: { user: UserDetail }) {
                       </button>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <Badge 
+                      <Badge
                         variant={
                           member.role === 'OWNER' ? 'info' :
-                          member.role === 'ADMIN' ? 'default' : 'default'
+                            member.role === 'ADMIN' ? 'default' : 'default'
                         }
                       >
                         {member.role}
                       </Badge>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <Badge 
+                      <Badge
                         variant={member.status === 'ACTIVE' ? 'success' : 'default'}
                       >
                         {member.status}
@@ -775,11 +775,11 @@ function ActivityTab({ user }: { user: UserDetail }) {
                       </p>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <Badge 
+                      <Badge
                         variant={
                           achievement.achievement.rarity === 'legendary' ? 'warning' :
-                          achievement.achievement.rarity === 'epic' ? 'info' :
-                          achievement.achievement.rarity === 'rare' ? 'default' : 'default'
+                            achievement.achievement.rarity === 'epic' ? 'info' :
+                              achievement.achievement.rarity === 'rare' ? 'default' : 'default'
                         }
                       >
                         {achievement.achievement.rarity}

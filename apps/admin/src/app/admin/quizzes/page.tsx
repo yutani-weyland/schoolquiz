@@ -11,6 +11,7 @@ import { headers } from 'next/headers'
 import { unstable_cache } from 'next/cache'
 import { TableSkeleton } from '@/components/admin/ui/TableSkeleton'
 import { CACHE_TTL, CACHE_TAGS, createCacheKey } from '@/lib/cache-config'
+import { NextRequest } from 'next/server'
 
 interface Quiz {
   id: string
@@ -64,7 +65,7 @@ async function getQuizzesInternal(searchParams: {
   // Try to use _count for runs, but fallback if relation doesn't exist
   let quizzes: any[]
   let total: number
-  
+
   try {
     // Try optimized query with relation count
     const result = await Promise.all([
@@ -135,7 +136,7 @@ async function getQuizzesInternal(searchParams: {
       ])
       quizzes = result[0]
       total = result[1]
-      
+
       // Get runs count separately if possible
       let runsCounts: any[] = []
       if (quizzes.length > 0) {
@@ -156,14 +157,14 @@ async function getQuizzesInternal(searchParams: {
           runsCounts = []
         }
       }
-      
+
       // Create a map of quizId -> runs count
       const runsCountMap = new Map(
-        Array.isArray(runsCounts) 
+        Array.isArray(runsCounts)
           ? runsCounts.map((r: any) => [r.quizId, r._count.id])
           : []
       )
-      
+
       // Add runs count to each quiz
       quizzes = quizzes.map(quiz => ({
         ...quiz,
@@ -177,7 +178,7 @@ async function getQuizzesInternal(searchParams: {
       throw error
     }
   }
-  
+
   const quizzesWithRuns = quizzes
 
   return {
@@ -201,7 +202,7 @@ async function getQuizzes(searchParams: {
   // Only check if not skipping auth (to avoid unnecessary DB queries)
   if (process.env.SKIP_ADMIN_AUTH !== 'true' && process.env.NODE_ENV === 'production') {
     const headersList = await headers()
-    const request = new Request('http://localhost', {
+    const request = new NextRequest('http://localhost', {
       headers: headersList,
     })
     await requireAdmin(request).catch(() => {
@@ -217,7 +218,7 @@ async function getQuizzes(searchParams: {
         page: searchParams.page || '1',
         limit: searchParams.limit || '50',
       }),
-      { 
+      {
         revalidate: CACHE_TTL.LIST,
         tags: [CACHE_TAGS.QUIZZES],
       }

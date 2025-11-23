@@ -33,7 +33,7 @@ function QuestionBankPageContent() {
   const [categories, setCategories] = useState<Array<{ id: string; name: string; parentId?: string | null }>>([])
   const [sortBy, setSortBy] = useState<string>('updatedAt')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
-  
+
   // Modal state
   const [showModal, setShowModal] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -101,10 +101,10 @@ function QuestionBankPageContent() {
     }
 
     try {
-      const url = editingId 
+      const url = editingId
         ? `/api/admin/questions/bank/${editingId}`
         : '/api/admin/questions/bank'
-      
+
       const method = editingId ? 'PUT' : 'POST'
 
       const response = await fetch(url, {
@@ -181,7 +181,7 @@ function QuestionBankPageContent() {
   const getCategoryDisplayName = (categoryId: string) => {
     const category = categories.find(c => c.id === categoryId)
     if (!category) return ''
-    
+
     if (category.parentId) {
       const parent = categories.find(c => c.id === category.parentId)
       return parent ? `${parent.name} > ${category.name}` : category.name
@@ -328,22 +328,22 @@ function QuestionBankPageContent() {
               <table className="w-full">
                 <DataTableHeader>
                   <tr>
-                    <DataTableHeaderCell 
-                      sortable 
+                    <DataTableHeaderCell
+                      sortable
                       sorted={sortBy === 'text' ? sortOrder : undefined}
                       onSort={() => handleSort('text')}
                     >
                       Question
                     </DataTableHeaderCell>
-                    <DataTableHeaderCell 
-                      sortable 
+                    <DataTableHeaderCell
+                      sortable
                       sorted={sortBy === 'answer' ? sortOrder : undefined}
                       onSort={() => handleSort('answer')}
                     >
                       Answer
                     </DataTableHeaderCell>
-                    <DataTableHeaderCell 
-                      sortable 
+                    <DataTableHeaderCell
+                      sortable
                       sorted={sortBy === 'categoryId' ? sortOrder : undefined}
                       onSort={() => handleSort('categoryId')}
                     >
@@ -352,8 +352,8 @@ function QuestionBankPageContent() {
                     <DataTableHeaderCell>
                       Status
                     </DataTableHeaderCell>
-                    <DataTableHeaderCell 
-                      sortable 
+                    <DataTableHeaderCell
+                      sortable
                       sorted={sortBy === 'updatedAt' ? sortOrder : undefined}
                       onSort={() => handleSort('updatedAt')}
                     >
@@ -381,20 +381,20 @@ function QuestionBankPageContent() {
                         </div>
                       </DataTableCell>
                       <DataTableCell>
-                        <Badge variant="secondary" className="text-xs">
+                        <Badge variant="default" className="text-xs">
                           {getCategoryDisplayName(question.categoryId)}
                         </Badge>
                       </DataTableCell>
                       <DataTableCell>
                         {question.usedInQuiz ? (
-                          <Link 
+                          <Link
                             href={`/admin/quizzes/${question.usedInQuiz.id}`}
                             className="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
                           >
                             Used in: {question.usedInQuiz.title}
                           </Link>
                         ) : (
-                          <Badge variant="secondary" className="text-xs">
+                          <Badge variant="default" className="text-xs">
                             Unused
                           </Badge>
                         )}

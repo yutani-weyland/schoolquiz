@@ -56,7 +56,7 @@ export function transformRoundToComponent(
 ): QuizRound {
 	// Sort questions by order
 	const sortedQuestions = [...prismaRound.questions].sort((a, b) => a.order - b.order);
-	
+
 	return {
 		number: prismaRound.index + 1, // Prisma uses 0-indexed, component uses 1-indexed
 		title: prismaRound.title || prismaRound.category?.name || 'Untitled Round',
@@ -74,10 +74,10 @@ export function transformQuizToPlayFormat(prismaQuiz: QuizWithRelations): {
 } {
 	// Sort rounds by index
 	const sortedRounds = [...prismaQuiz.rounds].sort((a, b) => a.index - b.index);
-	
+
 	// Transform rounds
 	const rounds: QuizRound[] = sortedRounds.map(transformRoundToComponent);
-	
+
 	// Flatten all questions from all rounds
 	const questions: QuizQuestion[] = [];
 	for (const round of sortedRounds) {
@@ -86,7 +86,7 @@ export function transformQuizToPlayFormat(prismaQuiz: QuizWithRelations): {
 			questions.push(transformQuestionToComponent(qrq.question, round.index + 1));
 		}
 	}
-	
+
 	return {
 		questions,
 		rounds,
@@ -105,7 +105,7 @@ export function transformQuestionToPrisma(
 	return {
 		text: componentQuestion.question,
 		answer: componentQuestion.answer,
-		explanation: componentQuestion.explanation || null,
+		explanation: null,
 		difficulty: 0.5, // Default difficulty
 		tags: '',
 		status: 'published',
@@ -129,8 +129,10 @@ export function transformRoundToPrisma(
 		quizId,
 		index,
 		categoryId,
+		title: componentRound.title,
 		blurb: componentRound.blurb || null,
 		targetDifficulty: null,
+		isPeoplesRound: index === QUIZ_CONSTANTS.PEOPLES_ROUND_NUMBER - 1,
 	};
 }
 

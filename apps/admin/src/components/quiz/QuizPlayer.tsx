@@ -62,13 +62,13 @@ function CircularProgress({
 	// Calculate progress percentage based on value/total if total exists, otherwise use value as percentage
 	const progressPercentage = total ? (value / total) * 100 : value;
 	const strokeDashoffset = circumference - (circumference * (progressPercentage / 100));
-	
+
 	const viewBox = `-${size * 0.125} -${size * 0.125} ${size * 1.25} ${size * 1.25}`;
-	
+
 	// Generate random direction for +1 animation - only when plusOneKey changes
 	// Use client-side only to avoid hydration mismatches
 	const [randomDirection, setRandomDirection] = React.useState({ x: 0, y: 0 });
-	
+
 	React.useEffect(() => {
 		if (!showPlusOne) {
 			setRandomDirection({ x: 0, y: 0 });
@@ -119,21 +119,21 @@ function CircularProgress({
 					fill="transparent"
 					strokeDasharray={circumference}
 					className={isDark ? "stroke-white" : "stroke-black"}
-					style={{ 
+					style={{
 						transition: "stroke-dashoffset 0.6s ease",
 						stroke: accentColor || (isDark ? "#fff" : "#000")
 					}}
 				/>
 			</svg>
 			{/* Score Display - Centered number */}
-			<div 
+			<div
 				className="absolute inset-0 pointer-events-none flex items-center justify-center transition-colors duration-300 ease-in-out tracking-tight"
 				style={{
 					fontFamily: 'var(--app-font), system-ui, sans-serif',
 					color: isDark ? "#fff" : "#000"
 				}}
 			>
-				<span 
+				<span
 					className="font-bold tracking-tight transition-colors duration-300 ease-in-out"
 					style={{
 						fontSize: size * 0.34,
@@ -144,54 +144,54 @@ function CircularProgress({
 					{value}
 				</span>
 			</div>
-		
-		{/* +1 Animation */}
-		<AnimatePresence>
-			{showPlusOne && (
-				<motion.div
-					key={`plus-one-${plusOneKey}`}
-					initial={{ 
-						opacity: 0, 
-						scale: 0.5,
-						y: -30,
-						x: 0
-					}}
-					animate={{ 
-						opacity: [0, 1, 1, 1, 0],
-						scale: [0.5, 1.4, 1.3, 1.2, 0.9],
-						y: [-30, randomDirection.y * 0.3 - 20, randomDirection.y * 0.5 - 10, randomDirection.y * 0.8, randomDirection.y],
-						x: [0, randomDirection.x * 0.25, randomDirection.x * 0.5, randomDirection.x * 0.75, randomDirection.x]
-					}}
-					exit={{
-						opacity: 0,
-						scale: 0.9,
-						y: randomDirection.y,
-						x: randomDirection.x
-					}}
-					transition={{
-						duration: 1.8,
-						ease: "easeOut",
-						times: [0, 0.15, 0.4, 0.75, 1]
-					}}
-					className="absolute inset-0 flex items-center justify-center pointer-events-none"
-					style={{
-						zIndex: 10
-					}}
-				>
-					<span
-						className="text-5xl font-bold"
+
+			{/* +1 Animation */}
+			<AnimatePresence>
+				{showPlusOne && (
+					<motion.div
+						key={`plus-one-${plusOneKey}`}
+						initial={{
+							opacity: 0,
+							scale: 0.5,
+							y: -30,
+							x: 0
+						}}
+						animate={{
+							opacity: [0, 1, 1, 1, 0],
+							scale: [0.5, 1.4, 1.3, 1.2, 0.9],
+							y: [-30, randomDirection.y * 0.3 - 20, randomDirection.y * 0.5 - 10, randomDirection.y * 0.8, randomDirection.y],
+							x: [0, randomDirection.x * 0.25, randomDirection.x * 0.5, randomDirection.x * 0.75, randomDirection.x]
+						}}
+						exit={{
+							opacity: 0,
+							scale: 0.9,
+							y: randomDirection.y,
+							x: randomDirection.x
+						}}
+						transition={{
+							duration: 1.8,
+							ease: "easeOut",
+							times: [0, 0.15, 0.4, 0.75, 1]
+						}}
+						className="absolute inset-0 flex items-center justify-center pointer-events-none"
 						style={{
-							color: isDark ? "#fff" : "#000",
-							textShadow: isDark
-								? "0 0 20px rgba(255, 255, 255, 0.8), 0 0 40px rgba(255, 255, 255, 0.4)"
-								: "0 0 20px rgba(0, 0, 0, 0.5), 0 0 40px rgba(0, 0, 0, 0.3)"
+							zIndex: 10
 						}}
 					>
-						+1
-					</span>
-				</motion.div>
-			)}
-		</AnimatePresence>
+						<span
+							className="text-5xl font-bold"
+							style={{
+								color: isDark ? "#fff" : "#000",
+								textShadow: isDark
+									? "0 0 20px rgba(255, 255, 255, 0.8), 0 0 40px rgba(255, 255, 255, 0.4)"
+									: "0 0 20px rgba(0, 0, 0, 0.5), 0 0 40px rgba(0, 0, 0, 0.3)"
+							}}
+						>
+							+1
+						</span>
+					</motion.div>
+				)}
+			</AnimatePresence>
 		</div>
 	);
 }
@@ -216,7 +216,7 @@ function CircularProgressButton({
 	const strokeDashoffset = circumference - (circumference * (progressPercentage / 100));
 
 	return (
-		<motion.div 
+		<motion.div
 			className={`pointer-events-none ${className}`}
 			style={{ width: size, height: size }}
 			initial={{ opacity: 0, scale: 0.8 }}
@@ -256,7 +256,7 @@ function CircularProgressButton({
 					fill="transparent"
 					strokeDasharray={circumference}
 					className={isDark ? "stroke-white" : "stroke-black"}
-					style={{ 
+					style={{
 						transition: "stroke-dashoffset 0.8s cubic-bezier(0.22, 1, 0.36, 1)",
 						opacity: 0.8
 					}}
@@ -315,35 +315,35 @@ function getNotchTextColor(backgroundColor: string): string {
 
 export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, weekISO, isNewest = false, isDemo = false, maxQuestions, onDemoComplete }: QuizPlayerProps) {
 	const { isPremium, isVisitor, isLoggedIn } = useUserAccess();
-	
+
 	// For restricted quiz mode: show all questions initially, but lock after 6 answers
 	const RESTRICTED_ANSWER_LIMIT = 6; // Lock restricted quiz after 6 answers
-	
+
 	// In restricted quiz mode, show all questions initially (no slicing)
 	// In non-restricted mode, apply maxQuestions limit if specified
-	const displayQuestions = isDemo 
+	const displayQuestions = isDemo
 		? questions // Show all questions in restricted quiz mode
 		: (maxQuestions ? questions.slice(0, maxQuestions) : questions);
-	const displayRounds = isDemo 
+	const displayRounds = isDemo
 		? rounds // Show all rounds in restricted quiz mode
 		: (maxQuestions ? rounds.slice(0, 2) : rounds);
-	
+
 	// Always show all questions (no visitor limit)
 	const finalQuestions = displayQuestions;
 	const finalRounds = displayRounds;
-	
+
 	const [showSignupPrompt, setShowSignupPrompt] = React.useState(false);
 	const [hasShownPrompt, setHasShownPrompt] = React.useState(false);
-	
+
 	// Debug logging
 	React.useEffect(() => {
-		console.log('[QuizPlayer] Mounted', { 
-			quizTitle, 
-			quizColor, 
-			quizSlug, 
-			questionsCount: finalQuestions?.length, 
-			roundsCount: finalRounds?.length, 
-			isDemo, 
+		console.log('[QuizPlayer] Mounted', {
+			quizTitle,
+			quizColor,
+			quizSlug,
+			questionsCount: finalQuestions?.length,
+			roundsCount: finalRounds?.length,
+			isDemo,
 			isVisitor,
 			hasQuestions: !!finalQuestions && finalQuestions.length > 0,
 			hasRounds: !!finalRounds && finalRounds.length > 0
@@ -367,17 +367,17 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 	React.useEffect(() => {
 		if (isDemo) return; // Restricted quiz mode bypasses auth checks
 		if (isVisitor) return; // Visitors can start the quiz (will be prompted after 5 questions)
-		
+
 		if (typeof window === 'undefined') return;
-		
+
 		const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
-		
+
 		// Require sign-up for non-visitors
 		if (!loggedIn) {
 			window.location.href = `/quizzes/${quizSlug}/intro`;
 			return;
 		}
-		
+
 		// If not premium, check quiz limits
 		if (!isPremium) {
 			// Check if they've exceeded free quizzes
@@ -385,13 +385,13 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 				window.location.href = `/quizzes/${quizSlug}/intro`;
 				return;
 			}
-			
+
 			// Check if trying to access non-latest quiz
 			if (!isNewest) {
 				window.location.href = `/quizzes/${quizSlug}/intro`;
 				return;
 			}
-			
+
 			// Track quiz play (only once per quiz)
 			if (!hasPlayedQuiz(quizSlug)) {
 				trackQuizPlayed(quizSlug);
@@ -445,7 +445,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 
 	// Keep viewMode state for UI-specific logic (will sync with quizPlay)
 	const [viewMode, setViewMode] = useState<ViewMode>(quizPlayViewMode);
-	
+
 	// Sync viewMode with quizPlay viewMode
 	useEffect(() => {
 		setViewMode(quizPlayViewMode);
@@ -468,7 +468,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 	// Enhanced switchToGridView with scroll logic
 	const switchToGridView = useCallback(() => {
 		quizPlaySwitchToGrid();
-		
+
 		// Scroll logic: wait for view mode to change and grid to render
 		setTimeout(() => {
 			// If on first question or round splash screen, scroll to top
@@ -482,20 +482,20 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 					const questionEl = document.getElementById(`mobile-question-${questionId}`);
 					if (questionEl) {
 						// Center the question in the viewport
-						questionEl.scrollIntoView({ 
-							behavior: "smooth", 
+						questionEl.scrollIntoView({
+							behavior: "smooth",
 							block: "center",
-							inline: "nearest" 
+							inline: "nearest"
 						});
 					} else {
 						// If question not found yet, try again after a short delay
 						setTimeout(() => {
 							const retryEl = document.getElementById(`mobile-question-${questionId}`);
 							if (retryEl) {
-								retryEl.scrollIntoView({ 
-									behavior: "smooth", 
+								retryEl.scrollIntoView({
+									behavior: "smooth",
 									block: "center",
-									inline: "nearest" 
+									inline: "nearest"
 								});
 							}
 						}, 100);
@@ -515,7 +515,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 	// IMPORTANT: For quiz pages, default to "colored" if no cookie exists
 	const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
 		if (typeof window === 'undefined') return "colored"; // SSR fallback to colored for quiz pages
-		
+
 		// Read from data-theme attribute (set by pre-paint script) to match server render
 		try {
 			const dataTheme = document.documentElement.getAttribute('data-theme');
@@ -524,7 +524,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 		} catch (e) {
 			// Ignore errors
 		}
-		
+
 		// Fallback to cookie if data-theme not set
 		try {
 			const cookieMatch = document.cookie.match(/(?:^|; )sq_theme=([^;]*)/);
@@ -537,7 +537,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 		} catch (e) {
 			// Ignore errors
 		}
-		
+
 		// Only use localStorage if cookie is not set (backward compatibility)
 		try {
 			const saved = localStorage.getItem('quizThemeMode');
@@ -547,7 +547,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 		} catch (e) {
 			// Ignore errors
 		}
-		
+
 		// Default to "colored" for quiz pages (quiz-specific default)
 		return "colored";
 	});
@@ -563,14 +563,14 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 	const [isMouseMoving, setIsMouseMoving] = useState(false);
 	const isNavigatingRef = useRef(false);
 	const [mounted, setMounted] = useState(false);
-	
+
 	// Use timer hook FIRST (before achievements hook that depends on it)
 	const { timer, isRunning: isTimerRunning, start: startTimer, stop: stopTimer } = useQuizTimer({
 		quizSlug,
 		autoStart: viewMode === 'grid',
 		initialTime: 0,
 	});
-	
+
 	// Use achievements hook (depends on timer)
 	const { achievements, dismissAchievement } = useQuizAchievements({
 		quizSlug,
@@ -606,12 +606,12 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 	const [hasSubmittedCompletion, setHasSubmittedCompletion] = React.useState(false);
 	const [isSubmittingCompletion, setIsSubmittingCompletion] = React.useState(false);
 	const [completionError, setCompletionError] = React.useState<string | null>(null);
-	
+
 	// Save completion when modal is shown
 	useEffect(() => {
 		if (!isDemo && showCompletionModal && !hasSubmittedCompletion && finalQuestions.length > 0) {
 			const score = correctAnswers.size;
-			
+
 			// Save via QuizSessionService
 			QuizSessionService.saveCompletion(quizSlug, {
 				score,
@@ -619,7 +619,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 				completedAt: new Date().toISOString(),
 				timeSpent: timer,
 			});
-			
+
 			// Calculate round scores for achievement evaluation
 			const roundScores = rounds.map((round) => {
 				const roundQuestions = finalQuestions.filter((q) => q.roundNumber === round.number);
@@ -631,18 +631,18 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 					totalQuestions: roundQuestions.length,
 				};
 			});
-			
+
 			const categories = rounds.map((r) => r.title.toLowerCase());
-			
+
 			// Submit to API if user is logged in
 			const token = getAuthToken();
 			const userId = getUserId();
-			
+
 			if (token && userId) {
 				setHasSubmittedCompletion(true);
 				setIsSubmittingCompletion(true);
 				setCompletionError(null);
-				
+
 				fetch('/api/quiz/completion', {
 					method: 'POST',
 					headers: {
@@ -671,7 +671,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 									// If JSON parsing fails, use default error
 								}
 							}
-							throw new Error(errorData.error || `Failed to save completion (${res.status})`);
+							throw new Error((errorData as any).error || `Failed to save completion (${res.status})`);
 						}
 						// Verify response is JSON before parsing
 						const contentType = res.headers.get('content-type');
@@ -750,7 +750,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 			setCurrentNotchMessage(0);
 			return;
 		}
-		
+
 		const tickerInterval = setInterval(() => {
 			setCurrentNotchMessage((prev) => (prev + 1) % messagesCount);
 		}, 5000); // Change message every 5 seconds
@@ -762,7 +762,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 	useEffect(() => {
 		const cleanupInterval = setInterval(() => {
 			const now = Date.now();
-			setNotchNotifications(notifications => 
+			setNotchNotifications(notifications =>
 				notifications.filter(n => now - n.timestamp < 30000) // Keep notifications less than 30 seconds old
 			);
 		}, 5000); // Check every 5 seconds
@@ -773,10 +773,10 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 	// Auto-retract notch when scrolling (unless locked or hovered)
 	useEffect(() => {
 		if (isNotchLocked || isNarrowViewport || isNotchHovered) return;
-		
+
 		const handleScroll = () => {
 			const currentScrollY = window.scrollY;
-			
+
 			// Auto-retract when scrolling down past 100px
 			if (currentScrollY > 100 && !isNotchRetracted) {
 				setIsNotchRetracted(true);
@@ -791,21 +791,21 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 		return () => window.removeEventListener('scroll', handleScroll);
 	}, [isNotchRetracted, isNotchLocked, isNarrowViewport, isNotchHovered]);
 
-		// Track mouse movement for arrow fade
-		useEffect(() => {
-			let timeoutId: NodeJS.Timeout | null = null;
-			
-			const handleMouseMove = () => {
-				setIsMouseMoving(true);
-				// Clear existing timeout
-				if (timeoutId) {
-					clearTimeout(timeoutId);
-				}
-				// Set new timeout to mark mouse as stopped after 500ms
-				timeoutId = setTimeout(() => {
-					setIsMouseMoving(false);
-				}, 500);
-			};
+	// Track mouse movement for arrow fade
+	useEffect(() => {
+		let timeoutId: NodeJS.Timeout | null = null;
+
+		const handleMouseMove = () => {
+			setIsMouseMoving(true);
+			// Clear existing timeout
+			if (timeoutId) {
+				clearTimeout(timeoutId);
+			}
+			// Set new timeout to mark mouse as stopped after 500ms
+			timeoutId = setTimeout(() => {
+				setIsMouseMoving(false);
+			}, 500);
+		};
 
 		window.addEventListener('mousemove', handleMouseMove);
 		return () => {
@@ -848,7 +848,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 		};
 		// Default emojis if round not found
 		const emojis = emojiSets[roundNumber] || ['🎉', '✨', '🎊', '🌟', '💫', '⭐'];
-		
+
 		// Convert emojis to confetti shapes
 		return emojis.map(emoji => confetti.shapeFromText({ text: emoji, scalar }));
 	};
@@ -857,7 +857,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 		const wasAlreadyCorrect = correctAnswers.has(id);
 		markCorrect(id);
 		// Remove from incorrect if it was marked incorrect (handled by hook)
-		
+
 		// Show +1 animation only if this question wasn't already marked correct
 		if (!wasAlreadyCorrect) {
 			// Reset to false first, then set to true to trigger animation
@@ -870,10 +870,10 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 			// Hide the animation after it completes
 			setTimeout(() => setShowPlusOne(false), 2000);
 		}
-		
+
 		// Get emoji shapes based on current round
 		const currentRoundNumber = currentQuestion?.roundNumber || 1;
-		
+
 		if (event) {
 			// Confetti from button position (both grid and presenter mode)
 			const button = event.currentTarget;
@@ -882,7 +882,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 			const y = (rect.top + rect.height / 2) / window.innerHeight;
 			const scalar = 1.8;
 			const emojiShapes = getContextEmojis(currentRoundNumber, scalar);
-			
+
 			confetti({
 				particleCount: 50,
 				spread: 60,
@@ -899,7 +899,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 			// Fallback: big, spread out confetti (for backwards compatibility)
 			const scalar = 2.2;
 			const emojiShapes = getContextEmojis(currentRoundNumber, scalar);
-			
+
 			confetti({
 				particleCount: 200,
 				spread: 180,
@@ -920,12 +920,12 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 	};
 
 	// currentQuestion, isAnswerRevealed, and isMarkedCorrect are now provided by useQuizPlay hook
-	
+
 	// Track answered questions for visitor prompt
 	const answeredQuestionsCount = React.useMemo(() => {
 		return correctAnswers.size + incorrectAnswers.size;
 	}, [correctAnswers.size, incorrectAnswers.size]);
-	
+
 	// Show sign-up prompt after 6 questions answered in restricted quiz mode
 	React.useEffect(() => {
 		if (isDemo && answeredQuestionsCount >= RESTRICTED_ANSWER_LIMIT && !hasShownPrompt) {
@@ -965,7 +965,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 						const token = getAuthToken();
 						const userId = getUserId();
 						const loggedInStatus = !!(token && userId);
-						
+
 						if (loggedInStatus) {
 							// Logged-in users: go to quizzes page
 							window.location.href = '/quizzes';
@@ -1017,10 +1017,10 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 				alert(`Keyboard Shortcuts:\n\n← → Arrow Keys: Navigate questions\nSpace/T: Toggle timer\nG: Toggle grid/presenter view\nEsc: Exit quiz\n?: Show this help`);
 				return;
 			}
-			
+
 			// Navigation - works on both question and round-intro screens
 			if (isNavigatingRef.current) return; // Prevent double navigation
-			
+
 			// Handle navigation when on round-intro screen
 			if (currentScreen === "round-intro") {
 				if (e.key === "ArrowRight") {
@@ -1091,11 +1091,11 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 			const token = getAuthToken();
 			const userId = getUserId();
 			const loggedInStatus = !!(token && userId);
-			
+
 			try {
 				const themeOverride = localStorage.getItem('themeOverride');
 				const savedTheme = localStorage.getItem('theme');
-				
+
 				if (themeOverride === 'true' && savedTheme) {
 					if (savedTheme === 'dark') {
 						document.documentElement.classList.add('dark');
@@ -1116,7 +1116,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 				// Fallback to light mode
 				document.documentElement.classList.remove('dark');
 			}
-			
+
 			// Navigate immediately based on login status - no delays, no intermediate pages
 			if (loggedInStatus) {
 				// Logged-in users: go to quizzes page
@@ -1135,28 +1135,28 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 		const r = parseInt(hex.slice(1, 3), 16);
 		const g = parseInt(hex.slice(3, 5), 16);
 		const b = parseInt(hex.slice(5, 7), 16);
-		
+
 		// Convert to HSL, reduce saturation, convert back
 		const max = Math.max(r, g, b) / 255;
 		const min = Math.min(r, g, b) / 255;
 		const l = (max + min) / 2;
 		const s = max === min ? 0 : l > 0.5 ? (max - min) / (2 - max - min) : (max - min) / (max + min);
-		
+
 		// Reduce saturation by 10%
 		const newS = Math.max(0, s * 0.9);
-		
+
 		// Simple conversion back (approximate)
 		const c = (1 - Math.abs(2 * l - 1)) * newS;
 		const x = c * (1 - Math.abs(((r / 255 - g / 255) / (max - min || 1)) % 2 - 1));
 		const m = l - c / 2;
-		
+
 		// Convert rgba opacity to solid hex by blending with white (95% color + 5% white)
 		// This ensures both main container and progress bar render identically
 		const blendWithWhite = (component: number) => Math.round(component * 0.95 + 255 * 0.05);
 		const finalR = blendWithWhite(r);
 		const finalG = blendWithWhite(g);
 		const finalB = blendWithWhite(b);
-		
+
 		return `#${finalR.toString(16).padStart(2, '0')}${finalG.toString(16).padStart(2, '0')}${finalB.toString(16).padStart(2, '0')}`;
 	};
 
@@ -1177,19 +1177,19 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 
 	const currentRoundNumber = currentQuestion?.roundNumber || 1;
 	const roundColor = getRoundColor(currentRoundNumber, quizColor);
-	
+
 	// Calculate backgroundColor immediately - default to quizColor to prevent white flash
-	const backgroundColor = themeMode === "colored" 
+	const backgroundColor = themeMode === "colored"
 		? quizColor
-		: themeMode === "light" 
-		? "#ffffff" 
-		: "#1a1a1a";
-	
-	const textColor = themeMode === "colored" 
+		: themeMode === "light"
+			? "#ffffff"
+			: "#1a1a1a";
+
+	const textColor = themeMode === "colored"
 		? getTextColor(quizColor)
 		: themeMode === "light"
-		? "black"
-		: "white";
+			? "black"
+			: "white";
 
 	// Compute section breaks from round numbers (for timeline markers)
 	const sections = React.useMemo(() => {
@@ -1203,7 +1203,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 		});
 		return breaks;
 	}, [finalQuestions]);
-	
+
 	// Round colors array for the progress rail
 	const roundColorsArray = [
 		quizColor, // Round 1 - quiz card color
@@ -1223,7 +1223,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 	// Apply theme immediately on mount to prevent flash
 	React.useEffect(() => {
 		if (typeof window === 'undefined') return;
-		
+
 		// Apply theme immediately on mount
 		if (themeMode === "dark") {
 			document.documentElement.classList.add('dark');
@@ -1231,17 +1231,17 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 			document.documentElement.classList.remove('dark');
 		}
 	}, []); // Run once on mount
-	
+
 	// Persist themeMode to cookie (unified theme system) and localStorage (backward compatibility)
 	// IMPORTANT: Always write to cookie when themeMode changes (user action in presenter view)
 	// On initial mount: if no cookie exists and themeMode is "colored", write cookie immediately
 	// This ensures quiz pages start in colored mode and persist correctly
 	const hasSyncedFromCookie = React.useRef(false);
 	const previousThemeModeRef = React.useRef<ThemeMode | null>(null);
-	
+
 	React.useEffect(() => {
 		if (typeof window === 'undefined') return;
-		
+
 		// On initial mount, check if cookie exists and sync themeMode to it ONCE
 		if (!hasSyncedFromCookie.current) {
 			hasSyncedFromCookie.current = true;
@@ -1277,18 +1277,18 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 			}
 			previousThemeModeRef.current = themeMode;
 		}
-		
+
 		// If themeMode changed (user action), ALWAYS write to cookie
 		// This handles theme changes from presenter view menu
 		if (previousThemeModeRef.current !== themeMode) {
 			previousThemeModeRef.current = themeMode;
-			
+
 			// Map "colored" to "color" for unified theme system
 			const unifiedTheme: Theme = themeMode === 'colored' ? 'color' : themeMode;
-			
+
 			// Use unified applyTheme function to ensure cookie is written properly
 			applyTheme(unifiedTheme);
-			
+
 			// Also update localStorage for backward compatibility
 			try {
 				localStorage.setItem('quizThemeMode', themeMode);
@@ -1379,7 +1379,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 			)}
 
 			<QuizHeader
-												textColor={textColor}
+				textColor={textColor}
 				headerTone={headerTone}
 				backgroundColor={backgroundColor}
 				achievements={achievements}
@@ -1397,32 +1397,32 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 
 			{/* Content Area */}
 			<div className="flex-1 pt-20 flex items-center justify-center">
-					{viewMode === "presenter" ? (
+				{viewMode === "presenter" ? (
 					<QuestionArea
 						screen={currentScreen}
 						round={currentRoundDetails}
-								question={currentQuestion}
-								currentIndex={currentIndex}
-								totalQuestions={finalQuestions.length}
+						question={currentQuestion}
+						currentIndex={currentIndex}
+						totalQuestions={finalQuestions.length}
 						textColor={textColor}
 						quizColor={roundColor}
 						finaleRoundNumber={FINALE_ROUND_NUMBER}
-								isAnswerRevealed={isAnswerRevealed}
-								isMarkedCorrect={isMarkedCorrect}
-								isQuestionAnswered={currentQuestion ? (isMarkedCorrect || incorrectAnswers.has(currentQuestion.id)) : false}
+						isAnswerRevealed={isAnswerRevealed}
+						isMarkedCorrect={isMarkedCorrect}
+						isQuestionAnswered={currentQuestion ? (isMarkedCorrect || incorrectAnswers.has(currentQuestion.id)) : false}
 						isMouseMoving={isMouseMoving}
 						canGoNext={currentIndex < finalQuestions.length - 1}
 						canGoPrevious={currentIndex > 0}
 						onStartRound={startRound}
-								onRevealAnswer={() => currentQuestion && handleRevealAnswer(currentQuestion.id)}
-								onHideAnswer={() => currentQuestion && handleHideAnswer(currentQuestion.id)}
+						onRevealAnswer={() => currentQuestion && handleRevealAnswer(currentQuestion.id)}
+						onHideAnswer={() => currentQuestion && handleHideAnswer(currentQuestion.id)}
 						onMarkCorrect={(event) => currentQuestion && handleMarkCorrect(currentQuestion.id, event)}
-								onUnmarkCorrect={() => currentQuestion && handleUnmarkCorrect(currentQuestion.id)}
-								onNext={goToNext}
-								onPrevious={goToPrevious}
-								onFinish={!isDemo ? handleFinishQuiz : undefined}
-							/>
-					) : (
+						onUnmarkCorrect={() => currentQuestion && handleUnmarkCorrect(currentQuestion.id)}
+						onNext={goToNext}
+						onPrevious={goToPrevious}
+						onFinish={!isDemo ? handleFinishQuiz : undefined}
+					/>
+				) : (
 					<MobileGridLayout
 						key="grid"
 						questions={finalQuestions}
@@ -1445,9 +1445,9 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 						weekISO={weekISO}
 						onFinish={handleFinishQuiz}
 					/>
-					)}
+				)}
 			</div>
-			
+
 			{/* Mid-quiz sign-up prompt for visitors */}
 			<MidQuizSignupPrompt
 				isOpen={showSignupPrompt}
@@ -1492,7 +1492,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 						setShowIncompleteModal(false);
 						handleFinishQuiz();
 					}}
-					unansweredQuestions={finalQuestions.filter(q => 
+					unansweredQuestions={finalQuestions.filter(q =>
 						!correctAnswers.has(q.id) && !incorrectAnswers.has(q.id)
 					)}
 					allQuestions={finalQuestions}
@@ -1523,7 +1523,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 function getTextColor(hex: string): "black" | "white" {
 	const cleanHex = hex.replace("#", "");
 	if (cleanHex.length !== 6) return "black";
-	
+
 	const r = parseInt(cleanHex.slice(0, 2), 16) / 255;
 	const g = parseInt(cleanHex.slice(2, 4), 16) / 255;
 	const b = parseInt(cleanHex.slice(4, 6), 16) / 255;
@@ -1534,7 +1534,7 @@ function getTextColor(hex: string): "black" | "white" {
 	const G = chan(g);
 	const B = chan(b);
 	const luminance = 0.2126 * R + 0.7152 * G + 0.0722 * B;
-	
+
 	return luminance > 0.5 ? "black" : "white";
 }
 
