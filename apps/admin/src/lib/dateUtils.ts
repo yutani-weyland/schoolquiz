@@ -28,11 +28,15 @@ export function formatDate(dateString: string | null | undefined): string {
   if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`
   
   // Show full date for older dates
-  return date.toLocaleDateString('en-US', {
+  // Use consistent locale to avoid hydration mismatches
+  const options: Intl.DateTimeFormatOptions = {
     month: 'short',
     day: 'numeric',
-    year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
-  })
+  }
+  if (date.getFullYear() !== now.getFullYear()) {
+    options.year = 'numeric'
+  }
+  return date.toLocaleDateString('en-US', options)
 }
 
 /**

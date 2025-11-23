@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { SubscriptionChart, QuizCategoryChart, WeeklyUsageChart } from "@/components/charts";
+import { SubscriptionChart, QuizCategoryChart, WeeklyUsageChart } from "@/components/charts-lazy";
 import { DataTable } from "@/components/data-table";
 import { KPICard, ProgressRing } from "@/components/dashboard/KPICard";
 import { CategoriesLeaderboard } from "@/components/dashboard/CategoriesLeaderboard";

@@ -2,32 +2,24 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import { prisma } from '@schoolquiz/db'
 import { dummyUsers } from '@/lib/dummy-data'
+import { unstable_cache } from 'next/cache'
+import { CACHE_TTL, CACHE_TAGS, createCacheKey } from '@/lib/cache-config'
 
 /**
- * GET /api/admin/users
- * List all users (admin only)
+ * Internal function to fetch users from database
  */
-export async function GET(request: NextRequest) {
+async function getUsersInternal(params: {
+  search: string
+  tier: string
+  page: number
+  limit: number
+  sortBy: string
+  sortOrder: 'asc' | 'desc'
+}) {
+  const { search, tier, page, limit, sortBy, sortOrder } = params
+  const skip = (page - 1) * limit
+
   try {
-    // Skip auth for testing
-    // TODO: Re-enable authentication in production
-    // const user = await getCurrentUser()
-    // if (!user) {
-    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    // }
-
-    // TODO: Add proper admin role check
-
-    const searchParams = request.nextUrl.searchParams
-    const search = searchParams.get('search') || ''
-    const tier = searchParams.get('tier') || ''
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = parseInt(searchParams.get('limit') || '50')
-    const skip = (page - 1) * limit
-    const sortBy = searchParams.get('sortBy') || 'createdAt'
-    const sortOrder = searchParams.get('sortOrder') || 'desc'
-
-    try {
       // Build where clause
       const where: any = {}
       
@@ -110,7 +102,7 @@ export async function GET(request: NextRequest) {
         },
       }))
 
-      return NextResponse.json({
+      return {
         users: formattedUsers,
         pagination: {
           page,
@@ -118,7 +110,7 @@ export async function GET(request: NextRequest) {
           total,
           totalPages: Math.ceil(total / limit),
         },
-      })
+      }
     } catch (dbError: any) {
       // Log the actual database error for debugging
       console.error('❌ Database query failed:', dbError)
@@ -194,7 +186,7 @@ export async function GET(request: NextRequest) {
       const total = filtered.length
       const users = filtered.slice(skip, skip + limit)
 
-      return NextResponse.json({
+      return {
         users,
         pagination: {
           page,
@@ -202,8 +194,58 @@ export async function GET(request: NextRequest) {
           total,
           totalPages: Math.ceil(total / limit),
         },
-      })
+      }
     }
+}
+
+/**
+ * GET /api/admin/users
+ * List all users (admin only)
+ * Cached for non-search queries to improve performance
+ */
+export async function GET(request: NextRequest) {
+  try {
+    // Skip auth for testing
+    // TODO: Re-enable authentication in production
+    // const user = await getCurrentUser()
+    // if (!user) {
+    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // }
+
+    // TODO: Add proper admin role check
+
+    const searchParams = request.nextUrl.searchParams
+    const search = searchParams.get('search') || ''
+    const tier = searchParams.get('tier') || ''
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = parseInt(searchParams.get('limit') || '50')
+    const sortBy = searchParams.get('sortBy') || 'createdAt'
+    const sortOrder = (searchParams.get('sortOrder') || 'desc') as 'asc' | 'desc'
+
+    const params = { search, tier, page, limit, sortBy, sortOrder }
+
+    // Only cache non-search, non-filter queries (search results should be fresh)
+    if (!search && !tier) {
+      const result = await unstable_cache(
+        () => getUsersInternal(params),
+        createCacheKey('users', {
+          page: page.toString(),
+          limit: limit.toString(),
+          sortBy,
+          sortOrder,
+        }),
+        {
+          revalidate: CACHE_TTL.LIST,
+          tags: [CACHE_TAGS.USERS],
+        }
+      )()
+      
+      return NextResponse.json(result)
+    }
+
+    // No cache for search/filter queries (always fresh)
+    const result = await getUsersInternal(params)
+    return NextResponse.json(result)
   } catch (error: any) {
     console.error('Error fetching users:', error)
     return NextResponse.json(

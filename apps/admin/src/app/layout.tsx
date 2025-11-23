@@ -34,9 +34,10 @@ export const metadata: Metadata = {
 	description: "Weekly quiz for Australian students"
 };
 
-// Cookie reading requires dynamic rendering, but we can still cache where possible
-// Individual routes can override this with their own dynamic/static settings
-export const dynamic = "force-dynamic";
+// Cookie reading in this layout will make routes dynamic, but we don't force it globally
+// Individual routes can opt into static rendering if they don't need cookies
+// Routes that need cookies (like admin pages) will automatically be dynamic
+// export const dynamic = "force-dynamic"; // Removed - let routes decide individually
 
 export default async function RootLayout({
 	children
