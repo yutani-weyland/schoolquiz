@@ -277,6 +277,8 @@ interface QuizPlayerProps {
 	isDemo?: boolean;
 	maxQuestions?: number;
 	onDemoComplete?: (score: number, totalQuestions: number) => void;
+	isCustom?: boolean;
+	customQuizId?: string;
 }
 
 type ViewMode = "presenter" | "grid";
@@ -313,7 +315,7 @@ function getNotchTextColor(backgroundColor: string): string {
 	return luminance > 0.5 ? 'white' : 'black';
 }
 
-export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, weekISO, isNewest = false, isDemo = false, maxQuestions, onDemoComplete }: QuizPlayerProps) {
+export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, weekISO, isNewest = false, isDemo = false, maxQuestions, onDemoComplete, isCustom = false, customQuizId }: QuizPlayerProps) {
 	const { isPremium, isVisitor, isLoggedIn } = useUserAccess();
 
 	// For restricted quiz mode: show all questions initially, but lock after 6 answers
@@ -1393,6 +1395,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 				onOpenPresenterView={viewMode === "grid" ? switchToPresenterView : undefined}
 				isGridView={viewMode === "grid"}
 				isPresenterView={viewMode === "presenter"}
+				isCustom={isCustom}
 			/>
 
 			{/* Content Area */}

@@ -66,14 +66,17 @@ model Category {
 
 model Question {
   id               String    @id @default(cuid())
-  categoryId       String
+  categoryId       String? // Nullable for custom quiz questions
   text             String
   answer           String
   explanation      String?
   difficulty       Float // 0-1 scale
   tags             String?   @default("") // Comma-separated tags
   status           String    @default("draft") // draft, review, published, archived
-  createdBy        String
+  createdBy        String? // Teacher ID (nullable for custom quiz questions)
+  createdByUserId  String? // User ID (for custom quizzes)
+  quizId           String? // Direct link to custom quiz (nullable for official quiz questions)
+  isCustom         Boolean   @default(false) // True if this is a custom quiz question
   isPeopleQuestion Boolean   @default(false) // True if this is a people's question
   usageCount       Int       @default(0)
   lastUsedAt       DateTime?
@@ -81,8 +84,10 @@ model Question {
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
-  category   Category                @relation(fields: [categoryId], references: [id])
-  creator    Teacher                 @relation(fields: [createdBy], references: [id])
+  category   Category?               @relation(fields: [categoryId], references: [id])
+  creator    Teacher?                @relation(fields: [createdBy], references: [id])
+  customQuiz Quiz?                   @relation("CustomQuizQuestions", fields: [quizId], references: [id], onDelete: Cascade)
+  user       User?                   @relation("QuestionCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
   rounds     QuizRoundQuestion[]
   stats      RunQuestionStat[]
   submission UserQuestionSubmission? @relation("QuestionSubmission") // Link to user submission if created from one
@@ -90,6 +95,8 @@ model Question {
   @@index([status, updatedAt])
   @@index([categoryId])
   @@index([isUsed])
+  @@index([quizId])
+  @@index([isCustom])
   @@map("questions")
 }
 
@@ -107,21 +114,33 @@ model Quiz {
   publicationDate DateTime?
   status          String    @default("draft") // draft, scheduled, published
   colorHex        String? // Hex color for quiz card (e.g., "#FFE135")
-  createdBy       String
+  createdBy       String // Teacher ID (for backward compatibility)
+  createdByUserId String? // User ID (for custom quizzes)
+  quizType        String    @default("OFFICIAL") // "OFFICIAL" | "CUSTOM"
+  // Branding fields for custom quizzes
+  schoolLogoUrl   String? // URL to uploaded school logo
+  brandHeading    String? // Custom heading for PDF
+  brandSubheading String? // Custom subheading for PDF
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  school    School? @relation(fields: [schoolId], references: [id])
-  creator   Teacher @relation(fields: [createdBy], references: [id])
-  rounds    Round[]
-  runs      Run[]
-  pdfUrl    String? // URL to generated PDF
-  pdfStatus String? // pending, generated, approved
+  school         School?            @relation(fields: [schoolId], references: [id])
+  creator        Teacher            @relation(fields: [createdBy], references: [id])
+  user           User?              @relation("CustomQuizCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  rounds         Round[]
+  runs           Run[]
+  customQuestions Question[]        @relation("CustomQuizQuestions")
+  shares         CustomQuizShare[]
+  pdfUrl         String? // URL to generated PDF
+  pdfStatus      String? // pending, generated, approved
 
   @@index([slug])
   @@index([status])
   @@index([createdAt])
   @@index([status, createdAt])
+  @@index([quizType])
+  @@index([createdByUserId])
+  @@index([quizType, createdByUserId])
   @@map("quizzes")
 }
 
@@ -283,6 +302,13 @@ model User {
   // User-submitted questions
   questionSubmissions UserQuestionSubmission[]
 
+  // Custom quiz relations
+  createdCustomQuizzes Quiz[]              @relation("CustomQuizCreator")
+  createdQuestions     Question[]           @relation("QuestionCreator")
+  customQuizUsage      CustomQuizUsage[]
+  customQuizShares     CustomQuizShare[]
+  customQuizSharesReceived CustomQuizShare[] @relation("CustomQuizSharer")
+
   // Billing & Support relations
   invoices             Invoice[]
   subscriptions        Subscription[]
@@ -324,6 +350,11 @@ model Organisation {
 
   // Feature flags (JSON)
   featureFlags String? @default("{}")
+
+  // Branding for custom quizzes
+  logoUrl       String? // School logo/emblem URL
+  brandHeading  String? // Default heading for custom quiz PDFs
+  brandSubheading String? // Default subheading for custom quiz PDFs
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -676,6 +707,8 @@ model QuizCompletion {
   id             String   @id @default(cuid())
   userId         String
   quizSlug       String
+  quizType       String   @default("OFFICIAL") // "OFFICIAL" | "CUSTOM"
+  quizId         String? // For custom quizzes, reference the quiz ID
   score          Int // Number of correct answers
   totalQuestions Int // Total questions in quiz
   completedAt    DateTime @default(now())
@@ -687,6 +720,8 @@ model QuizCompletion {
   @@index([userId, completedAt])
   @@index([quizSlug])
   @@index([completedAt])
+  @@index([quizType])
+  @@index([quizId])
   @@map("quiz_completions")
 }
 
@@ -1034,4 +1069,42 @@ model Referral {
   @@index([status])
   @@index([createdAt])
   @@map("referrals")
+}
+
+// ============================================================================
+// Custom Quiz Creation (Premium Feature)
+// ============================================================================
+
+model CustomQuizShare {
+  id        String   @id @default(cuid())
+  quizId    String
+  userId    String // User who has access to this quiz
+  sharedBy  String // User who shared the quiz
+  createdAt DateTime @default(now())
+
+  quiz     Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  user     User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sharer   User @relation("CustomQuizSharer", fields: [sharedBy], references: [id], onDelete: Cascade)
+
+  @@unique([quizId, userId])
+  @@index([userId])
+  @@index([quizId])
+  @@index([sharedBy])
+  @@map("custom_quiz_shares")
+}
+
+model CustomQuizUsage {
+  id             String   @id @default(cuid())
+  userId         String
+  monthYear      String // Format: "2025-01" for monthly tracking
+  quizzesCreated Int      @default(0)
+  quizzesShared  Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, monthYear])
+  @@index([userId, monthYear])
+  @@map("custom_quiz_usage")
 }

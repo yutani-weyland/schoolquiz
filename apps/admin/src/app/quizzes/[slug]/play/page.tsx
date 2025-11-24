@@ -59,6 +59,7 @@ async function getQuizData(slug: string) {
 			throw new Error('Prisma client not available');
 		}
 		
+		// Try to find quiz by slug (could be official or custom)
 		const quiz = await prisma.quiz.findUnique({
 			where: { slug },
 			include: {
@@ -83,6 +84,23 @@ async function getQuizData(slug: string) {
 
 		if (quiz) {
 			const quizData = transformQuizToPlayFormat(quiz);
+			
+			// Handle custom quizzes differently
+			if (quiz.quizType === 'CUSTOM') {
+				const metadata = {
+					id: 0,
+					slug: quiz.slug || slug,
+					title: quiz.title,
+					blurb: quiz.blurb || '',
+					weekISO: quiz.weekISO || new Date().toISOString().split('T')[0],
+					colorHex: quiz.colorHex || getQuizColor(0),
+					status: quiz.status,
+					isCustom: true,
+				};
+				return { quizData, metadata };
+			}
+			
+			// Official quiz
 			const metadata = QUIZ_METADATA.find(q => q.slug === slug) || {
 				id: 0,
 				slug: quiz.slug || slug,

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, User, Settings, Wallet, Users, Pencil, Plus, LogOut, Sun, Moon, Trophy, BarChart3, Crown, Info, Play, BookOpen } from 'lucide-react';
+import { Menu, X, User, Settings, Wallet, Users, Pencil, Plus, LogOut, Sun, Moon, Trophy, BarChart3, Crown, Info, Play, BookOpen, FileEdit } from 'lucide-react';
 import { useUserAccess } from '@/contexts/UserAccessContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { applyTheme, Theme } from '@/lib/theme';
@@ -487,6 +487,19 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
                         >
                           <BookOpen className="w-5 h-5" />
                           Quizzes
+                        </Link>
+                        <Link
+                          href="/custom-quizzes"
+                          onClick={handleLinkClick}
+                          className={cn(
+                            "flex items-center gap-3 px-4 py-2.5 rounded-full text-base transition-colors",
+                            isActiveRoute('/custom-quizzes')
+                              ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 font-medium"
+                              : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                          )}
+                        >
+                          <FileEdit className="w-5 h-5" />
+                          Custom Quizzes
                         </Link>
                         <Link
                           href="/leagues"

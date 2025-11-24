@@ -9,11 +9,12 @@ import { ContentCard } from '@/components/layout/ContentCard';
 import { AccountTab } from '@/components/premium/AccountTab';
 import { ReferralTab } from '@/components/premium/ReferralTab';
 import { SubscriptionTab } from '@/components/premium/SubscriptionTab';
+import { OrganisationBrandingTab } from '@/components/premium/OrganisationBrandingTab';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Gift, CreditCard } from 'lucide-react';
+import { User, Gift, CreditCard, Building2 } from 'lucide-react';
 import { useUserTier } from '@/hooks/useUserTier';
 
-type TabId = 'account' | 'referral' | 'subscription';
+type TabId = 'account' | 'referral' | 'subscription' | 'organisation';
 
 export default function AccountPage() {
   const router = useRouter();
@@ -44,11 +45,12 @@ export default function AccountPage() {
     );
   }
 
-  // Define tabs - no Private Leagues
+  // Define tabs
   const tabs = [
     { id: 'account' as TabId, label: 'Account', icon: User },
     { id: 'referral' as TabId, label: 'Refer & Earn', icon: Gift },
     { id: 'subscription' as TabId, label: 'Subscription', icon: CreditCard },
+    { id: 'organisation' as TabId, label: 'Organisation', icon: Building2 },
   ];
 
   return (
@@ -93,6 +95,16 @@ export default function AccountPage() {
                 </div>
                 <SubscriptionTab />
               </ContentCard>
+
+              <ContentCard padding="xl" rounded="3xl" hoverAnimation={false}>
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                    <Building2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">Organisation Branding</h2>
+                </div>
+                <OrganisationBrandingTab />
+              </ContentCard>
             </div>
 
             {/* Desktop: Tab Switcher */}
@@ -134,6 +146,7 @@ export default function AccountPage() {
                     {activeTab === 'account' && <AccountTab isPremium={isPremiumTier} />}
                     {activeTab === 'referral' && <ReferralTab />}
                     {activeTab === 'subscription' && <SubscriptionTab />}
+                    {activeTab === 'organisation' && <OrganisationBrandingTab />}
                   </motion.div>
                 </AnimatePresence>
               </ContentCard>

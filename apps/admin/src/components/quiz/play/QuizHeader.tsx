@@ -26,7 +26,8 @@ interface QuizHeaderProps {
   onOpenGridView?: () => void;
   onOpenPresenterView?: () => void;
   isGridView?: boolean;
-  isPresenterView?: boolean; // Add this prop
+  isPresenterView?: boolean;
+  isCustom?: boolean;
 }
 
 const THEME_MODES: QuizThemeMode[] = ["colored", "light", "dark"];
@@ -66,6 +67,7 @@ export function QuizHeader({
   onOpenPresenterView,
   isGridView = false,
   isPresenterView = false,
+  isCustom = false,
 }: QuizHeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isTopBarHovered, setIsTopBarHovered] = useState(false);
@@ -232,7 +234,14 @@ export function QuizHeader({
               >
                 The School Quiz
               </motion.a>
-              {quizLabel ? <span className={`text-xs font-medium mt-0.5 ${labelClass}`}>{quizLabel}</span> : null}
+              <div className="flex items-center gap-2 mt-0.5">
+                {quizLabel && <span className={`text-xs font-medium ${labelClass}`}>{quizLabel}</span>}
+                {isCustom && (
+                  <span className="px-2 py-0.5 text-xs font-medium bg-blue-600/20 text-blue-700 dark:text-blue-300 rounded-full border border-blue-400/30">
+                    Custom Quiz
+                  </span>
+                )}
+              </div>
             </motion.div>
 
             {achievements.length > 0 && (

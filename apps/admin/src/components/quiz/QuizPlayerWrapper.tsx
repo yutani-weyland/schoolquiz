@@ -21,6 +21,8 @@ interface QuizPlayerProps {
 	isDemo?: boolean;
 	maxQuestions?: number;
 	onDemoComplete?: (score: number, totalQuestions: number) => void;
+	isCustom?: boolean;
+	customQuizId?: string;
 }
 
 export function QuizPlayerWrapper(props: QuizPlayerProps) {

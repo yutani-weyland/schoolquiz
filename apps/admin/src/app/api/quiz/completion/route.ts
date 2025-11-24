@@ -22,9 +22,11 @@ interface CompletionRequest {
   quizSlug: string;
   score: number;
   totalQuestions: number;
-  completionTimeSeconds: number;
+  completionTimeSeconds?: number;
   roundScores?: RoundScore[];
   categories?: string[];
+  quizType?: string; // 'OFFICIAL' | 'CUSTOM'
+  customQuizId?: string; // For custom quizzes
 }
 
 export async function GET(request: NextRequest) {
@@ -240,9 +242,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if quiz exists
-    const quiz = await prisma.quiz.findUnique({
-      where: { slug: quizSlug },
-    });
+    const quizType = body.quizType || 'OFFICIAL'
+    const customQuizId = body.customQuizId
+    
+    let quiz;
+    if (quizType === 'CUSTOM' && customQuizId) {
+      // For custom quizzes, find by ID
+      quiz = await prisma.quiz.findUnique({
+        where: { id: customQuizId },
+      });
+    } else {
+      // For official quizzes, find by slug
+      quiz = await prisma.quiz.findUnique({
+        where: { slug: quizSlug },
+      });
+    }
 
     if (!quiz) {
       return NextResponse.json(
@@ -252,10 +266,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if completion already exists (upsert behavior)
+    // For custom quizzes, also check by quizId
     const existingCompletion = await prisma.quizCompletion.findFirst({
       where: {
         userId,
-        quizSlug,
+        quizSlug: quizType === 'CUSTOM' ? quiz.slug : quizSlug,
+        ...(quizType === 'CUSTOM' && customQuizId ? { customQuizId } : {}),
       },
     });
 
@@ -270,6 +286,7 @@ export async function POST(request: NextRequest) {
             totalQuestions,
             timeSeconds: completionTimeSeconds || null,
             completedAt: new Date(),
+            ...(quizType === 'CUSTOM' && customQuizId ? { customQuizId } : {}),
           },
         });
       } else {
@@ -281,7 +298,9 @@ export async function POST(request: NextRequest) {
       completion = await prisma.quizCompletion.create({
         data: {
           userId,
-          quizSlug,
+          quizSlug: quiz.slug || quizSlug,
+          quizType: quizType as any,
+          customQuizId: quizType === 'CUSTOM' ? (customQuizId || quiz.id) : null,
           score,
           totalQuestions,
           timeSeconds: completionTimeSeconds || null,
