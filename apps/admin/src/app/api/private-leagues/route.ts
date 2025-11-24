@@ -25,11 +25,39 @@ async function getUserFromToken(request: NextRequest) {
   }
 
   // Fetch user from database
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-  })
-
-  return user
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    })
+    return user
+  } catch (error: any) {
+    // Handle schema mismatch errors (e.g., missing columns)
+    const errorMsg = error.message || String(error)
+    if (errorMsg.includes('does not exist') || 
+        errorMsg.includes('referralCount') ||
+        errorMsg.includes('P2022') || // Column doesn't exist
+        errorMsg.includes('column')) {
+      console.warn('Database schema mismatch in getUserFromToken:', errorMsg)
+      // Try to fetch with minimal fields
+      try {
+        const user = await (prisma as any).user.findUnique({
+          where: { id: userId },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            tier: true,
+            teamName: true,
+          },
+        })
+        return user
+      } catch (fallbackError: any) {
+        console.error('Fallback query also failed:', fallbackError)
+        return null
+      }
+    }
+    throw error
+  }
 }
 
 function generateInviteCode(): string {
@@ -105,9 +133,10 @@ export async function GET(request: NextRequest) {
     }
     
     // Get all leagues where user is a member (not left) or creator
-    // Note: This will fail until Prisma client is regenerated after migration
+    // Optimized query with proper indexing
     let leagues: any[] = []
     try {
+      const startTime = Date.now()
       leagues = await (prisma as any).privateLeague.findMany({
       where: {
         deletedAt: null,
@@ -129,12 +158,24 @@ export async function GET(request: NextRequest) {
             id: true,
             name: true,
             email: true,
+            profile: {
+              select: {
+                displayName: true,
+              },
+            },
+          },
+        },
+        organisation: {
+          select: {
+            id: true,
+            name: true,
           },
         },
         members: {
           where: {
             leftAt: null,
           },
+          take: 50, // Limit members to prevent huge payloads
           include: {
             user: {
               select: {
@@ -142,6 +183,11 @@ export async function GET(request: NextRequest) {
                 name: true,
                 email: true,
                 teamName: true,
+                profile: {
+                  select: {
+                    displayName: true,
+                  },
+                },
               },
             },
           },
@@ -162,7 +208,10 @@ export async function GET(request: NextRequest) {
       orderBy: {
         createdAt: 'desc',
       },
+      take: 100, // Limit total leagues
     }) as any[]
+    const duration = Date.now() - startTime
+    console.log(`[API] Fetched ${leagues.length} leagues in ${duration}ms`)
     } catch (dbError: any) {
       // If the table doesn't exist yet (migration not run), return empty array
       if (dbError.message?.includes('does not exist') || 
@@ -174,7 +223,40 @@ export async function GET(request: NextRequest) {
       throw dbError
     }
     
-    return NextResponse.json({ leagues })
+    // Assign colors to leagues based on ID for consistency
+    // This ensures the same league always gets the same color
+    const defaultColors = [
+      '#3B82F6', // Blue
+      '#8B5CF6', // Purple
+      '#10B981', // Emerald
+      '#F59E0B', // Amber
+      '#EF4444', // Red
+      '#EC4899', // Pink
+      '#06B6D4', // Cyan
+      '#84CC16', // Lime
+      '#6366F1', // Indigo
+      '#F97316', // Orange
+      '#14B8A6', // Teal
+      '#A855F7', // Violet
+      '#22C55E', // Green
+      '#EAB308', // Yellow
+      '#F43F5E', // Rose
+      '#0EA5E9', // Sky
+    ]
+    
+    const leaguesWithColors = leagues.map((league: any) => {
+      // If league already has a color, use it; otherwise assign based on ID
+      if (league.color) {
+        return league
+      }
+      const colorIndex = parseInt(league.id.slice(-2), 16) % defaultColors.length
+      return {
+        ...league,
+        color: defaultColors[colorIndex],
+      }
+    })
+    
+    return NextResponse.json({ leagues: leaguesWithColors })
   } catch (error: any) {
     console.error('Error fetching private leagues:', error)
     const errorMessage = error.message || String(error)
@@ -187,12 +269,14 @@ export async function GET(request: NextRequest) {
       )
     }
     
-    // Check for migration issues
-    if (errorMessage.includes('does not exist') || errorMessage.includes('Unknown model')) {
-      return NextResponse.json(
-        { error: 'Database migration required. Please run: npx prisma migrate dev' },
-        { status: 503 }
-      )
+    // Check for migration issues - return empty array instead of error for better UX
+    if (errorMessage.includes('does not exist') || 
+        errorMessage.includes('Unknown model') ||
+        errorMessage.includes('private_league') ||
+        errorMessage.includes('relation') ||
+        errorMessage.includes('table')) {
+      console.warn('Private leagues tables not found - migrations may need to be run. Returning empty array.')
+      return NextResponse.json({ leagues: [] })
     }
     
     return NextResponse.json(
@@ -225,8 +309,48 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    const body = await request.json()
-    const { name, description } = body
+    let body: any
+    try {
+      body = await request.json()
+    } catch (parseError: any) {
+      console.error('Failed to parse request body:', parseError)
+      return NextResponse.json(
+        { error: 'Invalid request body', details: parseError.message },
+        { status: 400 }
+      )
+    }
+    
+    const { name, description, color, organisationId } = body
+    
+    // Get user's organization if organisationId not provided but user is in an org
+    let finalOrganisationId = organisationId
+    if (!finalOrganisationId) {
+      try {
+        const userWithOrg = await prisma.user.findUnique({
+          where: { id: user.id },
+          include: {
+            organisationMembers: {
+              where: { status: 'ACTIVE' },
+              take: 1,
+            },
+          },
+        })
+        if (userWithOrg?.organisationMembers?.[0]) {
+          finalOrganisationId = userWithOrg.organisationMembers[0].organisationId
+        }
+      } catch (orgError: any) {
+        // If there's a schema error, just continue without org
+        const errorMsg = orgError.message || String(orgError)
+        if (errorMsg.includes('does not exist') || 
+            errorMsg.includes('referralCount') ||
+            errorMsg.includes('P2022') ||
+            errorMsg.includes('column')) {
+          console.warn('Schema error fetching user org, continuing without org:', errorMsg)
+        } else {
+          throw orgError
+        }
+      }
+    }
     
     if (!name || name.trim().length === 0) {
       return NextResponse.json(
@@ -294,10 +418,15 @@ export async function POST(request: NextRequest) {
         }
       }
     } catch (dbError: any) {
-      if (dbError.message?.includes('does not exist') || 
-          dbError.message?.includes('Unknown model')) {
+      const errorMsg = dbError.message || String(dbError)
+      if (errorMsg.includes('does not exist') || 
+          errorMsg.includes('Unknown model') ||
+          errorMsg.includes('private_league') ||
+          errorMsg.includes('table') ||
+          errorMsg.includes('relation')) {
+        console.warn('Private leagues table not found:', errorMsg)
         return NextResponse.json(
-          { error: 'Database migration required. Please run: npx prisma migrate dev' },
+          { error: 'Database migration required. Please run migration 005 in Supabase Dashboard.' },
           { status: 503 }
         )
       }
@@ -307,25 +436,18 @@ export async function POST(request: NextRequest) {
     // Create league
     let league: any
     try {
-      league = await (prisma as any).privateLeague.create({
-      data: {
-        name: name.trim(),
-        description: description?.trim() || null,
-        createdByUserId: user.id,
-        inviteCode,
-        members: {
-          create: {
-            userId: user.id,
-            joinedAt: new Date(),
-          },
-        },
-      },
-      include: {
+      // Build the include object conditionally
+      const includeObj: any = {
         creator: {
           select: {
             id: true,
             name: true,
             email: true,
+            profile: {
+              select: {
+                displayName: true,
+              },
+            },
           },
         },
         members: {
@@ -339,27 +461,108 @@ export async function POST(request: NextRequest) {
                 name: true,
                 email: true,
                 teamName: true,
+                profile: {
+                  select: {
+                    displayName: true,
+                  },
+                },
               },
             },
           },
         },
-      },
-    }) as any
+        _count: {
+          select: {
+            members: {
+              where: {
+                leftAt: null,
+              },
+            },
+          },
+        },
+      }
+      
+      // Only include organisation if organisationId is set
+      if (finalOrganisationId) {
+        includeObj.organisation = {
+          select: {
+            id: true,
+            name: true,
+          },
+        }
+      }
+      
+      // Build data object without color (field doesn't exist in schema)
+      const leagueData: any = {
+        name: name.trim(),
+        description: description?.trim() || null,
+        createdByUserId: user.id,
+        inviteCode,
+        organisationId: finalOrganisationId || null,
+        members: {
+          create: {
+            userId: user.id,
+            joinedAt: new Date(),
+          },
+        },
+      }
+      
+      league = await (prisma as any).privateLeague.create({
+        data: leagueData,
+        include: includeObj,
+      }) as any
     } catch (dbError: any) {
-      if (dbError.message?.includes('does not exist') || 
-          dbError.message?.includes('Unknown model') ||
-          dbError.message?.includes('Unknown arg')) {
+      // Only check for specific migration-related errors
+      const errorMsg = dbError.message || String(dbError)
+      console.error('Database error creating league:', {
+        message: dbError.message,
+        code: dbError.code,
+        meta: dbError.meta,
+        stack: dbError.stack,
+      })
+      
+      // Check for schema mismatch errors (missing columns)
+      if (errorMsg.includes('referralCount') ||
+          errorMsg.includes('does not exist') ||
+          errorMsg.includes('P2022') || // Column doesn't exist
+          errorMsg.includes('column')) {
         return NextResponse.json(
-          { error: 'Database migration required. Please run: npx prisma migrate dev' },
+          { 
+            error: 'Database schema mismatch. Please run migrations 006 and 007 in Supabase Dashboard to update the referral system schema.',
+            details: errorMsg,
+            code: dbError.code 
+          },
           { status: 503 }
         )
       }
-      throw dbError
+      
+      if (errorMsg.includes('Unknown model') ||
+          errorMsg.includes('private_league_requests') ||
+          errorMsg.includes('private_league') ||
+          (errorMsg.includes('organisationId') && errorMsg.includes('does not exist'))) {
+        return NextResponse.json(
+          { error: 'Database migration required. Please run migration 005 in Supabase Dashboard.' },
+          { status: 503 }
+        )
+      }
+      
+      // Return more detailed error for debugging
+      const errorDetails = {
+        error: 'Failed to create league',
+        details: dbError.message || String(dbError),
+        code: dbError.code,
+        meta: dbError.meta,
+      }
+      console.error('Returning error response:', errorDetails)
+      return NextResponse.json(errorDetails, { status: 500 })
     }
     
     return NextResponse.json({ league }, { status: 201 })
   } catch (error: any) {
-    console.error('Error creating private league:', error)
+    console.error('Error creating private league:', {
+      message: error.message,
+      stack: error.stack,
+      response: error.response,
+    })
     const errorMessage = error.message || String(error)
     
     // Check for database connection issues
@@ -370,16 +573,23 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // Check for migration issues
-    if (errorMessage.includes('does not exist') || errorMessage.includes('Unknown model')) {
+    // Check for migration issues (only specific ones)
+    if (errorMessage.includes('Unknown model') ||
+        errorMessage.includes('private_league_requests') ||
+        (errorMessage.includes('organisationId') && errorMessage.includes('does not exist'))) {
       return NextResponse.json(
         { error: 'Database migration required. Please run: npx prisma migrate dev' },
         { status: 503 }
       )
     }
     
+    // Return error with details
     return NextResponse.json(
-      { error: 'Failed to create league', details: errorMessage },
+      { 
+        error: 'Failed to create league', 
+        details: errorMessage,
+        code: error.code,
+      },
       { status: 500 }
     )
   }

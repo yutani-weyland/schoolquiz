@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { User, LogOut, Sun, Moon, Search, Command, HelpCircle, Settings, Mail } from 'lucide-react'
+import { User, LogOut, Sun, Moon, Search, Command, HelpCircle, Settings, Mail, BookOpen, Users, Trophy, BarChart3 } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { DraftIndicator } from './DraftIndicator'
@@ -160,7 +160,44 @@ export function AdminTopbar() {
                 )}
               </div>
 
-              {/* Menu Items */}
+              {/* Menu Items - Testing Links */}
+              <div className="px-3 py-1.5 text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
+                Quick Access
+              </div>
+              <Link
+                href="/quizzes"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] transition-colors"
+              >
+                <BookOpen className="w-4 h-4" />
+                Quizzes
+              </Link>
+              <Link
+                href="/leagues"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] transition-colors"
+              >
+                <Users className="w-4 h-4" />
+                Private Leagues
+              </Link>
+              <Link
+                href="/stats"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] transition-colors"
+              >
+                <BarChart3 className="w-4 h-4" />
+                Stats & Analytics
+              </Link>
+              <Link
+                href="/achievements"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] transition-colors"
+              >
+                <Trophy className="w-4 h-4" />
+                Achievements
+              </Link>
+              
+              <div className="h-px bg-[hsl(var(--border))] my-1" />
+              
+              <div className="px-3 py-1.5 text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
+                Account
+              </div>
               <Link
                 href="/account"
                 className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] transition-colors"

@@ -88,16 +88,21 @@ export function DraggableLeaguesList({
                 items={leagues.map(l => l.id)}
                 strategy={verticalListSortingStrategy}
             >
-                <div className="space-y-2">
-                    {leagues.map((league) => (
-                        <SortableLeagueItem
-                            key={league.id}
-                            league={league}
-                            isSelected={selectedLeague?.id === league.id}
-                            onSelect={() => onSelectLeague(league)}
-                            leagueAccentColor={leagueAccentColor}
-                        />
-                    ))}
+                <div className="space-y-1.5">
+                    {leagues.filter(league => league).map((league) => {
+                        const currentUserId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null
+                        const isCreator = league.createdByUserId === currentUserId
+                        return (
+                            <SortableLeagueItem
+                                key={league.id}
+                                league={league}
+                                isSelected={selectedLeague?.id === league.id}
+                                onSelect={() => onSelectLeague(league)}
+                                leagueAccentColor={leagueAccentColor}
+                                isCreator={isCreator}
+                            />
+                        )
+                    })}
                 </div>
             </SortableContext>
         </DndContext>

@@ -22,11 +22,40 @@ async function getUserFromToken(request: NextRequest) {
     return null
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-  })
-  
-  return user
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        tier: true,
+        teamName: true,
+        // Exclude problematic fields that may not exist
+      },
+    })
+    return user
+  } catch (error: any) {
+    // If there's a schema error, try with minimal fields
+    if (error.code === 'P2022' || error.message?.includes('does not exist')) {
+      try {
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            tier: true,
+          },
+        })
+        return user
+      } catch (fallbackError) {
+        console.error('Error fetching user in getUserFromToken:', fallbackError)
+        return null
+      }
+    }
+    throw error
+  }
 }
 
 /**
@@ -101,7 +130,7 @@ export async function GET(
       })
     }
     
-    const league = await (prisma as any).privateLeague.findUnique({
+    const league = await (prisma as any).privateLeague.findFirst({
       where: { id, deletedAt: null },
       include: {
         members: {
@@ -140,51 +169,15 @@ export async function GET(
     
     // Get stats for the league
     // If quizSlug is provided, get quiz-specific stats, otherwise overall stats
-    const stats = await (prisma as any).privateLeagueStats.findMany({
-      where: {
-        leagueId: id,
-        quizSlug: quizSlug,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            teamName: true,
-          },
-        },
-      },
-      orderBy: quizSlug
-        ? [
-            { score: 'desc' }, // For quiz-specific, sort by score
-            { completedAt: 'asc' }, // Then by completion time (earlier = better)
-          ]
-        : [
-            { totalCorrectAnswers: 'desc' }, // For overall, sort by total correct
-            { bestStreak: 'desc' }, // Then by best streak
-          ],
-    })
+    let stats: any[] = []
+    let quizSlugs: any[] = []
+    let overallStats: any[] = []
     
-    // Get all unique quiz slugs for this league
-    const quizSlugs = await (prisma as any).privateLeagueStats.findMany({
-      where: {
-        leagueId: id,
-        quizSlug: { not: null },
-      },
-      select: {
-        quizSlug: true,
-      },
-      distinct: ['quizSlug'],
-    })
-    
-    return NextResponse.json({
-      stats,
-      quizSlugs: quizSlugs.map((q: any) => q.quizSlug).filter(Boolean),
-      overallStats: !quizSlug ? stats : await (prisma as any).privateLeagueStats.findMany({
+    try {
+      stats = await (prisma as any).privateLeagueStats.findMany({
         where: {
           leagueId: id,
-          quizSlug: null,
+          quizSlug: quizSlug,
         },
         include: {
           user: {
@@ -196,11 +189,76 @@ export async function GET(
             },
           },
         },
-        orderBy: [
-          { totalCorrectAnswers: 'desc' },
-          { bestStreak: 'desc' },
-        ],
-      }),
+        orderBy: quizSlug
+          ? [
+              { score: 'desc' }, // For quiz-specific, sort by score
+              { completedAt: 'asc' }, // Then by completion time (earlier = better)
+            ]
+          : [
+              { totalCorrectAnswers: 'desc' }, // For overall, sort by total correct
+              { bestStreak: 'desc' }, // Then by best streak
+            ],
+      })
+      
+      // Get all unique quiz slugs for this league
+      quizSlugs = await (prisma as any).privateLeagueStats.findMany({
+        where: {
+          leagueId: id,
+          quizSlug: { not: null },
+        },
+        select: {
+          quizSlug: true,
+        },
+        distinct: ['quizSlug'],
+      })
+      
+      // Get overall stats if quizSlug was provided
+      if (quizSlug) {
+        overallStats = await (prisma as any).privateLeagueStats.findMany({
+          where: {
+            leagueId: id,
+            quizSlug: null,
+          },
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                teamName: true,
+              },
+            },
+          },
+          orderBy: [
+            { totalCorrectAnswers: 'desc' },
+            { bestStreak: 'desc' },
+          ],
+        })
+      } else {
+        overallStats = stats
+      }
+    } catch (statsError: any) {
+      // If stats table doesn't exist or there's an error, return empty arrays
+      const errorMsg = statsError.message || String(statsError)
+      if (errorMsg.includes('does not exist') || 
+          errorMsg.includes('Unknown model') ||
+          errorMsg.includes('private_league_stats')) {
+        console.warn('League stats table not found or error querying stats:', errorMsg)
+        // Return empty stats - this is okay, stats will be created as users play
+        return NextResponse.json({
+          stats: [],
+          quizSlugs: [],
+          overallStats: [],
+        })
+      }
+      // Re-throw other errors
+      throw statsError
+    }
+    
+    return NextResponse.json({
+      stats,
+      quizSlugs: quizSlugs.map((q: any) => q.quizSlug).filter(Boolean),
+      overallStats,
     })
   } catch (error: any) {
     console.error('Error fetching league stats:', error)

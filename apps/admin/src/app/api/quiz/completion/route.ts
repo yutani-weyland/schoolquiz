@@ -57,21 +57,60 @@ export async function GET(request: NextRequest) {
     try {
       user = await prisma.user.findUnique({
         where: { id: userId },
+        // Select only fields we need to avoid schema mismatch errors
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          tier: true,
+          teamName: true,
+          referralCode: true,
+          referredBy: true,
+          freeMonthsGranted: true,
+          freeTrialUntil: true,
+          // Exclude nextCycleFree and freeMonthGrantedAt if they cause issues
+          // These are optional fields that may not exist in all databases
+        },
       });
     } catch (dbError: any) {
       console.error('❌ Database error when fetching user:', dbError);
       console.error('Error code:', dbError.code);
       console.error('Error message:', dbError.message);
-      console.error('Error stack:', dbError.stack);
-      // Return 500 with details instead of throwing
-      return NextResponse.json(
-        {
-          error: 'Database error when fetching user',
-          details: dbError.message || 'Unknown database error',
-          code: dbError.code,
-        },
-        { status: 500 }
-      );
+      
+      // If it's a column error, try with minimal fields
+      if (dbError.code === 'P2022' || dbError.message?.includes('does not exist')) {
+        try {
+          user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              tier: true,
+              teamName: true,
+            },
+          });
+        } catch (fallbackError: any) {
+          return NextResponse.json(
+            {
+              error: 'Database error when fetching user',
+              details: fallbackError.message || 'Unknown database error',
+              code: fallbackError.code,
+            },
+            { status: 500 }
+          );
+        }
+      } else {
+        // Return 500 with details instead of throwing
+        return NextResponse.json(
+          {
+            error: 'Database error when fetching user',
+            details: dbError.message || 'Unknown database error',
+            code: dbError.code,
+          },
+          { status: 500 }
+        );
+      }
     }
 
     if (!user) {

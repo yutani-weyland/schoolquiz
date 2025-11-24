@@ -10,6 +10,8 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { applyTheme, Theme } from '@/lib/theme';
 import { storage, getUserId, getUserName } from '@/lib/storage';
 import { logger } from '@/lib/logger';
+import { cn } from '@/lib/utils';
+import { LeagueRequestsNotification } from '@/components/leagues/LeagueRequestsNotification';
 
 export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
   const router = useRouter();
@@ -94,8 +96,14 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
   }, [isLoggedIn, isVisitor, isFree, isPremium, tier, isFreeUser, localStorageLoggedIn, effectiveIsFree, effectiveIsVisitor]);
   
   // Check if we're on the quizzes page
-  const isOnQuizzesPage = pathname === '/quizzes';
+  const isOnQuizzesPage = pathname === '/quizzes' || pathname?.startsWith('/quizzes/');
   const isOnIndexPage = pathname === '/';
+  
+  // Helper function to check if pathname matches a route
+  const isActiveRoute = (route: string) => {
+    if (route === '/') return pathname === '/';
+    return pathname === route || pathname?.startsWith(`${route}/`);
+  };
 
   useEffect(() => {
     // Get user ID if logged in
@@ -255,7 +263,12 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
                 Get Premium
               </Link>
             )}
-            <div className="relative flex-shrink-0" ref={menuRef}>
+            <div className="relative flex-shrink-0 flex items-center gap-2" ref={menuRef}>
+              {/* League Requests Notification - Only for logged-in premium users */}
+              {((isLoggedIn || localStorageLoggedIn) && (isPremium || tier === 'premium')) && (
+                <LeagueRequestsNotification />
+              )}
+              
               <motion.button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -327,7 +340,7 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
                   {/* User Profile Section - Only for logged-in users */}
                   {(isLoggedIn || localStorageLoggedIn) && (
                     <div className="px-0 py-0 mb-4 pb-4 border-b border-gray-100 dark:border-gray-700/50">
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 pl-4">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <p className="font-medium text-gray-900 dark:text-white text-base truncate">
@@ -343,7 +356,7 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
                   )}
 
                   {/* Menu Items - Tier-specific */}
-                  <div className="py-2">
+                  <div className="space-y-2">
                     {(() => {
                       console.log('[SiteHeader Menu] Rendering menu with:', {
                         isVisitor,
@@ -364,35 +377,55 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
                         <Link
                           href="/quizzes/12/intro"
                           onClick={handleLinkClick}
-                          className="flex items-center gap-3 px-4 py-2.5 rounded-full text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                          className={cn(
+                            "flex items-center gap-3 px-4 py-2.5 rounded-full text-base transition-colors",
+                            isActiveRoute('/quizzes')
+                              ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300"
+                              : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                          )}
                         >
-                          <Play className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                          <Play className="w-5 h-5" />
                           Play the quiz
                         </Link>
-                        <div className="border-t border-gray-200 dark:border-gray-700 my-1.5"></div>
+                        <div className="border-t border-gray-200 dark:border-gray-700 my-3"></div>
                         <Link
                           href="/sign-in"
                           onClick={handleLinkClick}
-                          className="flex items-center gap-3 px-4 py-2.5 rounded-full text-base text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                          className={cn(
+                            "flex items-center gap-3 px-4 py-2.5 rounded-full text-base transition-colors",
+                            isActiveRoute('/sign-in')
+                              ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 font-medium"
+                              : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          )}
                         >
-                          <User className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                          <User className="w-5 h-5" />
                           Log In
                         </Link>
                         <Link
                           href="/sign-up"
                           onClick={handleLinkClick}
-                          className="flex items-center gap-3 px-4 py-2.5 rounded-full text-base font-medium text-white bg-[#3B82F6] hover:bg-[#2563EB] transition-all duration-200"
+                          className={cn(
+                            "flex items-center gap-3 px-4 py-2.5 rounded-full text-base transition-colors",
+                            isActiveRoute('/sign-up')
+                              ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 font-medium"
+                              : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          )}
                         >
-                          <User className="w-5 h-5 text-white" />
+                          <User className="w-5 h-5" />
                           Sign Up
                         </Link>
-                        <div className="border-t border-gray-200 dark:border-gray-700 my-1.5"></div>
+                        <div className="border-t border-gray-200 dark:border-gray-700 my-3"></div>
                         <Link
                           href="/about"
                           onClick={handleLinkClick}
-                          className="flex items-center gap-3 px-4 py-2.5 rounded-full text-base text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                          className={cn(
+                            "flex items-center gap-3 px-4 py-2.5 rounded-full text-base transition-colors",
+                            isActiveRoute('/about')
+                              ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 font-medium"
+                              : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          )}
                         >
-                          <Info className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                          <Info className="w-5 h-5" />
                           About The School Quiz
                         </Link>
                       </>
@@ -402,25 +435,40 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
                         <Link
                           href="/quizzes"
                           onClick={handleLinkClick}
-                          className="flex items-center gap-3 px-4 py-2.5 rounded-full text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                          className={cn(
+                            "flex items-center gap-3 px-4 py-2.5 rounded-full text-base transition-colors",
+                            isActiveRoute('/quizzes')
+                              ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 font-medium"
+                              : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                          )}
                         >
-                          <BookOpen className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                          <BookOpen className="w-5 h-5" />
                           Quizzes
                         </Link>
                         <Link
                           href="/achievements"
                           onClick={handleLinkClick}
-                          className="flex items-center gap-3 px-4 py-2.5 rounded-full text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                          className={cn(
+                            "flex items-center gap-3 px-4 py-2.5 rounded-full text-base transition-colors",
+                            isActiveRoute('/achievements')
+                              ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 font-medium"
+                              : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                          )}
                         >
-                          <Trophy className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                          <Trophy className="w-5 h-5" />
                           Achievements
                         </Link>
                         <Link
                           href="/account"
                           onClick={handleLinkClick}
-                          className="flex items-center gap-3 px-4 py-2.5 rounded-full text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                          className={cn(
+                            "flex items-center gap-3 px-4 py-2.5 rounded-full text-base transition-colors",
+                            isActiveRoute('/account')
+                              ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 font-medium"
+                              : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                          )}
                         >
-                          <Settings className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                          <Settings className="w-5 h-5" />
                           Settings
                         </Link>
                       </>
@@ -430,41 +478,66 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
                         <Link
                           href="/quizzes"
                           onClick={handleLinkClick}
-                          className="flex items-center gap-3 px-4 py-2.5 rounded-full text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                          className={cn(
+                            "flex items-center gap-3 px-4 py-2.5 rounded-full text-base transition-colors",
+                            isActiveRoute('/quizzes')
+                              ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 font-medium"
+                              : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                          )}
                         >
-                          <BookOpen className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                          <BookOpen className="w-5 h-5" />
                           Quizzes
                         </Link>
                         <Link
                           href="/leagues"
                           onClick={handleLinkClick}
-                          className="flex items-center gap-3 px-4 py-2.5 rounded-full text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                          className={cn(
+                            "flex items-center gap-3 px-4 py-2.5 rounded-full text-base transition-colors",
+                            isActiveRoute('/leagues')
+                              ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 font-medium"
+                              : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                          )}
                         >
-                          <Users className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                          <Users className="w-5 h-5" />
                           Private Leagues
                         </Link>
                         <Link
                           href="/stats"
                           onClick={handleLinkClick}
-                          className="flex items-center gap-3 px-4 py-2.5 rounded-full text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                          className={cn(
+                            "flex items-center gap-3 px-4 py-2.5 rounded-full text-base transition-colors",
+                            isActiveRoute('/stats')
+                              ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 font-medium"
+                              : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                          )}
                         >
-                          <BarChart3 className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                          <BarChart3 className="w-5 h-5" />
                           Stats & Analytics
                         </Link>
                         <Link
                           href="/achievements"
                           onClick={handleLinkClick}
-                          className="flex items-center gap-3 px-4 py-2.5 rounded-full text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                          className={cn(
+                            "flex items-center gap-3 px-4 py-2.5 rounded-full text-base transition-colors",
+                            isActiveRoute('/achievements')
+                              ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 font-medium"
+                              : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                          )}
                         >
-                          <Trophy className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                          <Trophy className="w-5 h-5" />
                           Achievements
                         </Link>
                         <Link
                           href="/account"
                           onClick={handleLinkClick}
-                          className="flex items-center gap-3 px-4 py-2.5 rounded-full text-base text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                          className={cn(
+                            "flex items-center gap-3 px-4 py-2.5 rounded-full text-base transition-colors",
+                            isActiveRoute('/account')
+                              ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 font-medium"
+                              : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                          )}
                         >
-                          <Settings className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                          <Settings className="w-5 h-5" />
                           Account
                         </Link>
                       </>
@@ -474,8 +547,8 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
                   {/* Upgrade CTA for Free Users */}
                   {isFreeUser && (
                     <>
-                      <div className="border-t border-gray-100 dark:border-gray-700/50 my-1"></div>
-                      <div className="py-2">
+                      <div className="border-t border-gray-100 dark:border-gray-700/50 my-2"></div>
+                      <div className="space-y-1">
                         <Link
                           href="/upgrade"
                           onClick={handleLinkClick}
@@ -489,22 +562,22 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
                   )}
 
                   {/* Dark Mode and Sign Out - Always at bottom (static across tiers) */}
-                  <div className="border-t border-gray-100 dark:border-gray-700/50 mt-1"></div>
-                  <div className="py-2">
+                  <div className="border-t border-gray-100 dark:border-gray-700/50 my-3"></div>
+                  <div className="space-y-2">
                     {(isLoggedIn || localStorageLoggedIn) && (
                       <button
                         onClick={() => {
                           setIsMenuOpen(false);
                           handleLogout();
                         }}
-                        className="flex items-center gap-3 px-5 py-2.5 text-base text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors w-full text-left"
+                        className="flex items-center gap-3 px-4 py-2.5 text-base text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors w-full text-left rounded-full"
                       >
                         <LogOut className="w-5 h-5 text-red-600 dark:text-red-400" />
                         Sign Out
                       </button>
                     )}
                     {/* Dark Mode Toggle */}
-                    <div className="flex items-center justify-between px-5 py-2.5">
+                    <div className="flex items-center justify-between px-4 py-2.5">
                       <div className="flex items-center gap-3">
                         {isDark ? (
                           <Sun className="w-5 h-5 text-gray-500 dark:text-gray-400" />

@@ -7,16 +7,16 @@ import { GripVertical } from 'lucide-react'
 interface League {
     id: string
     name: string
-    description: string | null
-    inviteCode: string
-    createdByUserId: string
+    description?: string | null
+    inviteCode?: string
+    createdByUserId?: string
     color?: string
-    creator: {
+    creator?: {
         id: string
         name: string | null
         email: string
     }
-    members: Array<{
+    members?: Array<{
         id: string
         userId: string
         joinedAt: string
@@ -27,7 +27,7 @@ interface League {
             teamName: string | null
         }
     }>
-    _count: {
+    _count?: {
         members: number
     }
 }
@@ -43,8 +43,14 @@ export function SortableLeagueItem({
     league,
     isSelected,
     onSelect,
-    leagueAccentColor
+    leagueAccentColor,
+    isCreator
 }: SortableLeagueItemProps) {
+    // Defensive check - ensure league exists
+    if (!league) {
+        return null
+    }
+
     const {
         attributes,
         listeners,
@@ -60,28 +66,49 @@ export function SortableLeagueItem({
         opacity: isDragging ? 0.5 : 1,
     }
 
+    // Safely get member count
+    const memberCount = league._count?.members ?? league.members?.length ?? 0
+
     return (
         <div ref={setNodeRef} style={style}>
             <button
                 onClick={onSelect}
-                className={`w-full text-left p-4 rounded-xl transition-all relative group ${isSelected
+                className={`w-full text-left p-2.5 rounded-lg transition-all relative group ${isSelected
                         ? 'text-white shadow-md'
                         : 'bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
                     }`}
                 style={isSelected ? { backgroundColor: league.color || leagueAccentColor } : {}}
             >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5">
                     <div
                         {...attributes}
                         {...listeners}
                         className="cursor-grab active:cursor-grabbing text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity"
                     >
-                        <GripVertical className="w-4 h-4" />
+                        <GripVertical className="w-3.5 h-3.5" />
                     </div>
                     <div className="flex-1 min-w-0">
-                        <div className="font-medium mb-1 truncate">{league.name}</div>
-                        <div className={`text-sm ${isSelected ? 'opacity-90' : 'opacity-75'}`}>
-                            {league._count.members} member{league._count.members !== 1 ? 's' : ''}
+                        <div className="flex items-center gap-2">
+                            <div className="font-medium text-sm truncate">{league.name || 'Unnamed League'}</div>
+                            {isCreator && (
+                                <span className={`text-xs px-1.5 py-0.5 rounded ${isSelected 
+                                    ? 'bg-white/20 text-white' 
+                                    : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
+                                }`}>
+                                    Admin
+                                </span>
+                            )}
+                            {!isCreator && (
+                                <span className={`text-xs px-1.5 py-0.5 rounded ${isSelected 
+                                    ? 'bg-white/20 text-white' 
+                                    : 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-400'
+                                }`}>
+                                    Member
+                                </span>
+                            )}
+                        </div>
+                        <div className={`text-xs mt-0.5 ${isSelected ? 'opacity-90' : 'opacity-70'}`}>
+                            {memberCount} member{memberCount !== 1 ? 's' : ''}
                         </div>
                     </div>
                 </div>

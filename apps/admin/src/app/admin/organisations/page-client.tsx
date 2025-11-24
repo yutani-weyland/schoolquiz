@@ -483,9 +483,7 @@ export default function OrganisationsClient({
                 </button>
               </PopoverContent>
             </Popover>
-          </div>
-        }
-      />
+      </div>
 
       {/* Error State */}
       {error && (
@@ -598,7 +596,7 @@ export default function OrganisationsClient({
               onChange={setSearchInput}
               placeholder="Search organisations..."
               onFetchSuggestions={fetchSearchSuggestions}
-              className="text-xs"
+              className="text-xs h-9"
               minChars={2}
               maxSuggestions={8}
             />
@@ -612,7 +610,7 @@ export default function OrganisationsClient({
                 setPage(1)
               }}
             >
-              <SelectTrigger className="pl-10 text-xs">
+              <SelectTrigger className="pl-10 text-xs h-9">
                 <SelectValue placeholder="All Statuses" />
               </SelectTrigger>
               <SelectContent>

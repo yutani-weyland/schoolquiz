@@ -159,7 +159,7 @@ export async function GET(
         freeTrialEndsAt: user.freeTrialEndsAt?.toISOString() || null,
         referralCode: user.referralCode,
         referredBy: user.referredBy,
-        referralCount: user.referralCount,
+        freeMonthsGranted: (user as any).freeMonthsGranted || 0, // Use freeMonthsGranted instead of referralCount
         freeTrialUntil: user.freeTrialUntil?.toISOString() || null,
         emailVerified: user.emailVerified,
         phoneVerified: user.phoneVerified,

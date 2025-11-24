@@ -461,9 +461,7 @@ export default function UsersClient({
                 </button>
               </PopoverContent>
             </Popover>
-          </div>
-        }
-      />
+      </div>
 
       {/* Error State */}
       {error && (
@@ -573,7 +571,7 @@ export default function UsersClient({
               onChange={setSearchInput}
               placeholder="Search users..."
               onFetchSuggestions={fetchSearchSuggestions}
-              className="text-xs"
+              className="text-xs h-9"
               minChars={2}
               maxSuggestions={8}
             />
@@ -587,7 +585,7 @@ export default function UsersClient({
                 setPage(1)
               }}
             >
-              <SelectTrigger className="pl-10 text-xs">
+              <SelectTrigger className="pl-10 text-xs h-9">
                 <SelectValue placeholder="All Tiers" />
               </SelectTrigger>
               <SelectContent>

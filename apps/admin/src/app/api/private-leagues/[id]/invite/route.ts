@@ -140,7 +140,7 @@ export async function POST(
       })
     }
     
-    const league = await (prisma as any).privateLeague.findUnique({
+    const league = await (prisma as any).privateLeague.findFirst({
       where: { id, deletedAt: null },
       include: {
         members: {

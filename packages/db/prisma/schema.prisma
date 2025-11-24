@@ -224,10 +224,12 @@ model User {
   platformRole String? // "PLATFORM_ADMIN", "ORG_ADMIN", "TEACHER", "STUDENT", "PARENT" or null
 
   // Referral system
-  referralCode   String?   @unique // Unique code for this user to share
-  referredBy     String? // User ID who referred this user
-  referralCount  Int       @default(0) // Number of successful referrals (verified users)
-  freeTrialUntil DateTime? // Date when free trial from referrals ends
+  referralCode        String?   @unique // Unique code for this user to share
+  referredBy          String? // User ID who referred this user
+  freeMonthsGranted   Int       @default(0) // Total free months earned via referrals (max 3) - column name is "freeMonthsGranted" (quoted in migration)
+  freeTrialUntil      DateTime? // Date when free trial from referrals ends
+  nextCycleFree       Boolean   @default(false) @map("next_cycle_free") // True if user has earned a free month for next billing cycle
+  freeMonthGrantedAt  DateTime? @map("free_month_granted_at") // Timestamp when the free month was granted
 
   // Email verification
   emailVerified            Boolean   @default(false)
@@ -267,14 +269,16 @@ model User {
   unlockedFlair   UserFlair[]
 
   // Referral relations
-  referrals User[] @relation("UserReferrals") // Users referred by this user
-  referrer  User?  @relation("UserReferrals", fields: [referredBy], references: [id])
+  referralsMade    Referral[] @relation("UserReferrals") // Referrals this user made
+  referralReceived Referral?  @relation("ReferredUser")  // Referral record for this user (if they were referred)
 
   // Private League relations
-  createdPrivateLeagues PrivateLeague[]       @relation("PrivateLeagueCreator")
-  privateLeagueMembers  PrivateLeagueMember[] @relation("PrivateLeagueMembers")
-  privateLeagueInvites  PrivateLeagueMember[] @relation("PrivateLeagueInviter")
-  privateLeagueStats    PrivateLeagueStats[]  @relation("PrivateLeagueStats")
+  createdPrivateLeagues    PrivateLeague[]         @relation("PrivateLeagueCreator")
+  privateLeagueMembers     PrivateLeagueMember[]   @relation("PrivateLeagueMembers")
+  privateLeagueInvites     PrivateLeagueMember[]   @relation("PrivateLeagueInviter")
+  privateLeagueStats       PrivateLeagueStats[]    @relation("PrivateLeagueStats")
+  privateLeagueRequests    PrivateLeagueRequest[]  @relation("PrivateLeagueRequestUser")
+  respondedLeagueRequests  PrivateLeagueRequest[]  @relation("PrivateLeagueRequestResponder")
 
   // User-submitted questions
   questionSubmissions UserQuestionSubmission[]
@@ -324,12 +328,13 @@ model Organisation {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  owner        User                   @relation("OrganisationOwner", fields: [ownerUserId], references: [id])
-  members      OrganisationMember[]
-  groups       OrganisationGroup[]
-  leaderboards Leaderboard[]
-  activity     OrganisationActivity[]
-  invoices     Invoice[]
+  owner         User                   @relation("OrganisationOwner", fields: [ownerUserId], references: [id])
+  members       OrganisationMember[]
+  groups        OrganisationGroup[]
+  leaderboards  Leaderboard[]
+  privateLeagues PrivateLeague[]
+  activity      OrganisationActivity[]
+  invoices      Invoice[]
   subscriptions Subscription[]
   supportTickets SupportTicket[]
 
@@ -694,6 +699,7 @@ model PrivateLeague {
   name            String
   description     String?
   createdByUserId String
+  organisationId  String? // Optional - leagues can be organization-specific
 
   inviteCode String @unique // Unique code for inviting members
   maxMembers Int    @default(50) // Maximum members allowed
@@ -703,13 +709,16 @@ model PrivateLeague {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  creator User                  @relation("PrivateLeagueCreator", fields: [createdByUserId], references: [id], onDelete: Cascade)
-  members PrivateLeagueMember[]
-  stats   PrivateLeagueStats[]
+  creator      User                    @relation("PrivateLeagueCreator", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  organisation Organisation?            @relation(fields: [organisationId], references: [id], onDelete: SetNull)
+  members      PrivateLeagueMember[]
+  stats        PrivateLeagueStats[]
+  requests     PrivateLeagueRequest[]
 
   @@index([createdByUserId])
   @@index([inviteCode])
   @@index([deletedAt])
+  @@index([organisationId, deletedAt])
   @@map("private_leagues")
 }
 
@@ -761,6 +770,36 @@ model PrivateLeagueStats {
   @@index([leagueId, quizSlug, score]) // For ranking queries
   @@index([userId])
   @@map("private_league_stats")
+}
+
+enum PrivateLeagueRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model PrivateLeagueRequest {
+  id              String                     @id @default(cuid())
+  leagueId        String
+  userId          String
+  status          PrivateLeagueRequestStatus @default(PENDING)
+  requestedAt     DateTime                   @default(now())
+  respondedAt     DateTime?
+  respondedByUserId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  league        PrivateLeague @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  user          User          @relation("PrivateLeagueRequestUser", fields: [userId], references: [id], onDelete: Cascade)
+  respondedBy   User?         @relation("PrivateLeagueRequestResponder", fields: [respondedByUserId], references: [id], onDelete: SetNull)
+
+  // Note: Partial unique index (one pending request per user per league) is created via SQL migration
+  // This allows multiple requests with different statuses but only one PENDING at a time
+  @@index([leagueId, status])
+  @@index([userId, status])
+  @@index([leagueId, status, requestedAt]) // For creator queries
+  @@map("private_league_requests")
 }
 
 // ============================================================================
@@ -973,4 +1012,26 @@ model AuditLog {
   @@index([action])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+model Referral {
+  id              String   @id @default(cuid())
+  referrerId      String
+  referredUserId  String   @unique
+  referralCode    String
+  status          String   @default("PENDING") // PENDING: user signed up, REWARDED: both users got free month
+  rewardGrantedAt DateTime? // When the reward was granted (when referred user became Premium)
+  referrerRewarded Boolean  @default(false) // Whether referrer got their free month
+  referredRewarded Boolean  @default(false) // Whether referred user got their free month
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  referrer     User @relation("UserReferrals", fields: [referrerId], references: [id], onDelete: Cascade)
+  referredUser User @relation("ReferredUser", fields: [referredUserId], references: [id], onDelete: Cascade)
+
+  @@index([referrerId])
+  @@index([referredUserId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("referrals")
 }

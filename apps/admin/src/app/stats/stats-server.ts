@@ -53,14 +53,12 @@ export interface StatsData {
 /**
  * Fetch stats from API (server-side)
  * Uses internal API route which now supports cookies
+ * Token must be passed in (can't access cookies inside cached function)
  */
-async function fetchStatsFromAPI(userId: string): Promise<StatsData> {
+async function fetchStatsFromAPI(userId: string, token: string): Promise<StatsData> {
   try {
-    // Get auth token from cookies
-    const token = await getAuthTokenFromCookies()
-    
     if (!token) {
-      throw new Error('No auth token found')
+      throw new Error('No auth token provided')
     }
 
     // Call the stats API endpoint
@@ -131,7 +129,8 @@ function getEmptyStats(): StatsData {
 
 /**
  * Get stats data (server-side)
- * Uses caching to prevent duplicate database queries
+ * Note: Cannot use unstable_cache here because it requires cookies for auth
+ * The API route itself should handle caching if needed
  */
 export async function getStatsData(): Promise<StatsData | null> {
   const authUser = await getServerAuthUser()
@@ -140,16 +139,16 @@ export async function getStatsData(): Promise<StatsData | null> {
     return null
   }
 
-  // Cache stats for 2 minutes (stats don't change frequently)
-  const getCachedStats = unstable_cache(
-    async (uid: string) => fetchStatsFromAPI(uid),
-    [`stats-${authUser.userId}`],
-    {
-      revalidate: 120, // 2 minutes
-      tags: [`stats-${authUser.userId}`],
-    }
-  )
+  // Get auth token from cookies
+  const token = await getAuthTokenFromCookies()
+  
+  if (!token) {
+    console.error('[stats-server] No auth token found')
+    return getEmptyStats()
+  }
 
-  return getCachedStats(authUser.userId)
+  // Fetch stats directly (no caching - Next.js 15 doesn't allow cookies in cached functions)
+  // The API route can handle its own caching if needed
+  return fetchStatsFromAPI(authUser.userId, token)
 }
 

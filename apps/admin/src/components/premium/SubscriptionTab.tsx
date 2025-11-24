@@ -18,14 +18,20 @@ export function SubscriptionTab() {
   const fetchSubscription = async () => {
     try {
       const token = localStorage.getItem('authToken');
+      const userId = localStorage.getItem('userId');
       if (!token) {
         setError('Not authenticated');
         setIsLoading(false);
         return;
       }
 
+      const headers: HeadersInit = { Authorization: `Bearer ${token}` };
+      if (userId) {
+        headers['X-User-Id'] = userId;
+      }
+
       const response = await fetch('/api/user/subscription', {
-        headers: { Authorization: `Bearer ${token}` },
+        headers,
       });
 
       if (response.ok) {
@@ -44,17 +50,23 @@ export function SubscriptionTab() {
   const handleManageBilling = async () => {
     try {
       const token = localStorage.getItem('authToken');
+      const userId = localStorage.getItem('userId');
       if (!token) {
         setError('Not authenticated');
         return;
       }
 
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      };
+      if (userId) {
+        headers['X-User-Id'] = userId;
+      }
+
       const response = await fetch('/api/user/billing-portal', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
+        headers,
       });
 
       if (response.ok) {
@@ -81,12 +93,18 @@ export function SubscriptionTab() {
         throw new Error('Not authenticated');
       }
 
+      const userId = localStorage.getItem('userId');
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      };
+      if (userId) {
+        headers['X-User-Id'] = userId;
+      }
+
       const response = await fetch('/api/user/subscription/cancel', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
+        headers,
       });
 
       if (!response.ok) {

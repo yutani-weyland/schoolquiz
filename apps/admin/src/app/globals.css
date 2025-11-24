@@ -2,6 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  :root {
+    --page-bg: #ffffff;
+  }
+  
+  .dark {
+    --page-bg: #0F1419;
+  }
+}
+
 @keyframes spotlight {
   0% {
     opacity: 0;
@@ -285,12 +295,16 @@
   * {
     @apply border-border;
   }
+  html {
+    overflow-x: hidden;
+  }
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "kern" 1, "liga" 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    overflow-x: hidden;
   }
   
   /* Improved typography for card headings and values */

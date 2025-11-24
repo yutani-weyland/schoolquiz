@@ -133,8 +133,13 @@ export function AutocompleteSearch({
 
   const allSuggestions = localSuggestions
 
+  // Extract height classes from className to apply only to input
+  const heightMatch = className?.match(/\bh-\d+\b/)
+  const heightClass = heightMatch ? heightMatch[0] : null
+  const classNameWithoutHeight = className?.replace(/\bh-\d+\b/g, '').trim() || ''
+
   return (
-    <div ref={containerRef} className={cn('relative', className)}>
+    <div ref={containerRef} className={cn('relative', classNameWithoutHeight)}>
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[hsl(var(--muted-foreground))] z-10" />
         <input
@@ -155,7 +160,7 @@ export function AutocompleteSearch({
             'placeholder:text-[hsl(var(--muted-foreground))]',
             'focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]',
             'text-sm',
-            className
+            heightClass
           )}
         />
         {value && (

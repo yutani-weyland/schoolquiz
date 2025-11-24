@@ -112,7 +112,7 @@ export default async function RootLayout({
 					`}
 				</Script>
 			</head>
-			<body className="bg-gray-50 dark:bg-[#0F1419] text-[hsl(var(--foreground))]" suppressHydrationWarning>
+			<body className="bg-gray-50 dark:bg-[#0F1419] text-[hsl(var(--foreground))] overflow-x-hidden" suppressHydrationWarning>
 				<ReactQueryProvider>
 					<ThemeProvider>
 						<UserAccessProvider>

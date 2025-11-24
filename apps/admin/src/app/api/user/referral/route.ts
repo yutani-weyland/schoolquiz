@@ -1,7 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@schoolquiz/db';
-import { requireAuth } from '@/lib/auth';
 import crypto from 'crypto';
+
+/**
+ * Get user from token-based auth (localStorage token system)
+ */
+async function getUserFromToken(request: NextRequest) {
+  const authHeader = request.headers.get('Authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return null;
+  }
+
+  const token = authHeader.substring(7);
+  let userId: string | null = request.headers.get('X-User-Id');
+  
+  if (!userId && token.startsWith('mock-token-')) {
+    const parts = token.split('-');
+    if (parts.length >= 3) {
+      userId = parts.slice(2, -1).join('-');
+    }
+  }
+
+  if (!userId) {
+    return null;
+  }
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+    return user;
+  } catch (error: any) {
+    console.warn('Error fetching user for referral:', error.message);
+    return null;
+  }
+}
 
 /**
  * GET /api/user/referral
@@ -9,7 +42,14 @@ import crypto from 'crypto';
  */
 export async function GET(request: NextRequest) {
   try {
-    const user = await requireAuth();
+    const user = await getUserFromToken(request);
+    
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
 
     // Generate referral code if it doesn't exist
     let referralCode = user.referralCode;
@@ -33,9 +73,24 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // Get referral stats
+    const referralsMade = await (prisma as any).referral.count({
+      where: { referrerId: user.id },
+    })
+
+    const rewardedReferrals = await (prisma as any).referral.count({
+      where: {
+        referrerId: user.id,
+        status: 'REWARDED',
+      },
+    })
+
     return NextResponse.json({
       referralCode,
-      referralCount: user.referralCount || 0,
+      freeMonthsGranted: user.freeMonthsGranted || 0,
+      maxFreeMonths: 3,
+      referralsMade,
+      rewardedReferrals,
     });
   } catch (error: any) {
     console.error('Error fetching referral data:', error);
@@ -48,8 +103,8 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST /api/user/referral/verify
- * Verify and process a referral when a new user signs up
- * This should be called during signup if a referral code is provided
+ * Verify and record a referral when a new user signs up
+ * This creates a PENDING referral record - rewards are granted later when user becomes Premium
  */
 export async function POST(request: NextRequest) {
   try {
@@ -102,41 +157,37 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if referral record already exists
+    const existingReferral = await (prisma as any).referral.findUnique({
+      where: { referredUserId: newUserId },
+    });
+
+    if (existingReferral) {
+      return NextResponse.json(
+        { error: 'Referral already exists for this user' },
+        { status: 400 }
+      );
+    }
+
     // Update new user with referrer
     await prisma.user.update({
       where: { id: newUserId },
       data: { referredBy: referrer.id },
     });
 
-    // Increment referrer's count
-    const updatedReferrer = await prisma.user.update({
-      where: { id: referrer.id },
+    // Create referral record (status: PENDING - will be REWARDED when user becomes Premium)
+    await (prisma as any).referral.create({
       data: {
-        referralCount: {
-          increment: 1,
-        },
+        referrerId: referrer.id,
+        referredUserId: newUserId,
+        referralCode,
+        status: 'PENDING', // Will be REWARDED when referred user becomes Premium
       },
     });
 
-    // Check if referrer has reached 3 referrals
-    if (updatedReferrer.referralCount >= 3 && updatedReferrer.tier === 'basic') {
-      // Grant 1 month free premium
-      const freeTrialUntil = new Date();
-      freeTrialUntil.setMonth(freeTrialUntil.getMonth() + 1);
-
-      await prisma.user.update({
-        where: { id: referrer.id },
-        data: {
-          tier: 'premium',
-          freeTrialUntil,
-        },
-      });
-    }
-
     return NextResponse.json({
       success: true,
-      referralCount: updatedReferrer.referralCount,
-      upgraded: updatedReferrer.referralCount >= 3,
+      message: 'Referral recorded. Rewards will be granted when you become Premium.',
     });
   } catch (error: any) {
     console.error('Error processing referral:', error);

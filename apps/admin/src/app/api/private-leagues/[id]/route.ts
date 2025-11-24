@@ -22,11 +22,40 @@ async function getUserFromToken(request: NextRequest) {
     return null
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-  })
-  
-  return user
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        tier: true,
+        teamName: true,
+        // Exclude problematic fields that may not exist
+      },
+    })
+    return user
+  } catch (error: any) {
+    // If there's a schema error, try with minimal fields
+    if (error.code === 'P2022' || error.message?.includes('does not exist')) {
+      try {
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            tier: true,
+          },
+        })
+        return user
+      } catch (fallbackError) {
+        console.error('Error fetching user in getUserFromToken:', fallbackError)
+        return null
+      }
+    }
+    throw error
+  }
 }
 
 /**
@@ -98,7 +127,7 @@ export async function GET(
         stats: []
       }
     } else {
-      league = await (prisma as any).privateLeague.findUnique({
+      league = await (prisma as any).privateLeague.findFirst({
       where: { id, deletedAt: null },
       include: {
         creator: {
@@ -183,7 +212,16 @@ export async function DELETE(
       )
     }
     
-    const league = await (prisma as any).privateLeague.findUnique({
+    // Check if user is premium (private leagues are premium-only)
+    if (user.tier !== 'premium') {
+      return NextResponse.json(
+        { error: 'Private leagues are only available to premium users' },
+        { status: 403 }
+      )
+    }
+    
+    // Find league (including soft-deleted ones for delete operation)
+    const league = await (prisma as any).privateLeague.findFirst({
       where: { id },
     })
     
@@ -191,6 +229,14 @@ export async function DELETE(
       return NextResponse.json(
         { error: 'League not found' },
         { status: 404 }
+      )
+    }
+    
+    // Check if already deleted
+    if (league.deletedAt) {
+      return NextResponse.json(
+        { error: 'League is already deleted' },
+        { status: 400 }
       )
     }
     
@@ -210,9 +256,31 @@ export async function DELETE(
     
     return NextResponse.json({ success: true })
   } catch (error: any) {
-    console.error('Error deleting league:', error)
+    console.error('Error deleting league:', {
+      message: error.message,
+      code: error.code,
+      meta: error.meta,
+      stack: error.stack,
+    })
+    
+    // Check for specific database errors
+    const errorMsg = error.message || String(error)
+    if (errorMsg.includes('does not exist') || 
+        errorMsg.includes('Unknown model') ||
+        errorMsg.includes('P2022') ||
+        errorMsg.includes('column')) {
+      return NextResponse.json(
+        { 
+          error: 'Database schema error. Please ensure migrations are up to date.',
+          details: errorMsg,
+          code: error.code 
+        },
+        { status: 503 }
+      )
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to delete league', details: error.message },
+      { error: 'Failed to delete league', details: error.message || String(error) },
       { status: 500 }
     )
   }

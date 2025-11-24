@@ -7,7 +7,7 @@ import { CardStack } from "@/components/ui/card-stack";
 import { formatWeek } from "@/lib/format";
 import { textOn } from "@/lib/contrast";
 import { cn } from "@/lib/utils";
-import { Play, Calendar } from "lucide-react";
+import { Play, Calendar, Flame } from "lucide-react";
 import type { Quiz } from "@/components/quiz/QuizCard";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import { CursorProvider, Cursor, CursorFollow, useCursor } from "@/components/ui/animated-cursor";
@@ -21,7 +21,22 @@ function QuizCardStackContent({ quizzes }: QuizCardStackProps) {
   const [cardCount, setCardCount] = React.useState(5);
   const [currentQuizStreak, setCurrentQuizStreak] = React.useState(0);
   const [isHoveringTopCard, setIsHoveringTopCard] = React.useState(false);
+  const [lottieAvailable, setLottieAvailable] = React.useState(false);
   const { setIsActive } = useCursor();
+
+  // Check if Lottie file exists
+  React.useEffect(() => {
+    fetch('/fire-streak.lottie', { method: 'HEAD' })
+      .then(res => {
+        if (res.ok) {
+          setLottieAvailable(true)
+        }
+      })
+      .catch(() => {
+        // File doesn't exist, use fallback
+        setLottieAvailable(false)
+      })
+  }, [])
   
   // Update cursor active state when hovering
   React.useEffect(() => {
@@ -155,12 +170,20 @@ function QuizCardStackContent({ quizzes }: QuizCardStackProps) {
                   {shouldShowFire && (
                     <div className="absolute bottom-0 left-0 right-0 pointer-events-none rounded-b-3xl z-[5] flex items-end justify-center overflow-hidden">
                       <div className="w-full h-1/3 flex items-end justify-center">
-                        <DotLottieReact
-                          src="/fire-streak.lottie"
-                          loop
-                          autoplay
-                          className="w-full h-full"
-                        />
+                        {lottieAvailable ? (
+                          <DotLottieReact
+                            src="/fire-streak.lottie"
+                            loop
+                            autoplay
+                            className="w-full h-full"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-end justify-center pb-4">
+                            <Flame className="w-12 h-12 text-orange-500 animate-pulse" style={{
+                              filter: 'drop-shadow(0 0 8px rgba(249, 115, 22, 0.6))',
+                            }} />
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}

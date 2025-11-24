@@ -504,7 +504,7 @@ export default function HomePage() {
 	const [mounted, setMounted] = useState(false);
 	const [contentLoaded, setContentLoaded] = useState(false);
 	const [flippedCardIds, setFlippedCardIds] = useState<Set<string>>(new Set());
-	const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('yearly');
+	const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
 
 	useEffect(() => {
 		setMounted(true);
@@ -599,7 +599,7 @@ export default function HomePage() {
 			<div id="header-section">
 				<SiteHeader fadeLogo={true} />
 			</div>
-			<main className="min-h-screen">
+					<main className="min-h-screen overflow-x-hidden">
 				{/* Notch Component */}
 				<NextQuizCountdown />
 
@@ -615,8 +615,8 @@ export default function HomePage() {
 								id="headline"
 							>
 								A weekly quiz for<br />
-								high school{" "}
-								<span className="text-blue-600 dark:text-blue-400 inline-block min-h-[1.2em]">
+								high school<br />
+								<span className="text-blue-600 dark:text-blue-400 block min-h-[1.2em]">
 									<RotatingText
 										text={["students", "tutor groups", "homerooms"]}
 										duration={3000}
@@ -1519,7 +1519,7 @@ export default function HomePage() {
 				</section>
 
 				{/* Testimonials Section - Mobbin Style */}
-				<section className="w-full py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8">
+				<section className="w-full py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 overflow-x-hidden">
 					<motion.div
 						initial={{ opacity: 0, y: 20 }}
 						whileInView={{ opacity: 1, y: 0 }}
@@ -1537,7 +1537,7 @@ export default function HomePage() {
 						</div>
 
 						{/* Testimonials Infinite Scroll Carousel */}
-						<div className="relative overflow-visible pb-6 mb-12 group/testimonials">
+						<div className="relative overflow-x-hidden pb-6 mb-12 group/testimonials">
 							{/* Fade gradients at edges */}
 							<div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-gray-50 dark:from-[#0F1419] to-transparent z-20 pointer-events-none"></div>
 							<div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-gray-50 dark:from-[#0F1419] to-transparent z-20 pointer-events-none"></div>
@@ -1693,60 +1693,7 @@ export default function HomePage() {
 						</div>
 
 						{/* Pricing Cards */}
-						<div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 max-w-6xl mx-auto">
-							{/* Free Plan */}
-							<motion.div
-								initial={{ opacity: 0, y: 20, rotate: -0.5 }}
-								whileInView={{ opacity: 1, y: 0, rotate: -0.5 }}
-								viewport={{ once: true }}
-								transition={{
-									duration: 0.5,
-									delay: 0.1,
-									type: "spring",
-									stiffness: 300,
-									damping: 25
-								}}
-								whileHover={{ rotate: 0, scale: 1.02, y: -4 }}
-								className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-700/60 p-6 sm:p-8 flex flex-col hover:shadow-lg transition-all"
-								style={{ transformOrigin: 'center' }}
-							>
-								<div className="mb-6">
-									<h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-1.5">Free</h3>
-									<p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-5">Trialling the quiz in class</p>
-									<div className="mb-1">
-										<span className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">$0</span>
-									</div>
-								</div>
-
-								<ul className="space-y-2.5 sm:space-y-3 flex-1 mb-6">
-									<li className="flex items-start gap-2.5">
-										<span className="text-blue-600 dark:text-blue-400 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✓</span>
-										<span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">3 free quizzes (lifetime)</span>
-									</li>
-									<li className="flex items-start gap-2.5">
-										<span className="text-gray-300 dark:text-gray-600 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✗</span>
-										<span className="text-xs sm:text-sm text-gray-500 dark:text-gray-500 leading-relaxed">No premium features</span>
-									</li>
-									<li className="flex items-start gap-2.5">
-										<span className="text-gray-300 dark:text-gray-600 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✗</span>
-										<span className="text-xs sm:text-sm text-gray-500 dark:text-gray-500 leading-relaxed">No printing, no past quizzes</span>
-									</li>
-									<li className="flex items-start gap-2.5">
-										<span className="text-gray-300 dark:text-gray-600 text-base font-semibold flex-shrink-0 leading-none mt-0.5">✗</span>
-										<span className="text-xs sm:text-sm text-gray-500 dark:text-gray-500 leading-relaxed">No achievements, no leaderboards</span>
-									</li>
-								</ul>
-
-								<p className="text-xs text-gray-500 dark:text-gray-500 mb-6 italic">About three weeks of Monday mornings</p>
-
-								<Link
-									href="/sign-up"
-									className="w-full inline-flex items-center justify-center h-11 px-4 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-full text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
-								>
-									Get started
-								</Link>
-							</motion.div>
-
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 max-w-5xl mx-auto">
 							{/* Premium Plan */}
 							<motion.div
 								initial={{ opacity: 0, y: 20, rotate: 0 }}
@@ -1763,8 +1710,6 @@ export default function HomePage() {
 								className="bg-white dark:bg-gray-900 rounded-2xl border-2 border-blue-500 dark:border-blue-600 p-6 sm:p-8 flex flex-col relative hover:shadow-xl transition-all"
 								style={{ transformOrigin: 'center' }}
 							>
-								{/* Glow effect */}
-								<div className="absolute -inset-1 bg-gradient-to-r from-blue-400 to-blue-600 rounded-2xl opacity-20 dark:opacity-30 blur-xl -z-10"></div>
 								<div className="absolute top-4 right-4">
 									<span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
 										Popular

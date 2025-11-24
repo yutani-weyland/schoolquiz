@@ -51,7 +51,7 @@ export function ReferralProgress({ userId, organisationDomain }: ReferralProgres
   const progress = Math.min(referralCount, 3);
   const progressPercentage = (progress / 3) * 100;
   const referralLink = referralCode
-    ? `${window.location.origin}/signup?ref=${referralCode}`
+    ? `${window.location.origin}/sign-up?ref=${referralCode}`
     : null;
 
   const handleCopy = async () => {
@@ -80,7 +80,7 @@ export function ReferralProgress({ userId, organisationDomain }: ReferralProgres
             Refer & Earn Premium
           </h3>
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            Refer 3 teachers from your organisation to earn 1 month free Premium
+            Refer friends and earn 1 month free Premium when they upgrade. Earn up to 3 free months total.
           </p>
         </div>
       </div>
@@ -89,10 +89,10 @@ export function ReferralProgress({ userId, organisationDomain }: ReferralProgres
       <div className="mb-4">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            Progress: {progress} / 3 referrals
+            Progress: {progress} / 3 free months earned
           </span>
           <span className="text-sm font-bold text-purple-600 dark:text-purple-400">
-            {progress === 3 ? 'Complete!' : `${3 - progress} more needed`}
+            {progress === 3 ? 'Maximum reached!' : `${3 - progress} more to go`}
           </span>
         </div>
         <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
@@ -157,7 +157,7 @@ export function ReferralProgress({ userId, organisationDomain }: ReferralProgres
               Congratulations!
             </p>
             <p className="text-xs text-green-700 dark:text-green-300">
-              You've earned 1 month of Premium. Your account will be upgraded automatically.
+              You've earned the maximum 3 free months! Free months are applied when your referrals upgrade to Premium.
             </p>
           </div>
         </motion.div>

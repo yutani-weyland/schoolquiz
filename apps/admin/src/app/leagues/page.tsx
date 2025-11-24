@@ -1,93 +1,54 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef, memo } from 'react'
+import { useDebounce } from '@/hooks/useDebounce'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import dynamic from 'next/dynamic'
 import { motion } from 'framer-motion'
-import { Trophy, Users, Plus, Search, X, Copy, Mail, Calendar, Edit2, Trash2, LogOut, UserX } from 'lucide-react'
+import { Trophy, Users, Plus, Search, X, Copy, Mail, Calendar, Edit2, Trash2, LogOut, UserX, AlertCircle, RefreshCw, Building2, CheckCircle, XCircle, Loader2, BarChart3, ArrowRight } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { useUserTier } from '@/hooks/useUserTier'
 import { useUserAccess } from '@/contexts/UserAccessContext'
 import { UpgradeModal } from '@/components/premium/UpgradeModal'
 import { SiteHeader } from '@/components/SiteHeader'
 import { Footer } from '@/components/Footer'
+import { fetchLeagues, fetchLeagueStats, getCachedLeagues, cacheLeagues, type League, type LeagueStats, fetchAvailableOrgLeagues, fetchLeagueRequests, respondToRequest, type OrganisationLeague, type LeagueRequest } from '@/lib/leagues-fetch'
+import { LeaguesListSkeleton, LeagueDetailsSkeleton } from '@/components/leagues/LeaguesSkeleton'
+import { OrganisationLeaguesSection } from '@/components/leagues/OrganisationLeaguesSection'
 
 // Dynamic import for DnD Kit components - loads only when needed (saves ~100KB)
 const DraggableLeaguesList = dynamic(() => import('./DraggableLeaguesList').then(mod => ({ default: mod.DraggableLeaguesList })), {
-  loading: () => (
-    <div className="space-y-2">
-      {[...Array(3)].map((_, i) => (
-        <div key={i} className="h-20 bg-gray-100 dark:bg-gray-700/50 rounded-xl animate-pulse" />
-      ))}
-    </div>
-  ),
+  loading: () => <LeaguesListSkeleton />,
   ssr: false, // DnD Kit doesn't work with SSR
 })
 
-interface League {
-  id: string
-  name: string
-  description: string | null
-  inviteCode: string
-  createdByUserId: string
-  color?: string
-  creator: {
-    id: string
-    name: string | null
-    email: string
-  }
-  members: Array<{
-    id: string
-    userId: string
-    joinedAt: string
-    user: {
-      id: string
-      name: string | null
-      email: string
-      teamName: string | null
-    }
-  }>
-  _count: {
-    members: number
-  }
-}
-
-interface LeagueStats {
-  id: string
-  userId: string
-  quizSlug: string | null
-  score: number | null
-  totalQuestions: number | null
-  totalCorrectAnswers: number
-  bestStreak: number
-  currentStreak: number
-  quizzesPlayed: number
-  user: {
-    id: string
-    name: string | null
-    teamName: string | null
-  }
-}
 
 export default function LeaguesPage() {
   const { tier, isPremium, isLoading: tierLoading } = useUserTier()
-  const { userName, isLoading: accessLoading } = useUserAccess()
+  const { userName } = useUserAccess()
+  const queryClient = useQueryClient()
+  const router = useRouter()
+  
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
-  const [leagues, setLeagues] = useState<League[]>([])
-  const [selectedLeague, setSelectedLeague] = useState<League | null>(null)
-  const [leagueStats, setLeagueStats] = useState<{
-    stats: LeagueStats[]
-    quizSlugs: string[]
-    overallStats: LeagueStats[]
-  } | null>(null)
+  const [selectedLeagueId, setSelectedLeagueId] = useState<string | null>(null)
   const [selectedQuiz, setSelectedQuiz] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false) // Start with false - don't block on initial load
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showLeaveModal, setShowLeaveModal] = useState(false)
   const [showKickModal, setShowKickModal] = useState(false)
+  const [showRequestsModal, setShowRequestsModal] = useState(false)
+  const [showJoinByCodeModal, setShowJoinByCodeModal] = useState(false)
   const [memberToKick, setMemberToKick] = useState<{ id: string; name: string } | null>(null)
   const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteSearch, setInviteSearch] = useState('')
+  const debouncedInviteSearch = useDebounce(inviteSearch, 200) // Debounce search input
+  const [orgMembers, setOrgMembers] = useState<any[]>([])
+  const [loadingOrgMembers, setLoadingOrgMembers] = useState(false)
+  const [inviteMode, setInviteMode] = useState<'org' | 'external' | 'code'>('org')
+  const [selectedMemberIds, setSelectedMemberIds] = useState<Set<string>>(new Set())
   const [creating, setCreating] = useState(false)
   const [leagueColor, setLeagueColor] = useState('#3B82F6')
   const [inviting, setInviting] = useState(false)
@@ -95,6 +56,127 @@ export default function LeaguesPage() {
   const [deleting, setDeleting] = useState(false)
   const [leaving, setLeaving] = useState(false)
   const [kicking, setKicking] = useState(false)
+
+  // Check if user has access (premium or admin)
+  const platformRole = typeof window !== 'undefined' ? localStorage.getItem('platformRole') : null
+  const isAdmin = platformRole === 'PLATFORM_ADMIN' || platformRole === 'ORG_ADMIN'
+  const hasAccess = isPremium || isAdmin
+
+  // Get cached leagues for instant initial render
+  const cachedLeagues = useMemo(() => getCachedLeagues(), [])
+
+  // Fetch leagues with React Query - enabled only if user has access
+  const {
+    data: leagues = cachedLeagues || [],
+    isLoading: leaguesLoading,
+    error: leaguesError,
+    refetch: refetchLeagues,
+  } = useQuery({
+    queryKey: ['private-leagues'],
+    queryFn: async () => {
+      const data = await fetchLeagues()
+      cacheLeagues(data) // Cache for instant next render
+      return data
+    },
+    enabled: hasAccess && !tierLoading,
+    staleTime: 30 * 1000, // 30 seconds - leagues don't change often
+    gcTime: 5 * 60 * 1000, // 5 minutes cache
+    retry: 2,
+    retryDelay: 1000,
+    // Use cached data as initial data for instant render
+    initialData: cachedLeagues || undefined,
+    placeholderData: cachedLeagues || undefined,
+  })
+
+  // Get selected league from leagues array
+  const selectedLeague = useMemo(() => {
+    if (!selectedLeagueId || !leagues.length) return null
+    return leagues.find(l => l.id === selectedLeagueId) || null
+  }, [selectedLeagueId, leagues])
+
+  // Fetch stats for selected league - enabled only when league is selected
+  const {
+    data: leagueStats,
+    isLoading: statsLoading,
+    error: statsError,
+  } = useQuery({
+    queryKey: ['league-stats', selectedLeagueId],
+    queryFn: () => fetchLeagueStats(selectedLeagueId!),
+    enabled: !!selectedLeagueId && hasAccess,
+    staleTime: 10 * 1000, // 10 seconds - stats update more frequently
+    gcTime: 2 * 60 * 1000, // 2 minutes cache
+    retry: 1,
+  })
+
+  // Fetch user's organization info
+  const { data: userOrg } = useQuery({
+    queryKey: ['user-organisation'],
+    queryFn: async () => {
+      const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null
+      if (!userId) return null
+      
+      const response = await fetch('/api/user/organisation', {
+        headers: {
+          ...(typeof window !== 'undefined' && localStorage.getItem('authToken')
+            ? { Authorization: `Bearer ${localStorage.getItem('authToken')}` }
+            : {}),
+          ...(userId ? { 'X-User-Id': userId } : {}),
+        },
+      })
+      
+      if (!response.ok) return null
+      const data = await response.json()
+      return data.organisation || null
+    },
+    enabled: hasAccess,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  })
+
+  // Fetch pending requests for leagues user administers
+  const { data: leagueRequests = [] } = useQuery({
+    queryKey: ['league-requests'],
+    queryFn: fetchLeagueRequests,
+    enabled: hasAccess,
+    staleTime: 10 * 1000, // 10 seconds
+    refetchInterval: 30 * 1000, // Poll every 30 seconds
+  })
+
+  // Mutation for responding to requests
+  const respondToRequestMutation = useMutation({
+    mutationFn: ({ requestId, action }: { requestId: string; action: 'approve' | 'reject' }) =>
+      respondToRequest(requestId, action),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['league-requests'] })
+      queryClient.invalidateQueries({ queryKey: ['private-leagues'] })
+    },
+  })
+
+
+  // Auto-select first league when leagues load
+  useEffect(() => {
+    if (leagues.length > 0 && !selectedLeagueId && !selectedLeague) {
+      // Try to restore from localStorage first
+      const savedOrder = typeof window !== 'undefined' 
+        ? localStorage.getItem('league-order') 
+        : null
+      
+      if (savedOrder) {
+        try {
+          const order = JSON.parse(savedOrder) as string[]
+          const firstSaved = order.find(id => leagues.some(l => l.id === id))
+          if (firstSaved) {
+            setSelectedLeagueId(firstSaved)
+            return
+          }
+        } catch {
+          // Invalid saved order, ignore
+        }
+      }
+      
+      // Otherwise select first league
+      setSelectedLeagueId(leagues[0].id)
+    }
+  }, [leagues, selectedLeagueId, selectedLeague])
 
   // Save league order to localStorage
   const saveLeagueOrder = useCallback((newOrder: League[]) => {
@@ -104,171 +186,89 @@ export default function LeaguesPage() {
     }
   }, [])
 
-
-  // Mock data for prototype
-  const getMockLeagues = useCallback((): League[] => {
-    const userId = localStorage.getItem('userId') || 'user-1'
-    return [
-      {
-        id: 'league-1',
-        name: 'School Champions',
-        description: 'Our school league - compete with classmates!',
-        inviteCode: 'SCHOOL2024',
-        createdByUserId: userId,
-        creator: {
-          id: userId,
-          name: userName || 'You',
-          email: 'you@example.com'
+  // Mutation for creating league
+  const createLeagueMutation = useMutation({
+    mutationFn: async (data: { name: string; description: string; color: string; organisationId?: string }) => {
+      const response = await fetch('/api/private-leagues', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(typeof window !== 'undefined' && localStorage.getItem('authToken') 
+            ? { Authorization: `Bearer ${localStorage.getItem('authToken')}` }
+            : {}),
+          ...(typeof window !== 'undefined' && localStorage.getItem('userId')
+            ? { 'X-User-Id': localStorage.getItem('userId')! }
+            : {}),
         },
-        members: [
-          {
-            id: 'member-1',
-            userId: userId,
-            joinedAt: new Date().toISOString(),
-            user: {
-              id: userId,
-              name: userName || 'You',
-              email: 'you@example.com',
-              teamName: null
+        body: JSON.stringify(data),
+      })
+      if (!response.ok) {
+        let error: any = {}
+        let errorText = ''
+        const contentType = response.headers.get('content-type')
+        
+        try {
+          // Get response text (can only be called once)
+          errorText = await response.text()
+          
+          // Try to parse as JSON if content-type suggests it
+          if (contentType && contentType.includes('application/json') && errorText) {
+            try {
+              error = JSON.parse(errorText)
+            } catch (e) {
+              // If JSON parse fails, use text as error message
+              error = { error: errorText || `Server error (${response.status})` }
             }
-          },
-          {
-            id: 'member-2',
-            userId: 'user-2',
-            joinedAt: new Date(Date.now() - 86400000).toISOString(),
-            user: {
-              id: 'user-2',
-              name: 'Alex',
-              email: 'alex@example.com',
-              teamName: 'TEAM ALEX'
-            }
-          },
-          {
-            id: 'member-3',
-            userId: 'user-3',
-            joinedAt: new Date(Date.now() - 172800000).toISOString(),
-            user: {
-              id: 'user-3',
-              name: 'Sam',
-              email: 'sam@example.com',
-              teamName: null
-            }
+          } else {
+            error = { error: errorText || `Server error (${response.status})` }
           }
-        ],
-        _count: {
-          members: 3
+        } catch (parseError: any) {
+          error = { 
+            error: `Failed to read error response (${response.status})`,
+            parseError: parseError.message,
+          }
         }
+        
+        const errorMessage = error.error || error.details || error.message || `Failed to create league (${response.status} ${response.statusText})`
+        
+        // Log comprehensive error details
+        const errorDetails = {
+          status: response.status,
+          statusText: response.statusText,
+          contentType,
+          error: error.error,
+          details: error.details,
+          code: error.code,
+          message: error.message,
+          fullError: error,
+          rawText: errorText,
+        }
+        console.error('Create league error:', errorDetails)
+        console.error('Full error object:', JSON.stringify(errorDetails, null, 2))
+        
+        throw new Error(errorMessage)
       }
-    ]
-  }, [userName])
-
-  const getMockStats = useCallback((leagueId: string, quizSlug: string | null) => {
-    const userId = localStorage.getItem('userId') || 'user-1'
-    const quizSlugs = ['12', '11', '10']
-
-    const mockStats: LeagueStats[] = [
-      {
-        id: 'stat-1',
-        userId: userId,
-        quizSlug: quizSlug,
-        score: quizSlug ? 85 : null,
-        totalQuestions: quizSlug ? 20 : null,
-        totalCorrectAnswers: 245,
-        bestStreak: 12,
-        currentStreak: 5,
-        quizzesPlayed: 15,
-        user: {
-          id: userId,
-          name: userName || 'You',
-          teamName: null
-        }
-      },
-      {
-        id: 'stat-2',
-        userId: 'user-2',
-        quizSlug: quizSlug,
-        score: quizSlug ? 78 : null,
-        totalQuestions: quizSlug ? 20 : null,
-        totalCorrectAnswers: 198,
-        bestStreak: 8,
-        currentStreak: 3,
-        quizzesPlayed: 12,
-        user: {
-          id: 'user-2',
-          name: 'Alex',
-          teamName: 'TEAM ALEX'
-        }
-      },
-      {
-        id: 'stat-3',
-        userId: 'user-3',
-        quizSlug: quizSlug,
-        score: quizSlug ? 92 : null,
-        totalQuestions: quizSlug ? 20 : null,
-        totalCorrectAnswers: 267,
-        bestStreak: 15,
-        currentStreak: 7,
-        quizzesPlayed: 18,
-        user: {
-          id: 'user-3',
-          name: 'Sam',
-          teamName: null
-        }
-      }
-    ]
-
-    // Sort by score (if quiz selected) or total correct answers
-    return {
-      stats: quizSlug ? mockStats.sort((a, b) => (b.score || 0) - (a.score || 0)) : mockStats,
-      quizSlugs,
-      overallStats: mockStats.sort((a, b) => b.totalCorrectAnswers - a.totalCorrectAnswers)
-    }
-  }, [userName])
-
-  // Optimized: Render immediately using localStorage, then sync with API
-  useEffect(() => {
-    // Check localStorage immediately for instant rendering (optimistic)
-    if (typeof window === 'undefined') return
-    
-    const storedTier = localStorage.getItem('userTier')
-    const optimisticPremium = storedTier === 'premium'
-    const platformRole = localStorage.getItem('platformRole')
-    const isAdmin = platformRole === 'PLATFORM_ADMIN' || platformRole === 'ORG_ADMIN'
-    
-    // Always render immediately based on localStorage - allow admins too
-    if (optimisticPremium || isAdmin) {
-      const mockLeagues = getMockLeagues()
-      setLeagues(mockLeagues)
-      if (mockLeagues.length > 0 && !selectedLeague) {
-        setSelectedLeague(mockLeagues[0])
-      }
-    }
-    
-    // Then verify with actual API result (non-blocking update)
-    if (!tierLoading) {
-      // If admin or premium (from API), ensure leagues are loaded
-      if ((isPremium || isAdmin) && leagues.length === 0) {
-        const mockLeagues = getMockLeagues()
-        setLeagues(mockLeagues)
-        if (mockLeagues.length > 0 && !selectedLeague) {
-          setSelectedLeague(mockLeagues[0])
-        }
-      } else if (!isPremium && !isAdmin && optimisticPremium) {
-        // API says not premium and not admin, but localStorage did - clear (user downgraded)
-        setLeagues([])
-        setSelectedLeague(null)
-      }
-      setLoading(false)
-    }
-  }, [isPremium, tierLoading, selectedLeague, userName, getMockLeagues])
-
-  useEffect(() => {
-    if (selectedLeague) {
-      // Use mock data for prototype
-      const mockStats = getMockStats(selectedLeague.id, selectedQuiz)
-      setLeagueStats(mockStats)
-    }
-  }, [selectedLeague, selectedQuiz, getMockStats])
+      
+      // Parse successful response
+      const responseData = await response.json()
+      return responseData
+    },
+    onSuccess: (data) => {
+      const newLeague = data.league
+      // Optimistically update cache
+      queryClient.setQueryData(['private-leagues'], (old: League[] = []) => {
+        const updated = [newLeague, ...old]
+        cacheLeagues(updated)
+        return updated
+      })
+      setSelectedLeagueId(newLeague.id)
+      setShowCreateModal(false)
+      setLeagueColor('#3B82F6')
+      // Refetch to ensure consistency
+      queryClient.invalidateQueries({ queryKey: ['private-leagues'] })
+      queryClient.invalidateQueries({ queryKey: ['available-org-leagues'] })
+    },
+  })
 
   const handleCreateLeague = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -278,73 +278,326 @@ export default function LeaguesPage() {
       const formData = new FormData(e.currentTarget)
       const name = formData.get('name') as string
       const description = formData.get('description') as string
-      const userId = localStorage.getItem('userId') || 'user-1'
 
-      // Create mock league for prototype
-      const newLeague: League = {
-        id: `league-${Date.now()}`,
+      await createLeagueMutation.mutateAsync({
         name,
-        description: description || null,
-        inviteCode: Math.random().toString(36).substring(2, 10).toUpperCase(),
-        createdByUserId: userId,
+        description: description || '',
         color: leagueColor,
-        creator: {
-          id: userId,
-          name: userName || 'You',
-          email: 'you@example.com'
-        },
-        members: [
-          {
-            id: `member-${Date.now()}`,
-            userId: userId,
-            joinedAt: new Date().toISOString(),
-            user: {
-              id: userId,
-              name: userName || 'You',
-              email: 'you@example.com',
-              teamName: null
-            }
-          }
-        ],
-        _count: {
-          members: 1
-        }
-      }
-
-      setLeagues([newLeague, ...leagues])
-      setSelectedLeague(newLeague)
-      setShowCreateModal(false)
-      setLeagueColor('#3B82F6') // Reset to default
+        organisationId: userOrg?.id,
+      })
+      
+      // Reset form if it still exists
+      if (e.currentTarget) {
       e.currentTarget.reset()
+      }
     } catch (error) {
       console.error('Error creating league:', error)
-      alert('Failed to create league')
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : typeof error === 'object' && error !== null && 'message' in error
+        ? String(error.message)
+        : 'Failed to create league'
+      alert(errorMessage)
     } finally {
       setCreating(false)
     }
   }
 
+  // Mutation for inviting user
+  const inviteUserMutation = useMutation({
+    mutationFn: async ({ leagueId, email }: { leagueId: string; email: string }) => {
+      const response = await fetch(`/api/private-leagues/${leagueId}/invite`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(typeof window !== 'undefined' && localStorage.getItem('authToken')
+            ? { Authorization: `Bearer ${localStorage.getItem('authToken')}` }
+            : {}),
+          ...(typeof window !== 'undefined' && localStorage.getItem('userId')
+            ? { 'X-User-Id': localStorage.getItem('userId')! }
+            : {}),
+        },
+        body: JSON.stringify({ email }),
+      })
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}))
+        throw new Error(error.error || 'Failed to invite user')
+      }
+      return response.json()
+    },
+    onSuccess: () => {
+      // Refetch leagues to get updated member list
+      queryClient.invalidateQueries({ queryKey: ['private-leagues'] })
+      setInviteEmail('')
+      setShowInviteModal(false)
+      alert('Successfully invited user!')
+    },
+  })
+
+  const joinByCodeMutation = useMutation({
+    mutationFn: async (inviteCode: string) => {
+      const response = await fetch('/api/private-leagues/join-by-code', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(typeof window !== 'undefined' && localStorage.getItem('authToken')
+            ? { Authorization: `Bearer ${localStorage.getItem('authToken')}` }
+            : {}),
+          ...(typeof window !== 'undefined' && localStorage.getItem('userId')
+            ? { 'X-User-Id': localStorage.getItem('userId')! }
+            : {}),
+        },
+        body: JSON.stringify({ inviteCode: inviteCode.trim().toUpperCase() }),
+      })
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}))
+        throw new Error(error.error || 'Failed to join league')
+      }
+      return response.json()
+    },
+    onSuccess: (data) => {
+      // Optimistically update cache
+      queryClient.setQueryData(['private-leagues'], (old: League[] = []) => {
+        const newLeague = data.league
+        // Check if league already exists in cache
+        const exists = old.some(l => l.id === newLeague.id)
+        if (exists) {
+          return old
+        }
+        const updated = [newLeague, ...old]
+        cacheLeagues(updated)
+        return updated
+      })
+      setSelectedLeagueId(data.league.id)
+      setShowJoinByCodeModal(false)
+      // Refetch to ensure consistency
+      queryClient.invalidateQueries({ queryKey: ['private-leagues'] })
+      queryClient.invalidateQueries({ queryKey: ['available-org-leagues'] })
+    },
+  })
+
+  const deleteLeagueMutation = useMutation({
+    mutationFn: async (leagueId: string) => {
+      const response = await fetch(`/api/private-leagues/${leagueId}`, {
+        method: 'DELETE',
+        headers: {
+          ...(typeof window !== 'undefined' && localStorage.getItem('authToken')
+            ? { Authorization: `Bearer ${localStorage.getItem('authToken')}` }
+            : {}),
+          ...(typeof window !== 'undefined' && localStorage.getItem('userId')
+            ? { 'X-User-Id': localStorage.getItem('userId')! }
+            : {}),
+        },
+      })
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}))
+        throw new Error(error.error || 'Failed to delete league')
+      }
+      return response.json()
+    },
+    onSuccess: (_, deletedLeagueId) => {
+      // Optimistically update cache
+      queryClient.setQueryData(['private-leagues'], (old: League[] = []) => {
+        const updated = old.filter(league => league.id !== deletedLeagueId)
+        cacheLeagues(updated)
+        
+        // Select first league if available, otherwise clear selection
+        if (updated.length > 0) {
+          setSelectedLeagueId(updated[0].id)
+        } else {
+          setSelectedLeagueId(null)
+        }
+        
+        return updated
+      })
+      
+      // Remove stats for deleted league
+      queryClient.removeQueries({ queryKey: ['league-stats', deletedLeagueId] })
+      
+      setShowDeleteModal(false)
+      // Refetch to ensure consistency
+      queryClient.invalidateQueries({ queryKey: ['private-leagues'] })
+      queryClient.invalidateQueries({ queryKey: ['available-org-leagues'] })
+    },
+  })
+
+  // Fetch organization members when invite modal opens
+  useEffect(() => {
+    if (showInviteModal && userOrg?.id) {
+      setLoadingOrgMembers(true)
+      fetch(`/api/organisation/${userOrg.id}/members`, {
+        headers: {
+          ...(typeof window !== 'undefined' && localStorage.getItem('authToken')
+            ? { Authorization: `Bearer ${localStorage.getItem('authToken')}` }
+            : {}),
+          ...(typeof window !== 'undefined' && localStorage.getItem('userId')
+            ? { 'X-User-Id': localStorage.getItem('userId')! }
+            : {}),
+        },
+      })
+        .then(async res => {
+          if (!res.ok) {
+            const errorData = await res.json().catch(() => ({}))
+            throw new Error(errorData.error || `Failed to fetch members: ${res.status}`)
+          }
+          return res.json()
+        })
+        .then(data => {
+          // Filter out current user and existing league members
+          const currentUserId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null
+          const existingMemberIds = new Set(selectedLeague?.members.map(m => m.userId) || [])
+          const filtered = (data.members || []).filter((m: any) => 
+            m.user?.id !== currentUserId && 
+            !existingMemberIds.has(m.user?.id) &&
+            m.status === 'ACTIVE'
+          )
+          setOrgMembers(filtered)
+        })
+        .catch(err => {
+          console.error('[Invite Modal] Error fetching org members:', err)
+          alert(`Failed to load organization members: ${err.message}`)
+          setOrgMembers([])
+        })
+        .finally(() => setLoadingOrgMembers(false))
+    } else if (showInviteModal && !userOrg) {
+      // No org, default to external mode
+      setInviteMode('external')
+    }
+  }, [showInviteModal, userOrg?.id, selectedLeague?.members])
+
   const handleInvite = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    if (!selectedLeague) return
-
+    if (!selectedLeagueId) return
     setInviting(true)
 
     try {
-      // Mock invite for prototype - just show success message
-      // In a real implementation, this would send an API request
-      setTimeout(() => {
-        alert(`Successfully invited ${inviteEmail} (Prototype - no actual invite sent)`)
+      await inviteUserMutation.mutateAsync({
+        leagueId: selectedLeagueId,
+        email: inviteEmail,
+      })
         setInviteEmail('')
+      setInviteSearch('')
         setShowInviteModal(false)
-        setInviting(false)
-      }, 500)
     } catch (error) {
       console.error('Error inviting user:', error)
-      alert('Failed to invite user')
+      alert(error instanceof Error ? error.message : 'Failed to invite user')
+    } finally {
       setInviting(false)
     }
   }
+
+  const handleSelectOrgMember = useCallback((member: any) => {
+    setSelectedMemberIds(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(member.user?.id)) {
+        newSet.delete(member.user?.id)
+      } else {
+        newSet.add(member.user?.id)
+      }
+      return newSet
+    })
+  }, [])
+
+  // Memoize filtered members for performance with optimized search
+  const filteredOrgMembers = useMemo(() => {
+    if (!debouncedInviteSearch.trim()) return orgMembers
+    
+    // Pre-compute search term once
+    const search = debouncedInviteSearch.toLowerCase()
+    const searchLength = search.length
+    
+    // Use a more efficient filtering approach
+    return orgMembers.filter((member: any) => {
+      const user = member.user
+      if (!user) return false
+      
+      // Early exit if search is empty (shouldn't happen, but safety check)
+      if (searchLength === 0) return true
+      
+      // Check name
+      const name = user.name
+      if (name) {
+        const nameLower = name.toLowerCase()
+        if (nameLower.includes(search)) return true
+      }
+      
+      // Check display name
+      const displayName = user.profile?.displayName
+      if (displayName) {
+        const displayNameLower = displayName.toLowerCase()
+        if (displayNameLower.includes(search)) return true
+      }
+      
+      // Check email
+      const email = user.email
+      if (email) {
+        const emailLower = email.toLowerCase()
+        if (emailLower.includes(search)) return true
+      }
+      
+      return false
+    })
+  }, [orgMembers, debouncedInviteSearch])
+
+  const handleSelectAll = useCallback(() => {
+    if (selectedMemberIds.size === filteredOrgMembers.length) {
+      // Deselect all
+      setSelectedMemberIds(new Set())
+    } else {
+      // Select all
+      setSelectedMemberIds(new Set(filteredOrgMembers.map(m => m.user?.id).filter(Boolean)))
+    }
+  }, [filteredOrgMembers, selectedMemberIds.size])
+
+  // Memoized member item component - compact row with checkbox
+  const MemberItem = memo(({ member, isSelected, onToggle }: { member: any; isSelected: boolean; onToggle: () => void }) => {
+    const displayName = member.user?.profile?.displayName || member.user?.name || 'Unknown'
+    const fullName = member.user?.name || ''
+    const showFullName = fullName && displayName !== fullName
+    
+    return (
+      <div
+        className="flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-colors cursor-pointer"
+        onClick={onToggle}
+      >
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={onToggle}
+          onClick={(e) => e.stopPropagation()}
+          className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 cursor-pointer"
+        />
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
+            {displayName}
+            {showFullName && (
+              <span className="text-gray-500 dark:text-gray-400 font-normal ml-1">
+                ({fullName})
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }, (prevProps, nextProps) => {
+    // Custom comparison - only re-render if member data or selection changes
+    return (
+      prevProps.member.id === nextProps.member.id &&
+      prevProps.isSelected === nextProps.isSelected &&
+      prevProps.member.user?.email === nextProps.member.user?.email
+    )
+  })
+  
+  MemberItem.displayName = 'MemberItem'
+
+  // Virtual scrolling setup for member list
+  const parentRef = useRef<HTMLDivElement>(null)
+  const virtualizer = useVirtualizer({
+    count: filteredOrgMembers.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 48, // Estimated height of each compact member row
+    overscan: 5, // Render 5 extra items outside viewport for smooth scrolling
+  })
 
   const handleEditLeague = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -377,27 +630,15 @@ export default function LeaguesPage() {
   }
 
   const handleDeleteLeague = async () => {
-    if (!selectedLeague) return
+    if (!selectedLeagueId) return
 
     setDeleting(true)
 
     try {
-      // Remove league from local state for prototype
-      const updatedLeagues = leagues.filter(league => league.id !== selectedLeague.id)
-      setLeagues(updatedLeagues)
-
-      // Select first league if available, otherwise clear selection
-      if (updatedLeagues.length > 0) {
-        setSelectedLeague(updatedLeagues[0])
-      } else {
-        setSelectedLeague(null)
-        setLeagueStats(null)
-      }
-
-      setShowDeleteModal(false)
+      await deleteLeagueMutation.mutateAsync(selectedLeagueId)
     } catch (error) {
       console.error('Error deleting league:', error)
-      alert('Failed to delete league')
+      alert(error instanceof Error ? error.message : 'Failed to delete league')
     } finally {
       setDeleting(false)
     }
@@ -501,17 +742,40 @@ export default function LeaguesPage() {
     }
   }
 
-  const displayName = (user: { id: string; name: string | null; email?: string; teamName: string | null }) => {
-    if (user.teamName) return user.teamName.toUpperCase()
-    if (user.name) return user.name.toUpperCase()
-    if (user.email) return user.email.split('@')[0].toUpperCase()
+  const displayName = (user: { id: string; name: string | null; email?: string; teamName: string | null; profile?: { displayName: string | null } | null }) => {
+    // Prefer displayName from profile, then teamName, then name, then email
+    if (user.profile?.displayName) return user.profile.displayName
+    if (user.teamName) return user.teamName
+    if (user.name) return user.name
+    if (user.email) return user.email.split('@')[0]
     return `User ${user.id.slice(0, 8)}`
   }
 
-  // Removed blocking check - page renders immediately with optimistic premium status
+  if (!isPremium) {
+    return (
+      <>
+        <SiteHeader />
+        <main className="min-h-screen bg-white dark:bg-[#0F1419] text-gray-900 dark:text-white pt-32 pb-16 px-4 sm:px-8">
+          <div className="max-w-6xl mx-auto text-center py-16">
+            <Trophy className="w-16 h-16 text-gray-400 mx-auto mb-6" />
+            <h1 className="text-4xl font-bold mb-4">Private Leagues</h1>
+            <p className="text-lg text-gray-600 dark:text-gray-400 mb-8">
+              Private leagues are only available to premium subscribers.
+            </p>
+            <button
+              onClick={() => setShowUpgradeModal(true)}
+              className="inline-flex items-center justify-center h-12 px-6 bg-[#3B82F6] text-white rounded-full font-medium hover:bg-[#2563EB] transition-colors focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:ring-offset-2"
+            >
+              Upgrade to Premium
+            </button>
+          </div>
+          <UpgradeModal isOpen={showUpgradeModal} onClose={() => setShowUpgradeModal(false)} />
+        </main>
+        <Footer />
+      </>
+    )
+  }
 
-  // Don't block on loading - render page structure immediately
-  // Show loading states inline instead of blocking entire page
 
   // Helper function to darken a color for hover states
   const darkenColor = (color: string, percent: number = 10): string => {
@@ -530,55 +794,136 @@ export default function LeaguesPage() {
     ? leagueStats?.stats || []
     : leagueStats?.overallStats || []
 
-  // Check if user is admin (admins have access to all features)
-  const platformRole = typeof window !== 'undefined' ? localStorage.getItem('platformRole') : null
-  const isAdmin = platformRole === 'PLATFORM_ADMIN' || platformRole === 'ORG_ADMIN'
-  
-  // Optimistic premium check - use localStorage first, then sync with API
-  // This allows immediate rendering without blocking on API calls
-  const storedTier = typeof window !== 'undefined' ? localStorage.getItem('userTier') : null
-  const optimisticPremium = storedTier === 'premium'
-  const showPremiumContent = optimisticPremium || isPremium || isAdmin
-  
-  // Show upgrade modal if definitely not premium AND not admin (after API confirms)
-  const shouldShowUpgrade = !tierLoading && !isPremium && !optimisticPremium && !isAdmin
-
   return (
-    <div>
+    <>
       <SiteHeader />
       <main className="min-h-screen bg-white dark:bg-[#0F1419] text-gray-900 dark:text-white pt-24 sm:pt-32 pb-16 px-4 sm:px-8">
         <div className="max-w-6xl mx-auto">
           {/* Header */}
-          <div className="mb-12">
-            <h1 className="text-5xl md:text-6xl font-bold mb-4">Private Leagues</h1>
-            <p className="text-lg text-gray-600 dark:text-gray-400">Invite friends to your league and try to beat them</p>
+          <div className="mb-6">
+            <div className="flex items-start justify-between mb-3">
+              <div>
+                <h1 className="text-4xl md:text-5xl font-bold mb-2">Private Leagues</h1>
+                <p className="text-base text-gray-600 dark:text-gray-400">Set up and administrate private leagues</p>
+              </div>
+              {leagueRequests.length > 0 && (
+                <div className="relative">
+                  <div className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
+                    <span className="text-xs font-bold text-white">{leagueRequests.length}</span>
+                  </div>
+                  <button
+                    onClick={() => setShowRequestsModal(true)}
+                    className="p-3 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                    title={`${leagueRequests.length} pending request${leagueRequests.length > 1 ? 's' : ''}`}
+                  >
+                    <Mail className="w-5 h-5" />
+                  </button>
+                </div>
+              )}
           </div>
 
-          {/* Show upgrade prompt if not premium (after API confirms) */}
-          {shouldShowUpgrade && (
-            <div className="mb-8 text-center py-8">
-              <Trophy className="w-16 h-16 mx-auto mb-6 text-gray-400" />
-              <p className="text-lg text-gray-600 dark:text-gray-400 mb-8">
-                Compete with friends in private leagues. Upgrade to Premium to unlock this feature.
-              </p>
+            {/* Organization Info */}
+            {userOrg && (
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  Organisations you belong to:
+                </span>
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 dark:bg-blue-900/20 rounded-full border border-blue-200 dark:border-blue-800">
+                  <Building2 className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+                  <span className="text-xs font-medium text-blue-900 dark:text-blue-200">
+                    {userOrg.name}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Pending Join Requests Section - Only show if user is admin of any leagues */}
+            {leagueRequests.length > 0 && (
+              <div className="mb-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800 p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Mail className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+                      Pending Join Requests ({leagueRequests.length})
+                    </h3>
+                  </div>
               <button
-                onClick={() => setShowUpgradeModal(true)}
-                className="inline-flex items-center justify-center h-12 px-6 bg-[#3B82F6] text-white rounded-full font-medium hover:bg-[#2563EB] transition-colors focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:ring-offset-2"
+                    onClick={() => setShowRequestsModal(true)}
+                    className="text-xs font-medium text-amber-700 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300"
               >
-                Upgrade to Premium
+                    View all
               </button>
-              <UpgradeModal isOpen={showUpgradeModal} onClose={() => setShowUpgradeModal(false)} />
+                </div>
+                <div className="space-y-2">
+                  {leagueRequests.slice(0, 3).map((request: LeagueRequest) => (
+                    <div
+                      key={request.id}
+                      className="flex items-center justify-between p-2.5 bg-white dark:bg-gray-800/50 rounded-lg border border-amber-200 dark:border-amber-800"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                          {request.user.profile?.displayName || request.user.name || request.user.email}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                          wants to join <span className="font-medium">{request.league.name}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                        <button
+                          onClick={() => {
+                            respondToRequestMutation.mutate({ requestId: request.id, action: 'approve' })
+                          }}
+                          disabled={respondToRequestMutation.isPending}
+                          className="p-1.5 rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50"
+                          title="Approve"
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            respondToRequestMutation.mutate({ requestId: request.id, action: 'reject' })
+                          }}
+                          disabled={respondToRequestMutation.isPending}
+                          className="p-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50"
+                          title="Reject"
+                        >
+                          <XCircle className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  {leagueRequests.length > 3 && (
+                    <button
+                      onClick={() => setShowRequestsModal(true)}
+                      className="w-full text-xs text-center text-amber-700 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 py-1"
+                    >
+                      View {leagueRequests.length - 3} more request{leagueRequests.length - 3 > 1 ? 's' : ''}
+                    </button>
+                  )}
+                </div>
             </div>
           )}
 
-          {/* Show premium content if optimistic or confirmed premium */}
-          {showPremiumContent ? (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Available Organization Leagues */}
+            {userOrg && (
+              <OrganisationLeaguesSection 
+                organisationName={userOrg.name}
+                onJoinByCode={() => setShowJoinByCodeModal(true)}
+              />
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {/* Leagues List */}
             <div className="lg:col-span-1">
-              <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">Your Leagues</h2>
+              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <h2 className="text-lg font-bold text-gray-900 dark:text-white">Your Leagues</h2>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      Leagues you've created or joined
+                    </p>
+                  </div>
                   <button
                     onClick={() => setShowCreateModal(true)}
                     className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
@@ -588,16 +933,40 @@ export default function LeaguesPage() {
                   </button>
                 </div>
 
-                {leagues.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                    <p className="mb-4">No leagues yet</p>
+                {leaguesLoading ? (
+                  <LeaguesListSkeleton />
+                ) : leaguesError ? (
+                  <div className="text-center py-8">
+                    <AlertCircle className="w-12 h-12 mx-auto mb-4 text-red-500" />
+                    <p className="text-red-600 dark:text-red-400 mb-2 font-medium">
+                      {leaguesError instanceof Error ? leaguesError.message : 'Failed to load leagues'}
+                    </p>
+                    {leaguesError instanceof Error && leaguesError.message.includes('migration') && (
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 max-w-md mx-auto">
+                        The database needs to be updated. If you're running locally, run the migrations. 
+                        If this is production, contact support.
+                      </p>
+                    )}
+                    <button
+                      onClick={() => refetchLeagues()}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      Retry
+                    </button>
+                  </div>
+                ) : leagues.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="mb-6">
+                      <Trophy className="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
+                      <p className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">No leagues yet</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Create your first league to start competing</p>
+                    </div>
                     <button
                       onClick={() => setShowCreateModal(true)}
-                      className="font-medium transition-colors"
-                      style={{ color: leagueAccentColor }}
-                      onMouseEnter={(e) => e.currentTarget.style.color = leagueHoverColor}
-                      onMouseLeave={(e) => e.currentTarget.style.color = leagueAccentColor}
+                      className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium rounded-xl shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
                     >
+                      <Plus className="w-5 h-5" />
                       Create your first league
                     </button>
                   </div>
@@ -606,11 +975,13 @@ export default function LeaguesPage() {
                     leagues={leagues}
                     selectedLeague={selectedLeague}
                     onSelectLeague={(league) => {
-                      setSelectedLeague(league)
+                      setSelectedLeagueId(league.id)
                       setSelectedQuiz(null)
                     }}
                     onReorderLeagues={(newOrder) => {
-                      setLeagues(newOrder)
+                      // Optimistically update cache
+                      queryClient.setQueryData(['private-leagues'], newOrder)
+                      cacheLeagues(newOrder)
                       saveLeagueOrder(newOrder)
                     }}
                     leagueAccentColor={leagueAccentColor}
@@ -620,19 +991,54 @@ export default function LeaguesPage() {
             </div>
 
             {/* League Details */}
-            <div className="lg:col-span-2 space-y-6">
-              {selectedLeague ? (
+            <div className="lg:col-span-2 space-y-4">
+              {statsLoading && selectedLeague ? (
+                <LeagueDetailsSkeleton />
+              ) : statsError && selectedLeague ? (
+                <div className="bg-white dark:bg-gray-800 rounded-xl border border-red-200 dark:border-red-800 p-4 shadow-sm">
+                  <div className="text-center py-6">
+                    <AlertCircle className="w-10 h-10 mx-auto mb-3 text-red-500" />
+                    <p className="text-red-600 dark:text-red-400 mb-3">
+                      {statsError instanceof Error ? statsError.message : 'Failed to load league stats'}
+                    </p>
+                    <button
+                      onClick={() => queryClient.invalidateQueries({ queryKey: ['league-stats', selectedLeagueId] })}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      Retry
+                    </button>
+                  </div>
+                </div>
+              ) : selectedLeague ? (
                 <>
                   {/* League Header */}
-                  <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
-                    <div className="flex items-start justify-between mb-6">
-                      <div className="flex-1">
-                        <h2 className="text-3xl font-bold mb-2 text-gray-900 dark:text-white">{selectedLeague.name}</h2>
+                  <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2.5 flex-wrap">
+                          {/* Color indicator */}
+                          {selectedLeague.color && (
+                            <div
+                              className="w-4 h-4 rounded-full shrink-0 border border-gray-300 dark:border-gray-600"
+                              style={{ backgroundColor: selectedLeague.color }}
+                            />
+                          )}
+                          <h2 className="text-xl font-bold text-gray-900 dark:text-white truncate">{selectedLeague.name}</h2>
+                          {selectedLeague.organisation && (
+                            <div className="flex items-center gap-1.5 px-2 py-0.5 bg-blue-50 dark:bg-blue-900/20 rounded-full border border-blue-200 dark:border-blue-800 shrink-0">
+                              <Building2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                              <span className="text-xs font-medium text-blue-900 dark:text-blue-200">
+                                {selectedLeague.organisation.name}
+                              </span>
+                            </div>
+                          )}
+                        </div>
                         {selectedLeague.description && (
-                          <p className="text-gray-600 dark:text-gray-400">{selectedLeague.description}</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 truncate">{selectedLeague.description}</p>
                         )}
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5 shrink-0">
                         {isCreator(selectedLeague) && (
                           <>
                             <button
@@ -640,33 +1046,35 @@ export default function LeaguesPage() {
                                 setLeagueColor(selectedLeague?.color || '#3B82F6')
                                 setShowEditModal(true)
                               }}
-                              className="inline-flex items-center justify-center gap-2 h-10 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-full font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-600 focus:ring-offset-2"
+                              className="inline-flex items-center justify-center gap-1.5 h-8 px-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-600 focus:ring-offset-2"
                               title="Edit league"
                             >
-                              <Edit2 className="w-4 h-4" />
+                              <Edit2 className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => setShowDeleteModal(true)}
-                              className="inline-flex items-center justify-center gap-2 h-10 px-4 border border-red-300 dark:border-red-600 text-red-600 dark:text-red-400 rounded-full font-medium hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors focus:outline-none focus:ring-2 focus:ring-red-300 dark:focus:ring-red-600 focus:ring-offset-2"
+                              className="inline-flex items-center justify-center gap-1.5 h-8 px-3 border border-red-300 dark:border-red-600 text-red-600 dark:text-red-400 rounded-lg text-sm font-medium hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors focus:outline-none focus:ring-2 focus:ring-red-300 dark:focus:ring-red-600 focus:ring-offset-2"
                               title="Delete league"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </>
                         )}
                         {!isCreator(selectedLeague) && isMember(selectedLeague) && (
                           <button
                             onClick={() => setShowLeaveModal(true)}
-                            className="inline-flex items-center justify-center gap-2 h-10 px-4 border border-orange-300 dark:border-orange-600 text-orange-600 dark:text-orange-400 rounded-full font-medium hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-300 dark:focus:ring-orange-600 focus:ring-offset-2"
+                            className="inline-flex items-center justify-center gap-1.5 h-8 px-3 border border-orange-300 dark:border-orange-600 text-orange-600 dark:text-orange-400 rounded-lg text-sm font-medium hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-300 dark:focus:ring-orange-600 focus:ring-offset-2"
                             title="Leave league"
                           >
-                            <LogOut className="w-4 h-4" />
-                            Leave
+                            <LogOut className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">Leave</span>
                           </button>
                         )}
                         <button
-                          onClick={() => setShowInviteModal(true)}
-                          className="inline-flex items-center justify-center gap-2 h-10 px-4 text-white rounded-full font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2"
+                          onClick={() => {
+                            setShowInviteModal(true)
+                          }}
+                          className="inline-flex items-center justify-center gap-1.5 h-8 px-3 text-white rounded-lg text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2"
                           style={{
                             backgroundColor: leagueAccentColor
                           }}
@@ -675,29 +1083,22 @@ export default function LeaguesPage() {
                           onFocus={(e) => e.currentTarget.style.boxShadow = `0 0 0 2px ${leagueAccentColor}`}
                           onBlur={(e) => e.currentTarget.style.boxShadow = ''}
                         >
-                          <Mail className="w-4 h-4" />
-                          Invite
+                          <Mail className="w-3.5 h-3.5" />
+                          <span className="hidden sm:inline">Invite</span>
                         </button>
                       </div>
                     </div>
 
-                    {/* Invite Code */}
-                    <div className="flex items-center gap-2 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-600">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Invite code:</span>
-                      <code className="flex-1 font-mono text-gray-900 dark:text-white font-semibold">{selectedLeague.inviteCode}</code>
-                      <button
-                        onClick={() => copyInviteCode(selectedLeague.inviteCode)}
-                        className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-                        aria-label="Copy invite code"
-                      >
-                        <Copy className="w-4 h-4" />
-                      </button>
-                    </div>
                   </div>
 
                   {/* Members List */}
-                  <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
-                    <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Members ({selectedLeague.members.length})</h3>
+                  <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
+                    <div className="mb-3">
+                      <h3 className="text-lg font-bold mb-1 text-gray-900 dark:text-white">Members ({selectedLeague.members.length})</h3>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        People who have joined this league
+                      </p>
+                    </div>
                     <div className="space-y-2">
                       {selectedLeague.members.map((member) => {
                         const isYou = member.userId === localStorage.getItem('userId')
@@ -705,22 +1106,17 @@ export default function LeaguesPage() {
                         return (
                           <div
                             key={member.id}
-                            className={`flex items-center justify-between p-3 rounded-xl ${isYou
+                            className={`flex items-center justify-between p-2 rounded-lg ${isYou
                               ? 'border'
                               : 'bg-gray-50 dark:bg-gray-700/50'
                               }`}
                           >
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full text-white flex items-center justify-center font-semibold text-sm" style={{ backgroundColor: leagueAccentColor }}>
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-7 h-7 rounded-full text-white flex items-center justify-center font-semibold text-xs" style={{ backgroundColor: leagueAccentColor }}>
                                 {displayName(member.user).charAt(0)}
                               </div>
-                              <div>
-                                <div className="font-medium text-gray-900 dark:text-white">
-                                  {displayName(member.user)} {isYou && '(You)'} {isCreatorMember && !isYou && '(Creator)'}
-                                </div>
-                                <div className="text-xs text-gray-500 dark:text-gray-400">
-                                  Joined {new Date(member.joinedAt).toLocaleDateString()}
-                                </div>
+                              <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                {displayName(member.user)} {isYou && <span className="text-gray-500 dark:text-gray-400">(You)</span>} {isCreatorMember && !isYou && <span className="text-gray-500 dark:text-gray-400">(Creator)</span>}
                               </div>
                             </div>
                             {isCreator(selectedLeague) && !isYou && (
@@ -746,11 +1142,17 @@ export default function LeaguesPage() {
 
                   {/* Quiz Selector */}
                   {leagueStats && leagueStats.quizSlugs.length > 0 && (
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
+                    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-3 shadow-sm">
+                      <div className="mb-3">
+                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">Filter by Quiz</h3>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          View leaderboard for a specific quiz or overall performance
+                        </p>
+                      </div>
                       <div className="flex items-center gap-2 flex-wrap">
                         <button
                           onClick={() => setSelectedQuiz(null)}
-                          className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${selectedQuiz === null
+                          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${selectedQuiz === null
                             ? 'text-white shadow-sm'
                             : 'bg-gray-100 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                             }`}
@@ -762,7 +1164,7 @@ export default function LeaguesPage() {
                           <button
                             key={slug}
                             onClick={() => setSelectedQuiz(slug)}
-                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${selectedQuiz === slug
+                            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${selectedQuiz === slug
                               ? 'text-white shadow-sm'
                               : 'bg-gray-100 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                               }`}
@@ -776,15 +1178,15 @@ export default function LeaguesPage() {
                   )}
 
                   {/* Leaderboard */}
-                  <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
-                    <div className="mb-6">
-                      <h3 className="text-2xl font-bold mb-2 text-gray-900 dark:text-white">
+                  <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
+                    <div className="mb-4">
+                      <h3 className="text-xl font-bold mb-1.5 text-gray-900 dark:text-white">
                         {selectedQuiz ? `Quiz #${selectedQuiz} Results` : 'Overall Leaderboard'}
                       </h3>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
                         {selectedQuiz
                           ? 'Ranked by score for this quiz'
-                          : 'Ranked by total correct answers across all quizzes'}
+                          : 'Ranked by total correct answers across all quizzes. See how you compare to other members.'}
                       </p>
                     </div>
 
@@ -926,6 +1328,20 @@ export default function LeaguesPage() {
                         })}
                       </div>
                     )}
+                    
+                    {/* View More Stats Button */}
+                    {currentStats.length > 0 && (
+                      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <button
+                          onClick={() => router.push('/stats')}
+                          className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors border border-gray-200 dark:border-gray-600"
+                        >
+                          <BarChart3 className="w-4 h-4" />
+                          View detailed stats
+                          <ArrowRight className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </>
               ) : (
@@ -937,7 +1353,100 @@ export default function LeaguesPage() {
             </div>
           </div>
         </div>
-          ) : null}
+
+        {/* Join by Code Modal */}
+        {showJoinByCodeModal && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 max-w-md w-full shadow-xl"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Join League</h3>
+                <button
+                  onClick={() => setShowJoinByCodeModal(false)}
+                  className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-500 dark:text-gray-400"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault()
+                  const formData = new FormData(e.currentTarget)
+                  const inviteCode = formData.get('inviteCode') as string
+                  if (!inviteCode?.trim()) {
+                    alert('Please enter an invite code')
+                    return
+                  }
+                  try {
+                    await joinByCodeMutation.mutateAsync(inviteCode.trim().toUpperCase())
+                  } catch (error) {
+                    console.error('Error joining league:', error)
+                    alert(error instanceof Error ? error.message : 'Failed to join league')
+                  }
+                }}
+              >
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Invite Code
+                    </label>
+                    <input
+                      type="text"
+                      name="inviteCode"
+                      placeholder="Enter code"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm tracking-wider uppercase"
+                      required
+                      autoFocus
+                      disabled={joinByCodeMutation.isPending}
+                      maxLength={8}
+                      onChange={(e) => {
+                        e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '')
+                      }}
+                    />
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">
+                      Enter the 8-character invite code
+                    </p>
+                  </div>
+                  {joinByCodeMutation.isError && (
+                    <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                      <p className="text-sm text-red-600 dark:text-red-400">
+                        {joinByCodeMutation.error instanceof Error
+                          ? joinByCodeMutation.error.message
+                          : 'Failed to join league'}
+                      </p>
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-3 pt-6">
+                  <button
+                    type="submit"
+                    disabled={joinByCodeMutation.isPending}
+                    className="flex-1 inline-flex items-center justify-center h-11 px-4 bg-[#3B82F6] text-white rounded-full font-medium hover:bg-[#2563EB] transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:ring-offset-2"
+                  >
+                    {joinByCodeMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Joining...
+                      </>
+                    ) : (
+                      'Join League'
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowJoinByCodeModal(false)}
+                    className="px-4 h-11 inline-flex items-center justify-center border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-full font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-600 focus:ring-offset-2"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
 
         {/* Create League Modal */}
         {showCreateModal && (
@@ -979,6 +1488,21 @@ export default function LeaguesPage() {
                       placeholder="Describe your league..."
                     />
                   </div>
+                  {userOrg && (
+                    <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+                      <div className="flex items-center gap-2">
+                        <Building2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                        <div>
+                          <p className="text-xs font-medium text-blue-900 dark:text-blue-200">
+                            This league will be associated with {userOrg.name}
+                          </p>
+                          <p className="text-xs text-blue-700 dark:text-blue-300 mt-0.5">
+                            Members of your organization can request to join
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   <div>
                     <label className="block text-sm font-medium mb-3 text-gray-900 dark:text-white">League Color</label>
                     <div className="grid grid-cols-8 gap-2">
@@ -1017,10 +1541,13 @@ export default function LeaguesPage() {
                   <div className="flex gap-3 pt-2">
                     <button
                       type="submit"
-                      disabled={creating}
-                      className="flex-1 inline-flex items-center justify-center h-11 px-4 bg-[#3B82F6] text-white rounded-full font-medium hover:bg-[#2563EB] transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:ring-offset-2"
+                      disabled={creating || createLeagueMutation.isPending}
+                      className="flex-1 inline-flex items-center justify-center gap-2 h-11 px-4 bg-[#3B82F6] text-white rounded-full font-medium hover:bg-[#2563EB] transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:ring-offset-2"
                     >
-                      {creating ? 'Creating...' : 'Create'}
+                      {(creating || createLeagueMutation.isPending) && (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      )}
+                      {creating || createLeagueMutation.isPending ? 'Creating...' : 'Create League'}
                     </button>
                     <button
                       type="button"
@@ -1176,10 +1703,17 @@ export default function LeaguesPage() {
                 <div className="flex gap-3 pt-2">
                   <button
                     onClick={handleDeleteLeague}
-                    disabled={deleting}
+                    disabled={deleting || deleteLeagueMutation.isPending}
                     className="flex-1 inline-flex items-center justify-center h-11 px-4 bg-red-600 text-white rounded-full font-medium hover:bg-red-700 transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2"
                   >
-                    {deleting ? 'Deleting...' : 'Delete League'}
+                    {(deleting || deleteLeagueMutation.isPending) ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Deleting...
+                      </>
+                    ) : (
+                      'Delete League'
+                    )}
                   </button>
                   <button
                     type="button"
@@ -1290,21 +1824,209 @@ export default function LeaguesPage() {
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 max-w-md w-full shadow-xl"
+              className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 max-w-2xl w-full shadow-xl max-h-[85vh] flex flex-col"
             >
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Invite Friend</h3>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Invite to League</h3>
                 <button
-                  onClick={() => setShowInviteModal(false)}
+                  onClick={() => {
+                    setShowInviteModal(false)
+                    setInviteEmail('')
+                    setInviteSearch('')
+                    setSelectedMemberIds(new Set())
+                    setInviteMode('org')
+                  }}
                   className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-500 dark:text-gray-400"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              <form onSubmit={handleInvite}>
-                <div className="space-y-4">
+
+              {/* Mode Tabs */}
+              <div className="flex gap-2 mb-4 border-b border-gray-200 dark:border-gray-700">
+                {userOrg && orgMembers.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setInviteMode('org')}
+                    className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
+                      inviteMode === 'org'
+                        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                        : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                    }`}
+                  >
+                    <Building2 className="w-4 h-4 inline-block mr-2" />
+                    {userOrg.name} Members
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setInviteMode('external')}
+                  className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
+                    inviteMode === 'external'
+                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                      : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                  }`}
+                >
+                  <Mail className="w-4 h-4 inline-block mr-2" />
+                  External Email
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInviteMode('code')}
+                  className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
+                    inviteMode === 'code'
+                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                      : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                  }`}
+                >
+                  <KeyRound className="w-4 h-4 inline-block mr-2" />
+                  Invite Code
+                </button>
+              </div>
+
+              <form onSubmit={handleInvite} className="flex-1 flex flex-col min-h-0">
+                {inviteMode === 'org' && userOrg ? (
+                  <div className="flex-1 flex flex-col min-h-0">
+                    {/* Search */}
+                    <div className="mb-4">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                          type="text"
+                          value={inviteSearch}
+                          onChange={(e) => setInviteSearch(e.target.value)}
+                          placeholder="Search organization members..."
+                          className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:border-transparent transition-all"
+                          onFocus={(e) => e.currentTarget.style.boxShadow = `0 0 0 2px ${leagueColor}`}
+                          onBlur={(e) => e.currentTarget.style.boxShadow = ''}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Select All Checkbox */}
+                    {filteredOrgMembers.length > 0 && (
+                      <div className="mb-3 pb-3 border-b border-gray-200 dark:border-gray-700">
+                        <label className="flex items-center gap-2 p-2 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={selectedMemberIds.size > 0 && selectedMemberIds.size === filteredOrgMembers.length}
+                            onChange={handleSelectAll}
+                            className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                          />
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Select All ({selectedMemberIds.size} selected)
+                          </span>
+                        </label>
+                      </div>
+                    )}
+
+                    {/* Member List with Virtual Scrolling */}
+                    <div 
+                      ref={parentRef}
+                      className="flex-1 overflow-y-auto mb-4 min-h-0"
+                      style={{ height: '400px' }} // Fixed height for virtual scrolling
+                    >
+                      {loadingOrgMembers ? (
+                        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                          <Loader2 className="w-6 h-6 mx-auto mb-2 animate-spin" />
+                          <p className="text-sm">Loading members...</p>
+                        </div>
+                      ) : orgMembers.length === 0 ? (
+                        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                          <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                          <p className="text-sm">No available members to invite</p>
+                        </div>
+                      ) : filteredOrgMembers.length === 0 ? (
+                        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                          <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                          <p className="text-sm">No members found matching "{debouncedInviteSearch}"</p>
+                        </div>
+                      ) : (
+                        <div
+                          style={{
+                            height: `${virtualizer.getTotalSize()}px`,
+                            width: '100%',
+                            position: 'relative',
+                          }}
+                        >
+                          {virtualizer.getVirtualItems().map((virtualItem) => {
+                            const member = filteredOrgMembers[virtualItem.index]
+                            const isSelected = selectedMemberIds.has(member.user?.id)
+                            return (
+                              <div
+                                key={virtualItem.key}
+                                style={{
+                                  position: 'absolute',
+                                  top: 0,
+                                  left: 0,
+                                  width: '100%',
+                                  height: `${virtualItem.size}px`,
+                                  transform: `translateY(${virtualItem.start}px)`,
+                                }}
+                                className="pr-2"
+                              >
+                                <MemberItem
+                                  member={member}
+                                  isSelected={isSelected}
+                                  onToggle={() => handleSelectOrgMember(member)}
+                                />
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Selected Members Display */}
+                    {selectedMemberIds.size > 0 && (
+                      <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+                        <div className="text-sm font-medium text-blue-900 dark:text-blue-200 mb-2">
+                          {selectedMemberIds.size} member{selectedMemberIds.size > 1 ? 's' : ''} selected
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {filteredOrgMembers
+                            .filter(m => selectedMemberIds.has(m.user?.id))
+                            .map(member => (
+                              <span
+                                key={member.id}
+                                className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-md text-xs"
+                              >
+                                {member.user?.profile?.displayName || member.user?.name || member.user?.email}
+                                <button
+                                  type="button"
+                                  onClick={() => handleSelectOrgMember(member)}
+                                  className="hover:text-blue-900 dark:hover:text-blue-100"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </span>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex-1 flex flex-col">
+                    {/* Premium Requirement Notice */}
+                    <div className="mb-4 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
+                      <div className="flex items-start gap-3">
+                        <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
                   <div>
-                    <label className="block text-sm font-medium mb-2 text-gray-900 dark:text-white">Email Address</label>
+                          <h4 className="text-sm font-semibold text-amber-900 dark:text-amber-200 mb-1">
+                            Premium Membership Required
+                          </h4>
+                          <p className="text-sm text-amber-800 dark:text-amber-300">
+                            Only users with an active premium subscription can accept league invitations. 
+                            The recipient must have a premium account to join this league.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium mb-2 text-gray-900 dark:text-white">
+                        Email Address
+                      </label>
                     <input
                       type="email"
                       value={inviteEmail}
@@ -1315,35 +2037,156 @@ export default function LeaguesPage() {
                       onBlur={(e) => e.currentTarget.style.boxShadow = ''}
                       placeholder="friend@example.com"
                     />
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      Only premium users can be invited
-                    </p>
+                      
+                      {/* Selected Email Display (External Mode) */}
+                      {inviteEmail && (
+                        <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+                          <div className="text-sm font-medium text-blue-900 dark:text-blue-200 mb-1">
+                            Selected:
                   </div>
-                  <div className="flex gap-3 pt-2">
+                          <div className="text-sm text-blue-700 dark:text-blue-300">
+                            {inviteEmail}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  {inviteMode !== 'code' && (
                     <button
                       type="submit"
-                      disabled={inviting}
-                      className="flex-1 inline-flex items-center justify-center h-11 px-4 bg-[#3B82F6] text-white rounded-full font-medium hover:bg-[#2563EB] transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:ring-offset-2"
+                      disabled={
+                        inviting || 
+                        (inviteMode === 'org' && selectedMemberIds.size === 0) ||
+                        (inviteMode === 'external' && !inviteEmail.trim())
+                      }
+                      className="flex-1 inline-flex items-center justify-center h-11 px-4 text-white rounded-full font-medium transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-offset-2"
+                      style={{
+                        backgroundColor: (inviteMode === 'org' && selectedMemberIds.size > 0) || (inviteMode === 'external' && inviteEmail.trim()) 
+                          ? leagueColor 
+                          : '#9CA3AF',
+                      }}
                     >
-                      {inviting ? 'Inviting...' : 'Invite'}
+                      {inviting ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Inviting...
+                        </>
+                      ) : (
+                        <>
+                          <Mail className="w-4 h-4 mr-2" />
+                          {inviteMode === 'org' && selectedMemberIds.size > 0
+                            ? `Invite ${selectedMemberIds.size} Member${selectedMemberIds.size > 1 ? 's' : ''}`
+                            : 'Invite'}
+                        </>
+                      )}
                     </button>
+                  )}
                     <button
                       type="button"
-                      onClick={() => setShowInviteModal(false)}
+                    onClick={() => {
+                      setShowInviteModal(false)
+                      setInviteEmail('')
+                      setInviteSearch('')
+                      setSelectedMemberIds(new Set())
+                      setInviteMode('org')
+                    }}
                       className="px-4 h-11 inline-flex items-center justify-center border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-full font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-600 focus:ring-offset-2"
                     >
                       Cancel
                     </button>
-                  </div>
                 </div>
               </form>
+            </motion.div>
+          </div>
+        )}
+
+        {/* League Requests Modal */}
+        {showRequestsModal && leagueRequests.length > 0 && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 max-w-2xl w-full shadow-xl max-h-[80vh] overflow-hidden flex flex-col"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                  Join Requests ({leagueRequests.length})
+                </h3>
+                <button
+                  onClick={() => setShowRequestsModal(false)}
+                  className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-500 dark:text-gray-400"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto space-y-3">
+                {leagueRequests.map((request: LeagueRequest) => (
+                  <div
+                    key={request.id}
+                    className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-600"
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className="font-semibold text-gray-900 dark:text-white">
+                            {request.user.name || request.user.email}
+                          </h4>
+                          {request.user.teamName && (
+                            <span className="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-full">
+                              {request.user.teamName}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          Wants to join <span className="font-medium">{request.league.name}</span>
+                        </p>
+                        {request.league.organisation && (
+                          <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                            {request.league.organisation.name}
+                          </p>
+                        )}
+                        <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
+                          {new Date(request.requestedAt).toLocaleDateString()} at {new Date(request.requestedAt).toLocaleTimeString()}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          respondToRequestMutation.mutate({ requestId: request.id, action: 'approve' })
+                        }}
+                        disabled={respondToRequestMutation.isPending}
+                        className="flex-1 inline-flex items-center justify-center gap-2 h-9 px-4 bg-green-600 text-white rounded-full text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50"
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => {
+                          respondToRequestMutation.mutate({ requestId: request.id, action: 'reject' })
+                        }}
+                        disabled={respondToRequestMutation.isPending}
+                        className="flex-1 inline-flex items-center justify-center gap-2 h-9 px-4 bg-red-600 text-white rounded-full text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-50"
+                      >
+                        <XCircle className="w-4 h-4" />
+                        Reject
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </motion.div>
           </div>
         )}
       </main>
       <Footer />
       <UpgradeModal isOpen={showUpgradeModal} onClose={() => setShowUpgradeModal(false)} />
-    </div>
+    </>
   )
 }
 

@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { Check, Flame } from 'lucide-react';
 import Link from 'next/link';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 
 interface StreakOverviewProps {
   weeklyStreak: Array<{ week: string; date: string; completed: boolean; completedAt?: string; quizSlug?: string | null }>;
@@ -23,10 +23,25 @@ function getWeekNumberFromYearStart(date: Date): number {
 }
 
 export function StreakOverview({ weeklyStreak }: StreakOverviewProps) {
+  const [lottieAvailable, setLottieAvailable] = useState(false)
   const currentYear = new Date().getFullYear();
   const startOfYear = new Date(currentYear, 0, 1);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+
+  // Check if Lottie file exists
+  useEffect(() => {
+    fetch('/fire-streak.lottie', { method: 'HEAD' })
+      .then(res => {
+        if (res.ok) {
+          setLottieAvailable(true)
+        }
+      })
+      .catch(() => {
+        // File doesn't exist, use fallback
+        setLottieAvailable(false)
+      })
+  }, [])
   
   // Create a map of completed weeks for quick lookup by date string (YYYY-MM-DD)
   const completedWeeksMap = new Map<string, { completed: boolean; completedAt?: string; quizSlug?: string | null }>();
@@ -257,17 +272,25 @@ export function StreakOverview({ weeklyStreak }: StreakOverviewProps) {
                     minHeight: '66px',
                   }}
                 >
-                  <DotLottieReact
-                    src="/fire-streak.lottie"
-                    loop
-                    autoplay
-                    className="w-full h-full"
-                    style={{
-                      filter: 'drop-shadow(0 0 6px rgba(249, 115, 22, 0.5))',
-                      transformOrigin: 'center bottom',
-                      objectFit: 'contain',
-                    }}
-                  />
+                  {lottieAvailable ? (
+                    <DotLottieReact
+                      src="/fire-streak.lottie"
+                      loop
+                      autoplay
+                      className="w-full h-full"
+                      style={{
+                        filter: 'drop-shadow(0 0 6px rgba(249, 115, 22, 0.5))',
+                        transformOrigin: 'center bottom',
+                        objectFit: 'contain',
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Flame className="w-8 h-8 text-orange-500 animate-pulse" style={{
+                        filter: 'drop-shadow(0 0 6px rgba(249, 115, 22, 0.5))',
+                      }} />
+                    </div>
+                  )}
                 </div>
               )}
               
