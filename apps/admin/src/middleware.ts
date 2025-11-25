@@ -8,7 +8,8 @@ const publicRoutes = [
   '/sign-up',
   '/forgot-password',
   '/about',
-  '/pricing'
+  '/pricing',
+  '/quizzes' // Allow /quizzes - the page itself handles auth and redirects visitors
 ]
 
 // Define routes that are always public (assets, api, etc)
@@ -29,13 +30,17 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // 2. Check for auth token (check multiple sources)
-  const authToken = request.cookies.get('next-auth.session-token') ||
+  // 2. Check for NextAuth session cookie
+  // NextAuth v5 uses 'authjs.session-token' in development
+  // Also check legacy NextAuth cookie names for compatibility
+  const hasSessionCookie = 
+    request.cookies.get('authjs.session-token') ||
+    request.cookies.get('__Secure-authjs.session-token') ||
+    request.cookies.get('next-auth.session-token') ||
     request.cookies.get('__Secure-next-auth.session-token') ||
-    request.cookies.get('authToken') || // Custom auth token from localStorage-based auth
-    request.headers.get('authorization')?.replace('Bearer ', '')
+    request.cookies.get('authToken') // Legacy custom auth token
 
-  const isAuthenticated = !!authToken
+  const isAuthenticated = !!hasSessionCookie
   const isPublicPage = publicRoutes.some(route => pathname === route || pathname.startsWith(`${route}/`))
 
   // 3. Handle Unauthenticated Users

@@ -25,7 +25,7 @@ import { useQuizPlay } from "@/hooks/useQuizPlay";
 import { useQuizAchievements } from "@/hooks/useQuizAchievements";
 import { QuizSessionService } from "@/services/quizSessionService";
 
-import { QUIZ_CONSTANTS } from '@schoolquiz/db';
+import { QUIZ_CONSTANTS } from '@/lib/quiz-constants';
 
 const STANDARD_ROUND_COUNT = QUIZ_CONSTANTS.STANDARD_ROUND_COUNT;
 const QUESTIONS_PER_STANDARD_ROUND = QUIZ_CONSTANTS.QUESTIONS_PER_STANDARD_ROUND;

@@ -91,10 +91,10 @@ export async function POST(request: NextRequest) {
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object as Stripe.Invoice
 
-        if (invoice.subscription) {
+        if ((invoice as any).subscription) {
           // Find subscription and user
           const subscriptionRecord = await (prisma as any).subscription.findUnique({
-            where: { stripeSubscriptionId: invoice.subscription as string },
+            where: { stripeSubscriptionId: (invoice as any).subscription as string },
             include: { user: true },
           })
 

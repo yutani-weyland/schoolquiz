@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { SpellCheckInput } from "@/components/SpellCheckInput";
-import { QUIZ_CONSTANTS } from "@schoolquiz/db";
+import { QUIZ_CONSTANTS } from "@/lib/quiz-constants";
 
 // Dark mode toggle component
 function ThemeToggle() {

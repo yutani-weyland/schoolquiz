@@ -1,5 +1,6 @@
 import { getCurrentUser } from '@/lib/auth'
 import { prisma } from '@schoolquiz/db'
+import { unstable_cache } from 'next/cache'
 
 /**
  * Server-side data fetching for Quizzes page
@@ -110,6 +111,7 @@ async function fetchCustomQuizzes(userId: string): Promise<CustomQuiz[]> {
 
 /**
  * Main function to fetch all data needed for the Quizzes page
+ * Cached per user to avoid repeated database queries
  */
 export async function getQuizzesPageData(quizSlugs: string[]): Promise<QuizzesPageData> {
   const user = await getCurrentUser()
@@ -130,18 +132,32 @@ export async function getQuizzesPageData(quizSlugs: string[]): Promise<QuizzesPa
     user.subscriptionStatus === 'TRIALING' ||
     (user.freeTrialUntil && new Date(user.freeTrialUntil) > new Date())
 
-  // Fetch completions and custom quizzes in parallel
-  const [completions, customQuizzes] = await Promise.all([
-    fetchCompletions(user.id, quizSlugs),
-    isPremium ? fetchCustomQuizzes(user.id) : Promise.resolve([]),
-  ])
+  // Cache key includes user ID to ensure per-user caching
+  // Quiz slugs are included in key since completions are per-quiz
+  const cacheKey = `quizzes-page-${user.id}-${quizSlugs.join(',')}`
+  
+  // Use cached version - revalidate every 30 seconds
+  return unstable_cache(
+    async () => {
+      // Fetch completions and custom quizzes in parallel
+      const [completions, customQuizzes] = await Promise.all([
+        fetchCompletions(user.id, quizSlugs),
+        isPremium ? fetchCustomQuizzes(user.id) : Promise.resolve([]),
+      ])
 
-  return {
-    completions,
-    customQuizzes,
-    isPremium,
-    userName: user.name || user.email?.split('@')[0] || null,
-    isLoggedIn: true,
-  }
+      return {
+        completions,
+        customQuizzes,
+        isPremium,
+        userName: user.name || user.email?.split('@')[0] || null,
+        isLoggedIn: true,
+      }
+    },
+    [cacheKey],
+    {
+      revalidate: 30, // Cache for 30 seconds
+      tags: [`quizzes-page-${user.id}`], // Tag for potential invalidation
+    }
+  )()
 }
 

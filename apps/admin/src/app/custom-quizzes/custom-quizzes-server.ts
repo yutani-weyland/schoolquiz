@@ -177,7 +177,7 @@ async function fetchCustomQuizzes(userId: string): Promise<CustomQuiz[]> {
 			} : undefined,
 		}))
 
-		return [...transformedOwned, ...transformedShared]
+		return [...transformedOwned, ...transformedShared] as CustomQuiz[]
 	} catch (error) {
 		console.error('[Custom Quizzes Server] Error fetching quizzes:', error)
 		// If schema not migrated yet, return empty array

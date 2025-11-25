@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { motion, LayoutGroup, AnimatePresence } from "framer-motion";
 import { Calendar, Share2, Copy, Check, X } from "lucide-react";
 import { formatWeek } from "@/lib/format";
@@ -46,6 +47,7 @@ function textOn(bg: string): "black" | "white" {
 
 export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 	const { data: session } = useSession();
+	const router = useRouter();
 	const [showShareMenu, setShowShareMenu] = useState(false);
 	const [copied, setCopied] = useState(false);
 	const [formattedDate, setFormattedDate] = useState<string>("");
@@ -156,6 +158,13 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 			}
 		}
 	}, [quiz.slug, isPremium, isLoading, isNewest, loggedIn]);
+
+	// Prefetch play page route when intro page loads
+	// This makes the play page feel instant when user clicks "Start Quiz"
+	useEffect(() => {
+		// Just prefetch the route - Next.js will handle data fetching efficiently
+		router.prefetch(`/quizzes/${quiz.slug}/play`);
+	}, [quiz.slug, router]);
 	
 	const remainingQuizzes = loggedIn && !isPremium ? getRemainingFreeQuizzes() : 3;
 	const quizzesPlayed = loggedIn && !isPremium ? (3 - remainingQuizzes) : 0;

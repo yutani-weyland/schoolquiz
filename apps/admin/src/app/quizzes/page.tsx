@@ -7,8 +7,9 @@ import { QuizCardGridSkeleton } from '@/components/ui/Skeleton'
 import { getQuizColor } from '@/lib/colors'
 import type { Quiz } from "@/components/quiz/QuizCard"
 
-// Force dynamic rendering for user-specific data
-export const dynamic = 'force-dynamic'
+// Allow caching - user-specific data is cached per user via cache keys
+// Revalidate every 30 seconds for fresh completion data
+export const revalidate = 30
 
 // Official quizzes list (static data)
 const quizzes: Quiz[] = [

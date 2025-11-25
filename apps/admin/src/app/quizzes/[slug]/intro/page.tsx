@@ -30,7 +30,11 @@ export default function QuizIntroPage() {
 	useEffect(() => {
 		if (!quiz) {
 			router.replace("/quizzes");
+			return;
 		}
+		
+		// Prefetch play page when intro loads (user is likely to click "Start Quiz")
+		router.prefetch(`/quizzes/${quiz.slug}/play`);
 	}, [quiz, router]);
 
 	if (!quiz) return null;

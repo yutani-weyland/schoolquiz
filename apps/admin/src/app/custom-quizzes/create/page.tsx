@@ -13,6 +13,7 @@ import { CustomQuizUsageWidget } from '@/components/premium/CustomQuizUsageWidge
 import { motion } from 'framer-motion';
 import { Plus, Trash2, Save, Eye, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
 import { useUserTier } from '@/hooks/useUserTier';
+import { getAuthToken, getUserId } from '@/lib/storage';
 
 interface Question {
   id: string;

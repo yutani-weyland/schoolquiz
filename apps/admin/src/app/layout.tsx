@@ -7,6 +7,7 @@ import { UserAccessProvider } from "@/contexts/UserAccessContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ReactQueryProvider } from "@/providers/ReactQueryProvider";
 import { SessionProviderWrapper } from "@/providers/SessionProviderWrapper";
+import { NavigationProgress } from "@/components/ui/NavigationProgress";
 import { getThemeFromCookie, Theme } from "@/lib/theme";
 
 // Optimized font loading with next/font
@@ -128,6 +129,7 @@ export default async function RootLayout({
 				</Script>
 			</head>
 			<body className="bg-gray-50 dark:bg-[#0F1419] text-[hsl(var(--foreground))] overflow-x-hidden" suppressHydrationWarning>
+				<NavigationProgress />
 				<SessionProviderWrapper>
 					<ReactQueryProvider>
 						<ThemeProvider>

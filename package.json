@@ -6,6 +6,8 @@
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "type-check": "turbo run type-check",
+    "check": "bash scripts/check-build.sh",
+    "check:full": "bash scripts/check-build.sh --full",
     "test": "turbo run test",
     "test:e2e": "turbo run test:e2e",
     "clean": "turbo run clean",

@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
             name: true,
           },
         },
-      },
+      } as any,
     });
 
     if (!userWithProfile) {
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
       email: userWithProfile.email,
       name: userWithProfile.name,
       teamName: userWithProfile.teamName || "",
-      organisationName: userWithProfile.organisation?.name,
+      organisationName: (userWithProfile as any).organisation?.name,
       profileVisibility: userWithProfile.profileVisibility || "PUBLIC",
       avatar: userWithProfile.avatar || "👤",
     });
@@ -106,7 +106,7 @@ export async function PUT(request: NextRequest) {
             name: true,
           },
         },
-      },
+      } as any,
     });
 
     return NextResponse.json({
@@ -114,7 +114,7 @@ export async function PUT(request: NextRequest) {
       email: updatedUser.email,
       name: updatedUser.name,
       teamName: updatedUser.teamName || "",
-      organisationName: updatedUser.organisation?.name,
+      organisationName: (updatedUser as any).organisation?.name,
       profileVisibility: updatedUser.profileVisibility || "PUBLIC",
       avatar: updatedUser.avatar || "👤",
     });

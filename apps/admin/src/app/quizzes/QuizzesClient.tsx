@@ -7,7 +7,7 @@ import { QuizCard, Quiz } from "@/components/quiz/QuizCard"
 import { NextQuizTeaser } from "@/components/quiz/NextQuizTeaser"
 import { SkeletonCard } from "@/components/ui/Skeleton"
 import { Footer } from "@/components/Footer"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { getQuizColor } from '@/lib/colors'
 import { Plus, Sparkles } from 'lucide-react'
 import Link from 'next/link'
@@ -27,6 +27,7 @@ export function QuizzesClient({ initialData, quizzes }: QuizzesClientProps) {
   const [customQuizzes, setCustomQuizzes] = useState(initialData.customQuizzes)
   const [completions, setCompletions] = useState(initialData.completions)
   const pathname = usePathname()
+  const router = useRouter()
 
   // Force re-animation whenever the page is navigated to (including via menu)
   useEffect(() => {
@@ -38,6 +39,19 @@ export function QuizzesClient({ initialData, quizzes }: QuizzesClientProps) {
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // Background preload: Prefetch the newest quiz when page loads
+  useEffect(() => {
+    if (quizzes.length > 0 && viewType === 'official') {
+      const newestQuiz = quizzes[0]
+      if (newestQuiz && newestQuiz.status === 'available') {
+        // Only prefetch routes - Next.js will handle data fetching
+        // Prefetch intro and play pages for newest quiz (most likely to be clicked)
+        router.prefetch(`/quizzes/${newestQuiz.slug}/intro`)
+        router.prefetch(`/quizzes/${newestQuiz.slug}/play`)
+      }
+    }
+  }, [quizzes, viewType, router])
 
   // Fetch custom quizzes when viewType changes to 'custom' (if not already loaded)
   useEffect(() => {
