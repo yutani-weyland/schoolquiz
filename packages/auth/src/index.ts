@@ -205,22 +205,18 @@ const nextAuthConfig = NextAuth({
      * The session is built from the token, so we need to populate token data in jwt callback.
      */
     async session({ session, token }) {
-      // In v5, if there's no authenticated user, session will be null
-      // We should return null in that case, not an empty object
-      // But if session exists but token.sub is missing, return session as-is
-      if (!session) {
-        // No session at all - return null (NextAuth v5 will handle this)
-        return null as any
-      }
-      
-      // If no token.sub, user is not authenticated - return null
-      if (!token?.sub) {
-        return null as any
-      }
-
-      // In v5, we fetch user data here since session callback is called
-      // We'll populate the session with database data
+      // Wrap entire callback in try-catch to prevent any errors from crashing NextAuth
       try {
+        // In v5, if there's no authenticated user, NextAuth handles this at a higher level
+        // The session callback should always return a valid session object
+        // If session is null or token is missing, return the session as-is (NextAuth will handle it)
+        if (!session || !token?.sub) {
+          // Return session as-is - NextAuth v5 will handle unauthenticated state
+          return session
+        }
+
+        // In v5, we fetch user data here since session callback is called
+        // We'll populate the session with database data
         const db = getPrisma()
         if (!db) {
           // Database not available - return basic session
@@ -324,10 +320,15 @@ const nextAuthConfig = NextAuth({
       } catch (error: any) {
         // Log error but don't crash - return session with available data
         console.error('[NextAuth] Session callback error:', error)
+        // Return session as-is if it exists, otherwise return null
+        // NextAuth v5 will handle the null case properly
+        if (!session) {
+          return null as any
+        }
         return {
           ...session,
           user: {
-            id: token.sub as string,
+            id: token?.sub as string || '',
             email: session.user?.email || '',
             name: session.user?.name || '',
             role: 'teacher',

@@ -5,5 +5,6 @@
 
 import { handlers } from '@schoolquiz/auth'
 
+// Export handlers directly - NextAuth v5 handlers already have proper error handling
 export const { GET, POST } = handlers
 
