@@ -97,8 +97,8 @@ export async function GET(request: NextRequest) {
         round.questions.forEach((qr) => {
           questionList.push({
             questionId: qr.question.id,
-            categoryId: qr.question.categoryId,
-            categoryName: qr.question.category.name,
+            categoryId: qr.question.categoryId || '',
+            categoryName: qr.question.category?.name || 'Uncategorized',
             difficulty: qr.question.difficulty,
           })
         })

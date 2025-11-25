@@ -22,19 +22,6 @@ export function ReferralProgress({ userId, organisationDomain }: ReferralProgres
   // Use session userId if not provided as prop
   const effectiveUserId = userId || session?.user?.id;
 
-  useEffect(() => {
-    if (!isBasic || !effectiveUserId) {
-      setLoading(false);
-      return;
-    }
-
-    if (status === 'authenticated' && session) {
-      fetchReferralData();
-    } else if (status === 'unauthenticated') {
-      setLoading(false);
-    }
-  }, [status, session, isBasic, effectiveUserId]);
-
   // Fetch referral data
   const fetchReferralData = async () => {
     try {
@@ -47,20 +34,30 @@ export function ReferralProgress({ userId, organisationDomain }: ReferralProgres
         credentials: 'include', // Send session cookie
       });
 
-        if (response.ok) {
-          const data = await response.json();
-          setReferralCount(data.referralCount || 0);
-          setReferralCode(data.referralCode);
-        }
-      } catch (error) {
-        console.error('Failed to fetch referral data:', error);
-      } finally {
-        setLoading(false);
+      if (response.ok) {
+        const data = await response.json();
+        setReferralCount(data.referralCount || 0);
+        setReferralCode(data.referralCode);
       }
-    };
+    } catch (error) {
+      console.error('Failed to fetch referral data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchReferralData();
-  }, [userId, isBasic]);
+  useEffect(() => {
+    if (!isBasic || !effectiveUserId) {
+      setLoading(false);
+      return;
+    }
+
+    if (status === 'authenticated' && session) {
+      fetchReferralData();
+    } else if (status === 'unauthenticated') {
+      setLoading(false);
+    }
+  }, [status, session, isBasic, effectiveUserId]);
 
   // Only show for basic users
   if (!isBasic || loading) return null;

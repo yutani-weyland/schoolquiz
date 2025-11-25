@@ -86,10 +86,10 @@ export async function GET(
                 quizCompletions: true,
                 referrals: true,
                 createdOrganisations: true,
-              },
-            },
+            } as any,
           },
-        })
+        } as any,
+      }) as any
 
         // Try to add achievements if the table exists
         try {

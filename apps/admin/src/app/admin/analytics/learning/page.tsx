@@ -159,8 +159,8 @@ export default function LearningAnalyticsPage() {
                   border: '1px solid #e5e7eb',
                   borderRadius: '0.5rem',
                 }}
-                formatter={(value: number, name: string) => [
-                  `${value.toFixed(1)}%`,
+                formatter={(value: any, name: any) => [
+                  `${typeof value === 'number' ? value.toFixed(1) : value}%`,
                   'Coverage'
                 ]}
               />
@@ -279,7 +279,7 @@ export default function LearningAnalyticsPage() {
                     border: '1px solid #e5e7eb',
                     borderRadius: '0.5rem',
                   }}
-                  formatter={(value: number) => [`${value.toFixed(1)}%`, 'Correct Rate']}
+                  formatter={(value: any) => [`${typeof value === 'number' ? value.toFixed(1) : value}%`, 'Correct Rate']}
                 />
                 <Bar dataKey="percentage" radius={[8, 8, 0, 0]}>
                   {data.performanceByDifficulty.map((entry, index) => (

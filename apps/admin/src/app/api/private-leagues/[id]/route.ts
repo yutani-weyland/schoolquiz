@@ -148,7 +148,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getUserFromToken(request)
+    const user = await requireApiAuth()
     const { id } = await params
     
     if (!user) {

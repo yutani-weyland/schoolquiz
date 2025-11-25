@@ -28,7 +28,7 @@ interface Organisation {
     id: string
     name?: string | null
     email: string
-  }
+  } | null
   _count: {
     members: number
     groups: number
@@ -373,7 +373,7 @@ export default function OrganisationsClient({
       status: org.status,
       plan: org.plan,
       maxSeats: org.maxSeats,
-      ownerEmail: org.owner.email,
+      ownerEmail: org.owner?.email || 'N/A',
       memberCount: org._count.members,
       groupCount: org._count.groups,
       createdAt: new Date(org.createdAt).toLocaleString(),
@@ -747,10 +747,10 @@ export default function OrganisationsClient({
                           </DataTableCell>
                           <DataTableCell>
                             <div className="text-sm text-[hsl(var(--foreground))]">
-                              {org.owner.name || 'N/A'}
+                              {org.owner?.name || 'N/A'}
                             </div>
                             <div className="text-sm text-[hsl(var(--muted-foreground))]">
-                              {org.owner.email}
+                              {org.owner?.email || 'N/A'}
                             </div>
                           </DataTableCell>
                           <DataTableCell>

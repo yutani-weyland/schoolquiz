@@ -1,17 +1,16 @@
-"use client";
+import { Suspense } from 'react'
+import { redirect } from 'next/navigation'
+import { getCurrentUser } from '@/lib/auth'
+import { getQuizzesPageData } from './quizzes-server'
+import { QuizzesClient } from './QuizzesClient'
+import { QuizCardGridSkeleton } from '@/components/ui/Skeleton'
+import { getQuizColor } from '@/lib/colors'
+import type { Quiz } from "@/components/quiz/QuizCard"
 
-import React, { useState, useEffect, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { SiteHeader } from "@/components/SiteHeader";
-import { QuizCard, Quiz } from "@/components/quiz/QuizCard";
-import { NextQuizTeaser } from "@/components/quiz/NextQuizTeaser";
-import { Skeleton, SkeletonCard } from "@/components/ui/Skeleton";
-import { Footer } from "@/components/Footer";
-import { usePathname } from "next/navigation";
-import { getQuizColor } from '@/lib/colors';
-import { useUserAccess } from '@/contexts/UserAccessContext';
-import { useSession } from 'next-auth/react';
+// Force dynamic rendering for user-specific data
+export const dynamic = 'force-dynamic'
 
+// Official quizzes list (static data)
 const quizzes: Quiz[] = [
 	{
 		id: 12,
@@ -133,193 +132,27 @@ const quizzes: Quiz[] = [
 		status: "available",
 		tags: ["Inventions", "Science", "Medicine", "Innovation", "Discovery"]
 	}
-];
+]
 
-export default function QuizzesPage() {
-	const { isLoggedIn, userName, isLoading: userLoading, isVisitor } = useUserAccess();
-	const { data: session, status: sessionStatus } = useSession(); // NextAuth session
-	const [mounted, setMounted] = useState(false);
-	const [pageAnimationKey, setPageAnimationKey] = useState(0);
-	const [isLoading, setIsLoading] = useState(true);
-	const pathname = usePathname();
+/**
+ * Server Component - Quizzes Page
+ * Fetches data server-side and streams to client component
+ */
+export default async function QuizzesPage() {
+	// Get quiz slugs for fetching completions
+	const quizSlugs = quizzes.map(q => q.slug)
+	
+	// Fetch page data server-side
+	const pageData = await getQuizzesPageData(quizSlugs)
 
-	// Check authentication and get user name on client only to avoid hydration errors
-	useEffect(() => {
-		setMounted(true);
-
-		if (typeof window !== 'undefined') {
-			// Check NextAuth session first (primary auth system)
-			const isNextAuthLoggedIn = sessionStatus === 'authenticated' && !!session;
-			
-			// Fallback: Check localStorage for legacy auth (backward compatibility)
-			const authToken = localStorage.getItem('authToken');
-			const userId = localStorage.getItem('userId');
-			const isLegacyLoggedIn = !!(authToken && userId);
-			
-			// User is logged in if either NextAuth or legacy auth says so
-			const isActuallyLoggedIn = isNextAuthLoggedIn || isLegacyLoggedIn;
-
-			// If user is logged in, show the page (never redirect logged-in users)
-			if (isActuallyLoggedIn) {
-				setIsLoading(false);
-				return; // Early return - user is logged in, show the page
-			}
-
-			// Simulate loading delay for skeleton effect
-			const loadingTimer = setTimeout(() => {
-				setIsLoading(false);
-
-				// Re-check auth status after delay
-				const isNextAuthLoggedInRecheck = sessionStatus === 'authenticated' && !!session;
-				const authTokenRecheck = localStorage.getItem('authToken');
-				const userIdRecheck = localStorage.getItem('userId');
-				const isLegacyLoggedInRecheck = !!(authTokenRecheck && userIdRecheck);
-				const isActuallyLoggedInRecheck = isNextAuthLoggedInRecheck || isLegacyLoggedInRecheck;
-
-				// ONLY redirect if:
-				// 1. Session status is not loading
-				// 2. User is NOT logged in via NextAuth
-				// 3. User is NOT logged in via legacy auth
-				// 4. Context also says not logged in (double-check)
-				if (sessionStatus !== 'loading' && !isActuallyLoggedInRecheck && !isLoggedIn) {
-					// Redirect to latest quiz intro page (quiz #12) for visitors
-					window.location.href = '/quizzes/12/intro';
-				}
-			}, 300); // Small delay to show skeleton
-
-			return () => clearTimeout(loadingTimer);
-		}
-	}, [sessionStatus, session, userLoading, isLoggedIn]);
-
-	// Force re-animation whenever the page is navigated to (including via menu)
-	useEffect(() => {
-		// Increment animation key whenever pathname changes to /quizzes
-		if (pathname === '/quizzes') {
-			setPageAnimationKey(prev => prev + 1);
-		}
-	}, [pathname]);
-
+	// For visitors, redirect to latest quiz intro
+	if (!pageData.isLoggedIn) {
+		redirect('/quizzes/12/intro')
+	}
 
 	return (
-		<>
-			<SiteHeader fadeLogo={true} />
-			<main className="min-h-screen pt-24 pb-0">
-				<div className="max-w-[1600px] mx-auto px-6 sm:px-6 lg:px-8 xl:px-12">
-					{/* Page Title */}
-					<div className="text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 dark:text-white text-center mb-16 min-h-[1.2em] flex items-center justify-center">
-						<AnimatePresence mode="wait">
-							{isLoading || !mounted || userLoading ? (
-								<motion.div
-									key="skeleton-title"
-									initial={{ opacity: 0 }}
-									animate={{ opacity: 1 }}
-									exit={{ opacity: 0 }}
-									className="w-full max-w-md mx-auto"
-								>
-									<div className="w-full h-[80px] bg-[hsl(var(--muted))] rounded-lg animate-pulse" />
-								</motion.div>
-							) : (
-								<motion.h1
-									key={isLoggedIn && userName ? `greeting-${userName}` : 'default-title'}
-									initial={{ opacity: 0, y: -10 }}
-									animate={{ opacity: 1, y: 0 }}
-									exit={{ opacity: 0, y: 10 }}
-									transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-									className="w-full"
-								>
-									{(() => {
-										// Check NextAuth session first (primary auth)
-										if (session?.user?.name) {
-											return `G'day ${session.user.name}!`;
-										}
-										// Fallback: Check localStorage for legacy auth
-										if (typeof window !== 'undefined') {
-											const storedUserName = localStorage.getItem('userName');
-											const storedUserId = localStorage.getItem('userId');
-											const storedAuthToken = localStorage.getItem('authToken');
-											if (storedUserName && storedUserId && storedAuthToken) {
-												return `G'day ${storedUserName}!`;
-											}
-										}
-										// Fallback to context
-										return isLoggedIn && userName ? `G'day ${userName}!` : "Your Quizzes";
-									})()}
-								</motion.h1>
-							)}
-						</AnimatePresence>
-					</div>
-
-					{/* Quizzes Grid - Responsive with overlapping cards on mobile */}
-					<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8 md:gap-6">
-						{isLoading ? (
-							// Skeleton loading state
-							<>
-								<div className="hidden md:block">
-									<SkeletonCard className="h-full" />
-								</div>
-								{Array.from({ length: 6 }).map((_, index) => (
-									<motion.div
-										key={`skeleton-${index}`}
-										initial={{ opacity: 0, y: 20 }}
-										animate={{ opacity: 1, y: 0 }}
-										transition={{
-											duration: 0.3,
-											delay: index * 0.05,
-											ease: [0.22, 1, 0.36, 1]
-										}}
-									>
-										<SkeletonCard className="h-full" />
-									</motion.div>
-								))}
-							</>
-						) : (
-							<>
-								{/* Next Quiz Teaser Card */}
-								<motion.div
-									className="hidden md:block h-full"
-									key={`teaser-${pageAnimationKey}`}
-									initial={{ opacity: 0, y: 20, scale: 0.95 }}
-									animate={{ opacity: 1, y: 0, scale: 1 }}
-									transition={{
-										duration: 0.5,
-										delay: 0.1,
-										ease: [0.22, 1, 0.36, 1],
-										type: 'spring',
-										stiffness: 200,
-										damping: 20
-									}}
-								>
-									<NextQuizTeaser latestQuizId={quizzes[0]?.id || 12} />
-								</motion.div>
-
-								{quizzes.map((quiz, index) => {
-									const isNewest = index === 0;
-									return (
-										<motion.div
-											key={`quiz-${quiz.id}-${pageAnimationKey}`}
-											className="h-auto sm:h-full"
-											initial={{ opacity: 0, y: 20, scale: 0.95 }}
-											animate={{ opacity: 1, y: 0, scale: 1 }}
-											transition={{
-												duration: 0.5,
-												delay: 0.1 + (index * 0.05), // Stagger by 50ms per card
-												ease: [0.22, 1, 0.36, 1],
-												type: 'spring',
-												stiffness: 200,
-												damping: 20
-											}}
-										>
-											<QuizCard quiz={quiz} isNewest={isNewest} index={index} />
-										</motion.div>
-									);
-								})}
-							</>
-						)}
-					</div>
-				</div>
-			</main>
-
-			<Footer />
-		</>
-	);
+		<Suspense fallback={<QuizCardGridSkeleton count={6} />}>
+			<QuizzesClient initialData={pageData} quizzes={quizzes} />
+		</Suspense>
+	)
 }

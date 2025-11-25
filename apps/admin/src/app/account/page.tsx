@@ -31,19 +31,11 @@ export default function AccountPage() {
     }
   }, [status, router]);
 
+  // Loading state is now handled by loading.tsx
+  // Keep this check for client-side tier loading only
   if (tierLoading) {
-    return (
-      <PageLayout>
-        <PageContainer maxWidth="2xl">
-          <div className="flex items-center justify-center min-h-[calc(100vh-12rem)]">
-            <div className="text-center">
-              <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-              <p className="text-gray-600 dark:text-gray-400">Loading...</p>
-            </div>
-          </div>
-        </PageContainer>
-      </PageLayout>
-    );
+    // Show minimal loading - most content will be in loading.tsx
+    return null; // Let Next.js loading.tsx handle it
   }
 
   // Define tabs

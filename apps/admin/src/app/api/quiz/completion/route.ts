@@ -256,7 +256,7 @@ export async function POST(request: NextRequest) {
     const existingCompletion = await prisma.quizCompletion.findFirst({
       where: {
         userId,
-        quizSlug: quizType === 'CUSTOM' ? quiz.slug : quizSlug,
+        quizSlug: quizType === 'CUSTOM' ? (quiz.slug || undefined) : quizSlug,
         ...(quizType === 'CUSTOM' && customQuizId ? { customQuizId } : {}),
       },
     });
@@ -284,9 +284,9 @@ export async function POST(request: NextRequest) {
       completion = await prisma.quizCompletion.create({
         data: {
           userId,
-          quizSlug: quiz.slug || quizSlug,
+          quizSlug: quiz.slug || quizSlug || '',
           quizType: quizType as any,
-          customQuizId: quizType === 'CUSTOM' ? (customQuizId || quiz.id) : null,
+          ...(quizType === 'CUSTOM' && (customQuizId || quiz.id) ? { customQuizId: customQuizId || quiz.id } : {}),
           score,
           totalQuestions,
           timeSeconds: completionTimeSeconds || null,

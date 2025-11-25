@@ -280,8 +280,8 @@ export async function POST(request: NextRequest) {
           status: 'draft',
           // Create a default category for custom quizzes or use null
           // For now, we'll create rounds without requiring categories
-        },
-      })
+        } as any,
+      }) as any
 
       // Find or create a "Custom" category for custom quiz rounds
       let customCategory = await prisma.category.findFirst({

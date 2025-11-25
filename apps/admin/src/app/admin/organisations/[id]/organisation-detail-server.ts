@@ -231,7 +231,7 @@ export async function getOrganisationDetail(organisationId: string): Promise<Org
       async () => getOrganisationDetailInternal(organisationId),
       createCacheKey('organisation-detail', { id: organisationId }),
       {
-        revalidate: CACHE_TTL.USER_DETAIL, // Use same TTL as user detail
+        revalidate: CACHE_TTL.DETAIL, // Use same TTL as user detail
         tags: [CACHE_TAGS.ORGANISATIONS, `organisation-${organisationId}`],
       }
     )()

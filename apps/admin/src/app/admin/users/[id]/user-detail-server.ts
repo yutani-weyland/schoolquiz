@@ -151,8 +151,8 @@ async function getUserDetailInternal(userId: string): Promise<UserDetail | null>
               createdOrganisations: true,
             },
           },
-        },
-      })
+        } as any,
+      }) as any
 
       // Try to add achievements if the table exists
       try {
@@ -215,17 +215,14 @@ async function getUserDetailInternal(userId: string): Promise<UserDetail | null>
       subscriptionStatus: user.subscriptionStatus,
       subscriptionPlan: user.subscriptionPlan,
       subscriptionEndsAt: user.subscriptionEndsAt?.toISOString() || null,
-      freeTrialStartedAt: user.freeTrialStartedAt?.toISOString() || null,
-      freeTrialEndsAt: user.freeTrialEndsAt?.toISOString() || null,
+      freeTrialUntil: user.freeTrialUntil?.toISOString() || null,
       referralCode: user.referralCode,
       referredBy: user.referredBy,
       referralCount: user.referralCount,
-      freeTrialUntil: user.freeTrialUntil?.toISOString() || null,
       emailVerified: user.emailVerified,
       phoneVerified: user.phoneVerified,
       lastLoginAt: user.lastLoginAt?.toISOString() || null,
       createdAt: user.createdAt.toISOString(),
-      updatedAt: user.updatedAt.toISOString(),
       organisationMembers: user.organisationMembers.map((m: any) => ({
         id: m.id,
         role: m.role,

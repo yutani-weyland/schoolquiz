@@ -485,20 +485,16 @@ const sampleQuizzes: Quiz[] = [
 export default function HomePage() {
 	const { isVisitor, isFree, isPremium, userName, isLoading } = useUserAccess();
 	const [mounted, setMounted] = useState(false);
-	const [contentLoaded, setContentLoaded] = useState(false);
 	const [flippedCardIds, setFlippedCardIds] = useState<Set<string>>(new Set());
 	const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
 
 	useEffect(() => {
 		setMounted(true);
-		// Simulate progressive loading
-		const timer = setTimeout(() => setContentLoaded(true), 100);
-		return () => clearTimeout(timer);
 	}, []);
 
 	// Auto-flip cards in the preview to show the animation
 	useEffect(() => {
-		if (!contentLoaded) return;
+		if (!mounted) return;
 
 		let timeoutIds: NodeJS.Timeout[] = [];
 
@@ -540,7 +536,7 @@ export default function HomePage() {
 			timeoutIds.forEach(id => clearTimeout(id));
 			clearInterval(interval);
 		};
-	}, [contentLoaded]);
+	}, [mounted]);
 
 	// Redirect logged-in users to appropriate page
 	useEffect(() => {
@@ -589,192 +585,153 @@ export default function HomePage() {
 				{/* Hero Section */}
 				<section className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-8 md:px-4 pt-24 sm:pt-32 relative bg-gray-50 dark:bg-[#0F1419]">
 					<div className="max-w-4xl mx-auto text-center mb-8 sm:mb-16 px-4 sm:px-6 md:px-0">
-						{contentLoaded ? (
-							<motion.h1
-								initial={{ opacity: 0, y: 20 }}
-								animate={{ opacity: 1, y: 0 }}
-								transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-								className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold text-gray-900 dark:text-white mb-6 sm:mb-8 md:mb-10 pb-2 sm:pb-4 px-4 sm:px-6 md:px-8 lg:px-12 leading-[1.1] sm:leading-tight"
-								id="headline"
-							>
-								A weekly quiz for<br />
-								high school<br />
-								<span className="text-blue-600 dark:text-blue-400 block min-h-[1.2em]">
-									<RotatingText
-										text={["students", "tutor groups", "homerooms"]}
-										duration={3000}
-										transition={{ duration: 0.5, ease: "easeInOut" }}
-									/>
-								</span>
-							</motion.h1>
-						) : (
-							<div className="mb-6 sm:mb-8 md:mb-10 pb-2 sm:pb-4 px-4 sm:px-6 md:px-8 lg:px-12">
-								<div className="w-full mb-4 h-[120px] bg-[hsl(var(--muted))] rounded-lg animate-pulse" />
-								<div className="w-3/4 mx-auto h-[80px] bg-[hsl(var(--muted))] rounded-lg animate-pulse" />
-							</div>
-						)}
+						<motion.h1
+							initial={{ opacity: 0, y: 20 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+							className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold text-gray-900 dark:text-white mb-6 sm:mb-8 md:mb-10 pb-2 sm:pb-4 px-4 sm:px-6 md:px-8 lg:px-12 leading-[1.1] sm:leading-tight"
+							id="headline"
+						>
+							A weekly quiz for<br />
+							high school<br />
+							<span className="text-blue-600 dark:text-blue-400 block min-h-[1.2em]">
+								<RotatingText
+									text={["students", "tutor groups", "homerooms"]}
+									duration={3000}
+									transition={{ duration: 0.5, ease: "easeInOut" }}
+								/>
+							</span>
+						</motion.h1>
 
-						{contentLoaded ? (
-							<motion.div
-								initial={{ opacity: 0, y: 10 }}
-								animate={{ opacity: 1, y: 0 }}
-								transition={{ duration: 0.4, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-								className="text-base sm:text-lg md:text-xl text-gray-600 dark:text-[#DCDCDC] mb-8 sm:mb-12 max-w-4xl mx-auto px-4 sm:px-6 md:px-8 lg:px-12 leading-relaxed"
-								id="description"
-							>
-								{/* Desktop version */}
-								<div className="hidden sm:block space-y-4">
-									<p>
-										A great quiz brings out shared laughs, inside jokes, and those easy moments that help you build stronger connections with your students.
-									</p>
-									<p>
-										The School Quiz is built for exactly that.
-									</p>
-									<p>
-										Each week it blends general knowledge with school-friendly fun — music, sport, movies, current affairs, pop culture, and whatever's actually trending with teenagers in Australia. No trick questions. No AI slop. Just a solid, reliable quiz landing every Monday morning.
-									</p>
-								</div>
-								{/* Mobile version */}
-								<div className="block sm:hidden space-y-3">
-									<p>
-										A great quiz brings out shared laughs, inside jokes, and those easy moments that help you build stronger connections with your students.
-									</p>
-									<p>
-										The School Quiz is built for exactly that.
-									</p>
-									<p>
-										Each week it blends general knowledge with school-friendly fun — music, sport, movies, current affairs, pop culture, and whatever's actually trending with teenagers in Australia. No trick questions. No AI slop. Just a solid, reliable quiz landing every Monday morning.
-									</p>
-								</div>
-							</motion.div>
-						) : (
-							<div className="mb-8 sm:mb-12 max-w-4xl mx-auto px-4 sm:px-6 md:px-8 lg:px-12">
-								<SkeletonText lines={3} />
+						<motion.div
+							initial={{ opacity: 0, y: 10 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ duration: 0.4, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+							className="text-base sm:text-lg md:text-xl text-gray-600 dark:text-[#DCDCDC] mb-8 sm:mb-12 max-w-4xl mx-auto px-4 sm:px-6 md:px-8 lg:px-12 leading-relaxed"
+							id="description"
+						>
+							{/* Desktop version */}
+							<div className="hidden sm:block space-y-4">
+								<p>
+									A great quiz brings out shared laughs, inside jokes, and those easy moments that help you build stronger connections with your students.
+								</p>
+								<p>
+									The School Quiz is built for exactly that.
+								</p>
+								<p>
+									Each week it blends general knowledge with school-friendly fun — music, sport, movies, current affairs, pop culture, and whatever's actually trending with teenagers in Australia. No trick questions. No AI slop. Just a solid, reliable quiz landing every Monday morning.
+								</p>
 							</div>
-						)}
+							{/* Mobile version */}
+							<div className="block sm:hidden space-y-3">
+								<p>
+									A great quiz brings out shared laughs, inside jokes, and those easy moments that help you build stronger connections with your students.
+								</p>
+								<p>
+									The School Quiz is built for exactly that.
+								</p>
+								<p>
+									Each week it blends general knowledge with school-friendly fun — music, sport, movies, current affairs, pop culture, and whatever's actually trending with teenagers in Australia. No trick questions. No AI slop. Just a solid, reliable quiz landing every Monday morning.
+								</p>
+							</div>
+						</motion.div>
 
-						{contentLoaded ? (
-							<motion.div
-								id="buttons"
-								className="px-2 sm:px-0"
-								initial={{ opacity: 0, y: 10 }}
-								animate={{ opacity: 1, y: 0 }}
-								transition={{ duration: 0.4, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-							>
-								<HeroCTA />
-							</motion.div>
-						) : (
-							<div className="px-2 sm:px-0 flex justify-center gap-4">
-								<div className="w-[180px] h-[48px] bg-[hsl(var(--muted))] rounded-full animate-pulse" />
-								<div className="w-[180px] h-[48px] bg-[hsl(var(--muted))] rounded-full animate-pulse" />
-							</div>
-						)}
+						<motion.div
+							id="buttons"
+							className="px-2 sm:px-0"
+							initial={{ opacity: 0, y: 10 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ duration: 0.4, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+						>
+							<HeroCTA />
+						</motion.div>
 					</div>
 
 					{/* A new quiz every week heading */}
-					{contentLoaded ? (
-						<motion.div
-							className="w-full px-4 mt-8 mb-4"
-							initial={{ opacity: 0, y: 20 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{ duration: 0.5, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
-						>
-							<div className="max-w-6xl mx-auto text-center">
-								<h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
-									A new quiz every week
-								</h2>
-								<p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-									Balanced, teacher-written, and tailor made for Australian high school students.
-								</p>
-							</div>
-						</motion.div>
-					) : null}
+					<motion.div
+						className="w-full px-4 mt-8 mb-4"
+						initial={{ opacity: 0, y: 20 }}
+						animate={{ opacity: 1, y: 0 }}
+						transition={{ duration: 0.5, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
+					>
+						<div className="max-w-6xl mx-auto text-center">
+							<h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
+								A new quiz every week
+							</h2>
+							<p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+								Balanced, teacher-written, and tailor made for Australian high school students.
+							</p>
+						</div>
+					</motion.div>
 
 					{/* Quiz Card Stack - Back Catalogue Preview */}
-					{contentLoaded ? (
-						<motion.div
-							className="w-full"
-							initial={{ opacity: 0, y: 30 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{ duration: 0.5, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}
-						>
-							<QuizCardStack quizzes={sampleQuizzes} />
-						</motion.div>
-					) : null}
+					<motion.div
+						className="w-full"
+						initial={{ opacity: 0, y: 30 }}
+						animate={{ opacity: 1, y: 0 }}
+						transition={{ duration: 0.5, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}
+					>
+						<QuizCardStack quizzes={sampleQuizzes} />
+					</motion.div>
 
 					{/* Value Proposition Carousel */}
-					{contentLoaded ? (
-						<ReasonsCarousel />
-					) : null}
+					<ReasonsCarousel />
 
 					{/* Interactive Quiz Preview heading */}
-					{contentLoaded ? (
-						<motion.div
-							className="w-full px-4 mt-12 mb-6"
-							initial={{ opacity: 0, y: 20 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{ duration: 0.5, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
-						>
-							<div className="max-w-4xl mx-auto text-center">
-								<h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
-									Run the quiz your way
-								</h2>
-								<p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-									Use Presenter View for the screen or projector, Quick View for an at-a-glance overview, and Printable when you need a paper copy. Three simple, flexible ways to run the quiz your way.
-								</p>
-							</div>
-						</motion.div>
-					) : null}
+					<motion.div
+						className="w-full px-4 mt-12 mb-6"
+						initial={{ opacity: 0, y: 20 }}
+						animate={{ opacity: 1, y: 0 }}
+						transition={{ duration: 0.5, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
+					>
+						<div className="max-w-4xl mx-auto text-center">
+							<h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
+								Run the quiz your way
+							</h2>
+							<p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+								Use Presenter View for the screen or projector, Quick View for an at-a-glance overview, and Printable when you need a paper copy. Three simple, flexible ways to run the quiz your way.
+							</p>
+						</div>
+					</motion.div>
 
 					{/* Safari Preview Peeking from Bottom */}
-					{contentLoaded ? (
-						<motion.div
-							className="w-full px-8 sm:px-12 md:px-16 lg:px-20 xl:px-24 mt-4 mb-8"
-							initial={{ opacity: 0, y: 30 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{ duration: 0.5, delay: 0.45, ease: [0.22, 1, 0.36, 1] }}
-						>
-							<div className="max-w-5xl mx-auto">
-								<QuizSafariPreview />
-							</div>
-						</motion.div>
-					) : (
-						<div className="w-full px-8 sm:px-12 md:px-16 lg:px-20 xl:px-24 mt-4 mb-8">
-							<div className="max-w-5xl mx-auto">
-								<div className="w-full h-[400px] bg-[hsl(var(--muted))] rounded-2xl animate-pulse" />
-							</div>
+					<motion.div
+						className="w-full px-8 sm:px-12 md:px-16 lg:px-20 xl:px-24 mt-4 mb-8"
+						initial={{ opacity: 0, y: 30 }}
+						animate={{ opacity: 1, y: 0 }}
+						transition={{ duration: 0.5, delay: 0.45, ease: [0.22, 1, 0.36, 1] }}
+					>
+						<div className="max-w-5xl mx-auto">
+							<QuizSafariPreview />
 						</div>
-					)}
+					</motion.div>
 
 					{/* Achievements Preview heading */}
-					{contentLoaded ? (
-						<motion.div
-							className="w-full px-4 mt-16 mb-6"
-							initial={{ opacity: 0, y: 20 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{ duration: 0.5, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
-						>
-							<div className="max-w-6xl mx-auto text-center">
-								<h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
-									Earn achievements as you play
-								</h2>
-								<p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-									Unlock a growing library of achievement cards, including progress milestones, perfect scores, special editions, and fun one-offs.
-								</p>
-							</div>
-						</motion.div>
-					) : null}
+					<motion.div
+						className="w-full px-4 mt-16 mb-6"
+						initial={{ opacity: 0, y: 20 }}
+						animate={{ opacity: 1, y: 0 }}
+						transition={{ duration: 0.5, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
+					>
+						<div className="max-w-6xl mx-auto text-center">
+							<h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
+								Earn achievements as you play
+							</h2>
+							<p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+								Unlock a growing library of achievement cards, including progress milestones, perfect scores, special editions, and fun one-offs.
+							</p>
+						</div>
+					</motion.div>
 
 					{/* Achievements Preview Cards */}
-					{contentLoaded ? (
-						<motion.div
-							className="w-full px-4 mt-6 mb-12"
-							initial={{ opacity: 0, y: 30 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{ duration: 0.5, delay: 0.55, ease: [0.22, 1, 0.36, 1] }}
-						>
-							<div className="max-w-7xl mx-auto flex flex-wrap justify-center items-center gap-3 sm:gap-4 md:gap-5">
-								{[
+					<motion.div
+						className="w-full px-4 mt-6 mb-12"
+						initial={{ opacity: 0, y: 30 }}
+						animate={{ opacity: 1, y: 0 }}
+						transition={{ duration: 0.5, delay: 0.55, ease: [0.22, 1, 0.36, 1] }}
+					>
+						<div className="max-w-7xl mx-auto flex flex-wrap justify-center items-center gap-3 sm:gap-4 md:gap-5">
+							{[
 									{
 										id: "preview-1",
 										slug: "ace",
@@ -928,7 +885,6 @@ export default function HomePage() {
 								</Link>
 							</div>
 						</motion.div>
-					) : null}
 				</section>
 
 				{/* Premium Features - Mobbin Style */}
@@ -1481,6 +1437,138 @@ export default function HomePage() {
 								</div>
 							</motion.div>
 						</div>
+
+						{/* Custom Quiz Builder - Wide Screen Feature */}
+						<motion.div
+							initial={{ opacity: 0, y: 20 }}
+							whileInView={{ opacity: 1, y: 0 }}
+							viewport={{ once: true }}
+							transition={{ duration: 0.5, delay: 0.65 }}
+							className="mt-8"
+						>
+							<motion.div
+								whileHover={{ scale: 1.01, y: -4 }}
+								transition={{
+									type: "spring",
+									stiffness: 300,
+									damping: 20
+								}}
+								className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden group hover:shadow-xl transition-shadow"
+							>
+								{/* UI Preview Area */}
+								<div className="bg-gray-50 dark:bg-gray-800 px-6 sm:px-8 md:px-12 py-8 border-b border-gray-200 dark:border-gray-700">
+									<div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+										{/* Quiz Builder Preview - Left Side */}
+										<div className="space-y-4">
+											<div className="flex items-center gap-2 mb-4">
+												<FileEdit className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+												<h4 className="text-lg font-bold text-gray-900 dark:text-white">Create Your Own Quizzes</h4>
+											</div>
+											{/* Builder form mockup */}
+											<div className="bg-white dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700 shadow-sm space-y-3">
+												{/* Quiz Title */}
+												<div>
+													<label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">Quiz Title</label>
+													<div className="h-8 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 px-3 text-sm text-gray-900 dark:text-white flex items-center">
+														<TypingAnimation
+															text="Year 9 History Review"
+															speed={30}
+															delay={300}
+															className="text-sm"
+														/>
+													</div>
+												</div>
+												{/* Quiz Description */}
+												<div>
+													<label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">Description</label>
+													<div className="min-h-[60px] bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 p-2 text-xs text-gray-600 dark:text-gray-400">
+														Review quiz covering WWI and Australian Federation topics
+													</div>
+												</div>
+												{/* Round Section */}
+												<div className="space-y-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+													<div className="flex items-center justify-between">
+														<label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Round 1: World War I</label>
+														<span className="text-xs text-gray-500 dark:text-gray-400">5 questions</span>
+													</div>
+													<div className="space-y-1.5 pl-3 border-l-2 border-indigo-500">
+														<div className="text-xs text-gray-600 dark:text-gray-400">• Which year did WWI begin?</div>
+														<div className="text-xs text-gray-600 dark:text-gray-400">• Name the Gallipoli campaign commander</div>
+													</div>
+												</div>
+												{/* Add Round Button */}
+												<button className="w-full h-7 bg-indigo-600 text-white rounded-full font-medium text-xs hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2">
+													<FileEdit className="w-3.5 h-3.5" />
+													Add Round
+												</button>
+											</div>
+											{/* Org Badge */}
+											<div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+												<Building2 className="w-4 h-4" />
+												<span>Shared with your organisation</span>
+											</div>
+										</div>
+
+										{/* Example Quiz Cards - Right Side */}
+										<div className="flex flex-col justify-center">
+											<div className="flex items-center gap-2 mb-4">
+												<Sparkles className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+												<h4 className="text-lg font-bold text-gray-900 dark:text-white">Example Quizzes</h4>
+											</div>
+											<div className="grid grid-cols-2 gap-3">
+												{[
+													{ id: 1, title: "Year 9 History", color: '#6366f1', rotation: -1.5 },
+													{ id: 2, title: "Science Review", color: '#10b981', rotation: 1.2 },
+													{ id: 3, title: "Math Practice", color: '#f59e0b', rotation: -1.8 },
+													{ id: 4, title: "Geography Quiz", color: '#ec4899', rotation: 1.5 },
+												].map((quiz) => (
+													<motion.div
+														key={quiz.id}
+														initial={{ opacity: 0, scale: 0.9 }}
+														whileInView={{ opacity: 1, scale: 1 }}
+														viewport={{ once: true }}
+														transition={{ duration: 0.3, delay: 0.7 + (quiz.id * 0.1) }}
+														className="aspect-[5/8] rounded-2xl p-3 flex flex-col justify-between shadow-md relative overflow-hidden"
+														style={{
+															backgroundColor: quiz.color,
+															transform: `rotate(${quiz.rotation}deg)`,
+															transformOrigin: 'center'
+														}}
+														whileHover={{
+															rotate: 0,
+															scale: 1.05,
+															zIndex: 10,
+															transition: { duration: 0.2 }
+														}}
+													>
+														<div className="flex items-center gap-1">
+															<span className="text-xs font-bold text-white bg-white/20 px-2 py-0.5 rounded-full">
+																Custom
+															</span>
+														</div>
+														<div className="text-sm font-extrabold text-white leading-tight line-clamp-3">
+															{quiz.title}
+														</div>
+														<div className="text-xs font-medium text-white/90">
+															Org-wide
+														</div>
+													</motion.div>
+												))}
+											</div>
+										</div>
+									</div>
+								</div>
+								{/* Content */}
+								<div className="p-6 sm:p-8">
+									<h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2">
+										Create Custom Quizzes, Org-Wide
+									</h3>
+									<p className="text-base text-gray-600 dark:text-gray-400 leading-relaxed max-w-3xl">
+										Build your own quizzes tailored to your curriculum. Share them across your organisation so all teachers can use them in their classes. Perfect for review sessions, assessment prep, and topic-specific learning.
+									</p>
+								</div>
+							</motion.div>
+						</motion.div>
 
 						{/* CTA Button */}
 						<motion.div

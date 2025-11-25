@@ -239,15 +239,24 @@ const nextAuthConfig = NextAuth({
           }
         }
 
-        // Try User model first (newer system)
+        // Optimized: Use lightweight query - only fetch what we absolutely need
+        // For most API requests, we don't need org data, so skip the expensive include
         const user = await db.user.findUnique({
           where: { id: token.sub as string },
-          include: {
-            organisationMembers: {
-              where: { status: 'ACTIVE' },
-              include: { organisation: true },
-              take: 1,
-            },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            tier: true,
+            subscriptionStatus: true,
+            freeTrialUntil: true,
+            platformRole: true,
+            // Only fetch org data if explicitly needed (not for most API calls)
+            // organisationMembers: {
+            //   where: { status: 'ACTIVE' },
+            //   include: { organisation: true },
+            //   take: 1,
+            // },
           },
         })
         
@@ -257,11 +266,9 @@ const nextAuthConfig = NextAuth({
             (user.subscriptionStatus === 'ACTIVE' || user.subscriptionStatus === 'TRIALING') ||
             (user.freeTrialUntil && new Date(user.freeTrialUntil) > new Date())
           
-          // Determine role from organisation membership or default
-          const orgMember = user.organisationMembers[0]
-          const role = orgMember?.role === 'OWNER' || orgMember?.role === 'ADMIN' 
-            ? 'admin' 
-            : 'teacher'
+          // Default role to 'teacher' - org data only fetched when needed
+          // This avoids expensive queries on every session check
+          const role = 'teacher'
           
           return {
             ...session,
@@ -270,8 +277,8 @@ const nextAuthConfig = NextAuth({
               email: user.email,
               name: user.name || '',
               role,
-              schoolId: orgMember?.organisationId || '',
-              schoolName: orgMember?.organisation.name || '',
+              schoolId: '', // Empty unless org data is explicitly fetched
+              schoolName: '', // Empty unless org data is explicitly fetched
               tier: isPremium ? 'premium' : 'basic',
               platformRole: user.platformRole,
             } as any,

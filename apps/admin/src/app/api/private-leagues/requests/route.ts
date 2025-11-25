@@ -145,7 +145,7 @@ export async function GET(request: NextRequest) {
       
       // Build response with mapped relations
       requests = requestsData.map((r: any) => {
-        const league = leagueMap.get(r.leagueId)
+        const league = leagueMap.get(r.leagueId) as any
         return {
           ...r,
           user: userMap.get(r.userId) || null,
@@ -260,7 +260,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user is in the same organization
-    const userOrg = user.organisationMembers.find(
+    const userWithOrgs = await (prisma as any).user.findUnique({
+      where: { id: user.id },
+      include: {
+        organisationMembers: {
+          where: { status: 'ACTIVE' },
+          select: { organisationId: true, status: true },
+        },
+      },
+    })
+    
+    const userOrg = userWithOrgs?.organisationMembers?.find(
       (m: any) => m.organisationId === league.organisationId && m.status === 'ACTIVE'
     )
 

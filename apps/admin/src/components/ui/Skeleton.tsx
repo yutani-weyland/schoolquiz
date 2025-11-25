@@ -58,5 +58,84 @@ function SkeletonCard({ className }: SkeletonCardProps) {
   )
 }
 
-export { Skeleton, SkeletonText, SkeletonCard }
+/**
+ * Achievement Card Skeleton - matches AchievementCard layout
+ */
+function AchievementCardSkeleton() {
+  return (
+    <div 
+      className="rounded-2xl p-4 shadow-lg flex flex-col"
+      style={{
+        width: 'clamp(120px, 25vw, 200px)',
+        maxWidth: '200px',
+        aspectRatio: '5/8', // Match achievement card ratio
+      }}
+    >
+      <Skeleton className="h-6 w-16 rounded-full mb-3" />
+      <Skeleton className="h-8 w-3/4 mb-4" />
+      <Skeleton className="h-4 w-full mb-2" />
+      <Skeleton className="h-4 w-5/6 mb-auto" />
+      <Skeleton className="h-3 w-20 mt-auto" />
+    </div>
+  )
+}
+
+/**
+ * Leaderboard Card Skeleton - matches LeaderboardCard layout
+ */
+function LeaderboardCardSkeleton() {
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex-1 space-y-2">
+          <Skeleton className="h-5 w-3/4" />
+          <div className="flex gap-2">
+            <Skeleton className="h-5 w-16 rounded-full" />
+            <Skeleton className="h-5 w-20 rounded-full" />
+          </div>
+        </div>
+      </div>
+      <Skeleton className="h-4 w-full mb-4" />
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-8 w-20 rounded-full" />
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Quiz Card Grid Skeleton - for quiz list pages
+ */
+function QuizCardGridSkeleton({ count = 6 }: { count?: number }) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+      {Array.from({ length: count }).map((_, i) => (
+        <SkeletonCard key={i} />
+      ))}
+    </div>
+  )
+}
+
+/**
+ * Page Header Skeleton - for page titles and descriptions
+ */
+function PageHeaderSkeleton() {
+  return (
+    <div className="text-center mb-8 space-y-4">
+      <Skeleton className="h-12 w-full max-w-md mx-auto" />
+      <Skeleton className="h-6 w-full max-w-lg mx-auto" />
+    </div>
+  )
+}
+
+export { 
+  Skeleton, 
+  SkeletonText, 
+  SkeletonCard,
+  AchievementCardSkeleton,
+  LeaderboardCardSkeleton,
+  QuizCardGridSkeleton,
+  PageHeaderSkeleton,
+}
 

@@ -2,8 +2,23 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { springs, transitions } from "@schoolquiz/ui";
 import { PageHeader, Card, Input, Button } from '@/components/admin/ui';
+
+// Spring configurations (from @schoolquiz/ui)
+const springs = {
+  micro: { type: "spring" as const, stiffness: 380, damping: 28, mass: 0.8 },
+  gentle: { type: "spring" as const, stiffness: 200, damping: 25, mass: 1 },
+  snappy: { type: "spring" as const, stiffness: 500, damping: 30, mass: 0.5 }
+};
+
+// Transition presets (from @schoolquiz/ui)
+const transitions = {
+  fast: { duration: 0.18, ease: [0.22, 1, 0.36, 1] as const },
+  medium: { duration: 0.24, ease: [0.22, 1, 0.36, 1] as const },
+  slow: { duration: 0.4, ease: [0.22, 1, 0.36, 1] as const },
+  easeOut: { duration: 0.22, ease: [0.22, 1, 0.36, 1] as const },
+  easeInOut: { duration: 0.24, ease: [0.45, 0, 0.40, 1] as const }
+};
 
 const categories = [
   {

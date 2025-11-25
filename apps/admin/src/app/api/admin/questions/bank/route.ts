@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
           answer: q.answer,
           explanation: q.explanation || undefined,
           categoryId: q.categoryId,
-          categoryName: q.category.name,
+            categoryName: q.category?.name || 'Uncategorized',
           createdAt: q.createdAt.toISOString(),
           updatedAt: q.updatedAt.toISOString(),
           usedInQuiz: quizUsage ? {
@@ -243,7 +243,7 @@ export async function POST(request: NextRequest) {
           answer: question.answer,
           explanation: question.explanation || undefined,
           categoryId: question.categoryId,
-          categoryName: question.category.name,
+          categoryName: question.category?.name || 'Uncategorized',
           createdAt: question.createdAt.toISOString(),
           updatedAt: question.updatedAt.toISOString(),
         },

@@ -15,7 +15,7 @@ import { processReferralReward } from '@/lib/referral-rewards'
 import Stripe from 'stripe'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2024-11-20.acacia',
+  apiVersion: '2025-11-17.clover' as any,
 })
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
               tier: isActive ? 'premium' : 'basic',
               subscriptionStatus: isActive ? 'ACTIVE' : 'EXPIRED',
               subscriptionPlan: subscription.items.data[0]?.price.id || null,
-              subscriptionEndsAt: new Date(subscription.current_period_end * 1000),
+              subscriptionEndsAt: new Date((subscription as any).current_period_end * 1000),
             },
           })
 

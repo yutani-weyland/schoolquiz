@@ -45,7 +45,7 @@ export function UserDetailClient({ user, userId }: UserDetailClientProps) {
       })
       if (response.ok) {
         // Update local state
-        setCurrentUser(prev => prev ? { ...prev, platformRole: newRole } : null)
+        setCurrentUser(prev => ({ ...prev, platformRole: newRole }))
         // Optionally refetch to ensure consistency
         router.refresh()
       } else {

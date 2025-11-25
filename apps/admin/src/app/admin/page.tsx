@@ -22,7 +22,7 @@ export const dynamic = 'force-dynamic'
  */
 export default async function AdminOverviewPage() {
   // Fetch stats on the server (this will be cached)
-  const statsPromise = fetchAdminStats()
+  const stats = await fetchAdminStats()
 
   return (
     <div className="space-y-6">
@@ -39,15 +39,11 @@ export default async function AdminOverviewPage() {
       {/* Status Strips - Example usage */}
       <StatusStrips />
 
-      {/* User Distribution - Stream this section */}
-      <Suspense fallback={<UserDistributionSkeleton />}>
-        <UserDistributionWrapper statsPromise={statsPromise} />
-      </Suspense>
+      {/* User Distribution */}
+      <UserDistributionContent stats={stats} />
 
-      {/* Stat Cards - Stream this section */}
-      <Suspense fallback={<StatCardsSkeleton />}>
-        <StatCardsAsyncWrapper statsPromise={statsPromise} />
-      </Suspense>
+      {/* Stat Cards */}
+      <StatCardsWrapper stats={stats} />
 
       {/* Quick Actions & Recent Activity - Static content, no streaming needed */}
       <QuickActionsAndActivity />
@@ -99,15 +95,7 @@ function StatusStrips() {
 }
 
 /**
- * User Distribution Wrapper - Handles async component properly
- */
-async function UserDistributionWrapper({ statsPromise }: { statsPromise: Promise<any> }) {
-  const stats = await statsPromise
-  return <UserDistributionContent stats={stats} />
-}
-
-/**
- * User Distribution Component - Server Component with streaming
+ * User Distribution Component - Server Component
  */
 function UserDistributionContent({ stats }: { stats: any }) {
   return (
@@ -195,13 +183,6 @@ function UserDistributionSkeleton() {
   )
 }
 
-/**
- * Stat Cards Async Wrapper - Server component that awaits stats and passes to client component
- */
-async function StatCardsAsyncWrapper({ statsPromise }: { statsPromise: Promise<any> }) {
-  const stats = await statsPromise
-  return <StatCardsWrapper stats={stats} />
-}
 
 function StatCardsSkeleton() {
   return (

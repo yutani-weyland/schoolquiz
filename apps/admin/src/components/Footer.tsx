@@ -9,10 +9,9 @@ export function Footer() {
 	return (
 		<footer className="relative bg-[#3B82F6] text-white pt-20 pb-8 px-4 md:px-8">
 			{/* Rounded top corners effect - page background curving down into footer */}
-			{/* Uses CSS variable to match page background above footer */}
+			{/* Matches the actual page background: bg-gray-50 in light mode, bg-[#0F1419] in dark mode */}
 			<div 
-				className="absolute top-0 left-0 right-0 h-6 md:h-8 rounded-b-[1.5rem] md:rounded-b-[2.5rem]" 
-				style={{ backgroundColor: 'var(--page-bg, #ffffff)' }}
+				className="absolute top-0 left-0 right-0 h-6 md:h-8 rounded-b-[1.5rem] md:rounded-b-[2.5rem] bg-gray-50 dark:bg-[#0F1419]" 
 			/>
 			
 			<div className="max-w-7xl mx-auto relative z-10">

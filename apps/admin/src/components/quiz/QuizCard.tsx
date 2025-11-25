@@ -28,9 +28,10 @@ interface QuizCardProps {
 	quiz: Quiz;
 	isNewest?: boolean;
 	index?: number; // For rotation angle variation
+	completionData?: { score: number; totalQuestions: number; completedAt?: string } | null; // Optional: pre-fetched completion data
 }
 
-export function QuizCard({ quiz, isNewest = false, index = 0 }: QuizCardProps) {
+export function QuizCard({ quiz, isNewest = false, index = 0, completionData: initialCompletionData }: QuizCardProps) {
 	const { data: session } = useSession();
 	// Random tilt angles for hover effect (in degrees) - creates varied interactivity
 	const hoverTilts = [-1.5, 1.2, -1.8, 1.5, -1.2, 1.8, -1.5, 1.2, -1.8, 1.5, -1.2, 1.8];
@@ -43,7 +44,7 @@ export function QuizCard({ quiz, isNewest = false, index = 0 }: QuizCardProps) {
 	const [formattedDate, setFormattedDate] = useState<string>("");
 	const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 	const [animationKey, setAnimationKey] = useState(0);
-	const [completionData, setCompletionData] = useState<{ score: number; totalQuestions: number } | null>(null);
+	const [completionData, setCompletionData] = useState<{ score: number; totalQuestions: number } | null>(initialCompletionData || null);
 	const [isDownloadingPDF, setIsDownloadingPDF] = useState(false);
 	const { tier, isPremium } = useUserTier();
 	
@@ -84,8 +85,14 @@ export function QuizCard({ quiz, isNewest = false, index = 0 }: QuizCardProps) {
 		};
 	}, []);
 
-	// Check for quiz completion data
+	// Check for quiz completion data (only if not provided as prop)
 	React.useEffect(() => {
+		// If completion data was provided as prop, use it and skip fetching
+		if (initialCompletionData) {
+			setCompletionData(initialCompletionData);
+			return;
+		}
+
 		if (typeof window !== 'undefined') {
 			const fetchCompletionData = async () => {
 				// First check localStorage for completion data
@@ -154,7 +161,7 @@ export function QuizCard({ quiz, isNewest = false, index = 0 }: QuizCardProps) {
 			
 			fetchCompletionData();
 		}
-	}, [quiz.slug]);
+	}, [quiz.slug, initialCompletionData]);
 	
 	const text = textOn(quiz.colorHex);
 	const invert = text === "white" ? "text-white" : "text-gray-900";

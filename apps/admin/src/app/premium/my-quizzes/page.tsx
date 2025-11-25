@@ -10,6 +10,7 @@ import { ContentCard } from '@/components/layout/ContentCard';
 import { motion } from 'framer-motion';
 import { Plus, Edit, Share2, Trash2, FileText, Filter, Search, Sparkles } from 'lucide-react';
 import { useUserTier } from '@/hooks/useUserTier';
+import { getAuthToken, getUserId } from '@/lib/storage';
 import Link from 'next/link';
 
 interface CustomQuiz {
@@ -23,6 +24,8 @@ interface CustomQuiz {
   updatedAt: string;
   shareCount?: number;
   isShared?: boolean;
+  isOfficial?: boolean;
+  weekISO?: string;
   sharedBy?: {
     id: string;
     name?: string;
@@ -56,6 +59,7 @@ interface UsageData {
 }
 
 type FilterType = 'all' | 'mine' | 'shared';
+type QuizViewType = 'custom' | 'official';
 
 export default function MyCustomQuizzesPage() {
   const { data: session } = useSession();
@@ -66,6 +70,7 @@ export default function MyCustomQuizzesPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterType>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [viewType, setViewType] = useState<QuizViewType>('official'); // Default to weekly quiz drop
 
   // Redirect if not premium
   useEffect(() => {
@@ -84,23 +89,38 @@ export default function MyCustomQuizzesPage() {
 
     const fetchData = async () => {
       try {
-        const [quizzesRes, usageRes] = await Promise.all([
-          fetch('/api/premium/custom-quizzes?includeShared=true', {
-            credentials: 'include', // Send session cookie
-          }),
-          fetch('/api/premium/custom-quizzes/usage', {
-            credentials: 'include', // Send session cookie
-          }),
-        ]);
+        setLoading(true);
+        
+        if (viewType === 'official') {
+          // Fetch official quizzes (weekly quiz drop)
+          const quizzesRes = await fetch('/api/premium/official-quizzes', {
+            credentials: 'include',
+          });
 
-        if (quizzesRes.ok) {
-          const data = await quizzesRes.json();
-          setQuizzes(data.quizzes || []);
-        }
+          if (quizzesRes.ok) {
+            const data = await quizzesRes.json();
+            setQuizzes(data.quizzes || []);
+          }
+        } else {
+          // Fetch custom quizzes
+          const [quizzesRes, usageRes] = await Promise.all([
+            fetch('/api/premium/custom-quizzes?includeShared=true', {
+              credentials: 'include',
+            }),
+            fetch('/api/premium/custom-quizzes/usage', {
+              credentials: 'include',
+            }),
+          ]);
 
-        if (usageRes.ok) {
-          const data = await usageRes.json();
-          setUsage(data);
+          if (quizzesRes.ok) {
+            const data = await quizzesRes.json();
+            setQuizzes(data.quizzes || []);
+          }
+
+          if (usageRes.ok) {
+            const data = await usageRes.json();
+            setUsage(data);
+          }
         }
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -110,9 +130,19 @@ export default function MyCustomQuizzesPage() {
     };
 
     fetchData();
-  }, [isPremium, router]);
+  }, [isPremium, router, viewType, session?.user?.id]);
 
   const filteredQuizzes = quizzes.filter(quiz => {
+    // For official quizzes, only filter by search
+    if (viewType === 'official') {
+      return (
+        !searchQuery ||
+        quiz.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        quiz.blurb?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+    
+    // For custom quizzes, filter by both filter and search
     const matchesFilter =
       filter === 'all' ||
       (filter === 'mine' && !quiz.isShared) ||
@@ -189,13 +219,59 @@ export default function MyCustomQuizzesPage() {
     <PageLayout>
       <PageContainer maxWidth="6xl">
         <PageHeader
-          title="My Custom Quizzes"
-          subtitle="Create, manage, and share your custom quizzes"
+          title={viewType === 'official' ? 'Weekly Quiz Drop' : 'My Custom Quizzes'}
+          subtitle={viewType === 'official' ? 'Access all official weekly quizzes' : 'Create, manage, and share your custom quizzes'}
           centered
         />
 
-        {/* Usage Stats */}
-        {usage && (
+        {/* Toggle Switch */}
+        <div className="mb-8 flex items-center justify-center w-full">
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg rounded-2xl p-6">
+            <div className="flex items-center gap-6">
+              <span
+                className={`text-base font-semibold transition-colors whitespace-nowrap ${
+                  viewType === 'official'
+                    ? 'text-gray-900 dark:text-white'
+                    : 'text-gray-500 dark:text-gray-400'
+                }`}
+              >
+                Weekly Quiz Drop
+              </span>
+              <button
+                onClick={() => {
+                  console.log('Toggle clicked, current viewType:', viewType);
+                  setViewType(viewType === 'official' ? 'custom' : 'official');
+                }}
+                className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 cursor-pointer ${
+                  viewType === 'official'
+                    ? 'bg-blue-600'
+                    : 'bg-gray-300 dark:bg-gray-600'
+                }`}
+                role="switch"
+                aria-checked={viewType === 'official'}
+                aria-label="Toggle between weekly quiz drop and custom quizzes"
+              >
+                <span
+                  className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-lg transition-transform duration-200 ${
+                    viewType === 'official' ? 'translate-x-7' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+              <span
+                className={`text-base font-semibold transition-colors whitespace-nowrap ${
+                  viewType === 'custom'
+                    ? 'text-gray-900 dark:text-white'
+                    : 'text-gray-500 dark:text-gray-400'
+                }`}
+              >
+                My Custom Quizzes
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Usage Stats - Only show for custom quizzes */}
+        {viewType === 'custom' && usage && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -234,52 +310,75 @@ export default function MyCustomQuizzesPage() {
         )}
 
         {/* Actions Bar */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between"
-        >
-          <div className="flex-1 flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-            {/* Search */}
-            <div className="relative flex-1 sm:max-w-md">
+        {viewType === 'custom' && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between"
+          >
+            <div className="flex-1 flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+              {/* Search */}
+              <div className="relative flex-1 sm:max-w-md">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search quizzes..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Filter */}
+              <div className="flex gap-2">
+                {(['all', 'mine', 'shared'] as FilterType[]).map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setFilter(f)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      filter === f
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    {f === 'all' ? 'All' : f === 'mine' ? 'Mine' : 'Shared'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Create Button */}
+            <Link
+              href="/premium/create-quiz"
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            >
+              <Plus className="w-4 h-4" />
+              Create Quiz
+            </Link>
+          </motion.div>
+        )}
+
+        {/* Search for Official Quizzes */}
+        {viewType === 'official' && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="mb-6"
+          >
+            <div className="relative max-w-md mx-auto">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search quizzes..."
+                placeholder="Search weekly quizzes..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-
-            {/* Filter */}
-            <div className="flex gap-2">
-              {(['all', 'mine', 'shared'] as FilterType[]).map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setFilter(f)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    filter === f
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                  }`}
-                >
-                  {f === 'all' ? 'All' : f === 'mine' ? 'Mine' : 'Shared'}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Create Button */}
-          <Link
-            href="/premium/create-quiz"
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-          >
-            <Plus className="w-4 h-4" />
-            Create Quiz
-          </Link>
-        </motion.div>
+          </motion.div>
+        )}
 
         {/* Quizzes Grid */}
         {filteredQuizzes.length === 0 ? (
@@ -292,14 +391,24 @@ export default function MyCustomQuizzesPage() {
               <div className="text-center py-12">
                 <Sparkles className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                  {searchQuery ? 'No quizzes found' : 'No custom quizzes yet'}
+                  {viewType === 'official'
+                    ? searchQuery
+                      ? 'No quizzes found'
+                      : 'No official quizzes available'
+                    : searchQuery
+                    ? 'No quizzes found'
+                    : 'No custom quizzes yet'}
                 </h3>
                 <p className="text-gray-600 dark:text-gray-400 mb-6">
-                  {searchQuery
+                  {viewType === 'official'
+                    ? searchQuery
+                      ? 'Try adjusting your search'
+                      : 'Check back later for new weekly quizzes'
+                    : searchQuery
                     ? 'Try adjusting your search or filters'
                     : 'Create your first custom quiz to get started'}
                 </p>
-                {!searchQuery && (
+                {viewType === 'custom' && !searchQuery && (
                   <Link
                     href="/premium/create-quiz"
                     className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
@@ -341,25 +450,33 @@ export default function MyCustomQuizzesPage() {
                       </p>
                     )}
                     <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-500">
-                      <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded">
-                        Custom
-                      </span>
-                      {quiz.isShared && (
-                        <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded">
-                          Shared
+                      {quiz.isOfficial ? (
+                        <span className="px-2 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded">
+                          Official
                         </span>
-                      )}
-                      {quiz.shareCount && quiz.shareCount > 0 && (
-                        <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded">
-                          {quiz.shareCount} shares
-                        </span>
+                      ) : (
+                        <>
+                          <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded">
+                            Custom
+                          </span>
+                          {quiz.isShared && (
+                            <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded">
+                              Shared
+                            </span>
+                          )}
+                          {quiz.shareCount && quiz.shareCount > 0 && (
+                            <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded">
+                              {quiz.shareCount} shares
+                            </span>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
 
                   {/* Actions */}
                   <div className="flex gap-2">
-                    {!quiz.isShared && (
+                    {!quiz.isOfficial && !quiz.isShared && (
                       <>
                         <Link
                           href={`/premium/create-quiz?edit=${quiz.id}`}

@@ -105,7 +105,7 @@ export default function AdminReferralsPage() {
   if (loading) {
     return (
       <PageLayout>
-        <PageContainer maxWidth="7xl">
+        <PageContainer maxWidth="6xl">
           <div className="flex items-center justify-center min-h-[400px]">
             <Spinner className="size-8" />
           </div>
@@ -117,7 +117,7 @@ export default function AdminReferralsPage() {
   if (error) {
     return (
       <PageLayout>
-        <PageContainer maxWidth="7xl">
+        <PageContainer maxWidth="6xl">
           <div className="text-center py-12">
             <p className="text-red-600 dark:text-red-400">{error}</p>
           </div>
@@ -128,7 +128,7 @@ export default function AdminReferralsPage() {
 
   return (
     <PageLayout>
-      <PageContainer maxWidth="7xl">
+      <PageContainer maxWidth="6xl">
         <PageHeader
           title="Referral System"
           subtitle="Track referrals and free months granted"
