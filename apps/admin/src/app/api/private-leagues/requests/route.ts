@@ -2,14 +2,35 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@schoolquiz/db'
 import { requireApiAuth } from '@/lib/api-auth'
 import { ForbiddenError } from '@/lib/api-error'
+import { auth } from '@schoolquiz/auth'
 
 /**
  * GET /api/private-leagues/requests
  * Get pending requests for leagues the user administers
  */
 export async function GET(request: NextRequest) {
+  const totalStart = Date.now()
   try {
-    const user = await requireApiAuth()
+    // Optimized auth: Only fetch user ID for league lookup
+    const authStart = Date.now()
+    const session = await auth()
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    
+    const user = await (prisma as any).user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        id: true,
+      },
+    })
+    
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 401 })
+    }
+    
+    const authDuration = Date.now() - authStart
+    console.log(`[Requests API] Auth took ${authDuration}ms`)
 
     // Get all leagues where user is creator
     let userLeagues: any[] = []
@@ -42,45 +63,106 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ requests: [] })
     }
 
-    // Get pending requests for these leagues
+    // Get pending requests for these leagues - optimized: no nested includes
     let requests: any[] = []
     try {
-      requests = await (prisma as any).privateLeagueRequest.findMany({
+      const queryStart = Date.now()
+      
+      // Fetch requests without includes to avoid slow joins
+      const requestsData = await (prisma as any).privateLeagueRequest.findMany({
         where: {
           leagueId: { in: leagueIds },
           status: 'PENDING',
         },
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              teamName: true,
-              profile: {
-                select: {
-                  displayName: true,
-                },
-              },
-            },
-          },
-          league: {
-            select: {
-              id: true,
-              name: true,
-              organisation: {
-                select: {
-                  id: true,
-                  name: true,
-                },
-              },
-            },
-          },
+        select: {
+          id: true,
+          leagueId: true,
+          userId: true,
+          status: true,
+          requestedAt: true,
+          respondedAt: true,
+          respondedByUserId: true,
+          createdAt: true,
+          updatedAt: true,
         },
         orderBy: {
           requestedAt: 'desc',
         },
       })
+      
+      const requestsQueryTime = Date.now() - queryStart
+      
+      if (requestsData.length === 0) {
+        return NextResponse.json({ requests: [] })
+      }
+      
+      // Extract unique IDs for batch fetching
+      const userIds = new Set<string>(requestsData.map((r: any) => r.userId))
+      const uniqueLeagueIds = new Set<string>(requestsData.map((r: any) => r.leagueId))
+      
+      // Batch fetch users and leagues in parallel
+      const [users, leagues] = await Promise.all([
+        (prisma as any).user.findMany({
+          where: { id: { in: Array.from(userIds) } },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            teamName: true,
+          },
+        }),
+        (prisma as any).privateLeague.findMany({
+          where: { id: { in: Array.from(uniqueLeagueIds) } },
+          select: {
+            id: true,
+            name: true,
+            organisationId: true,
+          },
+        }),
+      ])
+      
+      // Get organisation IDs and fetch organisations
+      const orgIds = new Set<string>(
+        leagues
+          .map((l: any) => l.organisationId)
+          .filter((id: string | null): id is string => id !== null)
+      )
+      
+      const organisations = orgIds.size > 0
+        ? await (prisma as any).organisation.findMany({
+            where: { id: { in: Array.from(orgIds) } },
+            select: {
+              id: true,
+              name: true,
+            },
+          })
+        : []
+      
+      // Create lookup maps
+      const userMap = new Map(users.map((u: any) => [u.id, u]))
+      const leagueMap = new Map(leagues.map((l: any) => [l.id, l]))
+      const orgMap = new Map(organisations.map((o: any) => [o.id, o]))
+      
+      // Build response with mapped relations
+      requests = requestsData.map((r: any) => {
+        const league = leagueMap.get(r.leagueId)
+        return {
+          ...r,
+          user: userMap.get(r.userId) || null,
+          league: league
+            ? {
+                id: league.id,
+                name: league.name,
+                organisation: league.organisationId
+                  ? orgMap.get(league.organisationId) || null
+                  : null,
+              }
+            : null,
+        }
+      })
+      
+      const totalTime = Date.now() - queryStart
+      console.log(`[Requests API] Fetched ${requests.length} requests in ${totalTime}ms (queries: ${requestsQueryTime}ms)`)
     } catch (requestError: any) {
       // If the table doesn't exist yet, return empty array
       const errorMsg = requestError.message || String(requestError)
@@ -94,6 +176,9 @@ export async function GET(request: NextRequest) {
       throw requestError
     }
 
+    const totalDuration = Date.now() - totalStart
+    console.log(`[Requests API] Total request took ${totalDuration}ms`)
+    
     return NextResponse.json({ requests })
   } catch (error: any) {
     console.error('Error fetching league requests:', error)

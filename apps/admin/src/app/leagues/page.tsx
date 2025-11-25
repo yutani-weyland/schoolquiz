@@ -5,7 +5,7 @@ import { useDebounce } from '@/hooks/useDebounce'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import dynamic from 'next/dynamic'
 import { motion } from 'framer-motion'
-import { Trophy, Users, Plus, Search, X, Copy, Mail, Calendar, Edit2, Trash2, LogOut, UserX, AlertCircle, RefreshCw, Building2, CheckCircle, XCircle, Loader2, BarChart3, ArrowRight } from 'lucide-react'
+import { Trophy, Users, Plus, Search, X, Copy, Mail, Calendar, Edit2, Trash2, LogOut, UserX, AlertCircle, RefreshCw, Building2, CheckCircle, XCircle, Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { useUserTier } from '@/hooks/useUserTier'
@@ -13,7 +13,7 @@ import { useUserAccess } from '@/contexts/UserAccessContext'
 import { UpgradeModal } from '@/components/premium/UpgradeModal'
 import { SiteHeader } from '@/components/SiteHeader'
 import { Footer } from '@/components/Footer'
-import { fetchLeagues, fetchLeagueStats, getCachedLeagues, cacheLeagues, type League, type LeagueStats, fetchAvailableOrgLeagues, fetchLeagueRequests, respondToRequest, type OrganisationLeague, type LeagueRequest } from '@/lib/leagues-fetch'
+import { fetchLeagues, fetchLeagueStats, fetchLeagueDetails, getCachedLeagues, cacheLeagues, type League, type LeagueStats, fetchAvailableOrgLeagues, fetchLeagueRequests, respondToRequest, type OrganisationLeague, type LeagueRequest } from '@/lib/leagues-fetch'
 import { LeaguesListSkeleton, LeagueDetailsSkeleton } from '@/components/leagues/LeaguesSkeleton'
 import { OrganisationLeaguesSection } from '@/components/leagues/OrganisationLeaguesSection'
 
@@ -32,7 +32,6 @@ export default function LeaguesPage() {
   
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [selectedLeagueId, setSelectedLeagueId] = useState<string | null>(null)
-  const [selectedQuiz, setSelectedQuiz] = useState<string | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
@@ -90,11 +89,57 @@ export default function LeaguesPage() {
     placeholderData: cachedLeagues || undefined,
   })
 
-  // Get selected league from leagues array
+  // Fetch full league details (with members) when a league is selected
+  const {
+    data: selectedLeagueDetails,
+    isLoading: selectedLeagueLoading,
+  } = useQuery({
+    queryKey: ['league-details', selectedLeagueId],
+    queryFn: () => fetchLeagueDetails(selectedLeagueId!),
+    enabled: !!selectedLeagueId && hasAccess,
+    staleTime: 30 * 1000, // 30 seconds
+    gcTime: 5 * 60 * 1000, // 5 minutes cache
+    retry: 1,
+  })
+
+  // Get selected league - prefer full details (with members), fallback to list item
   const selectedLeague = useMemo(() => {
-    if (!selectedLeagueId || !leagues.length) return null
-    return leagues.find(l => l.id === selectedLeagueId) || null
-  }, [selectedLeagueId, leagues])
+    if (!selectedLeagueId) return null
+    // Use full details if available (includes members), otherwise use list item
+    if (selectedLeagueDetails) {
+      return selectedLeagueDetails
+    }
+    if (leagues.length) {
+      return leagues.find(l => l.id === selectedLeagueId) || null
+    }
+    return null
+  }, [selectedLeagueId, selectedLeagueDetails, leagues])
+
+  // Determine if we should show loading skeleton for details
+  // Show skeleton when:
+  // 1. League is selected but we're loading details AND don't have them yet
+  // 2. We have league details but stats are still loading (only show briefly, not if we have cached stats)
+  const isDetailsLoading = useMemo(() => {
+    if (!selectedLeagueId) return false
+    
+    // If we're loading details for the selected league and don't have them yet
+    // Show skeleton only if we don't have even basic league info from the list
+    if (selectedLeagueLoading && !selectedLeagueDetails) {
+      // If we have the league from the list, show it (even without members)
+      // Only show skeleton if we have nothing at all
+      if (!selectedLeague) {
+        return true
+      }
+    }
+    
+    // Don't show skeleton for stats loading - stats are optional and can load in background
+    // The league details are more important
+    return false
+  }, [selectedLeagueId, selectedLeagueLoading, selectedLeagueDetails, selectedLeague])
+
+  // Determine if leagues list is loading (accounting for cached data)
+  // Only show skeleton if we're actually loading AND have no data (cached or fresh)
+  const isLeaguesListLoading = leaguesLoading && leagues.length === 0
 
   // Fetch stats for selected league - enabled only when league is selected
   const {
@@ -648,6 +693,12 @@ export default function LeaguesPage() {
 
   const isMember = (league: League) => {
     const userId = localStorage.getItem('userId')
+    // Members might not be loaded yet - check if they exist
+    if (!league.members || league.members.length === 0) {
+      // If no members array, we can't determine membership from list data
+      // This will be handled by the full league details query
+      return false
+    }
     return league.members.some(member => member.userId === userId)
   }
 
@@ -662,11 +713,13 @@ export default function LeaguesPage() {
       // Remove user from league members for prototype
       const updatedLeagues = leagues.map(league => {
         if (league.id === selectedLeague.id) {
+          const currentMembers = league.members || []
+          const filteredMembers = currentMembers.filter(member => member.userId !== userId)
           return {
             ...league,
-            members: league.members.filter(member => member.userId !== userId),
+            members: filteredMembers,
             _count: {
-              members: league.members.filter(member => member.userId !== userId).length
+              members: filteredMembers.length
             }
           }
         }
@@ -677,7 +730,8 @@ export default function LeaguesPage() {
 
       // Select first league if available, otherwise clear selection
       const updatedLeague = updatedLeagues.find(l => l.id === selectedLeague.id)
-      if (updatedLeague && updatedLeague.members.length > 0) {
+      const memberCount = updatedLeague?._count?.members ?? updatedLeague?.members?.length ?? 0
+      if (updatedLeague && memberCount > 0) {
         setSelectedLeague(updatedLeague)
       } else {
         const otherLeagues = updatedLeagues.filter(l => l.id !== selectedLeague.id)
@@ -707,11 +761,13 @@ export default function LeaguesPage() {
       // Remove member from league for prototype
       const updatedLeagues = leagues.map(league => {
         if (league.id === selectedLeague.id) {
+          const currentMembers = league.members || []
+          const filteredMembers = currentMembers.filter(member => member.userId !== memberToKick.id)
           return {
             ...league,
-            members: league.members.filter(member => member.userId !== memberToKick.id),
+            members: filteredMembers,
             _count: {
-              members: league.members.filter(member => member.userId !== memberToKick.id).length
+              members: filteredMembers.length
             }
           }
         }
@@ -748,6 +804,27 @@ export default function LeaguesPage() {
     return `User ${user.id.slice(0, 8)}`
   }
 
+  // Show loading state while checking auth/tier
+  if (tierLoading) {
+    return (
+      <>
+        <SiteHeader />
+        <main className="min-h-screen bg-white dark:bg-[#0F1419] text-gray-900 dark:text-white pt-32 pb-16 px-4 sm:px-8">
+          <div className="max-w-6xl mx-auto">
+            <div className="flex items-center justify-center min-h-[calc(100vh-12rem)]">
+              <div className="text-center">
+                <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                <p className="text-[hsl(var(--muted-foreground))]">Loading...</p>
+              </div>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </>
+    )
+  }
+
+  // Show premium message only after loading is complete
   if (!isPremium) {
     return (
       <>
@@ -786,10 +863,6 @@ export default function LeaguesPage() {
   // Get the league color, defaulting to blue
   const leagueAccentColor = selectedLeague?.color || '#3B82F6'
   const leagueHoverColor = darkenColor(leagueAccentColor, 10)
-
-  const currentStats = selectedQuiz
-    ? leagueStats?.stats || []
-    : leagueStats?.overallStats || []
 
   return (
     <>
@@ -930,7 +1003,7 @@ export default function LeaguesPage() {
                   </button>
                 </div>
 
-                {leaguesLoading ? (
+                {isLeaguesListLoading ? (
                   <LeaguesListSkeleton />
                 ) : leaguesError ? (
                   <div className="text-center py-8">
@@ -973,7 +1046,6 @@ export default function LeaguesPage() {
                     selectedLeague={selectedLeague}
                     onSelectLeague={(league) => {
                       setSelectedLeagueId(league.id)
-                      setSelectedQuiz(null)
                     }}
                     onReorderLeagues={(newOrder) => {
                       // Optimistically update cache
@@ -989,7 +1061,7 @@ export default function LeaguesPage() {
 
             {/* League Details */}
             <div className="lg:col-span-2 space-y-4">
-              {statsLoading && selectedLeague ? (
+              {isDetailsLoading ? (
                 <LeagueDetailsSkeleton />
               ) : statsError && selectedLeague ? (
                 <div className="bg-white dark:bg-gray-800 rounded-xl border border-red-200 dark:border-red-800 p-4 shadow-sm">
@@ -1071,7 +1143,7 @@ export default function LeaguesPage() {
                           onClick={() => {
                             setShowInviteModal(true)
                           }}
-                          className="inline-flex items-center justify-center gap-1.5 h-8 px-3 text-white rounded-xl text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2"
+                          className="inline-flex items-center justify-center w-8 h-8 text-white rounded-full text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2"
                           style={{
                             backgroundColor: leagueAccentColor
                           }}
@@ -1079,9 +1151,9 @@ export default function LeaguesPage() {
                           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = leagueAccentColor}
                           onFocus={(e) => e.currentTarget.style.boxShadow = `0 0 0 2px ${leagueAccentColor}`}
                           onBlur={(e) => e.currentTarget.style.boxShadow = ''}
+                          title="Invite"
                         >
-                          <Mail className="w-3.5 h-3.5" />
-                          <span className="hidden sm:inline">Invite</span>
+                          <Mail className="w-4 h-4" />
                         </button>
                       </div>
                     </div>
@@ -1091,13 +1163,30 @@ export default function LeaguesPage() {
                   {/* Members List */}
                   <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
                     <div className="mb-3">
-                      <h3 className="text-lg font-bold mb-1 text-gray-900 dark:text-white">Members ({selectedLeague.members.length})</h3>
+                      <h3 className="text-lg font-bold mb-1 text-gray-900 dark:text-white">
+                        Members ({selectedLeague.members?.length ?? selectedLeague._count?.members ?? 0})
+                      </h3>
                       <p className="text-xs text-gray-500 dark:text-gray-400">
                         People who have joined this league
                       </p>
                     </div>
                     <div className="space-y-2">
-                      {selectedLeague.members.map((member) => {
+                      {selectedLeagueLoading && !selectedLeague.members ? (
+                        <div className="space-y-2">
+                          {[...Array(3)].map((_, i) => (
+                            <div
+                              key={i}
+                              className="flex items-center justify-between p-2 rounded-xl bg-gray-50 dark:bg-gray-700/50 animate-pulse"
+                            >
+                              <div className="flex items-center gap-2.5">
+                                <div className="w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-600/50" />
+                                <div className="h-4 bg-gray-200 dark:bg-gray-600/50 rounded w-32" />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : selectedLeague.members && selectedLeague.members.length > 0 ? (
+                        selectedLeague.members.map((member) => {
                         const isYou = member.userId === localStorage.getItem('userId')
                         const isCreatorMember = member.userId === selectedLeague.createdByUserId
                         return (
@@ -1133,213 +1222,13 @@ export default function LeaguesPage() {
                             )}
                           </div>
                         )
-                      })}
+                      })
+                      ) : (
+                        <p className="text-sm text-gray-500 dark:text-gray-400">No members yet</p>
+                      )}
                     </div>
                   </div>
 
-                  {/* Quiz Selector */}
-                  {leagueStats && leagueStats.quizSlugs.length > 0 && (
-                    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-3 shadow-sm">
-                      <div className="mb-3">
-                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">Filter by Quiz</h3>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          View leaderboard for a specific quiz or overall performance
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <button
-                          onClick={() => setSelectedQuiz(null)}
-                          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${selectedQuiz === null
-                            ? 'text-white shadow-sm'
-                            : 'bg-gray-100 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                            }`}
-                          style={selectedQuiz === null ? { backgroundColor: leagueAccentColor } : {}}
-                        >
-                          Overall
-                        </button>
-                        {leagueStats.quizSlugs.map((slug) => (
-                          <button
-                            key={slug}
-                            onClick={() => setSelectedQuiz(slug)}
-                            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${selectedQuiz === slug
-                              ? 'text-white shadow-sm'
-                              : 'bg-gray-100 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                              }`}
-                            style={selectedQuiz === slug ? { backgroundColor: leagueAccentColor } : {}}
-                          >
-                            Quiz #{slug}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Leaderboard */}
-                  <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
-                    <div className="mb-4">
-                      <h3 className="text-xl font-bold mb-1.5 text-gray-900 dark:text-white">
-                        {selectedQuiz ? `Quiz #${selectedQuiz} Results` : 'Overall Leaderboard'}
-                      </h3>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {selectedQuiz
-                          ? 'Ranked by score for this quiz'
-                          : 'Ranked by total correct answers across all quizzes. See how you compare to other members.'}
-                      </p>
-                    </div>
-
-                    {currentStats.length === 0 ? (
-                      <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-                        <Trophy className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                        <p>No stats yet. Start playing quizzes to see rankings!</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {/* Header Row */}
-                        <div className="hidden md:grid grid-cols-12 gap-4 px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b-2 border-gray-200 dark:border-gray-700">
-                          <div className="col-span-1 text-center">Rank</div>
-                          <div className="col-span-2">Player</div>
-                          {selectedQuiz ? (
-                            <>
-                              <div className="col-span-2 text-right">Score</div>
-                              <div className="col-span-2 text-right">Accuracy</div>
-                              <div className="col-span-5"></div>
-                            </>
-                          ) : (
-                            <>
-                              <div className="col-span-2 text-right">Correct</div>
-                              <div className="col-span-2 text-right">Quizzes</div>
-                              <div className="col-span-3 text-right">Avg Score</div>
-                            </>
-                          )}
-                        </div>
-
-                        {/* Leaderboard Rows */}
-                        {currentStats.map((stat, index) => {
-                          const isYou = stat.user.id === localStorage.getItem('userId')
-                          const rank = index + 1
-                          const accuracy = selectedQuiz && stat.totalQuestions
-                            ? Math.round((stat.score || 0) / stat.totalQuestions * 100)
-                            : null
-
-                          return (
-                            <div
-                              key={stat.id}
-                              className={`grid grid-cols-12 gap-4 items-center px-4 py-3.5 rounded-xl transition-all ${isYou
-                                ? 'text-white shadow-md'
-                                : 'bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 border border-transparent hover:border-gray-200 dark:hover:border-gray-600'
-                                }`}
-                              style={isYou ? { backgroundColor: leagueAccentColor } : {}}
-                            >
-                              {/* Rank */}
-                              <div className="col-span-1 flex items-center justify-center">
-                                <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm tabular-nums ${isYou
-                                  ? 'bg-white/20 text-white'
-                                  : 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
-                                  }`}>
-                                  {rank}
-                                </div>
-                              </div>
-
-                              {/* Player Name */}
-                              <div className="col-span-3 md:col-span-2 flex items-center">
-                                <div className="min-w-0">
-                                  <div className="font-semibold truncate">
-                                    {displayName(stat.user)}
-                                  </div>
-                                  {isYou && (
-                                    <div className={`text-xs mt-0.5 ${isYou ? 'opacity-90' : 'text-gray-500 dark:text-gray-400'}`}>
-                                      You
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-
-                              {/* Stats */}
-                              {selectedQuiz ? (
-                                <>
-                                  {/* Score */}
-                                  <div className="col-span-4 md:col-span-2 text-right">
-                                    <div className="font-bold text-lg md:text-xl tabular-nums">
-                                      {stat.score || 0}
-                                      <span className="text-sm font-normal opacity-70 ml-1.5">
-                                        / {stat.totalQuestions || 0}
-                                      </span>
-                                    </div>
-                                    <div className={`text-xs mt-1 font-medium uppercase tracking-wide ${isYou ? 'opacity-80' : 'text-gray-500 dark:text-gray-400'}`}>
-                                      score
-                                    </div>
-                                  </div>
-
-                                  {/* Accuracy */}
-                                  <div className="col-span-4 md:col-span-2 text-right">
-                                    <div className="font-bold text-lg md:text-xl tabular-nums">
-                                      {accuracy !== null ? `${accuracy}%` : '—'}
-                                    </div>
-                                    <div className={`text-xs mt-1 font-medium uppercase tracking-wide ${isYou ? 'opacity-80' : 'text-gray-500 dark:text-gray-400'}`}>
-                                      accuracy
-                                    </div>
-                                  </div>
-
-                                  <div className="col-span-4 hidden md:block"></div>
-                                </>
-                              ) : (
-                                <>
-                                  {/* Total Correct */}
-                                  <div className="col-span-2 md:col-span-2 text-right">
-                                    <div className="font-bold text-lg md:text-xl tabular-nums">
-                                      {stat.totalCorrectAnswers.toLocaleString()}
-                                    </div>
-                                    <div className={`text-xs mt-1 font-medium uppercase tracking-wide ${isYou ? 'opacity-80' : 'text-gray-500 dark:text-gray-400'}`}>
-                                      correct
-                                    </div>
-                                  </div>
-
-                                  {/* Quizzes Played */}
-                                  <div className="col-span-2 md:col-span-2 text-right">
-                                    <div className="font-bold text-lg md:text-xl tabular-nums">
-                                      {stat.quizzesPlayed}
-                                    </div>
-                                    <div className={`text-xs mt-1 font-medium uppercase tracking-wide ${isYou ? 'opacity-80' : 'text-gray-500 dark:text-gray-400'}`}>
-                                      quizzes
-                                    </div>
-                                  </div>
-
-                                  {/* Average Score */}
-                                  <div className="col-span-2 md:col-span-3 text-right">
-                                    <div className="font-bold text-lg md:text-xl tabular-nums">
-                                      {stat.quizzesPlayed > 0
-                                        ? (stat.totalCorrectAnswers / stat.quizzesPlayed).toFixed(1)
-                                        : '0.0'}
-                                      <span className="text-sm font-normal opacity-70 ml-1.5">
-                                        / 25
-                                      </span>
-                                    </div>
-                                    <div className={`text-xs mt-1 font-medium uppercase tracking-wide ${isYou ? 'opacity-80' : 'text-gray-500 dark:text-gray-400'}`}>
-                                      avg per quiz
-                                    </div>
-                                  </div>
-                                </>
-                              )}
-                            </div>
-                          )
-                        })}
-                      </div>
-                    )}
-                    
-                    {/* View More Stats Button */}
-                    {currentStats.length > 0 && (
-                      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                        <button
-                          onClick={() => router.push('/stats')}
-                          className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-[hsl(var(--foreground))] bg-secondary hover:bg-secondary/80 rounded-xl transition-colors border border-[hsl(var(--border))]"
-                        >
-                          <BarChart3 className="w-4 h-4" />
-                          View detailed stats
-                          <ArrowRight className="w-4 h-4" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
                 </>
               ) : (
                 <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-12 text-center text-gray-500 dark:text-gray-400 shadow-sm">

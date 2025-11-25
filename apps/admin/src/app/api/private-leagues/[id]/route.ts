@@ -77,6 +77,12 @@ export async function GET(
             email: true,
           },
         },
+        organisation: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
         members: {
           where: {
             leftAt: null,

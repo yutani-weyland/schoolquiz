@@ -11,6 +11,10 @@ interface League {
     inviteCode?: string
     createdByUserId?: string
     color?: string
+    organisation?: {
+        id: string
+        name: string
+    } | null
     creator?: {
         id: string
         name: string | null
@@ -108,7 +112,16 @@ export function SortableLeagueItem({
                             )}
                         </div>
                         <div className={`text-xs mt-0.5 ${isSelected ? 'opacity-90' : 'opacity-70'}`}>
-                            {memberCount} member{memberCount !== 1 ? 's' : ''}
+                            {league.organisation && (
+                                <span className="truncate">{league.organisation.name}</span>
+                            )}
+                            {league.organisation && memberCount > 0 && <span className="mx-1">•</span>}
+                            {memberCount > 0 && (
+                                <span>{memberCount} member{memberCount !== 1 ? 's' : ''}</span>
+                            )}
+                            {!league.organisation && memberCount === 0 && (
+                                <span className="opacity-50">No members</span>
+                            )}
                         </div>
                     </div>
                 </div>

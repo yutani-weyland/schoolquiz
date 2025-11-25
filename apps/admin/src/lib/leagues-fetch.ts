@@ -61,6 +61,7 @@ export interface LeagueStatsResponse {
 
 /**
  * Fetch all leagues for the current user
+ * OPTIMIZED: Does not include members by default for faster loading
  */
 export async function fetchLeagues(): Promise<League[]> {
   const startTime = performance.now()
@@ -83,6 +84,36 @@ export async function fetchLeagues(): Promise<League[]> {
   const duration = performance.now() - startTime
   console.log(`[Leagues] Fetched in ${duration.toFixed(0)}ms`)
   return data.leagues || []
+}
+
+/**
+ * Fetch full league details including members
+ * Use this when you need member data for a specific league
+ */
+export async function fetchLeagueDetails(leagueId: string): Promise<League> {
+  const startTime = performance.now()
+  const response = await fetch(`/api/private-leagues/${leagueId}`, {
+    credentials: 'include', // Send session cookie
+  })
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error('Unauthorized - Please log in')
+    }
+    if (response.status === 403) {
+      throw new Error('Access denied')
+    }
+    if (response.status === 404) {
+      throw new Error('League not found')
+    }
+    const errorData = await response.json().catch(() => ({}))
+    throw new Error(errorData.error || `Failed to fetch league details: ${response.status}`)
+  }
+
+  const data = await response.json()
+  const duration = performance.now() - startTime
+  console.log(`[League Details] Fetched in ${duration.toFixed(0)}ms`)
+  return data.league
 }
 
 /**

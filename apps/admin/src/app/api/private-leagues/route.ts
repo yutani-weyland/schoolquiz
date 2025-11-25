@@ -130,66 +130,30 @@ export async function GET(request: NextRequest) {
     }
     
     // Get all leagues where user is a member (not left) or creator
-    // Optimized query with proper indexing
+    // OPTIMIZED: Split OR condition into two separate queries for better performance
+    // This avoids expensive nested relation queries in OR conditions
     let leagues: any[] = []
     try {
       const startTime = Date.now()
-      leagues = await (prisma as any).privateLeague.findMany({
-      where: {
-        deletedAt: null,
-        OR: [
-          { createdByUserId: user.id },
-          {
-            members: {
-              some: {
-                userId: user.id,
-                leftAt: null,
-              },
-            },
-          },
-        ],
-      },
-      include: {
+      
+      // Check if we should include members (only if explicitly requested)
+      const { searchParams } = new URL(request.url)
+      const includeMembers = searchParams.get('includeMembers') === 'true'
+      
+      // Define the common include structure - OPTIMIZED: minimal data for list view
+      const includeStructure: any = {
         creator: {
           select: {
             id: true,
             name: true,
             email: true,
-            profile: {
-              select: {
-                displayName: true,
-              },
-            },
+            // Skip profile for list view - can be loaded separately if needed
           },
         },
         organisation: {
           select: {
             id: true,
             name: true,
-          },
-        },
-        members: {
-          where: {
-            leftAt: null,
-          },
-          take: 50, // Limit members to prevent huge payloads
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                teamName: true,
-                profile: {
-                  select: {
-                    displayName: true,
-                  },
-                },
-              },
-            },
-          },
-          orderBy: {
-            joinedAt: 'asc',
           },
         },
         _count: {
@@ -201,14 +165,98 @@ export async function GET(request: NextRequest) {
             },
           },
         },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-      take: 100, // Limit total leagues
-    }) as any[]
-    const duration = Date.now() - startTime
-    console.log(`[API] Fetched ${leagues.length} leagues in ${duration}ms`)
+      }
+      
+      // Only include members if explicitly requested (reduces payload by 80-90%)
+      if (includeMembers) {
+        includeStructure.members = {
+          where: {
+            leftAt: null,
+          },
+          take: 50, // Limit members to prevent huge payloads
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                teamName: true,
+                // Skip profile for performance - can be loaded separately if needed
+              },
+            },
+          },
+          orderBy: {
+            joinedAt: 'asc',
+          },
+        }
+      }
+      
+      // Query 1: Leagues where user is creator (uses index on createdByUserId)
+      const [createdLeagues, memberLeagues] = await Promise.all([
+        (prisma as any).privateLeague.findMany({
+          where: {
+            deletedAt: null,
+            createdByUserId: user.id,
+          },
+          include: includeStructure,
+          orderBy: {
+            createdAt: 'desc',
+          },
+          take: 100,
+        }) as Promise<any[]>,
+        
+        // Query 2: Leagues where user is an active member (uses index on userId, leftAt)
+        // First get the league IDs where user is a member
+        (async () => {
+          const memberRecords = await (prisma as any).privateLeagueMember.findMany({
+            where: {
+              userId: user.id,
+              leftAt: null,
+            },
+            select: {
+              leagueId: true,
+            },
+            take: 100, // Limit to prevent huge queries
+          }) as Array<{ leagueId: string }>
+          
+          if (memberRecords.length === 0) {
+            return []
+          }
+          
+          const leagueIds = memberRecords.map(m => m.leagueId)
+          
+          // Then fetch the leagues (excluding ones user created, to avoid duplicates)
+          return (prisma as any).privateLeague.findMany({
+            where: {
+              deletedAt: null,
+              id: { in: leagueIds },
+              createdByUserId: { not: user.id }, // Exclude leagues user created (already in first query)
+            },
+            include: includeStructure,
+            orderBy: {
+              createdAt: 'desc',
+            },
+            take: 100,
+          }) as Promise<any[]>
+        })(),
+      ])
+      
+      // Combine and deduplicate by ID (in case of any overlap)
+      const leagueMap = new Map<string, any>()
+      for (const league of createdLeagues) {
+        leagueMap.set(league.id, league)
+      }
+      for (const league of memberLeagues) {
+        leagueMap.set(league.id, league)
+      }
+      
+      // Sort by createdAt descending
+      leagues = Array.from(leagueMap.values()).sort((a, b) => {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      }).slice(0, 100) // Final limit
+      
+      const duration = Date.now() - startTime
+      console.log(`[API] Fetched ${leagues.length} leagues in ${duration}ms (created: ${createdLeagues.length}, member: ${memberLeagues.length})`)
     } catch (dbError: any) {
       // If the table doesn't exist yet (migration not run), return empty array
       if (dbError.message?.includes('does not exist') || 

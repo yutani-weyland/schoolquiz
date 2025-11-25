@@ -62,50 +62,6 @@ export function LeagueDetailsSkeleton() {
         </div>
       </div>
 
-      {/* Quiz Selector Skeleton */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
-        <div className="flex items-center gap-2">
-          <div className="h-9 bg-gray-200 dark:bg-gray-700/50 rounded-full w-20 animate-pulse" />
-          <div className="h-9 bg-gray-200 dark:bg-gray-700/50 rounded-full w-20 animate-pulse" />
-          <div className="h-9 bg-gray-200 dark:bg-gray-700/50 rounded-full w-20 animate-pulse" />
-        </div>
-      </div>
-
-      {/* Leaderboard Skeleton */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
-        <div className="mb-6 space-y-2">
-          <div className="h-7 bg-gray-200 dark:bg-gray-700/50 rounded w-48 animate-pulse" />
-          <div className="h-4 bg-gray-200 dark:bg-gray-700/50 rounded w-64 animate-pulse" />
-        </div>
-        <div className="space-y-2">
-          {[...Array(5)].map((_, i) => (
-            <div
-              key={i}
-              className="grid grid-cols-12 gap-4 items-center px-4 py-3.5 rounded-xl bg-gray-50 dark:bg-gray-700/50 animate-pulse"
-            >
-              <div className="col-span-1">
-                <div className="w-9 h-9 rounded-full bg-gray-200 dark:bg-gray-600/50 mx-auto" />
-              </div>
-              <div className="col-span-3 md:col-span-2 space-y-1.5">
-                <div className="h-4 bg-gray-200 dark:bg-gray-600/50 rounded w-24" />
-                <div className="h-3 bg-gray-200 dark:bg-gray-600/50 rounded w-16" />
-              </div>
-              <div className="col-span-2 text-right space-y-1.5">
-                <div className="h-5 bg-gray-200 dark:bg-gray-600/50 rounded w-16 ml-auto" />
-                <div className="h-3 bg-gray-200 dark:bg-gray-600/50 rounded w-12 ml-auto" />
-              </div>
-              <div className="col-span-2 text-right space-y-1.5">
-                <div className="h-5 bg-gray-200 dark:bg-gray-600/50 rounded w-12 ml-auto" />
-                <div className="h-3 bg-gray-200 dark:bg-gray-600/50 rounded w-16 ml-auto" />
-              </div>
-              <div className="col-span-2 text-right space-y-1.5">
-                <div className="h-5 bg-gray-200 dark:bg-gray-600/50 rounded w-20 ml-auto" />
-                <div className="h-3 bg-gray-200 dark:bg-gray-600/50 rounded w-24 ml-auto" />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   )
 }
