@@ -26,7 +26,6 @@ import { cn } from "@/lib/utils";
 // Reasons carousel component
 function ReasonsCarousel() {
 	const [currentIndex, setCurrentIndex] = useState(0);
-	const videoVersion = "v3"; // Update this when video changes
 	const [isAutoScrolling, setIsAutoScrolling] = useState(true);
 
 	const reasons = [
@@ -180,7 +179,7 @@ function ReasonsCarousel() {
 						>
 							<ChevronRight className="h-5 w-5 sm:h-6 sm:w-6 text-gray-700 dark:text-gray-300" />
 						</button>
-						<AnimatePresence mode="wait">
+						<AnimatePresence>
 							{visibleReasons.map((reason, idx) => (
 								<motion.div
 									key={`${currentIndex}-${idx}`}
@@ -196,19 +195,11 @@ function ReasonsCarousel() {
 											: "border-gray-200/60 dark:border-gray-700/60 bg-gradient-to-br from-blue-50/30 to-purple-50/20 dark:from-blue-950/20 dark:to-purple-950/10"
 									)}
 								>
-									{/* Australian video background for Aussie card */}
+									{/* Australian flag background for Aussie card */}
 									{reason.hasFlag && (
 										<>
-											<video
-												autoPlay
-												loop
-												muted
-												playsInline
-												className="absolute inset-0 w-full h-full object-cover opacity-30 dark:opacity-20"
-												key={videoVersion}
-											>
-												<source src={`/australia.mp4?v=${videoVersion}`} type="video/mp4" />
-											</video>
+											{/* Gradient background instead of video */}
+											<div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-white to-red-600 opacity-20 dark:opacity-30 pointer-events-none" />
 											{/* Dark overlay for better text visibility */}
 											<div className="absolute inset-0 bg-black/20 dark:bg-black/40 pointer-events-none" />
 										</>
@@ -291,7 +282,7 @@ function ReasonsCarousel() {
 						>
 							<ChevronRight className="h-5 w-5 sm:h-6 sm:w-6 text-gray-700 dark:text-gray-300" />
 						</button>
-						<AnimatePresence mode="wait">
+						<AnimatePresence>
 							{mobileVisibleReasons.map((reason) => (
 								<motion.div
 									key={currentIndex}
@@ -307,19 +298,11 @@ function ReasonsCarousel() {
 											: "border-gray-200/60 dark:border-gray-700/60 bg-gradient-to-br from-blue-50/30 to-purple-50/20 dark:from-blue-950/20 dark:to-purple-950/10"
 									)}
 								>
-									{/* Australian video background for Aussie card */}
+									{/* Australian flag background for Aussie card */}
 									{reason.hasFlag && (
 										<>
-											<video
-												autoPlay
-												loop
-												muted
-												playsInline
-												className="absolute inset-0 w-full h-full object-cover opacity-30 dark:opacity-20"
-												key={videoVersion}
-											>
-												<source src={`/australia.mp4?v=${videoVersion}`} type="video/mp4" />
-											</video>
+											{/* Gradient background instead of video */}
+											<div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-white to-red-600 opacity-20 dark:opacity-30 pointer-events-none" />
 											{/* Dark overlay for better text visibility */}
 											<div className="absolute inset-0 bg-black/20 dark:bg-black/40 pointer-events-none" />
 										</>
@@ -794,7 +777,7 @@ export default function HomePage() {
 								{[
 									{
 										id: "preview-1",
-										slug: "hail-caesar",
+										slug: "ace",
 										name: "HAIL, CAESAR!",
 										shortDescription: "Get 5/5 in a History round",
 										category: "performance",
@@ -991,7 +974,7 @@ export default function HomePage() {
 										<div className="bg-white dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
 											<div className="space-y-2.5">
 												<div>
-													<label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">Your question</label>
+													<div className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">Your question</div>
 													<div className="min-h-[60px] bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 p-3 text-sm text-gray-700 dark:text-gray-300">
 														<TypingAnimation
 															text="What Australian city is known as the 'City of Churches'?"
@@ -1003,11 +986,11 @@ export default function HomePage() {
 												</div>
 												<div className="grid grid-cols-2 gap-2">
 													<div>
-														<label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Teacher name</label>
+														<div className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Teacher name</div>
 														<div className="h-7 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 px-2 text-xs text-gray-600 dark:text-gray-400 flex items-center">Mr F</div>
 													</div>
 													<div>
-														<label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">School</label>
+														<div className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">School</div>
 														<div className="h-7 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 px-2 text-xs text-gray-600 dark:text-gray-400 flex items-center truncate">Stanton Road HS</div>
 													</div>
 												</div>

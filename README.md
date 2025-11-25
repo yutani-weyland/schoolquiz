@@ -118,8 +118,10 @@ cd schoolquiz
 pnpm install
 
 # Set up environment variables
-cp env.example .env.local
+cp env.local.example .env.local
 # Edit .env.local with your Supabase credentials
+# IMPORTANT: Sync env file to apps/admin/ (Next.js reads from there)
+pnpm sync-env
 
 # Start Supabase locally
 supabase start

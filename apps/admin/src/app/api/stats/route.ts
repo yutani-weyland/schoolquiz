@@ -1,39 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@schoolquiz/db'
 
-async function getUserFromToken(request: NextRequest) {
-  try {
-    // Commented out for prototyping - database calls disabled
-    // const authHeader = request.headers.get('authorization')
-    // const token = authHeader?.replace('Bearer ', '')
-    // 
-    // if (!token) {
-    //   return null
-    // }
-    // 
-    // const userId = request.headers.get('x-user-id')
-    // 
-    // if (!userId) {
-    //   return null
-    // }
-    // 
-    // console.log('[Stats API] Looking up user:', userId)
-    // const { prisma } = await import('@schoolquiz/db')
-    // const user = await prisma.user.findUnique({
-    //   where: { id: userId },
-    // })
-    // 
-    // if (!user) {
-    //   console.log('[Stats API] User not found in database:', userId)
-    // }
-    // 
-    // return user
-    return null
-  } catch (error: any) {
-    console.error('[Stats API] Error in getUserFromToken:', error)
-    return null
-  }
-}
+import { requireApiUserId } from '@/lib/api-auth'
 
 /**
  * GET /api/stats
@@ -43,26 +11,8 @@ export async function GET(request: NextRequest) {
   try {
     console.log('[Stats API] Starting stats fetch...')
     
-    // Get headers for auth check (client-side requests)
-    const userId = request.headers.get('x-user-id')
-    const authHeader = request.headers.get('authorization')
-    
-    // Also check cookies (server-side requests)
-    const cookieUserId = request.cookies.get('userId')?.value
-    const cookieToken = request.cookies.get('authToken')?.value
-    
-    // Use cookie values if headers not available (server-side fetch)
-    const finalUserId = userId || cookieUserId
-    const finalAuth = authHeader || (cookieToken ? `Bearer ${cookieToken}` : null)
-    
-    // Check if user is authenticated (has userId and token)
-    if (!finalUserId || !finalAuth) {
-      console.log('[Stats API] No auth - unauthorized')
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+    // Get user ID from NextAuth session
+    const userId = await requireApiUserId()
     
     // For prototyping: Return empty/mock stats without database calls
     // This allows the stats page to render even if database is unavailable

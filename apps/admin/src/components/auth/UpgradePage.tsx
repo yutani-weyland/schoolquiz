@@ -1,10 +1,14 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, Star, ArrowRight, Loader2, Users, Building2, TrendingDown, Sparkles, Percent, Zap } from "lucide-react";
 
 export default function UpgradePage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<"monthly" | "annual">("monthly");
   const [pricingType, setPricingType] = useState<"individual" | "organization">("individual");
@@ -15,39 +19,44 @@ export default function UpgradePage() {
   const [teacherCount, setTeacherCount] = useState(10);
 
   useEffect(() => {
-    const token = localStorage.getItem("authToken");
-    if (!token) {
-      window.location.href = "/sign-in";
+    if (status === 'unauthenticated') {
+      router.push("/sign-in");
       return;
     }
 
-    fetch("/api/auth/me", {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.subscriptionStatus) {
-          setUserStatus({
-            subscriptionStatus: data.subscriptionStatus,
-            freeTrialEndsAt: data.freeTrialEndsAt,
-          });
-        }
+    if (status === 'authenticated' && session?.user?.id) {
+      fetch("/api/user/subscription", {
+        credentials: 'include', // Send session cookie
       })
-      .catch(() => {
-        window.location.href = "/sign-in";
-      });
-  }, []);
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.status) {
+            setUserStatus({
+              subscriptionStatus: data.status,
+              freeTrialEndsAt: data.freeTrialEndsAt || null,
+            });
+          }
+        })
+        .catch(() => {
+          // Silently fail - user can still see upgrade page
+        });
+    }
+  }, [status, session, router]);
 
   const handleUpgrade = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem("authToken");
+      if (!session?.user?.id) {
+        router.push("/sign-in");
+        return;
+      }
+
       const response = await fetch("/api/auth/upgrade", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
+        credentials: 'include', // Send session cookie
         body: JSON.stringify({ 
           plan: selectedPlan,
           ...(pricingType === "organization" && { teacherCount })

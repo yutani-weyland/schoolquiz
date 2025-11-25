@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { PageContainer } from '@/components/layout/PageContainer';
@@ -9,7 +10,6 @@ import { ContentCard } from '@/components/layout/ContentCard';
 import { motion } from 'framer-motion';
 import { Plus, Edit, Share2, Trash2, FileText, Filter, Search, Sparkles } from 'lucide-react';
 import { useUserTier } from '@/hooks/useUserTier';
-import { getAuthToken, getUserId } from '@/lib/storage';
 import { CustomQuizUsageWidget } from '@/components/premium/CustomQuizUsageWidget';
 import { ShareQuizModal } from '@/components/premium/ShareQuizModal';
 import Link from 'next/link';
@@ -61,6 +61,7 @@ type FilterType = 'all' | 'mine' | 'shared';
 
 export default function MyCustomQuizzesPage() {
   const router = useRouter();
+  const { data: session } = useSession();
   const { tier, isPremium, isLoading: tierLoading } = useUserTier();
   const [quizzes, setQuizzes] = useState<CustomQuiz[]>([]);
   const [usage, setUsage] = useState<UsageData | null>(null);
@@ -83,26 +84,17 @@ export default function MyCustomQuizzesPage() {
 
     const fetchData = async () => {
       try {
-        const token = getAuthToken();
-        const userId = getUserId();
-
-        if (!token || !userId) {
+        if (!session?.user?.id) {
           router.push('/sign-in');
           return;
         }
 
         const [quizzesRes, usageRes] = await Promise.all([
           fetch('/api/premium/custom-quizzes?includeShared=true', {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'X-User-Id': userId,
-            },
+            credentials: 'include', // Send session cookie
           }),
           fetch('/api/premium/custom-quizzes/usage', {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'X-User-Id': userId,
-            },
+            credentials: 'include', // Send session cookie
           }),
         ]);
 
@@ -145,25 +137,16 @@ export default function MyCustomQuizzesPage() {
     }
 
     try {
-      const token = getAuthToken();
-      const userId = getUserId();
-
       const res = await fetch(`/api/premium/custom-quizzes/${quizId}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'X-User-Id': userId,
-        },
+        credentials: 'include', // Send session cookie
       });
 
       if (res.ok) {
         setQuizzes(quizzes.filter(q => q.id !== quizId));
         // Refresh usage
         const usageRes = await fetch('/api/premium/custom-quizzes/usage', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'X-User-Id': userId,
-          },
+          credentials: 'include', // Send session cookie
         });
         if (usageRes.ok) {
           const data = await usageRes.json();
@@ -185,8 +168,8 @@ export default function MyCustomQuizzesPage() {
         <PageContainer maxWidth="6xl">
           <div className="flex items-center justify-center min-h-[calc(100vh-12rem)]">
             <div className="text-center">
-              <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-              <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+              <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+              <p className="text-[hsl(var(--muted-foreground))]">Loading...</p>
             </div>
           </div>
         </PageContainer>
@@ -229,13 +212,13 @@ export default function MyCustomQuizzesPage() {
           <div className="flex-1 flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
             {/* Search */}
             <div className="relative flex-1 sm:max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[hsl(var(--muted-foreground))]" />
               <input
                 type="text"
                 placeholder="Search quizzes..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-10 pr-4 py-2 border border-[hsl(var(--border))] rounded-full bg-[hsl(var(--input))] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] transition-colors"
               />
             </div>
 
@@ -245,10 +228,10 @@ export default function MyCustomQuizzesPage() {
                 <button
                   key={f}
                   onClick={() => setFilter(f)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                     filter === f
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                      : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
                   }`}
                 >
                   {f === 'all' ? 'All' : f === 'mine' ? 'Mine' : 'Shared'}
@@ -260,7 +243,7 @@ export default function MyCustomQuizzesPage() {
           {/* Create Button */}
           <Link
             href="/custom-quizzes/create"
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-colors font-medium"
           >
             <Plus className="w-4 h-4" />
             Create Quiz
@@ -276,11 +259,11 @@ export default function MyCustomQuizzesPage() {
           >
             <ContentCard padding="xl" rounded="3xl" hoverAnimation={false}>
               <div className="text-center py-12">
-                <Sparkles className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                <Sparkles className="w-16 h-16 text-[hsl(var(--muted-foreground))] mx-auto mb-4" />
+                <h3 className="text-xl font-bold text-[hsl(var(--foreground))] mb-2">
                   {searchQuery ? 'No quizzes found' : 'No custom quizzes yet'}
                 </h3>
-                <p className="text-gray-600 dark:text-gray-400 mb-6">
+                <p className="text-[hsl(var(--muted-foreground))] mb-6">
                   {searchQuery
                     ? 'Try adjusting your search or filters'
                     : 'Create your first custom quiz to get started'}
@@ -288,7 +271,7 @@ export default function MyCustomQuizzesPage() {
                 {!searchQuery && (
                   <Link
                     href="/custom-quizzes/create"
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-colors font-medium"
                   >
                     <Plus className="w-4 h-4" />
                     Create Your First Quiz
@@ -322,21 +305,21 @@ export default function MyCustomQuizzesPage() {
                   {/* Quiz Info */}
                   <div className="mb-4">
                     {quiz.blurb && (
-                      <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-2">
+                      <p className="text-sm text-[hsl(var(--muted-foreground))] line-clamp-2 mb-2">
                         {quiz.blurb}
                       </p>
                     )}
-                    <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-500">
-                      <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded">
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="px-2 py-1 bg-primary/10 text-primary rounded-full">
                         Custom
                       </span>
                       {quiz.isShared && (
-                        <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded">
+                        <span className="px-2 py-1 bg-[#059669]/10 text-[#059669] rounded-full">
                           Shared
                         </span>
                       )}
                       {quiz.shareCount && quiz.shareCount > 0 && (
-                        <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded">
+                        <span className="px-2 py-1 bg-accent text-accent-foreground rounded-full">
                           {quiz.shareCount} shares
                         </span>
                       )}
@@ -349,7 +332,7 @@ export default function MyCustomQuizzesPage() {
                       <>
                         <Link
                           href={`/custom-quizzes/create?edit=${quiz.id}`}
-                          className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm font-medium"
+                          className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-secondary text-secondary-foreground rounded-full hover:bg-secondary/80 transition-colors text-sm font-medium"
                         >
                           <Edit className="w-4 h-4" />
                           Edit
@@ -359,14 +342,14 @@ export default function MyCustomQuizzesPage() {
                             setSelectedQuizForShare(quiz);
                             setShareModalOpen(true);
                           }}
-                          className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm font-medium"
+                          className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-secondary text-secondary-foreground rounded-full hover:bg-secondary/80 transition-colors text-sm font-medium"
                         >
                           <Share2 className="w-4 h-4" />
                           Share
                         </button>
                         <button
                           onClick={() => handleDelete(quiz.id)}
-                          className="px-3 py-2 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
+                          className="px-3 py-2 bg-destructive/10 text-destructive rounded-full hover:bg-destructive/20 transition-colors"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -374,7 +357,7 @@ export default function MyCustomQuizzesPage() {
                     )}
                     <Link
                       href={`/custom-quizzes/${quiz.id}/play`}
-                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-colors text-sm font-medium"
                     >
                       <FileText className="w-4 h-4" />
                       Play
@@ -401,16 +384,8 @@ export default function MyCustomQuizzesPage() {
             // Refresh quizzes list
             const fetchData = async () => {
               try {
-                const token = getAuthToken();
-                const userId = getUserId();
-
-                if (!token || !userId) return;
-
                 const res = await fetch('/api/premium/custom-quizzes?includeShared=true', {
-                  headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'X-User-Id': userId,
-                  },
+                  credentials: 'include', // Send session cookie
                 });
 
                 if (res.ok) {

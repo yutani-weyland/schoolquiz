@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { PageContainer } from '@/components/layout/PageContainer';
@@ -12,7 +13,6 @@ import { CustomQuizUsageWidget } from '@/components/premium/CustomQuizUsageWidge
 import { motion } from 'framer-motion';
 import { Plus, Trash2, Save, Eye, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
 import { useUserTier } from '@/hooks/useUserTier';
-import { getAuthToken, getUserId } from '@/lib/storage';
 
 interface Question {
   id: string;
@@ -49,6 +49,7 @@ interface OrganisationBranding {
 }
 
 export default function CreateQuizPage() {
+  const { data: session } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get('edit');
@@ -89,16 +90,10 @@ export default function CreateQuizPage() {
 
   const loadUsage = async () => {
     try {
-      const token = getAuthToken();
-      const userId = getUserId();
-      
-      if (!token || !userId) return;
+      if (!session?.user?.id) return;
 
       const res = await fetch('/api/premium/custom-quizzes/usage', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'X-User-Id': userId,
-        },
+        credentials: 'include', // Send session cookie
       });
 
       if (res.ok) {
@@ -119,16 +114,10 @@ export default function CreateQuizPage() {
 
   const loadOrganisation = async () => {
     try {
-      const token = getAuthToken();
-      const userId = getUserId();
-      
-      if (!token || !userId) return;
+      if (!session?.user?.id) return;
 
       const res = await fetch('/api/user/organisation', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'X-User-Id': userId,
-        },
+        credentials: 'include', // Send session cookie
       });
 
       if (res.ok) {
@@ -153,14 +142,8 @@ export default function CreateQuizPage() {
 
   const loadQuiz = async (id: string) => {
     try {
-      const token = getAuthToken();
-      const userId = getUserId();
-      
       const res = await fetch(`/api/premium/custom-quizzes/${id}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'X-User-Id': userId || '',
-        },
+        credentials: 'include', // Send session cookie
       });
 
       if (res.ok) {
@@ -285,10 +268,9 @@ export default function CreateQuizPage() {
         res = await fetch(`/api/premium/custom-quizzes/${editId}`, {
           method: 'PATCH',
           headers: {
-            'Authorization': `Bearer ${token}`,
-            'X-User-Id': userId || '',
             'Content-Type': 'application/json',
           },
+          credentials: 'include', // Send session cookie
           body: JSON.stringify({
             ...payload,
             status: publish ? 'published' : 'draft',
@@ -299,10 +281,9 @@ export default function CreateQuizPage() {
         res = await fetch('/api/premium/custom-quizzes', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${token}`,
-            'X-User-Id': userId || '',
             'Content-Type': 'application/json',
           },
+          credentials: 'include', // Send session cookie
           body: JSON.stringify(payload),
         });
       }
@@ -318,10 +299,9 @@ export default function CreateQuizPage() {
             await fetch(`/api/premium/custom-quizzes/${quizId}/branding`, {
               method: 'POST',
               headers: {
-                'Authorization': `Bearer ${token}`,
-                'X-User-Id': userId || '',
                 'Content-Type': 'application/json',
               },
+              credentials: 'include', // Send session cookie
               body: JSON.stringify({
                 schoolLogoUrl: quizData.schoolLogoUrl || null,
                 brandHeading: quizData.brandHeading?.trim() || null,
@@ -511,7 +491,7 @@ export default function CreateQuizPage() {
                       value={quizData.title}
                       onChange={(e) => setQuizData({ ...quizData, title: e.target.value })}
                       placeholder="Enter quiz title"
-                      className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                      className={`w-full px-4 py-2 border rounded-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                         errors.title ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
                       }`}
                       maxLength={100}
@@ -536,7 +516,7 @@ export default function CreateQuizPage() {
                       onChange={(e) => setQuizData({ ...quizData, blurb: e.target.value })}
                       placeholder="Enter quiz description (optional)"
                       rows={3}
-                      className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                      className={`w-full px-4 py-2 border rounded-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                         errors.blurb ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
                       }`}
                       maxLength={500}
@@ -649,7 +629,7 @@ export default function CreateQuizPage() {
                         value={quizData.brandHeading || ''}
                         onChange={(e) => setQuizData({ ...quizData, brandHeading: e.target.value })}
                         placeholder="e.g., St. Augustine's School"
-                        className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                         maxLength={100}
                       />
                       <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
@@ -666,7 +646,7 @@ export default function CreateQuizPage() {
                         value={quizData.brandSubheading || ''}
                         onChange={(e) => setQuizData({ ...quizData, brandSubheading: e.target.value })}
                         placeholder="e.g., Weekly Quiz - Term 1"
-                        className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                         maxLength={200}
                       />
                       <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
@@ -692,7 +672,7 @@ export default function CreateQuizPage() {
                   <button
                     onClick={addRound}
                     disabled={quizData.rounds.length >= 10}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     <Plus className="w-4 h-4" />
                     Add Round
@@ -700,7 +680,7 @@ export default function CreateQuizPage() {
                 </div>
 
                 {errors.rounds && (
-                  <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                  <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-full">
                     <p className="text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
                       <AlertCircle className="w-4 h-4" />
                       {errors.rounds}
@@ -772,7 +752,7 @@ export default function CreateQuizPage() {
                 </div>
 
                 {errors.questions && (
-                  <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                  <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-full">
                     <p className="text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
                       <AlertCircle className="w-4 h-4" />
                       {errors.questions}
@@ -785,7 +765,7 @@ export default function CreateQuizPage() {
                   <button
                     onClick={() => handleSave(false)}
                     disabled={saving}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 transition-colors"
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-full hover:bg-gray-700 disabled:opacity-50 transition-colors"
                   >
                     <Save className="w-4 h-4" />
                     {saving ? 'Saving...' : 'Save Draft'}
@@ -793,7 +773,7 @@ export default function CreateQuizPage() {
                   <button
                     onClick={() => handleSave(true)}
                     disabled={saving}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:opacity-50 transition-colors"
                   >
                     <Eye className="w-4 h-4" />
                     {saving ? 'Publishing...' : 'Publish'}
@@ -834,7 +814,7 @@ function RoundEditor({
   canRemove: boolean;
 }) {
   return (
-    <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+    <div className="border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden">
       {/* Round Header */}
       <div className="bg-gray-50 dark:bg-gray-800 p-4">
         <div className="flex items-center justify-between">
@@ -854,14 +834,14 @@ function RoundEditor({
               ({round.questions.length} questions)
             </span>
           </button>
-          {canRemove && (
-            <button
-              onClick={onRemove}
-              className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          )}
+        {canRemove && (
+          <button
+            onClick={onRemove}
+            className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        )}
         </div>
       </div>
 
@@ -877,7 +857,7 @@ function RoundEditor({
               value={round.title || ''}
               onChange={(e) => onUpdate({ title: e.target.value })}
               placeholder="e.g., History Round"
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               maxLength={100}
             />
           </div>
@@ -891,13 +871,13 @@ function RoundEditor({
               onChange={(e) => onUpdate({ blurb: e.target.value })}
               placeholder="Brief description of this round"
               rows={2}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               maxLength={300}
             />
           </div>
 
           {errors[`round_${roundIndex}_questions`] && (
-            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-full">
               <p className="text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
                 <AlertCircle className="w-4 h-4" />
                 {errors[`round_${roundIndex}_questions`]}
@@ -913,7 +893,7 @@ function RoundEditor({
               <button
                 onClick={onAddQuestion}
                 disabled={round.questions.length >= 20}
-                className="flex items-center gap-1 px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-1 px-3 py-1 text-sm bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Plus className="w-3 h-3" />
                 Add Question
@@ -957,7 +937,7 @@ function QuestionEditor({
   canRemove: boolean;
 }) {
   return (
-    <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3">
+    <div className="border border-gray-200 dark:border-gray-700 rounded-2xl p-4 space-y-3">
       <div className="flex items-center justify-between mb-2">
         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
           Question {questionIndex + 1}
@@ -965,7 +945,7 @@ function QuestionEditor({
         {canRemove && (
           <button
             onClick={onRemove}
-            className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+            className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full"
           >
             <Trash2 className="w-3 h-3" />
           </button>
@@ -981,7 +961,7 @@ function QuestionEditor({
           onChange={(e) => onUpdate({ text: e.target.value })}
           placeholder="Enter your question"
           rows={2}
-          className={`w-full px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+          className={`w-full px-3 py-2 text-sm border rounded-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 ${
             errors[`round_${roundIndex}_q_${questionIndex}_text`]
               ? 'border-red-500'
               : 'border-gray-300 dark:border-gray-600'
@@ -1007,7 +987,7 @@ function QuestionEditor({
           value={question.answer}
           onChange={(e) => onUpdate({ answer: e.target.value })}
           placeholder="Enter the answer"
-          className={`w-full px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+          className={`w-full px-3 py-2 text-sm border rounded-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 ${
             errors[`round_${roundIndex}_q_${questionIndex}_answer`]
               ? 'border-red-500'
               : 'border-gray-300 dark:border-gray-600'
@@ -1030,7 +1010,7 @@ function QuestionEditor({
           onChange={(e) => onUpdate({ explanation: e.target.value })}
           placeholder="Optional explanation for the answer"
           rows={2}
-          className={`w-full px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+          className={`w-full px-3 py-2 text-sm border rounded-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 ${
             errors[`round_${roundIndex}_q_${questionIndex}_explanation`]
               ? 'border-red-500'
               : 'border-gray-300 dark:border-gray-600'

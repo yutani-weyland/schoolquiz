@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { motion } from 'framer-motion';
 import { Target, TrendingUp } from 'lucide-react';
 import { AchievementCard } from '@/components/achievements/AchievementCard';
@@ -28,22 +29,25 @@ interface Achievement {
 }
 
 export function InProgressAchievements() {
+  const { data: session } = useSession();
   const { tier } = useUserTier();
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    if (!session?.user?.id) {
+      setIsLoading(false);
+      return;
+    }
+
     // Defer fetching to avoid blocking initial page load
     const timeoutId = setTimeout(() => {
       const fetchAchievements = async () => {
         try {
-          const token = localStorage.getItem('authToken');
-          const userId = localStorage.getItem('userId');
-          
           // Use shared fetch utility with automatic deduplication
           const { fetchAchievements } = await import('@/lib/achievement-fetch');
         
-        const data = await fetchAchievements(userId, token);
+        const data = await fetchAchievements(session.user.id, null);
         
         // Filter for in-progress achievements (have progress but not unlocked)
         const inProgressAchievements = data.achievements.filter((achievement: Achievement) => {

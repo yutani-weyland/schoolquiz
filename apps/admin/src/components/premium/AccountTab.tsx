@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { signOut } from 'next-auth/react';
 import { motion } from 'framer-motion';
 import { Mail, User, Building, Loader2, Check, Trash2, AlertTriangle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -10,6 +12,7 @@ interface AccountTabProps {
 }
 
 export function AccountTab({ isPremium }: AccountTabProps) {
+  const { data: session, status } = useSession();
   const [profile, setProfile] = useState({
     name: '',
     email: '',
@@ -25,34 +28,40 @@ export function AccountTab({ isPremium }: AccountTabProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const router = useRouter();
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const token = localStorage.getItem('authToken');
-        if (!token) return;
-
-        const response = await fetch('/api/user/profile', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          setProfile({
-            name: data.name || '',
-            email: data.email || '',
-            teamName: data.teamName || '',
-          });
-          setTeamNameInput(data.teamName || '');
-        }
-      } catch (err) {
-        console.error('Failed to fetch profile:', err);
-      } finally {
+  const fetchProfile = async () => {
+    try {
+      if (!session?.user?.id) {
         setIsLoading(false);
+        return;
       }
-    };
 
-    fetchProfile();
-  }, []);
+      const response = await fetch('/api/user/profile', {
+        credentials: 'include', // Send session cookie
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setProfile({
+          name: data.name || '',
+          email: data.email || '',
+          teamName: data.teamName || '',
+        });
+        setTeamNameInput(data.teamName || '');
+      }
+    } catch (err) {
+      console.error('Failed to fetch profile:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (status === 'authenticated' && session) {
+      fetchProfile();
+    } else if (status === 'unauthenticated') {
+      setIsLoading(false);
+    }
+  }, [status, session]);
 
   const handleSaveTeamName = async () => {
     if (!teamNameInput.trim()) {
@@ -69,8 +78,7 @@ export function AccountTab({ isPremium }: AccountTabProps) {
     setError(null);
 
     try {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
+      if (!session?.user?.id) {
         throw new Error('Not authenticated');
       }
 
@@ -78,8 +86,8 @@ export function AccountTab({ isPremium }: AccountTabProps) {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
+        credentials: 'include', // Send session cookie
         body: JSON.stringify({ teamName: teamNameInput.trim() }),
       });
 
@@ -105,8 +113,7 @@ export function AccountTab({ isPremium }: AccountTabProps) {
     setError(null);
 
     try {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
+      if (!session?.user?.id) {
         throw new Error('Not authenticated');
       }
 
@@ -114,8 +121,8 @@ export function AccountTab({ isPremium }: AccountTabProps) {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
+        credentials: 'include', // Send session cookie
       });
 
       if (!response.ok) {
@@ -123,10 +130,8 @@ export function AccountTab({ isPremium }: AccountTabProps) {
         throw new Error(data.error || 'Failed to delete account');
       }
 
-      // Clear local storage and redirect
-      localStorage.clear();
-      sessionStorage.clear();
-      router.push('/');
+      // Sign out and redirect
+      await signOut({ callbackUrl: '/' });
     } catch (err: any) {
       setError(err.message || 'Failed to delete account');
       setIsDeleting(false);

@@ -1,6 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { memo } from 'react';
 import { TrendingUp, TrendingDown, Award, AlertCircle } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
@@ -9,7 +10,7 @@ interface CategoryPerformanceProps {
   weakest: Array<{ name: string; percentage: number; correct: number; total: number; quizzes: number }>;
 }
 
-export function CategoryPerformance({ strongest, weakest }: CategoryPerformanceProps) {
+export const CategoryPerformance = memo(function CategoryPerformance({ strongest, weakest }: CategoryPerformanceProps) {
   const COLORS = {
     strong: '#10B981',
     weak: '#EF4444',
@@ -122,5 +123,5 @@ export function CategoryPerformance({ strongest, weakest }: CategoryPerformanceP
       </motion.div>
     </div>
   );
-}
+});
 

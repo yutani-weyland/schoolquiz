@@ -60,34 +60,12 @@ export interface LeagueStatsResponse {
 }
 
 /**
- * Get auth headers for API requests
- */
-function getAuthHeaders(): HeadersInit {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null
-  const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null
-  
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-  }
-  
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`
-  }
-  
-  if (userId) {
-    headers['X-User-Id'] = userId
-  }
-  
-  return headers
-}
-
-/**
  * Fetch all leagues for the current user
  */
 export async function fetchLeagues(): Promise<League[]> {
   const startTime = performance.now()
   const response = await fetch('/api/private-leagues', {
-    headers: getAuthHeaders(),
+    credentials: 'include', // Send session cookie
   })
 
   if (!response.ok) {
@@ -113,7 +91,7 @@ export async function fetchLeagues(): Promise<League[]> {
 export async function fetchLeagueStats(leagueId: string): Promise<LeagueStatsResponse> {
   const startTime = performance.now()
   const response = await fetch(`/api/private-leagues/${leagueId}/stats`, {
-    headers: getAuthHeaders(),
+    credentials: 'include', // Send session cookie
   })
 
   if (!response.ok) {
@@ -211,7 +189,7 @@ export async function fetchAvailableOrgLeagues(
   }
 
   const response = await fetch(`/api/private-leagues/organisation/available?${params}`, {
-    headers: getAuthHeaders(),
+    credentials: 'include', // Send session cookie
   })
 
   if (!response.ok) {
@@ -263,7 +241,7 @@ export interface LeagueRequest {
  */
 export async function fetchLeagueRequests(): Promise<LeagueRequest[]> {
   const response = await fetch('/api/private-leagues/requests', {
-    headers: getAuthHeaders(),
+    credentials: 'include', // Send session cookie
   })
 
   if (!response.ok) {
@@ -284,7 +262,10 @@ export async function fetchLeagueRequests(): Promise<LeagueRequest[]> {
 export async function createLeagueRequest(leagueId: string): Promise<LeagueRequest> {
   const response = await fetch('/api/private-leagues/requests', {
     method: 'POST',
-    headers: getAuthHeaders(),
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include', // Send session cookie
     body: JSON.stringify({ leagueId }),
   })
 
@@ -303,7 +284,10 @@ export async function createLeagueRequest(leagueId: string): Promise<LeagueReque
 export async function respondToRequest(requestId: string, action: 'approve' | 'reject'): Promise<void> {
   const response = await fetch(`/api/private-leagues/requests/${requestId}`, {
     method: 'PATCH',
-    headers: getAuthHeaders(),
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include', // Send session cookie
     body: JSON.stringify({ action }),
   })
 

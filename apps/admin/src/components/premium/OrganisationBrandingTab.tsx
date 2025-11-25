@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import { SchoolLogoUpload } from './SchoolLogoUpload'
-import { getAuthToken, getUserId } from '@/lib/storage'
 import { Building2, Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
 import { ContentCard } from '@/components/layout/ContentCard'
 
@@ -16,6 +16,7 @@ interface OrganisationBranding {
 }
 
 export function OrganisationBrandingTab() {
+  const { data: session, status } = useSession()
   const [organisation, setOrganisation] = useState<OrganisationBranding | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -29,24 +30,24 @@ export function OrganisationBrandingTab() {
   })
 
   useEffect(() => {
-    loadOrganisation()
-  }, [])
+    if (status === 'authenticated' && session) {
+      loadOrganisation()
+    } else if (status === 'unauthenticated') {
+      setError('Not authenticated')
+      setLoading(false)
+    }
+  }, [status, session])
 
   const loadOrganisation = async () => {
     try {
-      const token = getAuthToken()
-      const userId = getUserId()
-      
-      if (!token || !userId) {
+      if (!session?.user?.id) {
         setError('Not authenticated')
+        setLoading(false)
         return
       }
 
       const res = await fetch('/api/user/organisation', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'X-User-Id': userId,
-        },
+        credentials: 'include', // Send session cookie
       })
 
       if (res.ok) {
@@ -81,10 +82,7 @@ export function OrganisationBrandingTab() {
     setError(null)
 
     try {
-      const token = getAuthToken()
-      const userId = getUserId()
-      
-      if (!token || !userId) {
+      if (!session?.user?.id) {
         throw new Error('Not authenticated')
       }
 
@@ -100,10 +98,7 @@ export function OrganisationBrandingTab() {
 
         const uploadRes = await fetch(`/api/organisation/${organisation.id}/upload-logo`, {
           method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'X-User-Id': userId,
-          },
+          credentials: 'include', // Send session cookie
           body: formData,
         })
 
@@ -123,10 +118,9 @@ export function OrganisationBrandingTab() {
       const saveRes = await fetch(`/api/organisation/${organisation.id}/branding`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'X-User-Id': userId,
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // Send session cookie
         body: JSON.stringify({
           logoUrl: logoUrl || null,
           brandHeading: branding.brandHeading.trim() || null,

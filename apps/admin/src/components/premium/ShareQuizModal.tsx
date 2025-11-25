@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { useSession } from 'next-auth/react'
 import { X, Search, User, Check, Loader2, AlertCircle, Users, Share2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { getAuthToken, getUserId } from '@/lib/storage'
 
 interface PremiumUser {
   id: string
@@ -34,6 +34,7 @@ export function ShareQuizModal({
   currentShares = [],
   usage,
 }: ShareQuizModalProps) {
+  const { data: session } = useSession()
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<PremiumUser[]>([])
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set())
@@ -60,19 +61,13 @@ export function ShareQuizModal({
   const loadCurrentShares = async () => {
     setLoadingShares(true)
     try {
-      const token = getAuthToken()
-      const userId = getUserId()
-
-      if (!token || !userId) {
+      if (!session?.user?.id) {
         setError('Not authenticated')
         return
       }
 
       const res = await fetch(`/api/premium/custom-quizzes/${quizId}/shares`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'X-User-Id': userId,
-        },
+        credentials: 'include', // Send session cookie
       })
 
       if (res.ok) {
@@ -110,19 +105,13 @@ export function ShareQuizModal({
     setIsSearching(true)
     searchTimeoutRef.current = setTimeout(async () => {
       try {
-        const token = getAuthToken()
-        const userId = getUserId()
-
-        if (!token || !userId) {
+        if (!session?.user?.id) {
           setError('Not authenticated')
           return
         }
 
         const res = await fetch(`/api/premium/users/search?q=${encodeURIComponent(searchQuery)}&limit=20`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'X-User-Id': userId,
-          },
+          credentials: 'include', // Send session cookie
         })
 
         if (res.ok) {
@@ -169,10 +158,7 @@ export function ShareQuizModal({
     setError(null)
 
     try {
-      const token = getAuthToken()
-      const userId = getUserId()
-
-      if (!token || !userId) {
+      if (!session?.user?.id) {
         throw new Error('Not authenticated')
       }
 
@@ -187,10 +173,9 @@ export function ShareQuizModal({
         const res = await fetch(`/api/premium/custom-quizzes/${quizId}/share`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${token}`,
-            'X-User-Id': userId,
             'Content-Type': 'application/json',
           },
+          credentials: 'include', // Send session cookie
           body: JSON.stringify({ userIds: toAdd }),
         })
 
@@ -258,7 +243,7 @@ export function ShareQuizModal({
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
           >
             <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
           </button>
@@ -295,7 +280,7 @@ export function ShareQuizModal({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by name or email..."
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             {isSearching && (
               <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 animate-spin" />
@@ -304,7 +289,7 @@ export function ShareQuizModal({
 
           {/* Error */}
           {error && (
-            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-2">
+            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-full flex items-start gap-2">
               <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
               <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
             </div>
@@ -312,7 +297,7 @@ export function ShareQuizModal({
 
           {/* Success */}
           {success && (
-            <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg flex items-center gap-2">
+            <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-full flex items-center gap-2">
               <Check className="w-5 h-5 text-green-600 dark:text-green-400" />
               <p className="text-sm text-green-600 dark:text-green-400">
                 Quiz shared successfully!
@@ -334,7 +319,7 @@ export function ShareQuizModal({
                 {loadedShares.map(user => (
                   <div
                     key={user.id}
-                    className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
+                    className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-2xl"
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
@@ -379,7 +364,7 @@ export function ShareQuizModal({
                   .map(user => (
                     <div
                       key={user.id}
-                      className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer"
+                      className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer"
                       onClick={() => toggleUser(user.id)}
                     >
                       <div className="flex items-center gap-3">
@@ -438,14 +423,14 @@ export function ShareQuizModal({
           <button
             onClick={onClose}
             disabled={isSharing}
-            className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
+            className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             onClick={handleShare}
             disabled={isSharing || selectedUsers.size === 0 || (usage && newSharesCount > remainingShares)}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium flex items-center gap-2"
+            className="px-6 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium flex items-center gap-2"
           >
             {isSharing ? (
               <>

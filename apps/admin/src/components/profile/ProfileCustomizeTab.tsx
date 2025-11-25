@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { motion } from 'framer-motion';
 import { Palette, Save, Check, Sparkles, Globe, Users, Lock } from 'lucide-react';
 
@@ -18,6 +19,7 @@ interface ProfileCustomizeTabProps {
 
 
 export function ProfileCustomizeTab({ profile, onUpdate }: ProfileCustomizeTabProps) {
+  const { data: session } = useSession();
   const [profileColorScheme, setProfileColorScheme] = useState<string>(profile.profileColorScheme || 'blue');
   const [avatar, setAvatar] = useState<string>(profile.avatar || '👤');
   const [teamName, setTeamName] = useState<string>(profile.teamName || '');
@@ -31,8 +33,7 @@ export function ProfileCustomizeTab({ profile, onUpdate }: ProfileCustomizeTabPr
     setError(null);
 
     try {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
+      if (!session?.user?.id) {
         throw new Error('Not authenticated');
       }
 
@@ -40,8 +41,8 @@ export function ProfileCustomizeTab({ profile, onUpdate }: ProfileCustomizeTabPr
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
+        credentials: 'include', // Send session cookie
         body: JSON.stringify({
           profileColorScheme,
           avatar,

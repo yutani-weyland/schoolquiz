@@ -1,6 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { memo, useMemo } from 'react';
 import { BarChart3, Target, CheckCircle, Trophy, TrendingUp } from 'lucide-react';
 
 interface SummaryStatsProps {
@@ -13,8 +14,8 @@ interface SummaryStatsProps {
   };
 }
 
-export function SummaryStats({ summary }: SummaryStatsProps) {
-  const stats = [
+export const SummaryStats = memo(function SummaryStats({ summary }: SummaryStatsProps) {
+  const stats = useMemo(() => [
     {
       label: 'Average score',
       value: `${summary.averageScore.toFixed(1)}%`,
@@ -60,7 +61,7 @@ export function SummaryStats({ summary }: SummaryStatsProps) {
       textColor: 'text-white',
       iconBg: 'bg-orange-600',
     },
-  ];
+  ], [summary]);
 
   // Slight rotation angles for each card (in degrees)
   const rotations = [-1, 0.75, -0.5, 1, -0.75];
@@ -96,5 +97,5 @@ export function SummaryStats({ summary }: SummaryStatsProps) {
       })}
     </div>
   );
-}
+});
 

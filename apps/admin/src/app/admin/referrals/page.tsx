@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import { PageLayout } from '@/components/layout/PageLayout'
 import { PageContainer } from '@/components/layout/PageContainer'
 import { PageHeader } from '@/components/layout/PageHeader'
@@ -40,28 +41,30 @@ interface ReferralStats {
 }
 
 export default function AdminReferralsPage() {
+  const { data: session } = useSession()
   const [referrals, setReferrals] = useState<Referral[]>([])
   const [stats, setStats] = useState<ReferralStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetchReferrals()
-  }, [])
+    if (session?.user?.id) {
+      fetchReferrals()
+    }
+  }, [session])
 
   const fetchReferrals = async () => {
     try {
       setLoading(true)
       setError(null)
 
-      const token = localStorage.getItem('authToken')
-      if (!token) {
+      if (!session?.user?.id) {
         setError('Not authenticated')
         return
       }
 
       const response = await fetch('/api/admin/referrals', {
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include', // Send session cookie
       })
 
       if (!response.ok) {

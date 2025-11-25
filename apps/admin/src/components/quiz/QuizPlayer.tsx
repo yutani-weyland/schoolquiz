@@ -17,9 +17,9 @@ import { trackQuizPlayed, hasExceededFreeQuizzes, hasPlayedQuiz } from "@/lib/qu
 import { MidQuizSignupPrompt } from "./MidQuizSignupPrompt";
 import { QuizCompletionModal } from "./QuizCompletionModal";
 import { IncompleteQuizModal } from "./IncompleteQuizModal";
+import { useSession } from "next-auth/react";
 import { useUserAccess } from "@/contexts/UserAccessContext";
 import { applyTheme, Theme } from "@/lib/theme";
-import { getAuthToken, getUserId } from "@/lib/storage";
 import { useQuizTimer } from "@/hooks/useQuizTimer";
 import { useQuizPlay } from "@/hooks/useQuizPlay";
 import { useQuizAchievements } from "@/hooks/useQuizAchievements";
@@ -316,6 +316,7 @@ function getNotchTextColor(backgroundColor: string): string {
 }
 
 export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, weekISO, isNewest = false, isDemo = false, maxQuestions, onDemoComplete, isCustom = false, customQuizId }: QuizPlayerProps) {
+	const { data: session } = useSession();
 	const { isPremium, isVisitor, isLoggedIn } = useUserAccess();
 
 	// For restricted quiz mode: show all questions initially, but lock after 6 answers
@@ -375,7 +376,9 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 		const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
 
 		// Require sign-up for non-visitors
-		if (!loggedIn) {
+		// Check both NextAuth session and legacy localStorage for compatibility
+		const isNextAuthLoggedIn = session?.user?.id;
+		if (!loggedIn && !isNextAuthLoggedIn) {
 			window.location.href = `/quizzes/${quizSlug}/intro`;
 			return;
 		}
@@ -637,30 +640,28 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 			const categories = rounds.map((r) => r.title.toLowerCase());
 
 			// Submit to API if user is logged in
-			const token = getAuthToken();
-			const userId = getUserId();
+			// Note: We need to get session here, but since this is inside a callback,
+			// we'll check session at the component level and pass it down or use a ref
+			// For now, we'll use the session from the hook
+			setHasSubmittedCompletion(true);
+			setIsSubmittingCompletion(true);
+			setCompletionError(null);
 
-			if (token && userId) {
-				setHasSubmittedCompletion(true);
-				setIsSubmittingCompletion(true);
-				setCompletionError(null);
-
-				fetch('/api/quiz/completion', {
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json',
-						Authorization: `Bearer ${token}`,
-						'X-User-Id': userId,
-					},
-					body: JSON.stringify({
-						quizSlug,
-						score,
-						totalQuestions: finalQuestions.length,
-						completionTimeSeconds: timer,
-						roundScores,
-						categories,
-					}),
-				})
+			fetch('/api/quiz/completion', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				credentials: 'include', // Send session cookie
+				body: JSON.stringify({
+					quizSlug,
+					score,
+					totalQuestions: finalQuestions.length,
+					completionTimeSeconds: timer,
+					roundScores,
+					categories,
+				}),
+			})
 					.then(async (res) => {
 						if (!res.ok) {
 							// Check if response is JSON before parsing
@@ -696,7 +697,6 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 						setIsSubmittingCompletion(false);
 						setHasSubmittedCompletion(false); // Allow retry
 					});
-			}
 		}
 	}, [showCompletionModal, hasSubmittedCompletion, quizSlug, isDemo, correctAnswers, finalQuestions, rounds, timer]);
 	// Timer running state is now managed by useQuizTimer hook
@@ -964,9 +964,8 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 				if (typeof window !== 'undefined') {
 					if (confirm('Are you sure you want to exit? Your progress will be saved.')) {
 						// Check login status and redirect accordingly
-						const token = getAuthToken();
-						const userId = getUserId();
-						const loggedInStatus = !!(token && userId);
+						// Use NextAuth session or fallback to legacy check
+						const loggedInStatus = !!(session?.user?.id || isLoggedIn);
 
 						if (loggedInStatus) {
 							// Logged-in users: go to quizzes page
@@ -1087,12 +1086,10 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 	const exitQuiz = () => {
 		// Restore global theme before exiting quiz to prevent flash
 		if (typeof window !== 'undefined') {
-			// Check login status synchronously from localStorage (same way UserAccessContext does)
+			// Check login status - use NextAuth session or fallback to legacy check
 			// This ensures we immediately know where to redirect without any async delays
 			// that could cause flashing of intermediate pages
-			const token = getAuthToken();
-			const userId = getUserId();
-			const loggedInStatus = !!(token && userId);
+			const loggedInStatus = !!(session?.user?.id || isLoggedIn);
 
 			try {
 				const themeOverride = localStorage.getItem('themeOverride');

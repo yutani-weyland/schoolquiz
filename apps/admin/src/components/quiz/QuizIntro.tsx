@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
+import { useSession } from "next-auth/react";
 import { motion, LayoutGroup, AnimatePresence } from "framer-motion";
 import { Calendar, Share2, Copy, Check, X } from "lucide-react";
 import { formatWeek } from "@/lib/format";
@@ -44,6 +45,7 @@ function textOn(bg: string): "black" | "white" {
 }
 
 export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
+	const { data: session } = useSession();
 	const [showShareMenu, setShowShareMenu] = useState(false);
 	const [copied, setCopied] = useState(false);
 	const [formattedDate, setFormattedDate] = useState<string>("");
@@ -107,16 +109,10 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 				}
 				
 				// Also check API if logged in
-				const token = localStorage.getItem('authToken');
-				const userId = localStorage.getItem('userId');
-				
-				if (token && userId) {
+				if (session?.user?.id) {
 					try {
 						const response = await fetch(`/api/quiz/completion?quizSlug=${encodeURIComponent(quiz.slug)}`, {
-							headers: {
-								'Authorization': `Bearer ${token}`,
-								'X-User-Id': userId,
-							},
+							credentials: 'include', // Send session cookie
 						});
 						
 						// Check if response is JSON before parsing

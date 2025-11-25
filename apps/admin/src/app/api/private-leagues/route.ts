@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@schoolquiz/db'
+import { requireApiAuth } from '@/lib/api-auth'
+import { ForbiddenError, handleApiError, ApiError } from '@/lib/api-error'
 
 async function getUserFromToken(request: NextRequest) {
   const authHeader = request.headers.get('Authorization')
@@ -90,21 +92,16 @@ const getDevStorage = () => {
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await getUserFromToken(request)
-    
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+    const user = await requireApiAuth()
     
     // Check if user is premium
-    if (user.tier !== 'premium') {
-      return NextResponse.json(
-        { error: 'Private leagues are only available to premium users' },
-        { status: 403 }
-      )
+    const isPremium = user.tier === 'premium' || 
+      user.subscriptionStatus === 'ACTIVE' ||
+      user.subscriptionStatus === 'TRIALING' ||
+      (user.freeTrialUntil && new Date(user.freeTrialUntil) > new Date())
+    
+    if (!isPremium) {
+      throw new ForbiddenError('Private leagues are only available to premium users')
     }
     
     // Check if DATABASE_URL is set - if not, use in-memory storage for development
@@ -258,8 +255,28 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json({ leagues: leaguesWithColors })
   } catch (error: any) {
+    // Handle ApiError instances (UnauthorizedError, ForbiddenError, etc.)
+    if (error instanceof ApiError) {
+      return handleApiError(error)
+    }
+    
     console.error('Error fetching private leagues:', error)
-    const errorMessage = error.message || String(error)
+    const errorMessage = error?.message || String(error)
+    
+    // Check for authentication/authorization errors first
+    if (errorMessage.includes('Unauthorized') || errorMessage === 'Unauthorized') {
+      return NextResponse.json(
+        { error: 'Unauthorized', code: 'UNAUTHORIZED' },
+        { status: 401 }
+      )
+    }
+    
+    if (errorMessage.includes('Forbidden') || errorMessage.includes('Private leagues are only available')) {
+      return NextResponse.json(
+        { error: errorMessage || 'Forbidden', code: 'FORBIDDEN' },
+        { status: 403 }
+      )
+    }
     
     // Check for database connection issues
     if (errorMessage.includes('DATABASE_URL') || errorMessage.includes('Environment variable not found')) {
@@ -279,10 +296,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ leagues: [] })
     }
     
-    return NextResponse.json(
-      { error: 'Failed to fetch leagues', details: errorMessage },
-      { status: 500 }
-    )
+    // Use handleApiError for any other errors
+    return handleApiError(error)
   }
 }
 
@@ -292,21 +307,16 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const user = await getUserFromToken(request)
-    
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+    const user = await requireApiAuth()
     
     // Check if user is premium
-    if (user.tier !== 'premium') {
-      return NextResponse.json(
-        { error: 'Private leagues are only available to premium users' },
-        { status: 403 }
-      )
+    const isPremium = user.tier === 'premium' || 
+      user.subscriptionStatus === 'ACTIVE' ||
+      user.subscriptionStatus === 'TRIALING' ||
+      (user.freeTrialUntil && new Date(user.freeTrialUntil) > new Date())
+    
+    if (!isPremium) {
+      throw new ForbiddenError('Private leagues are only available to premium users')
     }
     
     let body: any
@@ -558,12 +568,32 @@ export async function POST(request: NextRequest) {
     
     return NextResponse.json({ league }, { status: 201 })
   } catch (error: any) {
+    // Handle ApiError instances (UnauthorizedError, ForbiddenError, etc.)
+    if (error instanceof ApiError) {
+      return handleApiError(error)
+    }
+    
     console.error('Error creating private league:', {
-      message: error.message,
-      stack: error.stack,
-      response: error.response,
+      message: error?.message,
+      stack: error?.stack,
+      response: error?.response,
     })
-    const errorMessage = error.message || String(error)
+    const errorMessage = error?.message || String(error)
+    
+    // Check for authentication/authorization errors first
+    if (errorMessage.includes('Unauthorized') || errorMessage === 'Unauthorized') {
+      return NextResponse.json(
+        { error: 'Unauthorized', code: 'UNAUTHORIZED' },
+        { status: 401 }
+      )
+    }
+    
+    if (errorMessage.includes('Forbidden') || errorMessage.includes('Private leagues are only available')) {
+      return NextResponse.json(
+        { error: errorMessage || 'Forbidden', code: 'FORBIDDEN' },
+        { status: 403 }
+      )
+    }
     
     // Check for database connection issues
     if (errorMessage.includes('DATABASE_URL') || errorMessage.includes('Environment variable not found')) {
@@ -583,15 +613,8 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // Return error with details
-    return NextResponse.json(
-      { 
-        error: 'Failed to create league', 
-        details: errorMessage,
-        code: error.code,
-      },
-      { status: 500 }
-    )
+    // Use handleApiError for any other errors
+    return handleApiError(error)
   }
 }
 

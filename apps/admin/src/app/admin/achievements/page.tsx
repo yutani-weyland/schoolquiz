@@ -90,7 +90,7 @@ function AdminAchievementsPageContent() {
             const exampleAchievements: Achievement[] = [
               {
                 id: 'example-1',
-                slug: 'hail-caesar',
+                slug: 'ace',
                 name: 'HAIL, CAESAR!',
                 shortDescription: 'Get 5/5 in a History round',
                 longDescription: 'Achieve a perfect score in a round focused on historical topics',
@@ -98,7 +98,7 @@ function AdminAchievementsPageContent() {
                 rarity: 'common',
                 isPremiumOnly: false,
                 seasonTag: null,
-                iconKey: '/achievements/hail-caesar.png',
+                iconKey: '/achievements/ace.png',
                 unlockConditionType: 'score_5_of_5',
                 unlockConditionConfig: JSON.stringify({ category: 'history' }),
                 appearance: JSON.stringify({ cardVariant: 'foil' }),

@@ -37,13 +37,13 @@ interface Achievement {
 const MOCK_ACHIEVEMENTS: Achievement[] = [
 	{
 		id: "1",
-		slug: "hail-caesar",
-		name: "HAIL, CAESAR!",
-		shortDescription: "Get 5/5 in a History round",
+		slug: "ace",
+		name: "ACE",
+		shortDescription: "Get a perfect score",
 		category: "performance",
 		rarity: "common",
 		isPremiumOnly: false,
-		iconKey: "/achievements/hail-caesar.png",
+		iconKey: "/achievements/ace.png",
 		series: "Roman History",
 		cardVariant: "foil", // Special foil edition!
 		status: "unlocked",
@@ -364,9 +364,9 @@ export default function AchievementsPage() {
 						quizSlug: "15",
 					},
 					{
-						id: "test-hail-caesar-1",
-						slug: "hail-caesar",
-						name: "HAIL, CAESAR!",
+						id: "test-ace-1",
+						slug: "ace",
+						name: "ACE",
 						shortDescription: "Get 5/5 in a History round",
 						longDescription: "Achieve a perfect score in a round focused on historical topics",
 						category: "performance",

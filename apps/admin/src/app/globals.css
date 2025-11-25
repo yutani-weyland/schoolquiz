@@ -10,6 +10,11 @@
   .dark {
     --page-bg: #0F1419;
   }
+
+  /* Account for fixed header when scrolling to hash targets */
+  html {
+    scroll-padding-top: calc(env(safe-area-inset-top, 0px) + 5rem);
+  }
 }
 
 @keyframes spotlight {
@@ -72,34 +77,9 @@
   font-variant-emoji: emoji;
 }
 
-/* Bagnard Font - Open Foundry from GitHub (https://github.com/sebsan/Bagnard) */
-@font-face {
-  font-family: 'Bagnard';
-  src: url('/fonts/Bagnard.otf') format('opentype');
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
-
-/* Bagnard utility class for Hail Caesar */
+/* Bagnard utility class for Hail Caesar - using fallback serif font */
 .font-bluu-next {
-  font-family: 'Bagnard', serif !important;
-  font-weight: normal !important;
-  font-style: normal !important;
-}
-
-/* Germania Font for Blitzkrieg achievement */
-@font-face {
-  font-family: 'Germania';
-  src: url('/fonts/GERMANIA.ttf') format('truetype');
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
-
-/* Germania utility class for Blitzkrieg */
-.font-germania {
-  font-family: 'Germania', serif !important;
+  font-family: Georgia, 'Times New Roman', serif !important;
   font-weight: normal !important;
   font-style: normal !important;
 }
@@ -136,21 +116,6 @@
   font-style: normal !important;
 }
 
-/* Public Sans Font for 95.5 ATAR achievement - NESA font */
-@font-face {
-  font-family: 'Public Sans';
-  src: url('/fonts/PublicSans-VariableFont_wght.ttf') format('truetype');
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-}
-
-/* Public Sans utility class for 95.5 ATAR */
-.font-public-sans {
-  font-family: 'Public Sans', sans-serif !important;
-  font-weight: 600 !important;
-  font-style: normal !important;
-}
 
 @layer base {
   :root {
@@ -359,6 +324,12 @@
   box-sizing: border-box;
   display: flex;
   align-items: center;
+}
+
+/* Account for fixed header when scrolling to hash targets */
+/* This prevents Next.js from showing the "Skipping auto-scroll" warning */
+[id] {
+  scroll-margin-top: calc(var(--safe-area-top-fixed, env(safe-area-inset-top, 0px)) + 5rem);
 }
 
 /* Smooth scroll with edge masking for menu - bottom fade only */

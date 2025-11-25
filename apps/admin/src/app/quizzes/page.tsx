@@ -10,6 +10,7 @@ import { Footer } from "@/components/Footer";
 import { usePathname } from "next/navigation";
 import { getQuizColor } from '@/lib/colors';
 import { useUserAccess } from '@/contexts/UserAccessContext';
+import { useSession } from 'next-auth/react';
 
 const quizzes: Quiz[] = [
 	{
@@ -136,6 +137,7 @@ const quizzes: Quiz[] = [
 
 export default function QuizzesPage() {
 	const { isLoggedIn, userName, isLoading: userLoading, isVisitor } = useUserAccess();
+	const { data: session, status: sessionStatus } = useSession(); // NextAuth session
 	const [mounted, setMounted] = useState(false);
 	const [pageAnimationKey, setPageAnimationKey] = useState(0);
 	const [isLoading, setIsLoading] = useState(true);
@@ -146,13 +148,18 @@ export default function QuizzesPage() {
 		setMounted(true);
 
 		if (typeof window !== 'undefined') {
-			// Check localStorage immediately - this is the source of truth
+			// Check NextAuth session first (primary auth system)
+			const isNextAuthLoggedIn = sessionStatus === 'authenticated' && !!session;
+			
+			// Fallback: Check localStorage for legacy auth (backward compatibility)
 			const authToken = localStorage.getItem('authToken');
 			const userId = localStorage.getItem('userId');
-			const isActuallyLoggedIn = !!(authToken && userId);
+			const isLegacyLoggedIn = !!(authToken && userId);
+			
+			// User is logged in if either NextAuth or legacy auth says so
+			const isActuallyLoggedIn = isNextAuthLoggedIn || isLegacyLoggedIn;
 
-			// If user is logged in according to localStorage, NEVER redirect
-			// This prevents race conditions where context hasn't updated yet
+			// If user is logged in, show the page (never redirect logged-in users)
 			if (isActuallyLoggedIn) {
 				setIsLoading(false);
 				return; // Early return - user is logged in, show the page
@@ -162,25 +169,27 @@ export default function QuizzesPage() {
 			const loadingTimer = setTimeout(() => {
 				setIsLoading(false);
 
-				// Re-check localStorage in case it was set during the delay
+				// Re-check auth status after delay
+				const isNextAuthLoggedInRecheck = sessionStatus === 'authenticated' && !!session;
 				const authTokenRecheck = localStorage.getItem('authToken');
 				const userIdRecheck = localStorage.getItem('userId');
-				const isActuallyLoggedInRecheck = !!(authTokenRecheck && userIdRecheck);
+				const isLegacyLoggedInRecheck = !!(authTokenRecheck && userIdRecheck);
+				const isActuallyLoggedInRecheck = isNextAuthLoggedInRecheck || isLegacyLoggedInRecheck;
 
 				// ONLY redirect if:
-				// 1. Context has finished loading
-				// 2. localStorage confirms user is NOT logged in (definitive check)
-				// 3. Context also says not logged in (double-check)
-				// If localStorage says logged in, NEVER redirect
-				if (!userLoading && !isActuallyLoggedInRecheck && !isLoggedIn) {
-					// Redirect to latest quiz intro page (quiz #12)
+				// 1. Session status is not loading
+				// 2. User is NOT logged in via NextAuth
+				// 3. User is NOT logged in via legacy auth
+				// 4. Context also says not logged in (double-check)
+				if (sessionStatus !== 'loading' && !isActuallyLoggedInRecheck && !isLoggedIn) {
+					// Redirect to latest quiz intro page (quiz #12) for visitors
 					window.location.href = '/quizzes/12/intro';
 				}
 			}, 300); // Small delay to show skeleton
 
 			return () => clearTimeout(loadingTimer);
 		}
-	}, [userLoading, isLoggedIn]);
+	}, [sessionStatus, session, userLoading, isLoggedIn]);
 
 	// Force re-animation whenever the page is navigated to (including via menu)
 	useEffect(() => {
@@ -219,7 +228,11 @@ export default function QuizzesPage() {
 									className="w-full"
 								>
 									{(() => {
-										// Check localStorage directly for immediate display
+										// Check NextAuth session first (primary auth)
+										if (session?.user?.name) {
+											return `G'day ${session.user.name}!`;
+										}
+										// Fallback: Check localStorage for legacy auth
 										if (typeof window !== 'undefined') {
 											const storedUserName = localStorage.getItem('userName');
 											const storedUserId = localStorage.getItem('userId');

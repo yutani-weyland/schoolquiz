@@ -1,14 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireApiUserId } from '@/lib/api-auth';
 
 export async function PUT(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    // Verify authentication
+    await requireApiUserId();
 
     const body = await request.json();
     const { order } = body;

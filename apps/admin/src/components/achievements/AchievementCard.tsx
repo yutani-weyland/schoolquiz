@@ -540,11 +540,11 @@ export function AchievementCard({
     }
   }
   
-  // Check if this is the Hail Caesar achievement for Roman marble theme
-  const isHailCaesar = achievement.slug === "hail-caesar" || achievement.name === "HAIL, CAESAR!" || achievement.name === "Hail Caesar"
-  
   // Check if this is the Blitzkrieg achievement for army camo theme
   const isBlitzkrieg = achievement.slug === "blitzkrieg" || achievement.name === "Blitzkrieg!" || achievement.name === "Blitzkrieg" || achievement.name === "BLITZKRIEG"
+  
+  // Hail Caesar achievement removed - always false
+  const isHailCaesar = false
   
   // Check if this is the Doppelganger achievement for Spiderman theme
   const isDoppelganger = achievement.slug === "doppelganger" || achievement.name === "Doppelganger"
@@ -642,7 +642,7 @@ export function AchievementCard({
             ...(isHailCaesar || isBlitzkrieg || isDoppelganger || isATAR || isAllRounder
               ? {
                   backgroundColor: isHailCaesar ? '#F5F5F0' : isBlitzkrieg ? '#4A5D23' : isDoppelganger ? '#1E3A8A' : '#003366',
-                  backgroundImage: isHailCaesar ? 'url(/achievements/roman-marble-texture.png)' : 'none',
+                  backgroundImage: 'none',
                   backgroundSize: isHailCaesar ? 'cover' : undefined,
                   backgroundPosition: isHailCaesar ? 'center' : undefined,
                   backgroundBlendMode: isHailCaesar ? 'overlay' : undefined,
@@ -1251,7 +1251,7 @@ export function AchievementCard({
                   }}
                   className={cn(
                     "font-bold mb-2 text-center outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2 rounded px-1",
-                    isHailCaesar ? "text-gray-900 drop-shadow-[0_1px_3px_rgba(0,0,0,0.3)] font-bluu-next tracking-wide text-xl" : isBlitzkrieg ? "text-amber-400 font-black tracking-wider drop-shadow-[0_2px_4px_rgba(0,0,0,0.8),0_0_8px_rgba(255,165,0,0.5)] text-xl sm:text-2xl font-germania" : isDoppelganger ? "text-white font-bold tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.8),0_0_8px_rgba(220,38,38,0.6)] text-sm sm:text-base font-backissues uppercase" : (isATAR || isAllRounder) ? "text-white font-public-sans tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] text-lg sm:text-xl" : "text-base",
+                    isHailCaesar ? "text-gray-900 drop-shadow-[0_1px_3px_rgba(0,0,0,0.3)] font-bluu-next tracking-wide text-xl" : isBlitzkrieg ? "text-amber-400 font-black tracking-wider drop-shadow-[0_2px_4px_rgba(0,0,0,0.8),0_0_8px_rgba(255,165,0,0.5)] text-xl sm:text-2xl font-serif" : isDoppelganger ? "text-white font-bold tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.8),0_0_8px_rgba(220,38,38,0.6)] text-sm sm:text-base font-backissues uppercase" : (isATAR || isAllRounder) ? "text-white font-sans tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] text-lg sm:text-xl" : "text-base",
                     "line-clamp-2 leading-tight break-words overflow-wrap-anywhere",
                     "transition-all duration-500 ease-out",
                     "group-hover:translate-y-[-4px]",
@@ -1281,7 +1281,7 @@ export function AchievementCard({
               ) : (
                 <h3 className={cn(
                   "font-bold mb-2 text-center",
-                  isHailCaesar ? "text-gray-900 drop-shadow-[0_1px_3px_rgba(0,0,0,0.3)] font-bluu-next tracking-wide text-xl" : isBlitzkrieg ? "text-amber-400 font-black tracking-wider drop-shadow-[0_2px_4px_rgba(0,0,0,0.8),0_0_8px_rgba(255,165,0,0.5)] text-xl sm:text-2xl font-germania" : isDoppelganger ? "text-white font-bold tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.8),0_0_8px_rgba(220,38,38,0.6)] text-sm sm:text-base font-backissues uppercase" : (isATAR || isAllRounder) ? "text-white font-public-sans tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] text-lg sm:text-xl" : "text-base",
+                  isHailCaesar ? "text-gray-900 drop-shadow-[0_1px_3px_rgba(0,0,0,0.3)] font-bluu-next tracking-wide text-xl" : isBlitzkrieg ? "text-amber-400 font-black tracking-wider drop-shadow-[0_2px_4px_rgba(0,0,0,0.8),0_0_8px_rgba(255,165,0,0.5)] text-xl sm:text-2xl font-serif" : isDoppelganger ? "text-white font-bold tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.8),0_0_8px_rgba(220,38,38,0.6)] text-sm sm:text-base font-backissues uppercase" : (isATAR || isAllRounder) ? "text-white font-sans tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] text-lg sm:text-xl" : "text-base",
                   "line-clamp-2 leading-tight break-words overflow-wrap-anywhere",
                   "transition-all duration-500 ease-out",
                   "group-hover:translate-y-[-4px]",
@@ -1324,7 +1324,7 @@ export function AchievementCard({
                   }}
                   className={cn(
                     "text-xs text-center outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2 rounded px-1",
-                    isHailCaesar ? "text-gray-800 drop-shadow-[0_1px_2px_rgba(0,0,0,0.2)]" : isBlitzkrieg ? "text-amber-300 font-medium drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : isDoppelganger ? "text-red-200 font-medium drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : (isATAR || isAllRounder) ? "text-white font-public-sans drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : style.text,
+                    isHailCaesar ? "text-gray-800 drop-shadow-[0_1px_2px_rgba(0,0,0,0.2)]" : isBlitzkrieg ? "text-amber-300 font-medium drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : isDoppelganger ? "text-red-200 font-medium drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : (isATAR || isAllRounder) ? "text-white font-sans drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : style.text,
                     isHailCaesar ? "opacity-95" : (isBlitzkrieg || isDoppelganger || isATAR || isAllRounder) ? "opacity-100" : "opacity-90",
                     "line-clamp-2 leading-tight break-words overflow-wrap-anywhere",
                     "transition-all duration-500 ease-out delay-75",
@@ -1350,7 +1350,7 @@ export function AchievementCard({
               ) : (
                 <p className={cn(
                   "text-xs text-center",
-                  isHailCaesar ? "text-gray-800 drop-shadow-[0_1px_2px_rgba(0,0,0,0.2)]" : isBlitzkrieg ? "text-amber-300 font-medium drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : isDoppelganger ? "text-red-200 font-medium drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : (isATAR || isAllRounder) ? "text-white font-public-sans drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : style.text,
+                  isHailCaesar ? "text-gray-800 drop-shadow-[0_1px_2px_rgba(0,0,0,0.2)]" : isBlitzkrieg ? "text-amber-300 font-medium drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : isDoppelganger ? "text-red-200 font-medium drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : (isATAR || isAllRounder) ? "text-white font-sans drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : style.text,
                   isHailCaesar ? "opacity-95" : (isBlitzkrieg || isDoppelganger || isATAR || isAllRounder) ? "opacity-100" : "opacity-90",
                   "line-clamp-2 leading-tight break-words overflow-wrap-anywhere",
                   "transition-all duration-500 ease-out delay-75",
@@ -1398,7 +1398,7 @@ export function AchievementCard({
                   </div>
                   <div className={cn(
                     "flex items-center justify-between text-xs",
-                    isHailCaesar ? "text-gray-800 drop-shadow-[0_1px_2px_rgba(0,0,0,0.2)]" : isBlitzkrieg ? "text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : isDoppelganger ? "text-red-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : (isATAR || isAllRounder) ? "text-white font-public-sans drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : style.text,
+                    isHailCaesar ? "text-gray-800 drop-shadow-[0_1px_2px_rgba(0,0,0,0.2)]" : isBlitzkrieg ? "text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : isDoppelganger ? "text-red-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : (isATAR || isAllRounder) ? "text-white font-sans drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : style.text,
                     "opacity-90"
                   )}>
                     <span className="font-medium">
@@ -1431,7 +1431,7 @@ export function AchievementCard({
                   </div>
                   <div className={cn(
                     "flex items-center justify-center text-xs",
-                        isHailCaesar ? "text-gray-800 drop-shadow-[0_1px_2px_rgba(0,0,0,0.2)]" : isBlitzkrieg ? "text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : isDoppelganger ? "text-red-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : (isATAR || isAllRounder) ? "text-white font-public-sans drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : style.text,
+                        isHailCaesar ? "text-gray-800 drop-shadow-[0_1px_2px_rgba(0,0,0,0.2)]" : isBlitzkrieg ? "text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : isDoppelganger ? "text-red-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : (isATAR || isAllRounder) ? "text-white font-sans drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : style.text,
                     "opacity-90"
                   )}>
                     <span className="font-medium">
@@ -1445,7 +1445,7 @@ export function AchievementCard({
               {isUnlocked && unlockedAt && (
                 <div className={cn(
                   "flex items-center justify-center gap-1.5 text-xs",
-                      isHailCaesar ? "text-gray-800 drop-shadow-[0_1px_2px_rgba(0,0,0,0.2)]" : isBlitzkrieg ? "text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : isDoppelganger ? "text-red-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : (isATAR || isAllRounder) ? "text-white font-public-sans drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : style.text,
+                      isHailCaesar ? "text-gray-800 drop-shadow-[0_1px_2px_rgba(0,0,0,0.2)]" : isBlitzkrieg ? "text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : isDoppelganger ? "text-red-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : (isATAR || isAllRounder) ? "text-white font-sans drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : style.text,
                       "opacity-90"
                     )}>
                       <Calendar className={cn("w-3 h-3", isHailCaesar ? "text-gray-800" : isBlitzkrieg ? "text-amber-300" : isDoppelganger ? "text-red-200" : (isATAR || isAllRounder) ? "text-white" : style.text)} />
@@ -1512,7 +1512,7 @@ export function AchievementCard({
               ...(isHailCaesar || isBlitzkrieg || isDoppelganger || isATAR || isAllRounder
                 ? {
                     backgroundColor: isHailCaesar ? '#F5F5F0' : isBlitzkrieg ? '#4A5D23' : isDoppelganger ? '#1E3A8A' : '#003366',
-                    backgroundImage: isHailCaesar ? 'url(/achievements/roman-marble-texture.png)' : 'none',
+                    backgroundImage: 'none',
                     backgroundSize: isHailCaesar ? 'cover' : undefined,
                     backgroundPosition: isHailCaesar ? 'center' : undefined,
                     backgroundBlendMode: isHailCaesar ? 'overlay' : undefined,
@@ -2093,7 +2093,7 @@ export function AchievementCard({
               <div className="space-y-2">
                 <h3 className={cn(
                   "font-bold",
-                  isHailCaesar ? "text-gray-900 drop-shadow-[0_1px_3px_rgba(0,0,0,0.3)] font-bluu-next tracking-wide text-2xl uppercase" : isBlitzkrieg ? "text-amber-400 font-black tracking-wider drop-shadow-[0_2px_4px_rgba(0,0,0,0.8),0_0_8px_rgba(255,165,0,0.5)] text-xl sm:text-2xl font-germania" : isDoppelganger ? "text-white font-bold tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.8),0_0_8px_rgba(220,38,38,0.6)] text-base sm:text-lg font-backissues uppercase" : (isATAR || isAllRounder) ? "text-white font-public-sans tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] text-xl sm:text-2xl" : "text-lg",
+                  isHailCaesar ? "text-gray-900 drop-shadow-[0_1px_3px_rgba(0,0,0,0.3)] font-bluu-next tracking-wide text-2xl uppercase" : isBlitzkrieg ? "text-amber-400 font-black tracking-wider drop-shadow-[0_2px_4px_rgba(0,0,0,0.8),0_0_8px_rgba(255,165,0,0.5)] text-xl sm:text-2xl font-serif" : isDoppelganger ? "text-white font-bold tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.8),0_0_8px_rgba(220,38,38,0.6)] text-base sm:text-lg font-backissues uppercase" : (isATAR || isAllRounder) ? "text-white font-sans tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] text-xl sm:text-2xl" : "text-lg",
                   "leading-tight break-words overflow-wrap-anywhere",
                   !isHailCaesar && !isBlitzkrieg && !isDoppelganger && !isATAR && !isAllRounder && style.text
                 )}
@@ -2120,7 +2120,7 @@ export function AchievementCard({
                 </h3>
                 <p className={cn(
                   "text-sm",
-                  isHailCaesar ? "text-gray-800 drop-shadow-[0_1px_2px_rgba(0,0,0,0.2)]" : isBlitzkrieg ? "text-amber-300 font-medium drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)]" : isDoppelganger ? "text-red-200 font-medium drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)]" : (isATAR || isAllRounder) ? "text-white font-public-sans drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : style.text,
+                  isHailCaesar ? "text-gray-800 drop-shadow-[0_1px_2px_rgba(0,0,0,0.2)]" : isBlitzkrieg ? "text-amber-300 font-medium drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)]" : isDoppelganger ? "text-red-200 font-medium drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)]" : (isATAR || isAllRounder) ? "text-white font-sans drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : style.text,
                   "opacity-90",
                   "leading-relaxed",
                   "line-clamp-4",
@@ -2163,7 +2163,7 @@ export function AchievementCard({
                   </div>
                   <div className={cn(
                     "flex items-center justify-center gap-2 text-sm",
-                    isHailCaesar ? "text-gray-800 drop-shadow-[0_1px_2px_rgba(0,0,0,0.2)]" : isBlitzkrieg ? "text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : isDoppelganger ? "text-red-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : (isATAR || isAllRounder) ? "text-white font-public-sans drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : style.text,
+                    isHailCaesar ? "text-gray-800 drop-shadow-[0_1px_2px_rgba(0,0,0,0.2)]" : isBlitzkrieg ? "text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : isDoppelganger ? "text-red-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : (isATAR || isAllRounder) ? "text-white font-sans drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : style.text,
                     "opacity-90"
                   )}>
                     <span className="font-medium">
@@ -2196,7 +2196,7 @@ export function AchievementCard({
                   </div>
                   <div className={cn(
                     "flex items-center justify-center gap-2 text-sm",
-                    isHailCaesar ? "text-gray-800 drop-shadow-[0_1px_2px_rgba(0,0,0,0.2)]" : isBlitzkrieg ? "text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : isDoppelganger ? "text-red-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : (isATAR || isAllRounder) ? "text-white font-public-sans drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : style.text,
+                    isHailCaesar ? "text-gray-800 drop-shadow-[0_1px_2px_rgba(0,0,0,0.2)]" : isBlitzkrieg ? "text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : isDoppelganger ? "text-red-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : (isATAR || isAllRounder) ? "text-white font-sans drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : style.text,
                     "opacity-90"
                   )}>
                     <span className="font-medium">
@@ -2212,7 +2212,7 @@ export function AchievementCard({
                 {unlockedAt && (
                   <div className={cn(
                     "flex items-center justify-center gap-2 text-sm",
-                    isHailCaesar ? "text-gray-800 drop-shadow-[0_1px_2px_rgba(0,0,0,0.2)]" : isBlitzkrieg ? "text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : isDoppelganger ? "text-red-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : (isATAR || isAllRounder) ? "text-white font-public-sans drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : style.text,
+                    isHailCaesar ? "text-gray-800 drop-shadow-[0_1px_2px_rgba(0,0,0,0.2)]" : isBlitzkrieg ? "text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : isDoppelganger ? "text-red-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : (isATAR || isAllRounder) ? "text-white font-sans drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : style.text,
                     "opacity-90"
                   )}>
                     <Calendar className={cn("w-4 h-4", isHailCaesar ? "text-gray-800" : isBlitzkrieg ? "text-amber-300" : isDoppelganger ? "text-red-200" : (isATAR || isAllRounder) ? "text-white" : style.text)} />
@@ -2230,7 +2230,7 @@ export function AchievementCard({
                 {quizSlug && (
                   <div className={cn(
                     "flex items-center justify-center gap-2 text-sm",
-                    isHailCaesar ? "text-gray-800 drop-shadow-[0_1px_2px_rgba(0,0,0,0.2)]" : isBlitzkrieg ? "text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : isDoppelganger ? "text-red-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : (isATAR || isAllRounder) ? "text-white font-public-sans drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : style.text,
+                    isHailCaesar ? "text-gray-800 drop-shadow-[0_1px_2px_rgba(0,0,0,0.2)]" : isBlitzkrieg ? "text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : isDoppelganger ? "text-red-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : (isATAR || isAllRounder) ? "text-white font-sans drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]" : style.text,
                     "opacity-90"
                   )}>
                     <span className="font-medium">Quiz:</span>

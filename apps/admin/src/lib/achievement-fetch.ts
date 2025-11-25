@@ -9,33 +9,32 @@ const fetchCache = new Map<string, Promise<any>>();
 
 /**
  * Fetch all achievements with user's unlock status
- * Multiple calls with the same userId/token will share the same fetch promise
+ * Multiple calls with the same userId will share the same fetch promise
  * Returns the parsed JSON data directly (not a Response object)
+ * 
+ * @param userId - User ID (required for authenticated users)
+ * @param token - Deprecated: token is no longer used, session cookie is used instead
  */
 export async function fetchAchievements(
   userId: string | null,
   token: string | null
 ): Promise<any> {
-  if (!token) {
+  if (!userId) {
     // Return empty achievements for visitors
     return { achievements: [], tier: 'visitor' };
   }
 
-  // Create cache key based on userId and token prefix
-  const cacheKey = `achievements-${userId || 'anonymous'}-${token.slice(0, 20)}`;
+  // Create cache key based on userId
+  const cacheKey = `achievements-${userId}`;
   
   // Check if there's already a pending request
   let fetchPromise = fetchCache.get(cacheKey);
   
   if (!fetchPromise) {
     // Create new fetch request and parse JSON immediately
-    const headers: HeadersInit = { Authorization: `Bearer ${token}` };
-    if (userId) {
-      headers['X-User-Id'] = userId;
-    }
-    
+    // Use session cookie instead of token
     fetchPromise = fetch('/api/achievements', {
-      headers,
+      credentials: 'include', // Send session cookie
     })
       .then(async (response) => {
         if (!response.ok) {
@@ -58,32 +57,31 @@ export async function fetchAchievements(
 
 /**
  * Fetch user's achievements with progress
- * Multiple calls with the same userId/token will share the same fetch promise
+ * Multiple calls with the same userId will share the same fetch promise
  * Returns the parsed JSON data directly (not a Response object)
+ * 
+ * @param userId - User ID (required for authenticated users)
+ * @param token - Deprecated: token is no longer used, session cookie is used instead
  */
 export async function fetchUserAchievements(
   userId: string | null,
   token: string | null
 ): Promise<any> {
-  if (!token || !userId) {
+  if (!userId) {
     return { achievements: [] };
   }
 
-  // Create cache key based on userId and token prefix
-  const cacheKey = `user-achievements-${userId}-${token.slice(0, 20)}`;
+  // Create cache key based on userId
+  const cacheKey = `user-achievements-${userId}`;
   
   // Check if there's already a pending request
   let fetchPromise = fetchCache.get(cacheKey);
   
   if (!fetchPromise) {
     // Create new fetch request and parse JSON immediately
-    const headers: HeadersInit = { 
-      Authorization: `Bearer ${token}`,
-      'X-User-Id': userId,
-    };
-    
+    // Use session cookie instead of token
     fetchPromise = fetch('/api/achievements/user', {
-      headers,
+      credentials: 'include', // Send session cookie
     })
       .then(async (response) => {
         if (!response.ok) {

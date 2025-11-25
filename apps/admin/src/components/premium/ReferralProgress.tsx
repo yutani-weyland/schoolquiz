@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { motion } from 'framer-motion';
 import { Users, Copy, Check, Gift, Sparkles } from 'lucide-react';
 import { useUserTier } from '@/hooks/useUserTier';
@@ -11,24 +12,40 @@ interface ReferralProgressProps {
 }
 
 export function ReferralProgress({ userId, organisationDomain }: ReferralProgressProps) {
+  const { data: session, status } = useSession();
   const { tier, isBasic } = useUserTier();
   const [referralCount, setReferralCount] = useState(0);
   const [referralCode, setReferralCode] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // Use session userId if not provided as prop
+  const effectiveUserId = userId || session?.user?.id;
+
   useEffect(() => {
-    if (!isBasic || !userId) return;
+    if (!isBasic || !effectiveUserId) {
+      setLoading(false);
+      return;
+    }
 
-    // Fetch referral data
-    const fetchReferralData = async () => {
-      try {
-        const token = localStorage.getItem('authToken');
-        if (!token) return;
+    if (status === 'authenticated' && session) {
+      fetchReferralData();
+    } else if (status === 'unauthenticated') {
+      setLoading(false);
+    }
+  }, [status, session, isBasic, effectiveUserId]);
 
-        const response = await fetch('/api/user/referral', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+  // Fetch referral data
+  const fetchReferralData = async () => {
+    try {
+      if (!session?.user?.id) {
+        setLoading(false);
+        return;
+      }
+
+      const response = await fetch('/api/user/referral', {
+        credentials: 'include', // Send session cookie
+      });
 
         if (response.ok) {
           const data = await response.json();

@@ -8,16 +8,24 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "clean": "rm -rf dist",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui"
   },
   "dependencies": {
-    "next-auth": "^4.24.0",
+    "@auth/prisma-adapter": "^2.7.0",
     "@schoolquiz/db": "workspace:*",
+    "bcryptjs": "^2.4.3",
+    "next-auth": "5.0.0-beta.30",
+    "rate-limiter-flexible": "^5.0.0",
     "zod": "^3.22.0"
   },
   "devDependencies": {
     "@schoolquiz/config": "workspace:*",
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20.0.0",
-    "typescript": "^5.1.0"
+    "typescript": "^5.1.0",
+    "vitest": "^1.0.4"
   }
 }

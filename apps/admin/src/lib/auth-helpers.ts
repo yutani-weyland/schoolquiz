@@ -1,9 +1,16 @@
 /**
  * Authentication helpers for API routes
  * 
- * TODO: Replace with real authentication when auth system is implemented
- * This currently uses a placeholder approach that can be easily swapped
- * for real session/auth token validation.
+ * @deprecated This file uses custom header-based auth.
+ * Use lib/auth.ts instead, which uses NextAuth's getServerSession().
+ * 
+ * Migration guide:
+ * - getAuthenticatedUser(request) -> getCurrentUser() from lib/auth.ts
+ * - requireAuth(request) -> requireAuth() from lib/auth.ts
+ * - requireAdmin(request) -> requireRole('PLATFORM_ADMIN') from lib/auth.ts
+ * 
+ * This file is kept for backward compatibility during migration.
+ * Will be removed in Phase 7 cleanup.
  */
 
 import { NextRequest } from 'next/server';

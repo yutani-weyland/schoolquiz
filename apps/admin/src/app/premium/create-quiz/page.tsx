@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { PageContainer } from '@/components/layout/PageContainer';
@@ -10,7 +11,6 @@ import { QuizColorPicker } from '@/components/admin/QuizColorPicker';
 import { motion } from 'framer-motion';
 import { Plus, Trash2, Save, Eye, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
 import { useUserTier } from '@/hooks/useUserTier';
-import { getAuthToken, getUserId } from '@/lib/storage';
 
 interface Question {
   id: string;
@@ -35,6 +35,7 @@ interface QuizData {
 }
 
 export default function CreateQuizPage() {
+  const { data: session } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get('edit');
@@ -68,14 +69,8 @@ export default function CreateQuizPage() {
 
   const loadQuiz = async (id: string) => {
     try {
-      const token = getAuthToken();
-      const userId = getUserId();
-      
       const res = await fetch(`/api/premium/custom-quizzes/${id}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'X-User-Id': userId || '',
-        },
+        credentials: 'include', // Send session cookie
       });
 
       if (res.ok) {
@@ -173,8 +168,10 @@ export default function CreateQuizPage() {
 
     setSaving(true);
     try {
-      const token = getAuthToken();
-      const userId = getUserId();
+      if (!session?.user?.id) {
+        router.push('/sign-in');
+        return;
+      }
 
       const payload = {
         title: quizData.title.trim(),
@@ -197,10 +194,9 @@ export default function CreateQuizPage() {
         res = await fetch(`/api/premium/custom-quizzes/${editId}`, {
           method: 'PATCH',
           headers: {
-            'Authorization': `Bearer ${token}`,
-            'X-User-Id': userId || '',
             'Content-Type': 'application/json',
           },
+          credentials: 'include', // Send session cookie
           body: JSON.stringify({
             ...payload,
             status: publish ? 'published' : 'draft',
@@ -211,10 +207,9 @@ export default function CreateQuizPage() {
         res = await fetch('/api/premium/custom-quizzes', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${token}`,
-            'X-User-Id': userId || '',
             'Content-Type': 'application/json',
           },
+          credentials: 'include', // Send session cookie
           body: JSON.stringify(payload),
         });
       }

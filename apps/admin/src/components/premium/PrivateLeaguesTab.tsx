@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { Trophy, Plus, X, Edit2, Mail, Copy, Check, Users, LogIn, Eye, BarChart3, Settings } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { allColors } from '@/lib/colors';
 import { PrivateLeaguesAnalytics } from '@/components/profile/PrivateLeaguesAnalytics';
-import { getUserId } from '@/lib/storage';
 
 // Use the combined palette: 2025 trending warm colors + modern vibrant colors
 export const leagueColors = allColors;
@@ -166,6 +166,7 @@ function textOn(bg: string): 'black' | 'white' {
 type TabType = 'performance' | 'manage';
 
 export function PrivateLeaguesTab() {
+  const { data: session } = useSession();
   const [activeTab, setActiveTab] = useState<TabType>('performance');
   const [userId, setUserId] = useState<string | null>(null);
   const [leaderboards, setLeaderboards] = useState<League[]>(mockLeaderboards);
@@ -175,37 +176,12 @@ export function PrivateLeaguesTab() {
   const [invitingId, setInvitingId] = useState<string | null>(null);
   const [viewingMembersId, setViewingMembersId] = useState<string | null>(null);
 
-  // Get user ID on mount
+  // Get user ID from session
   useEffect(() => {
-    const currentUserId = getUserId();
-    if (currentUserId) {
-      setUserId(currentUserId);
-    } else {
-      // Fallback: try to fetch from API or use mock
-      const token = localStorage.getItem('authToken');
-      if (token) {
-        fetch('/api/user/profile', {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-          .then((res) => res.json())
-          .then((data) => {
-            if (data.id) {
-              setUserId(data.id);
-            } else {
-              // Fallback to mock user ID
-              setUserId('user-andrew-123');
-            }
-          })
-          .catch(() => {
-            // Fallback to mock user ID
-            setUserId('user-andrew-123');
-          });
-      } else {
-        // Fallback to mock user ID
-        setUserId('user-andrew-123');
-      }
+    if (session?.user?.id) {
+      setUserId(session.user.id);
     }
-  }, []);
+  }, [session]);
 
   const handleUpdate = (id: string, updates: Partial<League>) => {
     setLeaderboards(leaderboards.map(lb => lb.id === id ? { ...lb, ...updates } : lb));
@@ -870,6 +846,7 @@ function JoinLeagueModal({
   onJoin: (league: League) => void;
   onClose: () => void;
 }) {
+  const { data: session } = useSession();
   const [inviteCode, setInviteCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -885,8 +862,7 @@ function JoinLeagueModal({
     setError(null);
 
     try {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
+      if (!session?.user?.id) {
         throw new Error('Not authenticated');
       }
 
@@ -894,8 +870,8 @@ function JoinLeagueModal({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
+        credentials: 'include', // Send session cookie
         body: JSON.stringify({ inviteCode: inviteCode.trim().toUpperCase() }),
       });
 

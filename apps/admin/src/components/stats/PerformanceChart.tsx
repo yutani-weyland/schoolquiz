@@ -1,6 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { memo, useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
 import { TrendingUp } from 'lucide-react';
 
@@ -8,13 +9,13 @@ interface PerformanceChartProps {
   data: Array<{ date: string; score: number; quizSlug: string }>;
 }
 
-export function PerformanceChart({ data }: PerformanceChartProps) {
-  // Format data for chart
-  const chartData = data.map(item => ({
+export const PerformanceChart = memo(function PerformanceChart({ data }: PerformanceChartProps) {
+  // Format data for chart - memoize to avoid recalculation
+  const chartData = useMemo(() => data.map(item => ({
     date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
     score: Math.round(item.score),
     fullDate: item.date,
-  }));
+  })), [data]);
 
   return (
     <motion.div
@@ -81,5 +82,5 @@ export function PerformanceChart({ data }: PerformanceChartProps) {
       </div>
     </motion.div>
   );
-}
+});
 

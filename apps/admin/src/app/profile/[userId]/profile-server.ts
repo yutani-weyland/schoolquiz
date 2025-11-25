@@ -1,11 +1,11 @@
 /**
  * Server-side data fetching for profile page
- * Uses cookies for authentication
+ * Uses NextAuth session for authentication
  */
 
 import { cookies } from 'next/headers'
 import { prisma } from '@schoolquiz/db'
-import { getServerAuthUser } from '@/lib/server-auth'
+import { auth } from '@schoolquiz/auth'
 import { unstable_cache } from 'next/cache'
 
 /**
@@ -211,13 +211,13 @@ async function fetchAchievementsUncached(userId: string) {
  * Get profile data (server-side)
  */
 export async function getProfileData(userId: string) {
-  const authUser = await getServerAuthUser()
+  const session = await auth()
   
-  if (!authUser) {
+  if (!session?.user?.id) {
     return null
   }
 
-  const currentUserId = authUser.userId
+  const currentUserId = session.user.id
   const targetUserId = userId || currentUserId
 
   // Cache profile data for 30 seconds
@@ -237,45 +237,45 @@ export async function getProfileData(userId: string) {
  * Get season stats (server-side)
  */
 export async function getSeasonStats(seasonSlug: string = '2025') {
-  const authUser = await getServerAuthUser()
+  const session = await auth()
   
-  if (!authUser) {
+  if (!session?.user?.id) {
     return null
   }
 
   // Cache season stats for 60 seconds
   const getCachedStats = unstable_cache(
     async (uid: string, slug: string) => fetchSeasonStatsUncached(uid, slug),
-    [`season-stats-${authUser.userId}-${seasonSlug}`],
+    [`season-stats-${session.user.id}-${seasonSlug}`],
     {
       revalidate: 60,
-      tags: [`season-stats-${authUser.userId}`],
+      tags: [`season-stats-${session.user.id}`],
     }
   )
 
-  return getCachedStats(authUser.userId, seasonSlug)
+  return getCachedStats(session.user.id, seasonSlug)
 }
 
 /**
  * Get user achievements (server-side)
  */
 export async function getUserAchievements() {
-  const authUser = await getServerAuthUser()
+  const session = await auth()
   
-  if (!authUser) {
+  if (!session?.user?.id) {
     return { achievements: [] }
   }
 
   // Cache achievements for 30 seconds
   const getCachedAchievements = unstable_cache(
     async (uid: string) => fetchAchievementsUncached(uid),
-    [`achievements-${authUser.userId}`],
+    [`achievements-${session.user.id}`],
     {
       revalidate: 30,
-      tags: [`achievements-${authUser.userId}`],
+      tags: [`achievements-${session.user.id}`],
     }
   )
 
-  return getCachedAchievements(authUser.userId)
+  return getCachedAchievements(session.user.id)
 }
 

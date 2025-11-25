@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -9,6 +10,7 @@ import { Mail, MessageSquare, Send, CheckCircle, AlertCircle, Sparkles } from 'l
 import { motion } from 'framer-motion';
 
 export default function ContactPage() {
+  const { data: session } = useSession();
   const [isPremium, setIsPremium] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -16,15 +18,14 @@ export default function ContactPage() {
     // Check premium status
     const checkPremium = async () => {
       try {
-        const token = localStorage.getItem('authToken');
-        if (!token) {
+        if (!session?.user?.id) {
           setIsPremium(false);
           setIsLoading(false);
           return;
         }
 
         const response = await fetch('/api/user/subscription', {
-          headers: { Authorization: `Bearer ${token}` },
+          credentials: 'include', // Send session cookie
         });
 
         if (response.ok) {

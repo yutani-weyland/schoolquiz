@@ -1,14 +1,15 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useSession } from 'next-auth/react'
 import { useParams, useRouter } from 'next/navigation'
 import { QuizPlayerWrapper } from '@/components/quiz/QuizPlayerWrapper'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
-import { getAuthToken, getUserId } from '@/lib/storage'
 import { Loader2 } from 'lucide-react'
 import { transformQuizToPlayFormat } from '@/lib/transformers/quizTransformers'
 
 export default function CustomQuizPlayPage() {
+  const { data: session } = useSession()
   const params = useParams()
   const router = useRouter()
   const quizId = params.id as string
@@ -19,24 +20,22 @@ export default function CustomQuizPlayPage() {
   const [metadata, setMetadata] = useState<any>(null)
 
   useEffect(() => {
-    loadQuiz()
-  }, [quizId])
+    if (session?.user?.id) {
+      loadQuiz()
+    } else if (session === null) {
+      router.push('/sign-in')
+    }
+  }, [quizId, session])
 
   const loadQuiz = async () => {
     try {
-      const token = getAuthToken()
-      const userId = getUserId()
-
-      if (!token || !userId) {
+      if (!session?.user?.id) {
         router.push('/sign-in')
         return
       }
 
       const res = await fetch(`/api/premium/custom-quizzes/${quizId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'X-User-Id': userId,
-        },
+        credentials: 'include', // Send session cookie
       })
 
       if (!res.ok) {
@@ -106,7 +105,7 @@ export default function CustomQuizPlayPage() {
           </h2>
           <button
             onClick={() => router.push('/custom-quizzes')}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="px-4 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors"
           >
             Back to My Quizzes
           </button>

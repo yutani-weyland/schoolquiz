@@ -1,38 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@schoolquiz/db'
-
-async function getUserFromToken(request: NextRequest) {
-  const authHeader = request.headers.get('Authorization')
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return null
-  }
-
-  const token = authHeader.substring(7)
-  let userId: string | null = request.headers.get('X-User-Id')
-  
-  if (!userId && token.startsWith('mock-token-')) {
-    const parts = token.split('-')
-    if (parts.length >= 3) {
-      userId = parts.slice(2, -1).join('-')
-    }
-  }
-
-  if (!userId) {
-    return null
-  }
-
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    include: {
-      organisationMembers: {
-        where: { status: 'ACTIVE' },
-        include: { organisation: true },
-      },
-    },
-  })
-
-  return user
-}
+import { requireApiAuth } from '@/lib/api-auth'
+import { ForbiddenError } from '@/lib/api-error'
 
 /**
  * GET /api/private-leagues/requests
@@ -40,14 +9,7 @@ async function getUserFromToken(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
-    const user = await getUserFromToken(request)
-    
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+    const user = await requireApiAuth()
 
     // Get all leagues where user is creator
     let userLeagues: any[] = []
@@ -160,20 +122,15 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const user = await getUserFromToken(request)
-    
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+    const user = await requireApiAuth()
 
-    if (user.tier !== 'premium') {
-      return NextResponse.json(
-        { error: 'Private leagues are only available to premium users' },
-        { status: 403 }
-      )
+    const isPremium = user.tier === 'premium' || 
+      user.subscriptionStatus === 'ACTIVE' ||
+      user.subscriptionStatus === 'TRIALING' ||
+      (user.freeTrialUntil && new Date(user.freeTrialUntil) > new Date())
+    
+    if (!isPremium) {
+      throw new ForbiddenError('Private leagues are only available to premium users')
     }
 
     const body = await request.json()

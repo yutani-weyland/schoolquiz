@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useSession } from 'next-auth/react';
 import { IconUser, IconMail, IconBuilding, IconCheck, IconX, IconWorld, IconUsers, IconLock, IconEdit } from '@tabler/icons-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ContentCard } from '@/components/layout/ContentCard';
@@ -17,6 +18,7 @@ interface UserProfile {
 }
 
 export function AccountProfileTab() {
+  const { data: session, status } = useSession();
   const [profile, setProfile] = useState<UserProfile>({
     name: 'Andrew',
     email: 'andrew@example.com',
@@ -37,43 +39,44 @@ export function AccountProfileTab() {
   const { isBasic, tier } = useUserTier();
   const [userId, setUserId] = useState<string | undefined>();
 
-  useEffect(() => {
-    // Fetch user profile on mount
-    const fetchProfile = async () => {
-      try {
-        const token = localStorage.getItem('authToken');
-        if (!token) return;
+  // Fetch user profile on mount - memoized to prevent infinite loops
+  const fetchProfile = useCallback(async () => {
+    try {
+      if (!session?.user?.id) return;
 
-        const response = await fetch('/api/user/profile', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+      const response = await fetch('/api/user/profile', {
+        credentials: 'include', // Send session cookie
+      });
 
-        if (response.ok) {
-          const data = await response.json();
-          setProfile(data);
-          setTeamNameInput(data.teamName || '');
-          setProfileVisibility(data.profileVisibility || 'PUBLIC');
-          setAvatar(data.avatar || '👤');
-          setUserId(data.id);
-        }
-
-        // Check premium status
-        const subscriptionResponse = await fetch('/api/user/subscription', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (subscriptionResponse.ok) {
-          const subscriptionData = await subscriptionResponse.json();
-          const premiumStatuses = ['ACTIVE', 'TRIALING', 'FREE_TRIAL'];
-          setIsPremium(premiumStatuses.includes(subscriptionData.status));
-        }
-      } catch (err) {
-        console.error('Failed to fetch profile:', err);
+      if (response.ok) {
+        const data = await response.json();
+        setProfile(data);
+        setTeamNameInput(data.teamName || '');
+        setProfileVisibility(data.profileVisibility || 'PUBLIC');
+        setAvatar(data.avatar || '👤');
+        setUserId(data.id);
       }
-    };
 
-    fetchProfile();
-  }, []);
+      // Check premium status
+      const subscriptionResponse = await fetch('/api/user/subscription', {
+        credentials: 'include', // Send session cookie
+      });
+
+      if (subscriptionResponse.ok) {
+        const subscriptionData = await subscriptionResponse.json();
+        const premiumStatuses = ['ACTIVE', 'TRIALING', 'FREE_TRIAL'];
+        setIsPremium(premiumStatuses.includes(subscriptionData.status));
+      }
+    } catch (err) {
+      console.error('Failed to fetch profile:', err);
+    }
+  }, [session?.user?.id]);
+
+  useEffect(() => {
+    if (status === 'authenticated' && session?.user?.id) {
+      fetchProfile();
+    }
+  }, [status, session?.user?.id, fetchProfile]);
 
   const handleSaveTeamName = async () => {
     if (!teamNameInput.trim()) {
@@ -90,8 +93,7 @@ export function AccountProfileTab() {
     setError(null);
 
     try {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
+      if (!session?.user?.id) {
         throw new Error('Not authenticated');
       }
 
@@ -99,8 +101,8 @@ export function AccountProfileTab() {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
+        credentials: 'include', // Send session cookie
         body: JSON.stringify({ teamName: teamNameInput.trim() }),
       });
 
@@ -126,8 +128,7 @@ export function AccountProfileTab() {
     setError(null);
 
     try {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
+      if (!session?.user?.id) {
         throw new Error('Not authenticated');
       }
 
@@ -135,8 +136,8 @@ export function AccountProfileTab() {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
+        credentials: 'include', // Send session cookie
         body: JSON.stringify({ profileVisibility }),
       });
 
@@ -161,8 +162,7 @@ export function AccountProfileTab() {
     setError(null);
 
     try {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
+      if (!session?.user?.id) {
         throw new Error('Not authenticated');
       }
 
@@ -170,8 +170,8 @@ export function AccountProfileTab() {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
+        credentials: 'include', // Send session cookie
         body: JSON.stringify({ avatar: newAvatar }),
       });
 

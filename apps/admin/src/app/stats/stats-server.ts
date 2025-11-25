@@ -1,9 +1,9 @@
 /**
  * Server-side data fetching for stats page
- * Uses cookies for authentication
+ * Uses NextAuth for authentication
  */
 
-import { getServerAuthUser, getAuthTokenFromCookies } from '@/lib/server-auth'
+import { auth } from '@schoolquiz/auth'
 import { unstable_cache } from 'next/cache'
 
 export interface StatsData {
@@ -52,25 +52,21 @@ export interface StatsData {
 
 /**
  * Fetch stats from API (server-side)
- * Uses internal API route which now supports cookies
- * Token must be passed in (can't access cookies inside cached function)
+ * Uses NextAuth session for authentication
  */
-async function fetchStatsFromAPI(userId: string, token: string): Promise<StatsData> {
+async function fetchStatsFromAPI(userId: string): Promise<StatsData> {
   try {
-    if (!token) {
-      throw new Error('No auth token provided')
-    }
-
     // Call the stats API endpoint
     // Construct absolute URL for server-side fetch
     const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http'
     const host = process.env.VERCEL_URL || process.env.NEXT_PUBLIC_BASE_URL || 'localhost:3001'
     const baseUrl = `${protocol}://${host}`
     
+    // For server-side fetch, we need to forward cookies
+    // The API route will use NextAuth session
     const response = await fetch(`${baseUrl}/api/stats`, {
       headers: {
         'X-User-Id': userId,
-        'Authorization': `Bearer ${token}`,
       },
       cache: 'no-store', // Don't cache the fetch itself, we'll use unstable_cache
     })
@@ -129,26 +125,19 @@ function getEmptyStats(): StatsData {
 
 /**
  * Get stats data (server-side)
+ * Uses NextAuth session for authentication
  * Note: Cannot use unstable_cache here because it requires cookies for auth
  * The API route itself should handle caching if needed
  */
 export async function getStatsData(): Promise<StatsData | null> {
-  const authUser = await getServerAuthUser()
+  const session = await auth()
   
-  if (!authUser) {
+  if (!session?.user?.id) {
     return null
-  }
-
-  // Get auth token from cookies
-  const token = await getAuthTokenFromCookies()
-  
-  if (!token) {
-    console.error('[stats-server] No auth token found')
-    return getEmptyStats()
   }
 
   // Fetch stats directly (no caching - Next.js 15 doesn't allow cookies in cached functions)
   // The API route can handle its own caching if needed
-  return fetchStatsFromAPI(authUser.userId, token)
+  return fetchStatsFromAPI(session.user.id)
 }
 

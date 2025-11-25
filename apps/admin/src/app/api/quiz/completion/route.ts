@@ -29,18 +29,12 @@ interface CompletionRequest {
   customQuizId?: string; // For custom quizzes
 }
 
+import { requireApiUserId } from '@/lib/api-auth';
+
 export async function GET(request: NextRequest) {
   try {
-    // Get auth token and user ID from headers
-    const authHeader = request.headers.get('Authorization');
-    const userId = request.headers.get('X-User-Id');
-
-    if (!authHeader || !userId) {
-      return NextResponse.json(
-        { error: 'Unauthorized - authentication required' },
-        { status: 401 }
-      );
-    }
+    // Get user ID from NextAuth session
+    const userId = await requireApiUserId();
 
     // Get quizSlug from query parameters
     const quizSlug = request.nextUrl.searchParams.get('quizSlug');
@@ -207,16 +201,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // Get auth token and user ID from headers
-    const authHeader = request.headers.get('Authorization');
-    const userId = request.headers.get('X-User-Id');
-
-    if (!authHeader || !userId) {
-      return NextResponse.json(
-        { error: 'Unauthorized - authentication required' },
-        { status: 401 }
-      );
-    }
+    // Get user ID from NextAuth session
+    const userId = await requireApiUserId();
 
     const body: CompletionRequest = await request.json();
     const { quizSlug, score, totalQuestions, completionTimeSeconds, roundScores, categories } = body;

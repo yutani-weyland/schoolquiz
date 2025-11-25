@@ -1,6 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { memo } from 'react';
 import { Flame, Zap } from 'lucide-react';
 
 interface StreakCardsProps {
@@ -12,7 +13,7 @@ interface StreakCardsProps {
   };
 }
 
-export function StreakCards({ streaks }: StreakCardsProps) {
+export const StreakCards = memo(function StreakCards({ streaks }: StreakCardsProps) {
   // Slight rotation angles for each card (in degrees)
   const rotations = [-0.75, 0.5];
 
@@ -77,5 +78,5 @@ export function StreakCards({ streaks }: StreakCardsProps) {
       </motion.div>
     </div>
   );
-}
+});
 

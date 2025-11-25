@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { PageContainer } from '@/components/layout/PageContainer';
@@ -9,7 +10,6 @@ import { ContentCard } from '@/components/layout/ContentCard';
 import { motion } from 'framer-motion';
 import { Plus, Edit, Share2, Trash2, FileText, Filter, Search, Sparkles } from 'lucide-react';
 import { useUserTier } from '@/hooks/useUserTier';
-import { getAuthToken, getUserId } from '@/lib/storage';
 import Link from 'next/link';
 
 interface CustomQuiz {
@@ -58,6 +58,7 @@ interface UsageData {
 type FilterType = 'all' | 'mine' | 'shared';
 
 export default function MyCustomQuizzesPage() {
+  const { data: session } = useSession();
   const router = useRouter();
   const { tier, isPremium, isLoading: tierLoading } = useUserTier();
   const [quizzes, setQuizzes] = useState<CustomQuiz[]>([]);
@@ -76,29 +77,19 @@ export default function MyCustomQuizzesPage() {
   // Fetch quizzes and usage
   useEffect(() => {
     if (!isPremium) return;
+    if (!session?.user?.id) {
+      router.push('/sign-in');
+      return;
+    }
 
     const fetchData = async () => {
       try {
-        const token = getAuthToken();
-        const userId = getUserId();
-
-        if (!token || !userId) {
-          router.push('/sign-in');
-          return;
-        }
-
         const [quizzesRes, usageRes] = await Promise.all([
           fetch('/api/premium/custom-quizzes?includeShared=true', {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'X-User-Id': userId,
-            },
+            credentials: 'include', // Send session cookie
           }),
           fetch('/api/premium/custom-quizzes/usage', {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'X-User-Id': userId,
-            },
+            credentials: 'include', // Send session cookie
           }),
         ]);
 

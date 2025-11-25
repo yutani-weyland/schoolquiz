@@ -82,15 +82,12 @@ export function AchievementsShowcase({
 
     const timeout = setTimeout(async () => {
       try {
-        const token = localStorage.getItem('authToken');
-        if (!token) return;
-
         await fetch('/api/user/achievements/order', {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
           },
+          credentials: 'include', // Send session cookie
           body: JSON.stringify({ order }),
         });
 

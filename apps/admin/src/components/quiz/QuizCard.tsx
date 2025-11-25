@@ -1,5 +1,6 @@
 "use client";
 
+import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Calendar, Share2, Copy, Check, Lock, Crown, Trophy, FileDown } from "lucide-react";
 import React, { useState, useMemo, useCallback } from "react";
@@ -30,6 +31,7 @@ interface QuizCardProps {
 }
 
 export function QuizCard({ quiz, isNewest = false, index = 0 }: QuizCardProps) {
+	const { data: session } = useSession();
 	// Random tilt angles for hover effect (in degrees) - creates varied interactivity
 	const hoverTilts = [-1.5, 1.2, -1.8, 1.5, -1.2, 1.8, -1.5, 1.2, -1.8, 1.5, -1.2, 1.8];
 	const hoverTilt = hoverTilts[index % hoverTilts.length] || 0;
@@ -106,16 +108,10 @@ export function QuizCard({ quiz, isNewest = false, index = 0 }: QuizCardProps) {
 				}
 				
 				// If not in localStorage and user is logged in, try fetching from API
-				const token = localStorage.getItem('authToken');
-				const userId = localStorage.getItem('userId');
-				
-				if (token && userId) {
+				if (session?.user?.id) {
 					try {
 						const response = await fetch(`/api/quiz/completion?quizSlug=${encodeURIComponent(quiz.slug)}`, {
-							headers: {
-								'Authorization': `Bearer ${token}`,
-								'X-User-Id': userId,
-							},
+							credentials: 'include', // Send session cookie
 						});
 						
 						// Check if response is JSON before parsing

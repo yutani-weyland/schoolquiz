@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { PageContainer } from '@/components/layout/PageContainer';
@@ -17,6 +18,7 @@ import { useUserTier } from '@/hooks/useUserTier';
 type TabId = 'account' | 'referral' | 'subscription' | 'organisation';
 
 export default function AccountPage() {
+  const { data: session, status } = useSession();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabId>('account');
   // Use premium status from useUserTier hook (already fetches subscription data)
@@ -24,11 +26,10 @@ export default function AccountPage() {
 
   // Redirect if not authenticated
   useEffect(() => {
-    const token = localStorage.getItem('authToken');
-    if (!token) {
+    if (status === 'unauthenticated') {
       router.push('/sign-in');
     }
-  }, [router]);
+  }, [status, router]);
 
   if (tierLoading) {
     return (

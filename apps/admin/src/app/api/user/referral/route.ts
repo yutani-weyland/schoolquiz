@@ -1,40 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@schoolquiz/db';
 import crypto from 'crypto';
-
-/**
- * Get user from token-based auth (localStorage token system)
- */
-async function getUserFromToken(request: NextRequest) {
-  const authHeader = request.headers.get('Authorization');
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return null;
-  }
-
-  const token = authHeader.substring(7);
-  let userId: string | null = request.headers.get('X-User-Id');
-  
-  if (!userId && token.startsWith('mock-token-')) {
-    const parts = token.split('-');
-    if (parts.length >= 3) {
-      userId = parts.slice(2, -1).join('-');
-    }
-  }
-
-  if (!userId) {
-    return null;
-  }
-
-  try {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-    });
-    return user;
-  } catch (error: any) {
-    console.warn('Error fetching user for referral:', error.message);
-    return null;
-  }
-}
+import { requireApiAuth } from '@/lib/api-auth';
+import { handleApiError } from '@/lib/api-error';
 
 /**
  * GET /api/user/referral
@@ -42,14 +10,7 @@ async function getUserFromToken(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
-    const user = await getUserFromToken(request);
-    
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    const user = await requireApiAuth();
 
     // Generate referral code if it doesn't exist
     let referralCode = user.referralCode;
@@ -93,11 +54,7 @@ export async function GET(request: NextRequest) {
       rewardedReferrals,
     });
   } catch (error: any) {
-    console.error('Error fetching referral data:', error);
-    return NextResponse.json(
-      { error: error.message || 'Failed to fetch referral data' },
-      { status: error.message?.includes('Unauthorized') ? 401 : 500 }
-    );
+    return handleApiError(error);
   }
 }
 
@@ -190,11 +147,7 @@ export async function POST(request: NextRequest) {
       message: 'Referral recorded. Rewards will be granted when you become Premium.',
     });
   } catch (error: any) {
-    console.error('Error processing referral:', error);
-    return NextResponse.json(
-      { error: error.message || 'Failed to process referral' },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }
 

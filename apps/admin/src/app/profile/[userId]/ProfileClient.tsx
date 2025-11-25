@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { PageLayout } from '@/components/layout/PageLayout'
@@ -21,20 +22,11 @@ interface ProfileClientProps {
 }
 
 // Fetch functions for React Query
+// Note: These are called from client components, so we use session cookie
 async function fetchProfile(userId: string) {
-  const token = localStorage.getItem('authToken')
-  const currentUserId = localStorage.getItem('userId')
-  
-  if (!token || !currentUserId) {
-    throw new Error('Not authenticated')
-  }
-
-  const targetUserId = userId || currentUserId
+  const targetUserId = userId
   const response = await fetch(`/api/profile/${targetUserId}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'X-User-Id': currentUserId,
-    },
+    credentials: 'include', // Send session cookie
   })
 
   if (!response.ok) {
@@ -45,18 +37,8 @@ async function fetchProfile(userId: string) {
 }
 
 async function fetchSeasonStats(season: string) {
-  const token = localStorage.getItem('authToken')
-  const currentUserId = localStorage.getItem('userId')
-  
-  if (!token || !currentUserId) {
-    return null
-  }
-
   const response = await fetch(`/api/seasons/stats?season=${season}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'X-User-Id': currentUserId,
-    },
+    credentials: 'include', // Send session cookie
   })
 
   if (!response.ok) {
@@ -67,18 +49,8 @@ async function fetchSeasonStats(season: string) {
 }
 
 async function fetchAchievements() {
-  const token = localStorage.getItem('authToken')
-  const currentUserId = localStorage.getItem('userId')
-  
-  if (!token || !currentUserId) {
-    return { achievements: [] }
-  }
-
   const response = await fetch('/api/achievements/user', {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'X-User-Id': currentUserId,
-    },
+    credentials: 'include', // Send session cookie
   })
 
   if (!response.ok) {

@@ -1,6 +1,16 @@
 /**
  * Server-side authentication utilities
- * Reads auth tokens from cookies for use in Server Components
+ * 
+ * @deprecated This file uses custom cookie-based auth. 
+ * Use lib/auth.ts instead, which uses NextAuth's getServerSession().
+ * 
+ * Migration guide:
+ * - getServerAuthUser() -> getCurrentUser() from lib/auth.ts
+ * - getAuthTokenFromCookies() -> getSession() from lib/auth.ts
+ * - requireAuth() -> requireAuth() from lib/auth.ts
+ * 
+ * This file is kept for backward compatibility during migration.
+ * Will be removed in Phase 7 cleanup.
  */
 
 import { cookies } from 'next/headers'

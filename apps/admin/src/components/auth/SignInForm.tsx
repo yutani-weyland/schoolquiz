@@ -5,8 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Mail, Phone, ArrowRight, Loader2, Lock } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { signIn } from "next-auth/react";
 import { ContentCard } from "@/components/layout/ContentCard";
-import { setUserTier } from "@/lib/storage";
 
 type SigninMethod = "email" | "phone";
 
@@ -26,87 +26,36 @@ export default function SignInForm() {
     setLoading(true);
 
     try {
-      const response = await fetch("/api/auth/signin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          method,
-          email: method === "email" ? email : undefined,
-          password: method === "email" ? password : undefined,
-          phone: method === "phone" ? phone : undefined,
-        }),
+      // Only support email/password for now (phone auth can be added later)
+      if (method !== "email" || !email || !password) {
+        throw new Error("Email and password are required");
+      }
+
+      // Use NextAuth's signIn function
+      const result = await signIn("credentials", {
+        email: email.trim().toLowerCase(),
+        password,
+        redirect: false, // Handle redirect manually
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Log in failed");
+      if (result?.error) {
+        // NextAuth returns error messages from the authorize function
+        throw new Error(result.error);
       }
 
-      // Store user session
-      if (data.token) {
-        localStorage.setItem("authToken", data.token);
-        localStorage.setItem("isLoggedIn", "true");
-        localStorage.setItem("userId", data.userId);
-        if (data.email) localStorage.setItem("userEmail", data.email);
-        if (data.name) localStorage.setItem("userName", data.name);
-        // Store tier info from sign-in response (fallback if API fails)
-        if (data.tier) {
-          console.log('[SignInForm] Storing tier:', data.tier);
-          setUserTier(data.tier); // Use storage utility for consistency
-          // Also set directly to ensure it's stored
-          localStorage.setItem('userTier', data.tier);
-          console.log('[SignInForm] Stored userTier:', data.tier);
-          console.log('[SignInForm] Verified:', localStorage.getItem('userTier'));
-        }
-        // Store platformRole for redirect logic
-        if (data.platformRole) {
-          localStorage.setItem('platformRole', data.platformRole);
-          console.log('[SignInForm] Stored platformRole:', data.platformRole);
-        } else {
-          localStorage.removeItem('platformRole');
-        }
-        
-        // Dispatch custom event to notify UserAccessContext immediately
-        console.log('[SignInForm] Dispatching authChange event');
-        window.dispatchEvent(new Event("authChange"));
+      if (!result?.ok) {
+        throw new Error("Sign in failed. Please try again.");
       }
 
+      // Success! NextAuth has set the session cookie
       // Determine redirect destination
       const callbackUrl = searchParams.get('callbackUrl');
-      const isPlatformAdmin = data.platformRole === 'PLATFORM_ADMIN';
+      let redirectUrl = callbackUrl || '/quizzes';
       
-      console.log('[SignInForm] Redirect check:', {
-        email: data.email,
-        platformRole: data.platformRole,
-        isPlatformAdmin,
-        callbackUrl,
-      });
-      
-      // Set cookies so middleware and server components can see the auth token
-      // This enables server-side data fetching
-      if (data.token) {
-        document.cookie = `authToken=${data.token}; path=/; max-age=86400; SameSite=Lax`;
-      }
-      if (data.userId) {
-        document.cookie = `userId=${data.userId}; path=/; max-age=86400; SameSite=Lax`;
-      }
-      
-      // Determine redirect destination
-      // Priority: callbackUrl > platformRole check > default
-      let redirectUrl = '/quizzes';
-      if (callbackUrl) {
-        redirectUrl = callbackUrl;
-        console.log('[SignInForm] Using callbackUrl:', callbackUrl);
-      } else if (isPlatformAdmin) {
-        redirectUrl = '/admin';
-        console.log('[SignInForm] Redirecting to /admin (platform admin)');
-      } else {
-        console.log('[SignInForm] Redirecting to /quizzes (default)');
-      }
-      
-      // Use window.location.href for full page reload to ensure middleware sees the cookie
-      // This ensures the cookie is sent with the request
+      // Use window.location.href for full page reload to ensure:
+      // 1. Session cookie is properly set and sent
+      // 2. Server components get the updated session
+      // 3. Middleware sees the authenticated state
       window.location.href = redirectUrl;
     } catch (err: any) {
       setError(err.message || "Something went wrong. Please try again.");
@@ -152,13 +101,16 @@ export default function SignInForm() {
               className="space-y-4"
             >
               <div className="relative">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Email address
                 </label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <input
+                    id="email"
+                    name="email"
                     type="email"
+                    autoComplete="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -168,27 +120,30 @@ export default function SignInForm() {
                 </div>
               </div>
               <div className="relative">
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Password
-                  </label>
-                  <Link
-                    href="/forgot-password"
-                    className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors"
-                  >
-                    Forgot password?
-                  </Link>
-                </div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Password
+                </label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <input
+                    id="password"
+                    name="password"
                     type="password"
+                    autoComplete="current-password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     placeholder="Enter your password"
                   />
+                </div>
+                <div className="flex justify-end mt-2">
+                  <Link
+                    href="/forgot-password"
+                    className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors"
+                  >
+                    Forgot password?
+                  </Link>
                 </div>
               </div>
             </motion.div>
@@ -202,13 +157,16 @@ export default function SignInForm() {
               exit={{ opacity: 0, x: 20 }}
               className="relative"
             >
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Phone number
               </label>
               <div className="relative">
                 <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
+                  id="phone"
+                  name="phone"
                   type="tel"
+                  autoComplete="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   required
@@ -232,6 +190,7 @@ export default function SignInForm() {
 
         <motion.button
           type="submit"
+          name="submit"
           disabled={loading}
           whileHover={{ scale: loading ? 1 : 1.02 }}
           whileTap={{ scale: loading ? 1 : 0.98 }}

@@ -1,62 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@schoolquiz/db'
-
-async function getUserFromToken(request: NextRequest) {
-  const authHeader = request.headers.get('Authorization')
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return null
-  }
-
-  const token = authHeader.substring(7)
-  
-  let userId: string | null = request.headers.get('X-User-Id')
-  
-  if (!userId && token.startsWith('mock-token-')) {
-    const parts = token.split('-')
-    if (parts.length >= 3) {
-      userId = parts.slice(2, -1).join('-')
-    }
-  }
-
-  if (!userId) {
-    return null
-  }
-
-  try {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        tier: true,
-        teamName: true,
-        // Exclude problematic fields that may not exist
-      },
-    })
-    return user
-  } catch (error: any) {
-    // If there's a schema error, try with minimal fields
-    if (error.code === 'P2022' || error.message?.includes('does not exist')) {
-      try {
-        const user = await prisma.user.findUnique({
-          where: { id: userId },
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            tier: true,
-          },
-        })
-        return user
-      } catch (fallbackError) {
-        console.error('Error fetching user in getUserFromToken:', fallbackError)
-        return null
-      }
-    }
-    throw error
-  }
-}
+import { requireApiAuth } from '@/lib/api-auth'
+import { ForbiddenError } from '@/lib/api-error'
 
 /**
  * GET /api/private-leagues/[id]/stats
@@ -67,23 +12,18 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getUserFromToken(request)
+    const user = await requireApiAuth()
     const { id } = await params
     const { searchParams } = new URL(request.url)
     const quizSlug = searchParams.get('quizSlug') || null
     
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+    const isPremium = user.tier === 'premium' || 
+      user.subscriptionStatus === 'ACTIVE' ||
+      user.subscriptionStatus === 'TRIALING' ||
+      (user.freeTrialUntil && new Date(user.freeTrialUntil) > new Date())
     
-    if (user.tier !== 'premium') {
-      return NextResponse.json(
-        { error: 'Private leagues are only available to premium users' },
-        { status: 403 }
-      )
+    if (!isPremium) {
+      throw new ForbiddenError('Private leagues are only available to premium users')
     }
     
     // Check if DATABASE_URL is set - if not, use in-memory storage for access check

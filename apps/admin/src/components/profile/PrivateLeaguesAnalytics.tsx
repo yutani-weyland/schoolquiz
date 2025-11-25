@@ -38,9 +38,8 @@ export function PrivateLeaguesAnalytics({ userId, colorScheme = 'blue' }: Privat
   useEffect(() => {
     const fetchLeagueData = async () => {
       try {
-        const token = localStorage.getItem('authToken');
         const response = await fetch(`/api/profile/${userId}/leagues`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          credentials: 'include', // Send session cookie
         });
 
         if (!response.ok) {

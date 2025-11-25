@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { motion } from 'framer-motion';
 import { CreditCard, Calendar, CheckCircle, XCircle, ExternalLink, Loader2, AlertCircle } from 'lucide-react';
 
 export function SubscriptionTab() {
+  const { data: session, status } = useSession();
   const [subscription, setSubscription] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isCancelling, setIsCancelling] = useState(false);
@@ -12,26 +14,24 @@ export function SubscriptionTab() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchSubscription();
-  }, []);
+    if (status === 'authenticated' && session) {
+      fetchSubscription();
+    } else if (status === 'unauthenticated') {
+      setError('Not authenticated');
+      setIsLoading(false);
+    }
+  }, [status, session]);
 
   const fetchSubscription = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      const userId = localStorage.getItem('userId');
-      if (!token) {
+      if (!session?.user?.id) {
         setError('Not authenticated');
         setIsLoading(false);
         return;
       }
 
-      const headers: HeadersInit = { Authorization: `Bearer ${token}` };
-      if (userId) {
-        headers['X-User-Id'] = userId;
-      }
-
       const response = await fetch('/api/user/subscription', {
-        headers,
+        credentials: 'include', // Send session cookie
       });
 
       if (response.ok) {
@@ -49,24 +49,17 @@ export function SubscriptionTab() {
 
   const handleManageBilling = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      const userId = localStorage.getItem('userId');
-      if (!token) {
+      if (!session?.user?.id) {
         setError('Not authenticated');
         return;
       }
 
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      };
-      if (userId) {
-        headers['X-User-Id'] = userId;
-      }
-
       const response = await fetch('/api/user/billing-portal', {
         method: 'POST',
-        headers,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', // Send session cookie
       });
 
       if (response.ok) {
@@ -88,23 +81,16 @@ export function SubscriptionTab() {
     setError(null);
 
     try {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
+      if (!session?.user?.id) {
         throw new Error('Not authenticated');
-      }
-
-      const userId = localStorage.getItem('userId');
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      };
-      if (userId) {
-        headers['X-User-Id'] = userId;
       }
 
       const response = await fetch('/api/user/subscription/cancel', {
         method: 'POST',
-        headers,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', // Send session cookie
       });
 
       if (!response.ok) {

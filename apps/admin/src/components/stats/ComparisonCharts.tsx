@@ -1,6 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { memo, useMemo } from 'react';
 import { Users, Trophy, TrendingUp } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend } from 'recharts';
 
@@ -20,12 +21,12 @@ interface ComparisonChartsProps {
   userAverage: number;
 }
 
-export function ComparisonCharts({ publicStats, leagueComparisons, userAverage }: ComparisonChartsProps) {
-  // Public comparison data
-  const publicComparisonData = [
+export const ComparisonCharts = memo(function ComparisonCharts({ publicStats, leagueComparisons, userAverage }: ComparisonChartsProps) {
+  // Public comparison data - memoize to avoid recalculation
+  const publicComparisonData = useMemo(() => [
     { name: 'You', score: userAverage },
     { name: 'Public Average', score: publicStats.averageScore },
-  ];
+  ], [userAverage, publicStats.averageScore]);
 
   // League comparison data for radar chart
   const leagueRadarData = leagueComparisons.map(league => ({
@@ -138,5 +139,5 @@ export function ComparisonCharts({ publicStats, leagueComparisons, userAverage }
       )}
     </div>
   );
-}
+});
 

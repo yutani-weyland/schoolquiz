@@ -3,8 +3,7 @@
 import { motion } from 'framer-motion';
 import { Check, Flame } from 'lucide-react';
 import Link from 'next/link';
-import { DotLottieReact } from '@lottiefiles/dotlottie-react';
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, memo } from 'react';
 
 interface StreakOverviewProps {
   weeklyStreak: Array<{ week: string; date: string; completed: boolean; completedAt?: string; quizSlug?: string | null }>;
@@ -22,88 +21,68 @@ function getWeekNumberFromYearStart(date: Date): number {
   return Math.min(weekNumber, 52); // Cap at 52 weeks
 }
 
-export function StreakOverview({ weeklyStreak }: StreakOverviewProps) {
-  const [lottieAvailable, setLottieAvailable] = useState(false)
+export const StreakOverview = memo(function StreakOverview({ weeklyStreak }: StreakOverviewProps) {
   const currentYear = new Date().getFullYear();
   const startOfYear = new Date(currentYear, 0, 1);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-
-  // Check if Lottie file exists
-  useEffect(() => {
-    fetch('/fire-streak.lottie', { method: 'HEAD' })
-      .then(res => {
-        if (res.ok) {
-          setLottieAvailable(true)
-        }
-      })
-      .catch(() => {
-        // File doesn't exist, use fallback
-        setLottieAvailable(false)
-      })
-  }, [])
   
-  // Create a map of completed weeks for quick lookup by date string (YYYY-MM-DD)
-  const completedWeeksMap = new Map<string, { completed: boolean; completedAt?: string; quizSlug?: string | null }>();
-  weeklyStreak.forEach(week => {
-    const weekDate = new Date(week.date);
-    weekDate.setHours(0, 0, 0, 0); // Normalize time
-    if (weekDate.getFullYear() === currentYear) {
-      // Use date string as key for more reliable matching
+  // Memoize expensive calculations - only recalculate when weeklyStreak changes
+  const { allWeeks, completedWeeksMap } = useMemo(() => {
+    // Create a map of completed weeks for quick lookup by date string (YYYY-MM-DD)
+    const map = new Map<string, { completed: boolean; completedAt?: string; quizSlug?: string | null }>();
+    weeklyStreak.forEach(week => {
+      const weekDate = new Date(week.date);
+      weekDate.setHours(0, 0, 0, 0); // Normalize time
+      if (weekDate.getFullYear() === currentYear) {
+        // Use date string as key for more reliable matching
+        const dateKey = weekDate.toISOString().split('T')[0];
+        map.set(dateKey, {
+          completed: week.completed,
+          completedAt: week.completedAt,
+          quizSlug: week.quizSlug || null,
+        });
+      }
+    });
+
+    // Generate all 52 weeks of the year
+    // Each week starts on Monday, week 1 starts on Jan 1
+    const weeks: Array<{ 
+      weekNumber: number; 
+      date: Date; 
+      completed: boolean;
+      isFuture: boolean;
+      completedAt?: string;
+      quizSlug?: string | null;
+    }> = [];
+    
+    for (let weekNum = 1; weekNum <= 52; weekNum++) {
+      // Calculate the date for the start of this week (Monday)
+      const weekDate = new Date(startOfYear);
+      const daysToAdd = (weekNum - 1) * 7;
+      weekDate.setDate(startOfYear.getDate() + daysToAdd);
+      weekDate.setHours(0, 0, 0, 0);
+      
+      // Match by date string (YYYY-MM-DD) for more reliable matching
       const dateKey = weekDate.toISOString().split('T')[0];
-      completedWeeksMap.set(dateKey, {
-        completed: week.completed,
-        completedAt: week.completedAt,
-        quizSlug: week.quizSlug || null,
+      const weekData = map.get(dateKey);
+      
+      // Check if this week is in the future (not yet released)
+      // Quizzes are typically released on Mondays, so we check if the week start date is after today
+      const isFuture = weekDate > today;
+      
+      weeks.push({
+        weekNumber: weekNum,
+        date: weekDate,
+        completed: weekData?.completed || false,
+        isFuture,
+        completedAt: weekData?.completedAt,
+        quizSlug: weekData?.quizSlug || null,
       });
     }
-  });
-  
-  // Debug: Log the completed weeks map
-  if (completedWeeksMap.size > 0) {
-    console.log('[StreakOverview] Completed weeks map:', Array.from(completedWeeksMap.entries()));
-  }
-
-  // Generate all 52 weeks of the year
-  // Each week starts on Monday, week 1 starts on Jan 1
-  const allWeeks: Array<{ 
-    weekNumber: number; 
-    date: Date; 
-    completed: boolean;
-    isFuture: boolean;
-    completedAt?: string;
-    quizSlug?: string | null;
-  }> = [];
-  
-  for (let weekNum = 1; weekNum <= 52; weekNum++) {
-    // Calculate the date for the start of this week (Monday)
-    const weekDate = new Date(startOfYear);
-    const daysToAdd = (weekNum - 1) * 7;
-    weekDate.setDate(startOfYear.getDate() + daysToAdd);
-    weekDate.setHours(0, 0, 0, 0);
     
-    // Match by date string (YYYY-MM-DD) for more reliable matching
-    const dateKey = weekDate.toISOString().split('T')[0];
-    const weekData = completedWeeksMap.get(dateKey);
-    
-    // Debug: Log matching for first few weeks
-    if (weekNum <= 5) {
-      console.log(`[StreakOverview] Week ${weekNum}: date=${dateKey}, found=${!!weekData}, completed=${weekData?.completed}`);
-    }
-    
-    // Check if this week is in the future (not yet released)
-    // Quizzes are typically released on Mondays, so we check if the week start date is after today
-    const isFuture = weekDate > today;
-    
-    allWeeks.push({
-      weekNumber: weekNum,
-      date: weekDate,
-      completed: weekData?.completed || false,
-      isFuture,
-      completedAt: weekData?.completedAt,
-      quizSlug: weekData?.quizSlug || null,
-    });
-  }
+    return { allWeeks: weeks, completedWeeksMap: map };
+  }, [weeklyStreak, currentYear, startOfYear, today]);
 
   const completedCount = allWeeks.filter(w => w.completed).length;
   const totalWeeks = allWeeks.length;
@@ -272,25 +251,11 @@ export function StreakOverview({ weeklyStreak }: StreakOverviewProps) {
                     minHeight: '66px',
                   }}
                 >
-                  {lottieAvailable ? (
-                    <DotLottieReact
-                      src="/fire-streak.lottie"
-                      loop
-                      autoplay
-                      className="w-full h-full"
-                      style={{
-                        filter: 'drop-shadow(0 0 6px rgba(249, 115, 22, 0.5))',
-                        transformOrigin: 'center bottom',
-                        objectFit: 'contain',
-                      }}
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <Flame className="w-8 h-8 text-orange-500 animate-pulse" style={{
-                        filter: 'drop-shadow(0 0 6px rgba(249, 115, 22, 0.5))',
-                      }} />
-                    </div>
-                  )}
+                  <div className="w-full h-full flex items-center justify-center">
+                    <Flame className="w-8 h-8 text-orange-500 animate-pulse" style={{
+                      filter: 'drop-shadow(0 0 6px rgba(249, 115, 22, 0.5))',
+                    }} />
+                  </div>
                 </div>
               )}
               
@@ -341,5 +306,5 @@ export function StreakOverview({ weeklyStreak }: StreakOverviewProps) {
       </div>
     </motion.div>
   );
-}
+});
 

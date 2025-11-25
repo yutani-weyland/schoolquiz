@@ -1,6 +1,7 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useRef, ReactNode } from 'react';
+import { useSession } from 'next-auth/react';
 import { storage, getAuthToken, getUserId, getUserName, getUserEmail, getUserTier } from '@/lib/storage';
 import { logger } from '@/lib/logger';
 import { fetchSubscription } from '@/lib/subscription-fetch';
@@ -26,27 +27,90 @@ interface UserAccessProviderProps {
 }
 
 export function UserAccessProvider({ children }: UserAccessProviderProps) {
+  const { data: session, status: sessionStatus } = useSession(); // NextAuth session
   const [tier, setTier] = useState<AccessTier>('visitor');
   const [isLoading, setIsLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  
+  // Refs to prevent duplicate fetches and track state
+  const isFetchingRef = useRef(false);
+  const lastFetchTimeRef = useRef(0);
+  const lastSessionUserIdRef = useRef<string | null>(null);
+  const lastSessionTierRef = useRef<string | undefined>(undefined);
+  const lastSessionStatusRef = useRef<string>('loading');
+
+  // Extract stable values from session to avoid unnecessary re-renders
+  const sessionUserId = session?.user?.id || null;
+  const sessionTier = (session?.user as any)?.tier;
+  const sessionUserName = session?.user?.name || null;
+  const sessionUserEmail = session?.user?.email || null;
 
   useEffect(() => {
     const determineTier = async () => {
+      // Don't run if session is still loading
+      if (sessionStatus === 'loading') {
+        logger.debug('Session still loading, waiting...');
+        return;
+      }
+      
+      // Prevent rapid successive calls (debounce: max once per 2 seconds)
+      const now = Date.now();
+      if (isFetchingRef.current || (now - lastFetchTimeRef.current < 2000)) {
+        logger.debug('Debouncing - too soon since last fetch');
+        return;
+      }
+      
+      // Only re-fetch if userId or tier actually changed, or if session just finished loading
+      const userIdChanged = sessionUserId !== lastSessionUserIdRef.current;
+      const tierChanged = sessionTier !== lastSessionTierRef.current;
+      const sessionStatusChanged = sessionStatus !== lastSessionStatusRef.current;
+      const sessionJustLoaded = sessionStatus === 'authenticated' && lastSessionStatusRef.current === 'loading';
+      
+      if (!userIdChanged && !tierChanged && !sessionStatusChanged && !sessionJustLoaded && sessionStatus === 'authenticated') {
+        logger.debug('Skipping tier determination - no changes detected');
+        return;
+      }
+      
+      // Update refs before running
+      lastSessionStatusRef.current = sessionStatus;
+      
+      logger.debug('Running tier determination', {
+        userIdChanged,
+        tierChanged,
+        sessionStatusChanged,
+        sessionJustLoaded,
+      });
+      
+      isFetchingRef.current = true;
+      lastFetchTimeRef.current = now;
+      if (sessionUserId) {
+        lastSessionUserIdRef.current = sessionUserId;
+      }
+      lastSessionTierRef.current = sessionTier;
+      
       // Set a timeout to ensure isLoading is always set to false, even if API hangs
       const timeoutId = setTimeout(() => {
         setIsLoading(false);
+        isFetchingRef.current = false;
       }, 2000); // Max 2 seconds to determine tier
 
       try {
-        // Check if user is logged in
+        // Check NextAuth session first (primary auth system)
+        const isNextAuthLoggedIn = sessionStatus === 'authenticated' && !!session;
+        
+        // Fallback: Check localStorage for legacy auth (backward compatibility)
         const token = getAuthToken();
         const storedUserId = getUserId();
         const storedUserName = getUserName();
         const storedUserEmail = getUserEmail();
+        const isLegacyLoggedIn = !!(token && storedUserId);
 
-        if (!token || !storedUserId) {
+        // Determine if user is logged in (NextAuth or legacy)
+        const isLoggedIn = isNextAuthLoggedIn || isLegacyLoggedIn;
+
+        if (!isLoggedIn) {
           // Visitor (not logged in)
           clearTimeout(timeoutId);
           setTier('visitor');
@@ -57,95 +121,92 @@ export function UserAccessProvider({ children }: UserAccessProviderProps) {
           return;
         }
 
-        setUserId(storedUserId);
-        setUserName(storedUserName);
-        setUserEmail(storedUserEmail);
+        // Set user data from NextAuth session (preferred) or localStorage (fallback)
+        if (isNextAuthLoggedIn && sessionUserId) {
+          setUserId(sessionUserId);
+          setUserName(sessionUserName);
+          setUserEmail(sessionUserEmail);
+        } else if (isLegacyLoggedIn) {
+          setUserId(storedUserId);
+          setUserName(storedUserName);
+          setUserEmail(storedUserEmail);
+        }
 
-        // Get stored tier from localStorage first (from sign-in response) - use immediately
-        const storedTier = getUserTier();
-        console.log('[UserAccessContext] Stored tier from localStorage:', storedTier);
-        console.log('[UserAccessContext] Token:', token ? 'exists' : 'missing');
-        console.log('[UserAccessContext] UserId:', storedUserId);
-        
-        if (storedTier === 'premium' || storedTier === 'basic') {
-          // Set tier immediately from localStorage for instant UI update
-          const tierToSet = storedTier === 'premium' ? 'premium' : 'free';
-          console.log('[UserAccessContext] Setting tier immediately to:', tierToSet);
+        // Get tier from NextAuth session first (if available)
+        // The session callback already queries the database, so this is the source of truth
+        if (sessionTier === 'premium' || sessionTier === 'basic') {
+          const tierToSet = sessionTier === 'premium' ? 'premium' : 'free';
+          logger.debug('Using tier from session', { tier: tierToSet });
           clearTimeout(timeoutId);
           setTier(tierToSet);
           setIsLoading(false);
-          
-          // Then try to refresh from API in the background (non-blocking)
-          // Use shared fetch utility with automatic deduplication
-          // Returns parsed JSON data directly (not Response object)
-          fetchSubscription(storedUserId, token)
-            .then((data) => {
-              if (data) {
-                const premiumStatuses = ['ACTIVE', 'TRIALING', 'FREE_TRIAL'];
-                const isPremium = 
-                  data.tier === 'premium' ||
-                  premiumStatuses.includes(data.status) ||
-                  (data.freeTrialUntil && new Date(data.freeTrialUntil) > new Date());
-                
-                const determinedTier = isPremium ? 'premium' : 'free';
-                setTier(determinedTier);
-                storage.set('userTier', determinedTier === 'premium' ? 'premium' : 'basic');
-              }
-            })
-            .catch((error) => {
-              // Silently fail - we already have tier from localStorage
-              logger.debug('Failed to refresh subscription from API:', error);
-            });
-          
-          return; // Early return - we've set the tier from localStorage
+          isFetchingRef.current = false;
+          return; // Early return - session is the source of truth, no API call needed
         }
 
-        // No stored tier - fetch from API with timeout
-        try {
-          // Use shared fetch utility with automatic deduplication
-          // Returns parsed JSON data directly (not Response object)
-          // Add timeout to prevent hanging
-          const fetchPromise = fetchSubscription(storedUserId, token);
-          const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Subscription fetch timeout')), 1500)
-          );
-          
-          const data = await Promise.race([fetchPromise, timeoutPromise]) as any;
-          
-          clearTimeout(timeoutId);
-          
-          if (data) {
-            // Determine tier: premium if status is ACTIVE, TRIALING, or FREE_TRIAL
-            // OR if tier field exists and is "premium"
-            const premiumStatuses = ['ACTIVE', 'TRIALING', 'FREE_TRIAL'];
-            const isPremium = 
-              data.tier === 'premium' ||
-              premiumStatuses.includes(data.status) ||
-              (data.freeTrialUntil && new Date(data.freeTrialUntil) > new Date());
-            
-            const determinedTier = isPremium ? 'premium' : 'free';
-            setTier(determinedTier);
-            // Store tier in localStorage for future use
-            storage.set('userTier', determinedTier === 'premium' ? 'premium' : 'basic');
-          }
-        } catch (error) {
-          clearTimeout(timeoutId);
-          logger.error('Failed to fetch subscription:', error);
-          // API failed - default to free if logged in, visitor if not
-          if (token && storedUserId) {
-            setTier('free');
-            storage.set('userTier', 'basic');
-          } else {
-            setTier('visitor');
+        // If session doesn't have tier but user is logged in, fetch from API
+        // This handles cases where session hasn't been refreshed yet
+        if (isLoggedIn && sessionUserId) {
+          logger.debug('Session tier not available, fetching from API', { sessionUserId });
+          try {
+            const subscriptionResponse = await fetch('/api/user/subscription', {
+              credentials: 'include', // Send session cookie
+            });
+
+            if (subscriptionResponse.ok) {
+              const subscriptionData = await subscriptionResponse.json();
+              const isPremium = subscriptionData.tier === 'premium';
+              const tierToSet = isPremium ? 'premium' : 'free';
+              logger.debug('Got tier from API', { tier: tierToSet });
+              clearTimeout(timeoutId);
+              setTier(tierToSet);
+              setIsLoading(false);
+              isFetchingRef.current = false;
+              return;
+            } else {
+              const errorText = await subscriptionResponse.text();
+              logger.warn('Subscription API returned non-OK status', { 
+                status: subscriptionResponse.status, 
+                error: errorText 
+              });
+            }
+          } catch (apiError) {
+            logger.error('Failed to fetch subscription from API', apiError);
+            // Fall through to localStorage/fallback
           }
         }
+
+        // Fallback: Get stored tier from localStorage (for legacy compatibility)
+        const storedTier = getUserTier();
+        if (storedTier === 'premium' || storedTier === 'basic') {
+          // Set tier immediately from localStorage for instant UI update
+          const tierToSet = storedTier === 'premium' ? 'premium' : 'free';
+          clearTimeout(timeoutId);
+          setTier(tierToSet);
+          setIsLoading(false);
+          isFetchingRef.current = false;
+          // No API call needed - localStorage is sufficient fallback
+          return;
+        }
+
+        // No tier in session, API, or localStorage - default to free if logged in
+        clearTimeout(timeoutId);
+        if (isLoggedIn) {
+          setTier('free');
+        } else {
+          setTier('visitor');
+        }
+        setIsLoading(false);
+        isFetchingRef.current = false;
       } catch (error) {
         clearTimeout(timeoutId);
         logger.error('Failed to determine tier:', error);
         setTier('visitor');
+        isFetchingRef.current = false;
       } finally {
         clearTimeout(timeoutId);
         setIsLoading(false);
+        isFetchingRef.current = false;
       }
     };
 
@@ -170,7 +231,7 @@ export function UserAccessProvider({ children }: UserAccessProviderProps) {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('authChange', handleAuthChange);
     };
-  }, []);
+  }, [sessionStatus, sessionUserId, sessionTier, sessionUserName, sessionUserEmail]); // Only re-run when actual values change, not object reference
 
   // Memoize context value to prevent unnecessary re-renders
   const value = useMemo<UserAccessContextType>(() => {
@@ -185,7 +246,10 @@ export function UserAccessProvider({ children }: UserAccessProviderProps) {
       userName,
       userEmail,
     };
-    console.log('[UserAccessContext] Computed value:', computed);
+    // Only log when tier actually changes (not on every render)
+    if (tier !== 'visitor' || isLoading === false) {
+      logger.debug('User access computed', { tier, isLoggedIn: computed.isLoggedIn });
+    }
     return computed;
   }, [tier, isLoading, userId, userName, userEmail]);
 

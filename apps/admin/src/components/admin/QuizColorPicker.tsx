@@ -93,7 +93,7 @@ export function QuizColorPicker({ value, onChange, disabled }: QuizColorPickerPr
             }}
             disabled={disabled}
             placeholder="#FFE135"
-            className="flex-1 h-8 px-2 text-sm border border-[hsl(var(--border))] rounded bg-[hsl(var(--input))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--ring))] disabled:opacity-50"
+            className="flex-1 h-8 px-2 text-sm border border-[hsl(var(--border))] rounded-full bg-[hsl(var(--input))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--ring))] disabled:opacity-50"
           />
         </div>
       )}

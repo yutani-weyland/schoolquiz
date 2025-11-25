@@ -7,7 +7,7 @@ export const ACHIEVEMENT_DEFINITIONS: Omit<Achievement, 'id' | 'unlockedAt'>[] =
 		icon: "🦅",
 		iconColor: "#B8860B",
 		rarity: 4,
-		artworkSrc: "/achievements/hail-caesar.png",
+		artworkSrc: "/achievements/ace.png",
 		artworkAlt: "Golden laurel profile badge",
 	},
 	{

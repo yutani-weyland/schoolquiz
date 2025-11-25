@@ -9,7 +9,9 @@
     "test": "turbo run test",
     "test:e2e": "turbo run test:e2e",
     "clean": "turbo run clean",
-    "postinstall": "node scripts/patch-radix-slot.js"
+    "postinstall": "node scripts/patch-radix-slot.js",
+    "sync-env": "node scripts/sync-env.js",
+    "setup": "node scripts/sync-env.js && echo '✅ Environment files synced'"
   },
   "devDependencies": {
     "@turbo/gen": "^1.10.12",

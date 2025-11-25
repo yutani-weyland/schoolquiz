@@ -1,38 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma, getUserTier } from '@schoolquiz/db'
 import { unstable_cache } from 'next/cache'
-import { cache } from 'react'
-
-// Memoize getUserFromToken to prevent duplicate database queries in same render
-const getUserFromToken = cache(async (request: NextRequest) => {
-  try {
-    const authHeader = request.headers.get('authorization')
-    const token = authHeader?.replace('Bearer ', '')
-    
-    if (!token) {
-      return null
-    }
-    
-    const userId = request.headers.get('x-user-id')
-    
-    if (!userId) {
-      return null
-    }
-    
-    try {
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-      })
-      return user
-    } catch (dbError: any) {
-      console.error('[User Achievements API] Database error fetching user:', dbError)
-      return null
-    }
-  } catch (error: any) {
-    console.error('[User Achievements API] Error in getUserFromToken:', error)
-    return null
-  }
-})
+import { getApiUser } from '@/lib/api-auth'
 
 // Cached function to fetch user achievements
 async function getUserAchievementsUncached(userId: string) {
@@ -75,7 +44,7 @@ async function getUserAchievementsUncached(userId: string) {
  */
 export async function GET(request: NextRequest) {
   try {
-    const user = await getUserFromToken(request)
+    const user = await getApiUser()
     
     if (!user) {
       return NextResponse.json(

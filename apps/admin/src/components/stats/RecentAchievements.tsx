@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { motion } from 'framer-motion';
 import { Trophy, ArrowRight, Target, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
@@ -31,12 +32,12 @@ const getMockAchievements = (): Achievement[] => {
     {
       id: 'mock-1',
       achievementId: 'mock-1',
-      achievementSlug: 'hail-caesar',
-      achievementName: 'HAIL, CAESAR!',
-      achievementDescription: 'Get 5/5 in a History round',
+      achievementSlug: 'ace',
+      achievementName: 'ACE',
+      achievementDescription: 'Get a perfect score',
       achievementRarity: 'common',
       achievementCategory: 'performance',
-      achievementIconKey: '/achievements/hail-caesar.png',
+      achievementIconKey: '/achievements/ace.png',
       quizSlug: '10',
       unlockedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
     },
@@ -172,6 +173,7 @@ interface AllAchievement {
 }
 
 export function RecentAchievements() {
+  const { data: session } = useSession();
   const { tier: hookTier } = useUserTier();
   // Map hook tier ('basic' | 'premium') to feature-gating tier ('visitor' | 'free' | 'premium')
   const tier: UserTier = hookTier === 'premium' ? 'premium' : 'free';
@@ -180,24 +182,21 @@ export function RecentAchievements() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    if (!session?.user?.id) {
+      setIsLoading(false);
+      // Use mock achievements for prototyping
+      setRecentAchievements(getMockAchievements());
+      return;
+    }
+
     // Defer fetching to avoid blocking initial page load
     const timeoutId = setTimeout(async () => {
       try {
-        const token = localStorage.getItem('authToken');
-        const userId = localStorage.getItem('userId');
-
-        if (!token || !userId) {
-          setIsLoading(false);
-          // Use mock achievements for prototyping
-          setRecentAchievements(getMockAchievements());
-          return;
-        }
-
         // Use shared fetch utilities with automatic deduplication
         const { fetchUserAchievements, fetchAchievements } = await import('@/lib/achievement-fetch');
         
         // Fetch recent unlocked achievements
-        const userData = await fetchUserAchievements(userId, token);
+        const userData = await fetchUserAchievements(session.user.id, null);
         const fetchedAchievements = userData.achievements || [];
         // If no achievements, use mock data for prototyping
         if (fetchedAchievements.length === 0) {
@@ -208,7 +207,7 @@ export function RecentAchievements() {
         }
 
         // Fetch all achievements to get in-progress ones
-        const allData = await fetchAchievements(userId, token);
+        const allData = await fetchAchievements(session.user.id, null);
         // Filter for in-progress achievements (have progress but not unlocked)
         const inProgress = (allData.achievements || []).filter((achievement: AllAchievement) => {
           const hasProgress = achievement.progressValue !== undefined && 
@@ -348,7 +347,7 @@ export function RecentAchievements() {
                         iconKey: achievement.achievementIconKey,
                         // Add card variants for visual variety
                         cardVariant: 
-                          achievement.achievementSlug === 'hail-caesar' ? 'foil' :
+                          achievement.achievementSlug === 'ace' ? 'foil' :
                           achievement.achievementSlug === 'addicted-shiny' ? 'shiny' :
                           achievement.achievementSlug === 'perfect-fullart' ? 'fullArt' :
                           achievement.achievementSlug === 'golden-champion' ? 'foilGold' :

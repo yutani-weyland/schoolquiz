@@ -6,6 +6,7 @@ import "./globals.css";
 import { UserAccessProvider } from "@/contexts/UserAccessContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ReactQueryProvider } from "@/providers/ReactQueryProvider";
+import { SessionProviderWrapper } from "@/providers/SessionProviderWrapper";
 import { getThemeFromCookie, Theme } from "@/lib/theme";
 
 // Optimized font loading with next/font
@@ -84,6 +85,20 @@ export default async function RootLayout({
 								} catch (e) {
 									document.documentElement.style.setProperty('--safe-area-top-fixed', '0px');
 								}
+								
+								// Suppress Next.js scroll warning for fixed header (development only)
+								if (typeof window !== 'undefined' && window.console) {
+									const originalWarn = console.warn;
+									console.warn = function(...args) {
+										const message = String(args[0] || '');
+										// Suppress the specific Next.js scroll warning about fixed/sticky headers
+										if (message.includes('Skipping auto-scroll behavior due to') && 
+											(message.includes('position: sticky') || message.includes('position: fixed'))) {
+											return; // Suppress this warning
+										}
+										originalWarn.apply(console, args);
+									};
+								}
 							})();
 						`,
 					}}
@@ -113,13 +128,15 @@ export default async function RootLayout({
 				</Script>
 			</head>
 			<body className="bg-gray-50 dark:bg-[#0F1419] text-[hsl(var(--foreground))] overflow-x-hidden" suppressHydrationWarning>
-				<ReactQueryProvider>
-					<ThemeProvider>
-						<UserAccessProvider>
-							{children}
-						</UserAccessProvider>
-					</ThemeProvider>
-				</ReactQueryProvider>
+				<SessionProviderWrapper>
+					<ReactQueryProvider>
+						<ThemeProvider>
+							<UserAccessProvider>
+								{children}
+							</UserAccessProvider>
+						</ThemeProvider>
+					</ReactQueryProvider>
+				</SessionProviderWrapper>
 			</body>
 		</html>
 	);

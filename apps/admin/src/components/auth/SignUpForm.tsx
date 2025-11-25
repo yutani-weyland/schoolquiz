@@ -1,20 +1,24 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import { signIn } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mail, Phone, ArrowRight, Loader2, Gift, Sparkles } from "lucide-react";
+import { Mail, Phone, ArrowRight, Loader2, Gift, Sparkles, CheckCircle2, XCircle } from "lucide-react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { ContentCard } from "@/components/layout/ContentCard";
 
 type SignupMethod = "email" | "phone";
+type ReferralValidationState = "idle" | "validating" | "valid" | "invalid";
 
 export default function SignUpForm() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [method, setMethod] = useState<SignupMethod>("email");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [referralCode, setReferralCode] = useState("");
+  const [referralValidation, setReferralValidation] = useState<ReferralValidationState>("idle");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -26,6 +30,38 @@ export default function SignUpForm() {
       setReferralCode(refCode.toUpperCase());
     }
   }, [searchParams]);
+
+  // Validate referral code
+  const validateReferralCode = useCallback(async (code: string) => {
+    if (!code || code.length < 3) {
+      setReferralValidation("idle");
+      return;
+    }
+
+    setReferralValidation("validating");
+
+    try {
+      const response = await fetch(`/api/referral/validate?code=${encodeURIComponent(code.trim().toUpperCase())}`);
+      const data = await response.json();
+
+      if (data.valid) {
+        setReferralValidation("valid");
+      } else {
+        setReferralValidation("invalid");
+      }
+    } catch (err) {
+      setReferralValidation("invalid");
+    }
+  }, []);
+
+  // Debounced validation effect
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      validateReferralCode(referralCode);
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [referralCode, validateReferralCode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,18 +88,32 @@ export default function SignUpForm() {
 
       setSuccess(true);
       
-      // Store user session
-      if (data.token) {
-        localStorage.setItem("authToken", data.token);
-        localStorage.setItem("isLoggedIn", "true");
-        localStorage.setItem("userId", data.userId);
-        if (data.email) localStorage.setItem("userEmail", data.email);
-      }
+      // If signup returns credentials, sign in with NextAuth
+      if (data.email && data.password) {
+        // Sign in with the credentials provided by signup
+        const result = await signIn('credentials', {
+          email: data.email,
+          password: data.password,
+          redirect: false,
+        });
 
-      // Redirect after a moment
-      setTimeout(() => {
-        window.location.href = "/quizzes";
-      }, 1500);
+        if (result?.ok) {
+          // Redirect after successful sign-in
+          setTimeout(() => {
+            window.location.href = "/quizzes";
+          }, 1500);
+        } else {
+          // If auto-signin fails, redirect to sign-in page
+          setTimeout(() => {
+            router.push("/sign-in?email=" + encodeURIComponent(data.email));
+          }, 1500);
+        }
+      } else {
+        // If no credentials returned, redirect to sign-in
+        setTimeout(() => {
+          router.push("/sign-in");
+        }, 1500);
+      }
     } catch (err: any) {
       setError(err.message || "Something went wrong. Please try again.");
     } finally {
@@ -145,13 +195,16 @@ export default function SignUpForm() {
               exit={{ opacity: 0, x: 20 }}
               className="relative"
             >
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label htmlFor="signup-email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Email address
               </label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
+                  id="signup-email"
+                  name="email"
                   type="email"
+                  autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -170,13 +223,16 @@ export default function SignUpForm() {
               exit={{ opacity: 0, x: 20 }}
               className="relative"
             >
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label htmlFor="signup-phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Phone number
               </label>
               <div className="relative">
                 <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
+                  id="signup-phone"
+                  name="phone"
                   type="tel"
+                  autoComplete="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   required
@@ -201,81 +257,72 @@ export default function SignUpForm() {
         </div>
 
         {/* Referral Code Section */}
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className={`relative overflow-hidden rounded-2xl border transition-all ${
-            referralCode
-              ? "bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/20 border-blue-200 dark:border-blue-800/50 shadow-sm"
-              : "bg-gradient-to-br from-gray-50 to-slate-50 dark:from-gray-800/50 dark:to-slate-800/30 border-gray-200 dark:border-gray-700"
-          }`}
-        >
-          {/* Decorative background element */}
-          <div className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl opacity-20 ${
-            referralCode
-              ? "bg-blue-400 dark:bg-blue-600"
-              : "bg-gray-300 dark:bg-gray-600"
-          }`} />
-          
-          <div className="relative p-5">
-            <div className="flex items-start gap-4 mb-4">
-              <div className={`p-2.5 rounded-xl shadow-sm transition-all ${
-                referralCode
-                  ? "bg-blue-100 dark:bg-blue-900/40 ring-2 ring-blue-200 dark:ring-blue-800"
-                  : "bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600"
-              }`}>
-                <Gift className={`w-5 h-5 transition-colors ${
-                  referralCode
-                    ? "text-blue-600 dark:text-blue-400"
-                    : "text-gray-500 dark:text-gray-400"
-                }`} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <label className="block text-sm font-bold text-gray-900 dark:text-white mb-1.5">
-                  Have a referral code?
-                </label>
-                <p className="text-xs leading-relaxed text-gray-600 dark:text-gray-400">
-                  {referralCode
-                    ? "Great! You and your referrer will both get 1 month free when you upgrade to Premium."
-                    : "Enter a friend's code and you'll both get 1 month free when you upgrade to Premium."}
-                </p>
-              </div>
-            </div>
+        <div className="space-y-3">
+          <label htmlFor="referral-code" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Referral code (optional)
+          </label>
+          <div className="relative">
+            <input
+              id="referral-code"
+              name="referralCode"
+              type="text"
+              autoComplete="off"
+              value={referralCode}
+              onChange={(e) => setReferralCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
+              maxLength={8}
+              className={`w-full pl-4 pr-12 py-3 border rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 transition-all uppercase text-sm font-semibold tracking-wider ${
+                referralValidation === "valid"
+                  ? "border-green-300 dark:border-green-700 focus:ring-green-500 focus:border-green-400 dark:focus:border-green-600"
+                  : referralValidation === "invalid"
+                  ? "border-red-300 dark:border-red-700 focus:ring-red-500 focus:border-red-400 dark:focus:border-red-600"
+                  : "border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-400 dark:focus:border-blue-600"
+              }`}
+              placeholder="ABC12345"
+            />
             
-            <div className="relative">
-              <input
-                type="text"
-                value={referralCode}
-                onChange={(e) => setReferralCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
-                maxLength={8}
-                className={`w-full pl-11 pr-4 py-3 border-2 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 transition-all uppercase text-sm font-semibold tracking-wider shadow-sm ${
-                  referralCode
-                    ? "border-blue-300 dark:border-blue-700 focus:ring-blue-500 focus:border-blue-400 dark:focus:border-blue-600"
-                    : "border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-400 dark:focus:border-blue-600"
-                }`}
-                placeholder="ABC12345"
-              />
-              <Gift className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 transition-colors ${
-                referralCode
-                  ? "text-blue-500 dark:text-blue-400"
-                  : "text-gray-400 dark:text-gray-500"
-              }`} />
-            </div>
-            
-            {referralCode && (
-              <motion.div
-                initial={{ opacity: 0, y: -5 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mt-4 flex items-center gap-2.5 px-3 py-2.5 bg-blue-100/80 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-800"
-              >
-                <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
-                <span className="text-xs font-medium text-blue-800 dark:text-blue-200">
-                  Referral code applied! Both you and your referrer will benefit.
-                </span>
-              </motion.div>
+            {/* Validation status icon */}
+            {referralCode && referralValidation !== "idle" && (
+              <div className="absolute right-3.5 top-1/2 -translate-y-1/2">
+                {referralValidation === "validating" && (
+                  <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
+                )}
+                {referralValidation === "valid" && (
+                  <CheckCircle2 className="w-5 h-5 text-green-500 dark:text-green-400" />
+                )}
+                {referralValidation === "invalid" && (
+                  <XCircle className="w-5 h-5 text-red-500 dark:text-red-400" />
+                )}
+              </div>
             )}
           </div>
-        </motion.div>
+          
+          {/* Show validation feedback */}
+          {referralCode && referralValidation === "valid" && (
+            <motion.div
+              initial={{ opacity: 0, y: -5 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center gap-2 px-3 py-2 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800"
+            >
+              <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />
+              <span className="text-xs text-green-800 dark:text-green-200">
+                Valid code! You and your referrer will both get 1 month free when you upgrade to Premium.
+              </span>
+            </motion.div>
+          )}
+          
+          {referralCode && referralValidation === "invalid" && (
+            <motion.div
+              initial={{ opacity: 0, y: -5 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center gap-2 px-3 py-2 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800"
+            >
+              <XCircle className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0" />
+              <span className="text-xs text-red-800 dark:text-red-200">
+                Invalid referral code. Please check and try again.
+              </span>
+            </motion.div>
+          )}
+        </div>
 
         {error && (
           <motion.div
@@ -289,6 +336,7 @@ export default function SignUpForm() {
 
         <motion.button
           type="submit"
+          name="submit"
           disabled={loading}
           whileHover={{ scale: loading ? 1 : 1.02 }}
           whileTap={{ scale: loading ? 1 : 0.98 }}

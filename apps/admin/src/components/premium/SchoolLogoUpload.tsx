@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import { useSession } from 'next-auth/react'
 import { Upload, X, Image as ImageIcon, Loader2, AlertCircle } from 'lucide-react'
 import { optimizeImage, validateImageFile, type OptimizedImage } from '@/lib/image-optimization'
-import { getAuthToken, getUserId } from '@/lib/storage'
 
 interface SchoolLogoUploadProps {
   value?: string
@@ -18,6 +18,7 @@ export function SchoolLogoUpload({
   className = '',
   compact = false,
 }: SchoolLogoUploadProps) {
+  const { data: session } = useSession()
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [preview, setPreview] = useState<string | null>(value || null)
@@ -105,19 +106,14 @@ export function SchoolLogoUpload({
       formData.append('file', fileToUpload)
 
       setUploadProgress(60)
-      const token = getAuthToken()
-      const userId = getUserId()
 
-      if (!token || !userId) {
+      if (!session?.user?.id) {
         throw new Error('Not authenticated')
       }
 
       const response = await fetch('/api/premium/custom-quizzes/upload-logo', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'X-User-Id': userId,
-        },
+        credentials: 'include', // Send session cookie
         body: formData,
       })
 
@@ -179,7 +175,7 @@ export function SchoolLogoUpload({
       )}
 
       {error && (
-        <div className="mb-3 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-2">
+        <div className="mb-3 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-full flex items-start gap-2">
           <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
           <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
         </div>

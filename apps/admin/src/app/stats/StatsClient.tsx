@@ -1,5 +1,6 @@
 'use client'
 
+import { useSession } from 'next-auth/react';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { SiteHeader } from '@/components/SiteHeader';
@@ -62,15 +63,10 @@ interface StatsClientProps {
 }
 
 // Fetch function for React Query
+// Note: This is called from a client component, so we use session cookie
 async function fetchStats(): Promise<StatsData> {
-    const token = localStorage.getItem('authToken');
-    const userId = localStorage.getItem('userId');
-
     const response = await fetch('/api/stats', {
-        headers: {
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            ...(userId ? { 'X-User-Id': userId } : {}),
-        },
+        credentials: 'include', // Send session cookie
     });
 
     if (!response.ok) {

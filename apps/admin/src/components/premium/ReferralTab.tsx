@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { motion } from 'framer-motion';
 import { Copy, Check, Users, Sparkles, Gift, TrendingUp } from 'lucide-react';
 import { useUserTier } from '@/hooks/useUserTier';
@@ -14,44 +15,42 @@ interface ReferralData {
 }
 
 export function ReferralTab() {
+  const { data: session, status } = useSession();
   const { tier } = useUserTier();
   const [referralData, setReferralData] = useState<ReferralData | null>(null);
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // Fetch referral data
-    const fetchReferralData = async () => {
-      try {
-        const token = localStorage.getItem('authToken');
-        const userId = localStorage.getItem('userId');
-        if (!token) {
-          setLoading(false);
-          return;
-        }
-
-        const headers: HeadersInit = { Authorization: `Bearer ${token}` };
-        if (userId) {
-          headers['X-User-Id'] = userId;
-        }
-
-        const response = await fetch('/api/user/referral', {
-          headers,
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          setReferralData(data);
-        }
-      } catch (error) {
-        console.error('Failed to fetch referral data:', error);
-      } finally {
+  // Fetch referral data
+  const fetchReferralData = async () => {
+    try {
+      if (!session?.user?.id) {
         setLoading(false);
+        return;
       }
-    };
 
-    fetchReferralData();
-  }, []);
+      const response = await fetch('/api/user/referral', {
+        credentials: 'include', // Send session cookie
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setReferralData(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch referral data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (status === 'authenticated' && session?.user?.id) {
+      fetchReferralData();
+    } else if (status === 'unauthenticated') {
+      setLoading(false);
+    }
+  }, [status, session]);
 
   if (loading) {
     return (

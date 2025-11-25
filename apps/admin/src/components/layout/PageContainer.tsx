@@ -24,7 +24,7 @@ const maxWidthClasses = {
  */
 export function PageContainer({ children, maxWidth = '2xl', className = '' }: PageContainerProps) {
   return (
-    <div className={`${maxWidthClasses[maxWidth]} mx-auto px-6 sm:px-8 md:px-4 lg:px-8 ${className}`}>
+    <div className={`${maxWidthClasses[maxWidth]} mx-auto px-4 sm:px-8 ${className}`}>
       {children}
     </div>
   );

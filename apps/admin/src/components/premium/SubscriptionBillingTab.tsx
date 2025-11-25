@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { CreditCard, Calendar, AlertCircle, CheckCircle, XCircle, ExternalLink, Loader2 } from 'lucide-react';
 
 interface SubscriptionData {
@@ -16,6 +17,7 @@ interface SubscriptionData {
 }
 
 export function SubscriptionBillingTab() {
+  const { data: session, status } = useSession();
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isCancelling, setIsCancelling] = useState(false);
@@ -23,20 +25,24 @@ export function SubscriptionBillingTab() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchSubscription();
-  }, []);
+    if (status === 'authenticated' && session) {
+      fetchSubscription();
+    } else if (status === 'unauthenticated') {
+      setError('Not authenticated');
+      setIsLoading(false);
+    }
+  }, [status, session]);
 
   const fetchSubscription = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
+      if (!session?.user?.id) {
         setError('Not authenticated');
         setIsLoading(false);
         return;
       }
 
       const response = await fetch('/api/user/subscription', {
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include', // Send session cookie
       });
 
       if (response.ok) {
@@ -54,8 +60,7 @@ export function SubscriptionBillingTab() {
 
   const handleManageBilling = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
+      if (!session?.user?.id) {
         setError('Not authenticated');
         return;
       }
@@ -64,8 +69,8 @@ export function SubscriptionBillingTab() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
+        credentials: 'include', // Send session cookie
       });
 
       if (response.ok) {
@@ -87,8 +92,7 @@ export function SubscriptionBillingTab() {
     setError(null);
 
     try {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
+      if (!session?.user?.id) {
         throw new Error('Not authenticated');
       }
 
@@ -96,8 +100,8 @@ export function SubscriptionBillingTab() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
+        credentials: 'include', // Send session cookie
       });
 
       if (!response.ok) {

@@ -1,61 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@schoolquiz/db'
 import { z } from 'zod'
-
-async function getUserFromToken(request: NextRequest) {
-  const authHeader = request.headers.get('Authorization')
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return null
-  }
-
-  const token = authHeader.substring(7)
-  let userId: string | null = request.headers.get('X-User-Id')
-  
-  if (!userId && token.startsWith('mock-token-')) {
-    const parts = token.split('-')
-    if (parts.length >= 3) {
-      userId = parts.slice(2, -1).join('-')
-    }
-  }
-
-  if (!userId) {
-    return null
-  }
-
-  try {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        tier: true,
-      },
-    })
-    return user
-  } catch (error: any) {
-    const errorMsg = error.message || String(error)
-    if (errorMsg.includes('does not exist') || 
-        errorMsg.includes('P2022') ||
-        errorMsg.includes('column')) {
-      try {
-        const user = await (prisma as any).user.findUnique({
-          where: { id: userId },
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            tier: true,
-          },
-        })
-        return user
-      } catch (fallbackError) {
-        return null
-      }
-    }
-    throw error
-  }
-}
+import { requireApiAuth } from '@/lib/api-auth'
+import { ForbiddenError } from '@/lib/api-error'
 
 function generateId(): string {
   return `c${Date.now().toString(36)}${Math.random().toString(36).substr(2, 9)}`
@@ -77,24 +24,15 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getUserFromToken(request)
-    
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+    const user = await requireApiAuth()
 
     const isPremium = user.tier === 'premium' || 
-      (user as any).subscriptionStatus === 'ACTIVE' ||
-      (user as any).subscriptionStatus === 'TRIALING'
+      user.subscriptionStatus === 'ACTIVE' ||
+      user.subscriptionStatus === 'TRIALING' ||
+      (user.freeTrialUntil && new Date(user.freeTrialUntil) > new Date())
     
     if (!isPremium) {
-      return NextResponse.json(
-        { error: 'Custom quizzes are only available to premium users' },
-        { status: 403 }
-      )
+      throw new ForbiddenError('Custom quizzes are only available to premium users')
     }
 
     const { id } = await params
@@ -206,24 +144,15 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getUserFromToken(request)
-    
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+    const user = await requireApiAuth()
 
     const isPremium = user.tier === 'premium' || 
-      (user as any).subscriptionStatus === 'ACTIVE' ||
-      (user as any).subscriptionStatus === 'TRIALING'
+      user.subscriptionStatus === 'ACTIVE' ||
+      user.subscriptionStatus === 'TRIALING' ||
+      (user.freeTrialUntil && new Date(user.freeTrialUntil) > new Date())
     
     if (!isPremium) {
-      return NextResponse.json(
-        { error: 'Custom quizzes are only available to premium users' },
-        { status: 403 }
-      )
+      throw new ForbiddenError('Custom quizzes are only available to premium users')
     }
 
     const { id } = await params
@@ -314,24 +243,15 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getUserFromToken(request)
-    
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+    const user = await requireApiAuth()
 
     const isPremium = user.tier === 'premium' || 
-      (user as any).subscriptionStatus === 'ACTIVE' ||
-      (user as any).subscriptionStatus === 'TRIALING'
+      user.subscriptionStatus === 'ACTIVE' ||
+      user.subscriptionStatus === 'TRIALING' ||
+      (user.freeTrialUntil && new Date(user.freeTrialUntil) > new Date())
     
     if (!isPremium) {
-      return NextResponse.json(
-        { error: 'Custom quizzes are only available to premium users' },
-        { status: 403 }
-      )
+      throw new ForbiddenError('Custom quizzes are only available to premium users')
     }
 
     const { id } = await params

@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { fetchSubscription } from '@/lib/subscription-fetch';
+import { useSession } from 'next-auth/react';
 
 export type UserTier = 'basic' | 'premium';
 
 /**
  * Hook to get current user's tier
- * Uses localStorage-based auth system (not NextAuth)
+ * Uses NextAuth session (which queries the database)
  */
 export function useUserTier(): {
   tier: UserTier;
@@ -15,65 +15,39 @@ export function useUserTier(): {
   isBasic: boolean;
   isLoading: boolean;
 } {
+  const { data: session, status } = useSession();
   const [tier, setTier] = useState<UserTier>('basic');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchTier = async () => {
-      try {
-        // Check localStorage first for immediate premium status
-        const storedTier = localStorage.getItem('userTier');
-        if (storedTier === 'premium') {
-          setTier('premium');
-          setIsLoading(false);
-          // Still try to refresh from API in background, but don't block UI
-        } else if (storedTier === 'basic') {
-          setTier('basic');
-          setIsLoading(false);
-        }
+    // Session is loading
+    if (status === 'loading') {
+      setIsLoading(true);
+      return;
+    }
 
-        const token = localStorage.getItem('authToken');
-        if (!token) {
-          setTier('basic');
-          setIsLoading(false);
-          return;
-        }
+    // Not authenticated
+    if (status === 'unauthenticated' || !session?.user) {
+      setTier('basic');
+      setIsLoading(false);
+      return;
+    }
 
-        // Get userId from localStorage (stored during signin)
-        const userId = localStorage.getItem('userId');
-        
-        // Use shared fetch utility with automatic deduplication
-        // Returns parsed JSON data directly (not Response object)
-        const data = await fetchSubscription(userId, token);
-        
-        if (data) {
-          // Determine tier: premium if status is ACTIVE, TRIALING, or FREE_TRIAL
-          // OR if tier field exists and is "premium"
-          const premiumStatuses = ['ACTIVE', 'TRIALING', 'FREE_TRIAL'];
-          const isPremium = 
-            data.tier === 'premium' ||
-            premiumStatuses.includes(data.status) ||
-            (data.freeTrialUntil && new Date(data.freeTrialUntil) > new Date());
-          
-          const determinedTier = isPremium ? 'premium' : 'basic';
-          setTier(determinedTier);
-          // Update localStorage to match API response
-          localStorage.setItem('userTier', determinedTier);
-        }
-      } catch (error) {
-        console.error('Failed to fetch user tier:', error);
-        // On error, trust localStorage if it exists
-        const storedTier = localStorage.getItem('userTier');
-        if (!storedTier) {
-          setTier('basic');
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchTier();
-  }, []);
+    // Get tier from NextAuth session (which comes from database query in session callback)
+    // The session callback already queries the database, so we trust it as the source of truth
+    const sessionTier = (session.user as any)?.tier;
+    
+    if (sessionTier === 'premium' || sessionTier === 'basic') {
+      const determinedTier = sessionTier === 'premium' ? 'premium' : 'basic';
+      setTier(determinedTier);
+      setIsLoading(false);
+      // No need to make additional API calls - session callback already queries the database
+    } else {
+      // Session doesn't have tier - default to basic
+      setTier('basic');
+      setIsLoading(false);
+    }
+  }, [session, status]);
 
   return {
     tier,

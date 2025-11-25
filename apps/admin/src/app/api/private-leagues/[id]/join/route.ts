@@ -1,33 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@schoolquiz/db'
-
-async function getUserFromToken(request: NextRequest) {
-  const authHeader = request.headers.get('Authorization')
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return null
-  }
-
-  const token = authHeader.substring(7)
-  
-  let userId: string | null = request.headers.get('X-User-Id')
-  
-  if (!userId && token.startsWith('mock-token-')) {
-    const parts = token.split('-')
-    if (parts.length >= 3) {
-      userId = parts.slice(2, -1).join('-')
-    }
-  }
-
-  if (!userId) {
-    return null
-  }
-
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-  })
-  
-  return user
-}
+import { requireApiAuth } from '@/lib/api-auth'
+import { ForbiddenError } from '@/lib/api-error'
 
 /**
  * POST /api/private-leagues/[id]/join
@@ -38,24 +12,18 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getUserFromToken(request)
+    const user = await requireApiAuth()
     const { id } = await params
     const body = await request.json()
     const { inviteCode } = body
     
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+    const isPremium = user.tier === 'premium' || 
+      user.subscriptionStatus === 'ACTIVE' ||
+      user.subscriptionStatus === 'TRIALING' ||
+      (user.freeTrialUntil && new Date(user.freeTrialUntil) > new Date())
     
-    // Check if user is premium
-    if (user.tier !== 'premium') {
-      return NextResponse.json(
-        { error: 'Private leagues are only available to premium users' },
-        { status: 403 }
-      )
+    if (!isPremium) {
+      throw new ForbiddenError('Private leagues are only available to premium users')
     }
     
     // Check if DATABASE_URL is set - if not, use in-memory storage
@@ -191,15 +159,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getUserFromToken(request)
+    const user = await requireApiAuth()
     const { id } = await params
-    
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
     
     const league = await prisma.privateLeague.findUnique({
       where: { id },

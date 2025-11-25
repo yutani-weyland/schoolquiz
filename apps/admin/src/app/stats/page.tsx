@@ -1,7 +1,7 @@
 import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { getStatsData } from './stats-server'
-import { getServerAuthUser } from '@/lib/server-auth'
+import { getCurrentUser } from '@/lib/auth'
 import { StatsClient } from './StatsClient'
 import { LockedFeature } from '@/components/access/LockedFeature'
 import { SiteHeader } from '@/components/SiteHeader'
@@ -35,15 +35,18 @@ function StatsSkeleton() {
 
 // Async component for fetching stats data
 async function StatsData() {
-  const authUser = await getServerAuthUser()
+  const user = await getCurrentUser()
   
-  if (!authUser) {
+  if (!user) {
     redirect('/sign-in')
   }
 
   // Check if user is premium
-  const isPremium = authUser.tier === 'premium' || 
-    (authUser.tier === null && process.env.NODE_ENV !== 'production') // Allow in dev
+  // Premium if tier is "premium" OR subscription is active
+  const isPremium = user.tier === 'premium' || 
+    (user.subscriptionStatus === 'ACTIVE' || user.subscriptionStatus === 'TRIALING') ||
+    (user.freeTrialUntil && new Date(user.freeTrialUntil) > new Date()) ||
+    (user.tier === null && process.env.NODE_ENV !== 'production') // Allow in dev
 
   if (!isPremium) {
     return (

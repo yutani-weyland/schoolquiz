@@ -1,5 +1,17 @@
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@schoolquiz/auth';
+/**
+ * Unified Authentication Utilities
+ * 
+ * This is the SINGLE SOURCE OF TRUTH for authentication in the app.
+ * All server-side auth should use these functions.
+ * 
+ * Uses NextAuth's getServerSession() for all authentication.
+ * 
+ * @deprecated Use these functions instead:
+ * - lib/server-auth.ts -> use getSession() or getCurrentUser()
+ * - lib/auth-helpers.ts -> use getSession() or requireAuth()
+ */
+
+import { auth } from '@schoolquiz/auth';
 import { cache } from 'react';
 
 /**
@@ -24,14 +36,28 @@ async function getPrismaClient() {
 }
 
 /**
+ * Get NextAuth session
+ * Returns null if not authenticated
+ * 
+ * Wrapped in cache() to prevent duplicate fetches in the same render pass
+ * 
+ * In v5, we use auth() instead of getServerSession()
+ */
+export const getSession = cache(async function getSession() {
+  return await auth();
+});
+
+/**
  * Get current user from session
  * Returns null if not authenticated or database unavailable
+ * 
+ * Uses NextAuth session to get user ID, then fetches full user data from database.
  * 
  * Wrapped in cache() to prevent duplicate fetches in the same render pass
  * This is especially important when called multiple times in one route
  */
 export const getCurrentUser = cache(async function getCurrentUser() {
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
   if (!session?.user?.id) {
     return null;
   }
@@ -90,6 +116,22 @@ export const getCurrentUser = cache(async function getCurrentUser() {
 
 /**
  * Require authentication or throw error
+ * Returns the session if authenticated
+ * 
+ * Also cached to prevent duplicate session checks
+ */
+export const requireSession = cache(async function requireSession() {
+  const session = await getSession();
+  if (!session?.user) {
+    throw new Error('Unauthorized');
+  }
+  return session;
+});
+
+/**
+ * Require authentication or throw error
+ * Returns the user from database if authenticated
+ * 
  * Also cached to prevent duplicate session checks
  */
 export const requireAuth = cache(async function requireAuth() {
@@ -99,4 +141,16 @@ export const requireAuth = cache(async function requireAuth() {
   }
   return user;
 });
+
+/**
+ * Require specific platform role
+ * Throws error if user doesn't have the required role
+ */
+export async function requireRole(role: string) {
+  const session = await requireSession();
+  if (session.user.platformRole !== role) {
+    throw new Error(`Access denied. Required role: ${role}`);
+  }
+  return session;
+}
 

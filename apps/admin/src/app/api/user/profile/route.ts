@@ -1,50 +1,49 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { requireApiAuth } from "@/lib/api-auth";
+import { handleApiError } from "@/lib/api-error";
+import { prisma } from "@schoolquiz/db";
 
-// Mock user data - replace with actual database queries
-const MOCK_USER = {
-  id: "user-andrew-123",
-  email: "andrew@example.com",
-  name: "Andrew",
-  teamName: "Quiz Masters",
-  organisationName: undefined,
-  profileVisibility: "PUBLIC",
-  avatar: "👤",
-};
-
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
-    const authHeader = request.headers.get("Authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    const user = await requireApiAuth();
+
+    // Fetch user with related data
+    const userWithProfile = await prisma.user.findUnique({
+      where: { id: user.id },
+      include: {
+        organisation: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    if (!userWithProfile) {
       return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
+        { error: "User not found" },
+        { status: 404 }
       );
     }
 
-    // In a real app, verify the token and fetch user from database
-    // For now, return mock data
     return NextResponse.json({
-      ...MOCK_USER,
-      id: MOCK_USER.id, // Ensure id is included
+      id: userWithProfile.id,
+      email: userWithProfile.email,
+      name: userWithProfile.name,
+      teamName: userWithProfile.teamName || "",
+      organisationName: userWithProfile.organisation?.name,
+      profileVisibility: userWithProfile.profileVisibility || "PUBLIC",
+      avatar: userWithProfile.avatar || "👤",
     });
   } catch (error) {
-    return NextResponse.json(
-      { error: "Failed to fetch profile" },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }
 
-export async function PUT(request: Request) {
+export async function PUT(request: NextRequest) {
   try {
-    const authHeader = request.headers.get("Authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
+    const user = await requireApiAuth();
     const body = await request.json();
     const { teamName, profileVisibility, avatar } = body;
 
@@ -96,19 +95,31 @@ export async function PUT(request: Request) {
       updates.avatar = avatar;
     }
     
-    // In a real app, update the database
-    // For now, return updated mock data
-    const updatedUser = {
-      ...MOCK_USER,
-      ...updates,
-    };
+    // Update the database
+    const updatedUser = await prisma.user.update({
+      where: { id: user.id },
+      data: updates,
+      include: {
+        organisation: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
 
-    return NextResponse.json(updatedUser);
+    return NextResponse.json({
+      id: updatedUser.id,
+      email: updatedUser.email,
+      name: updatedUser.name,
+      teamName: updatedUser.teamName || "",
+      organisationName: updatedUser.organisation?.name,
+      profileVisibility: updatedUser.profileVisibility || "PUBLIC",
+      avatar: updatedUser.avatar || "👤",
+    });
   } catch (error) {
-    return NextResponse.json(
-      { error: "Failed to update profile" },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }
 

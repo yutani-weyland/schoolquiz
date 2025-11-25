@@ -20,47 +20,7 @@ function getUserTier(user: {
   return isPremium ? 'premium' : 'free'
 }
 
-// Memoize getUserFromToken to prevent duplicate database queries in same render
-const getUserFromToken = cache(async (request: NextRequest) => {
-  try {
-    const authHeader = request.headers.get('Authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return null
-    }
-
-    const token = authHeader.substring(7)
-    
-    // Try to get userId from custom header (sent by client)
-    let userId: string | null = request.headers.get('X-User-Id')
-    
-    // If not in header, try to extract from mock token format: "mock-token-{userId}-{timestamp}"
-    if (!userId && token.startsWith('mock-token-')) {
-      const parts = token.split('-')
-      if (parts.length >= 3) {
-        userId = parts.slice(2, -1).join('-') // Get everything between "mock-token" and timestamp
-      }
-    }
-
-    if (!userId) {
-      return null
-    }
-
-    // Fetch user from database with error handling
-    try {
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-      })
-      return user
-    } catch (dbError: any) {
-      console.error('[Achievements API] Database error fetching user:', dbError)
-      // Return null if database error - we'll handle it gracefully
-      return null
-    }
-  } catch (error: any) {
-    console.error('[Achievements API] Error in getUserFromToken:', error)
-    return null
-  }
-})
+import { getApiUser } from '@/lib/api-auth'
 
 // Cached function to fetch achievements data (uncached version)
 async function getAchievementsDataUncached(userId: string | null, tier: 'visitor' | 'free' | 'premium') {
@@ -298,7 +258,7 @@ async function getAchievementsDataUncached(userId: string | null, tier: 'visitor
 export async function GET(request: NextRequest) {
   try {
     console.log('[Achievements API] Starting request...')
-    const user = await getUserFromToken(request)
+    const user = await getApiUser()
     const tier = user ? getUserTier(user) : 'visitor'
     const userId = user?.id || null
     console.log('[Achievements API] User tier:', tier)

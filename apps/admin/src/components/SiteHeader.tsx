@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, User, Settings, Wallet, Users, Pencil, Plus, LogOut, Sun, Moon, Trophy, BarChart3, Crown, Info, Play, BookOpen, FileEdit } from 'lucide-react';
+import { useSession, signOut } from 'next-auth/react';
 import { useUserAccess } from '@/contexts/UserAccessContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { applyTheme, Theme } from '@/lib/theme';
@@ -16,6 +17,7 @@ import { LeagueRequestsNotification } from '@/components/leagues/LeagueRequestsN
 export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
+  const { data: session, status: sessionStatus } = useSession(); // NextAuth session
   const { isLoggedIn: userIsLoggedIn, userName, userEmail, tier, isVisitor, isFree, isPremium, isLoading: userLoading } = useUserAccess();
   const { isDark, toggleTheme } = useTheme();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -59,41 +61,22 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
     }
   }, []);
   
-  // Use userIsLoggedIn directly to avoid hydration issues
-  const isLoggedIn = userIsLoggedIn;
+  // Check NextAuth session first (primary auth), then fall back to context/legacy
+  const isNextAuthLoggedIn = sessionStatus === 'authenticated' && !!session;
+  const isLoggedIn = isNextAuthLoggedIn || userIsLoggedIn;
   
-  // Safety check: if localStorage says logged in, override context
-  const [localStorageLoggedIn, setLocalStorageLoggedIn] = useState(false);
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const authToken = localStorage.getItem('authToken');
-      const userId = localStorage.getItem('userId');
-      const actuallyLoggedIn = !!(authToken && userId);
-      setLocalStorageLoggedIn(actuallyLoggedIn);
-    }
-  }, []);
+  // Get user info from NextAuth session (preferred) or context (fallback)
+  const displayName = session?.user?.name || userName || null;
+  const displayEmail = session?.user?.email || userEmail || null;
   
   // Determine if user is free - use context's isFree which is more reliable
   // isFreeUser is for header buttons, isFree is for menu items
-  // If localStorage says logged in but context hasn't updated, assume free tier
-  const effectiveIsFree = isFree || (localStorageLoggedIn && !isPremium && !isVisitor);
-  const effectiveIsVisitor = isVisitor && !localStorageLoggedIn; // Only visitor if NOT logged in per localStorage
+  const effectiveIsFree = isFree || (isLoggedIn && !isPremium && !isVisitor);
+  const effectiveIsVisitor = !isLoggedIn; // Visitor if not logged in via NextAuth or legacy
   const isFreeUser = effectiveIsFree; // Use effectiveIsFree for consistency
   
-  // Debug logging
-  useEffect(() => {
-    console.log('[SiteHeader] Auth state:', {
-      isLoggedIn,
-      isVisitor,
-      isFree,
-      isPremium,
-      tier,
-      isFreeUser,
-      localStorageLoggedIn,
-      effectiveIsFree,
-      effectiveIsVisitor,
-    });
-  }, [isLoggedIn, isVisitor, isFree, isPremium, tier, isFreeUser, localStorageLoggedIn, effectiveIsFree, effectiveIsVisitor]);
+  // Debug logging - only log when auth state actually changes (removed excessive logging)
+  // Use browser devtools or logger level filtering instead of console.log in production
   
   // Check if we're on the quizzes page
   const isOnQuizzesPage = pathname === '/quizzes' || pathname?.startsWith('/quizzes/');
@@ -144,8 +127,17 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
     // Don't prevent default - let Next.js Link handle navigation
   }, []);
 
-  const handleLogout = useCallback(() => {
-    // Clear auth session
+  const handleLogout = useCallback(async () => {
+    // Close menu first
+    setIsMenuOpen(false);
+    
+    // Sign out using NextAuth (primary auth system)
+    if (isNextAuthLoggedIn) {
+      await signOut({ callbackUrl: '/' });
+      return;
+    }
+    
+    // Fallback: Clear legacy auth session
     storage.remove('authToken');
     storage.remove('isLoggedIn');
     storage.remove('userId');
@@ -153,12 +145,9 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
     storage.remove('userName');
     storage.remove('userTier');
     
-    // Close menu
-    setIsMenuOpen(false);
-    
     // Redirect to home/index page
     window.location.href = '/';
-  }, []);
+  }, [isNextAuthLoggedIn]);
 
   const handleStorageChange = useCallback(() => {
     if (userIsLoggedIn) {
@@ -265,7 +254,7 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
             )}
             <div className="relative flex-shrink-0 flex items-center gap-2" ref={menuRef}>
               {/* League Requests Notification - Only for logged-in premium users */}
-              {((isLoggedIn || localStorageLoggedIn) && (isPremium || tier === 'premium')) && (
+              {isLoggedIn && (isPremium || tier === 'premium') && (
                 <LeagueRequestsNotification />
               )}
               
@@ -338,7 +327,7 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
                   >
                   <div className="p-4 overflow-y-auto flex-1">
                   {/* User Profile Section - Only for logged-in users */}
-                  {(isLoggedIn || localStorageLoggedIn) && (
+                  {isLoggedIn && (
                     <div className="px-0 py-0 mb-4 pb-4 border-b border-gray-100 dark:border-gray-700/50">
                       <div className="flex items-center gap-3 pl-4">
                         <div className="flex-1 min-w-0">
@@ -357,20 +346,6 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
 
                   {/* Menu Items - Tier-specific */}
                   <div className="space-y-2">
-                    {(() => {
-                      console.log('[SiteHeader Menu] Rendering menu with:', {
-                        isVisitor,
-                        effectiveIsVisitor,
-                        isFree,
-                        effectiveIsFree,
-                        isPremium,
-                        tier,
-                        isLoading: userLoading,
-                        isLoggedIn,
-                        localStorageLoggedIn,
-                      });
-                      return null;
-                    })()}
                     {effectiveIsVisitor ? (
                       // Visitor menu - Play Quiz, Sign In, Sign Up, divider, About, Dark Mode
                       <>
@@ -577,7 +552,7 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
                   {/* Dark Mode and Sign Out - Always at bottom (static across tiers) */}
                   <div className="border-t border-gray-100 dark:border-gray-700/50 my-3"></div>
                   <div className="space-y-2">
-                    {(isLoggedIn || localStorageLoggedIn) && (
+                    {isLoggedIn && (
                       <button
                         onClick={() => {
                           setIsMenuOpen(false);

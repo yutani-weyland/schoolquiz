@@ -15,33 +15,7 @@ function getDevStorage(): { leagues: Map<string, any>; members: Map<string, Set<
   }
 }
 
-async function getUserFromToken(request: NextRequest) {
-  const authHeader = request.headers.get('Authorization')
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return null
-  }
-
-  const token = authHeader.substring(7)
-  
-  let userId: string | null = request.headers.get('X-User-Id')
-  
-  if (!userId && token.startsWith('mock-token-')) {
-    const parts = token.split('-')
-    if (parts.length >= 3) {
-      userId = parts.slice(2, -1).join('-')
-    }
-  }
-
-  if (!userId) {
-    return null
-  }
-
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-  })
-  
-  return user
-}
+import { requireApiAuth } from '@/lib/api-auth'
 
 /**
  * POST /api/private-leagues/[id]/invite
@@ -52,17 +26,10 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getUserFromToken(request)
+    const user = await requireApiAuth()
     const { id } = await params
     const body = await request.json()
     const { email } = body
-    
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
     
     if (!email || !email.trim()) {
       return NextResponse.json(
