@@ -7,32 +7,68 @@ import { prisma } from '@schoolquiz/db'
 import { StatsData } from './stats-server'
 
 /**
- * Get summary stats using database aggregates (single query)
+ * Get summary stats from pre-computed summary table (ultra-fast single SELECT)
+ * Falls back to aggregation if summary table doesn't exist yet
  */
 async function getSummaryStats(userId: string) {
   const startTime = Date.now()
   
-  const [summary, perfectScores] = await Promise.all([
-    // Aggregate query - compute in database
-    prisma.quizCompletion.aggregate({
-      where: { userId },
-      _count: { id: true }, // totalQuizzesPlayed
-      _sum: {
-        totalQuestions: true, // totalQuestionsAttempted
-        score: true, // totalCorrectAnswers
-      },
-    }),
-    // Perfect scores count (separate lightweight query)
-    prisma.quizCompletion.count({
-      where: {
-        userId,
-        // Use raw query for score = totalQuestions comparison
-        // Prisma doesn't support direct field comparison in where clause
-      },
-    }),
-  ])
+  try {
+    // Try to get from pre-computed summary table first (fastest)
+    const summaryResult = await prisma.$queryRaw<Array<{
+      total_quizzes_played: number
+      total_questions_attempted: number
+      total_correct_answers: number
+      perfect_scores: number
+      average_score: number
+      current_question_streak: number
+      best_question_streak: number
+      current_quiz_streak: number
+      best_quiz_streak: number
+    }>>`
+      SELECT 
+        total_quizzes_played,
+        total_questions_attempted,
+        total_correct_answers,
+        perfect_scores,
+        average_score,
+        current_question_streak,
+        best_question_streak,
+        current_quiz_streak,
+        best_quiz_streak
+      FROM user_stats_summary
+      WHERE user_id = ${userId}
+    `
+    
+    if (summaryResult.length > 0) {
+      const summary = summaryResult[0]
+      const queryTime = Date.now() - startTime
+      console.log(`[Stats Summary] Summary stats from pre-computed table took ${queryTime}ms`)
+      
+      return {
+        averageScore: Number(summary.average_score),
+        totalQuestionsAttempted: summary.total_questions_attempted,
+        totalQuizzesPlayed: summary.total_quizzes_played,
+        totalCorrectAnswers: summary.total_correct_answers,
+        perfectScores: summary.perfect_scores,
+      }
+    }
+  } catch (error: any) {
+    // Table doesn't exist yet or error - fall back to aggregation
+    console.log('[Stats Summary] Pre-computed table not available, using aggregation fallback')
+  }
   
-  // Get perfect scores using raw query for field comparison
+  // Fallback: Aggregate query - compute in database
+  const summary = await prisma.quizCompletion.aggregate({
+    where: { userId },
+    _count: { id: true },
+    _sum: {
+      totalQuestions: true,
+      score: true,
+    },
+  })
+  
+  // Get perfect scores using raw query
   const perfectScoresResult = await prisma.$queryRaw<Array<{ count: bigint }>>`
     SELECT COUNT(*)::int as count
     FROM quiz_completions
@@ -48,7 +84,7 @@ async function getSummaryStats(userId: string) {
     : 0
   
   const queryTime = Date.now() - startTime
-  console.log(`[Stats Summary] Summary stats query took ${queryTime}ms`)
+  console.log(`[Stats Summary] Summary stats query (fallback) took ${queryTime}ms`)
   
   return {
     averageScore,
@@ -60,30 +96,98 @@ async function getSummaryStats(userId: string) {
 }
 
 /**
- * Get completion weeks for streak calculation (minimal data)
+ * Get completion weeks for streak calculation (minimal data, limited to last 52 weeks)
  */
 async function getCompletionWeeks(userId: string) {
   const startTime = Date.now()
   
+  // Only fetch completions from last 52 weeks (enough for weekly streak)
+  const fiftyTwoWeeksAgo = new Date()
+  fiftyTwoWeeksAgo.setDate(fiftyTwoWeeksAgo.getDate() - (52 * 7))
+  
   const completions = await prisma.quizCompletion.findMany({
-    where: { userId },
+    where: { 
+      userId,
+      completedAt: { gte: fiftyTwoWeeksAgo },
+    },
     select: {
       completedAt: true,
       quizSlug: true,
     },
     orderBy: { completedAt: 'desc' },
+    take: 100, // Limit to 100 most recent (more than enough for 52 weeks)
   })
   
   const queryTime = Date.now() - startTime
-  console.log(`[Stats Summary] Completion weeks query took ${queryTime}ms (${completions.length} records)`)
+  console.log(`[Stats Summary] Completion weeks query took ${queryTime}ms (${completions.length} records, limited to last 52 weeks)`)
   
   return completions
 }
 
 /**
- * Calculate streaks from completion data
+ * Get streaks from pre-computed summary table (ultra-fast)
+ * Falls back to calculation if summary table doesn't exist
  */
-function calculateStreaks(
+async function getStreaks(userId: string): Promise<{
+  currentQuestionStreak: number
+  bestQuestionStreak: number
+  currentQuizStreak: number
+  bestQuizStreak: number
+}> {
+  const startTime = Date.now()
+  
+  try {
+    // Try to get from pre-computed summary table first
+    const streaksResult = await prisma.$queryRaw<Array<{
+      current_question_streak: number
+      best_question_streak: number
+      current_quiz_streak: number
+      best_quiz_streak: number
+    }>>`
+      SELECT 
+        current_question_streak,
+        best_question_streak,
+        current_quiz_streak,
+        best_quiz_streak
+      FROM user_stats_summary
+      WHERE user_id = ${userId}
+    `
+    
+    if (streaksResult.length > 0) {
+      const streaks = streaksResult[0]
+      const queryTime = Date.now() - startTime
+      console.log(`[Stats Summary] Streaks from pre-computed table took ${queryTime}ms`)
+      
+      return {
+        currentQuestionStreak: streaks.current_question_streak,
+        bestQuestionStreak: streaks.best_question_streak,
+        currentQuizStreak: streaks.current_quiz_streak,
+        bestQuizStreak: streaks.best_quiz_streak,
+      }
+    }
+  } catch (error: any) {
+    // Table doesn't exist yet - fall back to calculation
+    console.log('[Stats Summary] Pre-computed streaks not available, using calculation fallback')
+  }
+  
+  // Fallback: Calculate from completion data
+  const completions = await prisma.quizCompletion.findMany({
+    where: { userId },
+    select: {
+      completedAt: true,
+      score: true,
+      totalQuestions: true,
+    },
+    orderBy: { completedAt: 'asc' },
+  })
+  
+  return calculateStreaksFromCompletions(completions)
+}
+
+/**
+ * Calculate streaks from completion data (fallback)
+ */
+function calculateStreaksFromCompletions(
   completions: Array<{ completedAt: Date; score: number; totalQuestions: number }>
 ) {
   if (completions.length === 0) {
@@ -100,8 +204,7 @@ function calculateStreaks(
     a.completedAt.getTime() - b.completedAt.getTime()
   )
 
-  // Calculate question streak (consecutive correct answers)
-  // Since we don't have individual question tracking, we'll use perfect scores as a proxy
+  // Calculate question streak
   let currentQuestionStreak = 0
   let bestQuestionStreak = 0
   let tempStreak = 0
@@ -109,18 +212,17 @@ function calculateStreaks(
   for (const completion of sorted) {
     const isPerfect = completion.score === completion.totalQuestions
     if (isPerfect) {
-      tempStreak += completion.totalQuestions || 0
+      tempStreak += completion.totalQuestions
       bestQuestionStreak = Math.max(bestQuestionStreak, tempStreak)
     } else {
-      // Add partial streak from this quiz
-      tempStreak += completion.score || 0
+      tempStreak += completion.score
       bestQuestionStreak = Math.max(bestQuestionStreak, tempStreak)
       tempStreak = 0
     }
   }
   currentQuestionStreak = tempStreak
 
-  // Calculate quiz streak (consecutive quizzes played within 7 days)
+  // Calculate quiz streak
   let currentQuizStreak = 1
   let bestQuizStreak = 1
   let tempQuizStreak = 1
@@ -130,7 +232,7 @@ function calculateStreaks(
       (sorted[i].completedAt.getTime() - sorted[i - 1].completedAt.getTime()) / (1000 * 60 * 60 * 24)
     )
     
-    if (daysDiff <= 7) { // Within a week
+    if (daysDiff <= 7) {
       tempQuizStreak++
       bestQuizStreak = Math.max(bestQuizStreak, tempQuizStreak)
     } else {
@@ -231,8 +333,8 @@ async function getPerformanceOverTime(userId: string) {
 }
 
 /**
- * Get category performance
- * Note: This is a simplified version - in production you'd want to use answer_stats or a materialized view
+ * Get category performance from pre-computed summary table (ultra-fast)
+ * Falls back to calculation if summary table doesn't exist
  */
 async function getCategoryPerformance(
   userId: string,
@@ -240,56 +342,71 @@ async function getCategoryPerformance(
 ) {
   const startTime = Date.now()
   
-  // For now, we'll use a simplified approach:
-  // Get all quizzes user has completed and their rounds/categories
-  // Then estimate category performance based on quiz structure
+  try {
+    // Try to get from pre-computed category stats table first
+    const categoryStatsResult = await prisma.$queryRaw<Array<{
+      category_name: string
+      correct_answers: number
+      total_questions: number
+      quizzes_count: number
+      percentage: number
+    }>>`
+      SELECT 
+        category_name,
+        correct_answers,
+        total_questions,
+        quizzes_count,
+        percentage
+      FROM user_category_stats
+      WHERE user_id = ${userId}
+      ORDER BY percentage DESC
+    `
+    
+    if (categoryStatsResult.length > 0) {
+      const queryTime = Date.now() - startTime
+      console.log(`[Stats Summary] Category performance from pre-computed table took ${queryTime}ms`)
+      
+      return categoryStatsResult.map(stat => ({
+        name: stat.category_name,
+        correct: stat.correct_answers,
+        total: stat.total_questions,
+        percentage: Number(stat.percentage),
+        quizzes: stat.quizzes_count,
+      }))
+    }
+  } catch (error: any) {
+    // Table doesn't exist yet - fall back to calculation
+    console.log('[Stats Summary] Pre-computed category stats not available, using calculation fallback')
+  }
   
+  // Fallback: Calculate from quiz structure
   if (completions.length === 0) {
     return []
   }
   
-  // Get quiz slugs
   const quizSlugs = completions.map(c => c.quizSlug).filter(Boolean) as string[]
   
-  // Fetch quiz rounds with categories (minimal data)
   const quizzes = await prisma.quiz.findMany({
-    where: {
-      slug: { in: quizSlugs },
-    },
+    where: { slug: { in: quizSlugs } },
     select: {
       slug: true,
       rounds: {
         select: {
           category: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-          questions: {
-            select: {
-              id: true,
-            },
-            take: 1, // Just to count questions per round
+            select: { id: true, name: true },
           },
         },
       },
     },
   })
   
-  // Create a map of quiz slug to completion data
-  const completionMap = new Map(
-    completions.map(c => [c.quizSlug, c])
-  )
-  
-  // Aggregate category stats
+  const completionMap = new Map(completions.map(c => [c.quizSlug, c]))
   const categoryMap = new Map<string, { correct: number; total: number; quizzes: Set<string> }>()
   
   for (const quiz of quizzes) {
     const completion = completionMap.get(quiz.slug)
     if (!completion) continue
     
-    // Distribute score across rounds/categories
     const rounds = quiz.rounds.filter(r => r.category)
     if (rounds.length === 0) continue
     
@@ -310,7 +427,6 @@ async function getCategoryPerformance(
     }
   }
   
-  // Convert to array and calculate percentages
   const categoryStats = Array.from(categoryMap.entries())
     .map(([name, stats]) => ({
       name,
@@ -322,17 +438,49 @@ async function getCategoryPerformance(
     .sort((a, b) => a.percentage - b.percentage)
   
   const queryTime = Date.now() - startTime
-  console.log(`[Stats Summary] Category performance query took ${queryTime}ms`)
+  console.log(`[Stats Summary] Category performance query (fallback) took ${queryTime}ms`)
   
   return categoryStats
 }
 
 /**
- * Get public stats (aggregated across all users)
+ * Get public stats from pre-computed summary table (ultra-fast)
+ * Falls back to aggregation if summary table doesn't exist
  */
 async function getPublicStats() {
   const startTime = Date.now()
   
+  try {
+    // Try to get from pre-computed summary table first
+    const publicStatsResult = await prisma.$queryRaw<Array<{
+      total_users: number
+      total_quizzes_played: number
+      average_score: number
+    }>>`
+      SELECT 
+        total_users,
+        total_quizzes_played,
+        average_score
+      FROM public_stats_summary
+      WHERE id = 'global'
+    `
+    
+    if (publicStatsResult.length > 0) {
+      const stats = publicStatsResult[0]
+      const queryTime = Date.now() - startTime
+      console.log(`[Stats Summary] Public stats from pre-computed table took ${queryTime}ms`)
+      
+      return {
+        averageScore: Number(stats.average_score),
+        totalUsers: stats.total_users,
+      }
+    }
+  } catch (error: any) {
+    // Table doesn't exist yet - fall back to aggregation
+    console.log('[Stats Summary] Pre-computed public stats not available, using aggregation fallback')
+  }
+  
+  // Fallback: Aggregate query
   const [publicStats, uniqueUserCount] = await Promise.all([
     prisma.quizCompletion.aggregate({
       _sum: {
@@ -353,7 +501,7 @@ async function getPublicStats() {
     : 0
   
   const queryTime = Date.now() - startTime
-  console.log(`[Stats Summary] Public stats query took ${queryTime}ms`)
+  console.log(`[Stats Summary] Public stats query (fallback) took ${queryTime}ms`)
   
   return {
     averageScore,
@@ -524,7 +672,10 @@ export async function getStatsSummary(userId: string): Promise<StatsData> {
     getSeasonStats(userId),
   ])
   
-  // Fetch completions with scores for streaks and category performance
+  // Get streaks from pre-computed table (or calculate if not available)
+  const streaks = await getStreaks(userId)
+  
+  // Fetch completions with scores for weekly streak and category performance
   const completionsWithScores = await prisma.quizCompletion.findMany({
     where: { userId },
     select: {
@@ -535,9 +686,6 @@ export async function getStatsSummary(userId: string): Promise<StatsData> {
     },
     orderBy: { completedAt: 'desc' },
   })
-  
-  // Calculate streaks from completion data with scores
-  const streaks = calculateStreaks(completionsWithScores)
   
   // Calculate weekly streak
   const weeklyStreak = calculateWeeklyStreakData(completionsWithScores)
