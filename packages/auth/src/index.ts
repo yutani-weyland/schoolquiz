@@ -276,6 +276,8 @@ const nextAuthConfig = NextAuth({
               schoolId: '', // Empty unless org data is explicitly fetched
               schoolName: '', // Empty unless org data is explicitly fetched
               tier: isPremium ? 'premium' : 'basic',
+              subscriptionStatus: user.subscriptionStatus, // Include for API routes
+              freeTrialUntil: user.freeTrialUntil?.toISOString() || null, // Include for API routes
               platformRole: user.platformRole,
             } as any,
           }

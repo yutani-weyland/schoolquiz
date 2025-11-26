@@ -10,7 +10,8 @@ import { SiteHeader } from '@/components/SiteHeader'
 import { Footer } from '@/components/Footer'
 
 // Dynamic imports for heavy components - loads only when needed
-const DraggableLeagues = dynamic(() => import('./DraggableLeagues'), {
+// Dynamic imports for heavy components - loads only when needed
+const DraggableLeaguesList = dynamic(() => import('./DraggableLeaguesList').then(mod => mod.DraggableLeaguesList), {
     loading: () => <div className="space-y-2">{[...Array(3)].map((_, i) => (
         <div key={i} className="h-20 bg-gray-100 dark:bg-gray-700/50 rounded-xl animate-pulse" />
     ))}</div>,
@@ -86,11 +87,12 @@ export default function LeaguesPage() {
                 <div className="max-w-6xl mx-auto">
                     {/* Use the dynamically imported component */}
                     {isPremium && leagues.length > 0 && (
-                        <DraggableLeagues
+                        <DraggableLeaguesList
                             leagues={leagues}
                             selectedLeague={selectedLeague}
                             onSelectLeague={setSelectedLeague}
                             onReorderLeagues={setLeagues}
+                            leagueAccentColor="#3b82f6"
                         />
                     )}
                 </div>

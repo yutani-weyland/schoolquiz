@@ -1,5 +1,6 @@
 import { getCurrentUser } from '@/lib/auth'
 import { prisma } from '@schoolquiz/db'
+import { unstable_cache } from 'next/cache'
 
 export interface CustomQuiz {
 	id: string
@@ -10,7 +11,15 @@ export interface CustomQuiz {
 	status: string
 	createdAt: string
 	updatedAt: string
+	// OPTIMIZATION: Added metadata fields (from summary queries)
+	roundCount?: number
+	questionCount?: number
+	isOrgWide?: boolean
+	isTemplate?: boolean
+	// Share indicators
 	shareCount?: number
+	hasUserShares?: boolean
+	hasGroupShares?: boolean
 	isShared?: boolean
 	sharedBy?: {
 		id: string
@@ -35,49 +44,50 @@ export interface UsageData {
 }
 
 export interface CustomQuizzesPageData {
-	quizzes: CustomQuiz[]
+	ownedQuizzes: CustomQuiz[] // Paginated owned quizzes
+	sharedQuizzes: CustomQuiz[] // All shared quizzes (no pagination needed)
+	quizzesTotal: number // Total count for pagination
+	quizzesHasMore: boolean // Whether there are more owned quizzes to load
 	usage: UsageData | null
 	isPremium: boolean
 }
 
 /**
- * Fetch usage data server-side
+ * OPTIMIZATION: Fetch usage data server-side with parallel queries
  */
-async function fetchUsageData(userId: string): Promise<UsageData | null> {
+export async function fetchUsageData(userId: string): Promise<UsageData | null> {
 	try {
 		const now = new Date()
 		const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
 
-		// Count quizzes created this month
-		const quizzesCreatedThisMonth = await prisma.quiz.count({
-			where: {
-				quizType: 'CUSTOM',
-				createdByUserId: userId,
-				createdAt: {
-					gte: startOfMonth,
+		// OPTIMIZATION: Execute all count queries in parallel
+		const [quizzesCreatedThisMonth, quizzesSharedThisMonth, totalQuizzes] = await Promise.all([
+			prisma.quiz.count({
+				where: {
+					quizType: 'CUSTOM',
+					createdByUserId: userId,
+					createdAt: {
+						gte: startOfMonth,
+					},
 				},
-			},
-		})
-
-		// Count quizzes shared this month
-		const quizzesSharedThisMonth = await prisma.customQuizShare.count({
-			where: {
-				quiz: {
+			}),
+			prisma.customQuizShare.count({
+				where: {
+					quiz: {
+						createdByUserId: userId,
+					},
+					createdAt: {
+						gte: startOfMonth,
+					},
+				},
+			}),
+			prisma.quiz.count({
+				where: {
+					quizType: 'CUSTOM',
 					createdByUserId: userId,
 				},
-				createdAt: {
-					gte: startOfMonth,
-				},
-			},
-		})
-
-		// Count total quizzes
-		const totalQuizzes = await prisma.quiz.count({
-			where: {
-				quizType: 'CUSTOM',
-				createdByUserId: userId,
-			},
-		})
+			}),
+		])
 
 		// Premium limits (matching API limits)
 		const quizzesCreatedLimit = 10
@@ -105,34 +115,67 @@ async function fetchUsageData(userId: string): Promise<UsageData | null> {
 }
 
 /**
- * Fetch custom quizzes server-side
+ * OPTIMIZATION: Fetch custom quizzes server-side with caching
+ * Only fetches metadata needed for list view (no rounds/questions)
+ * Returns quizzes, total count, and whether there are more to load
  */
-async function fetchCustomQuizzes(userId: string): Promise<CustomQuiz[]> {
+async function fetchCustomQuizzes(
+	userId: string, 
+	limit: number = 12, 
+	offset: number = 0
+): Promise<{ ownedQuizzes: CustomQuiz[]; sharedQuizzes: CustomQuiz[]; total: number; hasMore: boolean }> {
 	try {
-		// Get quizzes created by user
-		const ownedQuizzes = await prisma.quiz.findMany({
-			where: {
-				quizType: 'CUSTOM',
-				createdByUserId: userId,
-			},
-			include: {
-				_count: {
-					select: {
-						shares: true,
+		// OPTIMIZATION: Fetch owned quizzes count and data in parallel
+		const [ownedQuizzes, ownedCount] = await Promise.all([
+			prisma.quiz.findMany({
+				where: {
+					quizType: 'CUSTOM',
+					createdByUserId: userId,
+				},
+				select: {
+					id: true,
+					slug: true,
+					title: true,
+					blurb: true,
+					colorHex: true,
+					status: true,
+					createdAt: true,
+					updatedAt: true,
+					_count: {
+						select: {
+							shares: true,
+						},
 					},
 				},
-			},
-			orderBy: { createdAt: 'desc' },
-		})
+				orderBy: { createdAt: 'desc' },
+				take: limit,
+				skip: offset,
+			}),
+			prisma.quiz.count({
+				where: {
+					quizType: 'CUSTOM',
+					createdByUserId: userId,
+				},
+			}),
+		])
 
-		// Get quizzes shared with user
+		// OPTIMIZATION: Fetch shared quizzes (always include all shared, no pagination)
+		// Shared quizzes are typically few, so pagination not needed
 		const shares = await prisma.customQuizShare.findMany({
 			where: {
 				userId: userId,
 			},
-			include: {
+			select: {
 				quiz: {
-					include: {
+					select: {
+						id: true,
+						slug: true,
+						title: true,
+						blurb: true,
+						colorHex: true,
+						status: true,
+						createdAt: true,
+						updatedAt: true,
 						user: {
 							select: {
 								id: true,
@@ -177,30 +220,43 @@ async function fetchCustomQuizzes(userId: string): Promise<CustomQuiz[]> {
 			} : undefined,
 		}))
 
-		return [...transformedOwned, ...transformedShared] as CustomQuiz[]
+		// OPTIMIZATION: Return owned and shared separately for better pagination control
+		const total = ownedCount + shares.length
+		const hasMore = offset + limit < ownedCount
+
+		return { 
+			ownedQuizzes: transformedOwned, 
+			sharedQuizzes: transformedShared as CustomQuiz[],
+			total, 
+			hasMore 
+		}
 	} catch (error) {
 		console.error('[Custom Quizzes Server] Error fetching quizzes:', error)
-		// If schema not migrated yet, return empty array
+		// If schema not migrated yet, return empty result
 		if (error instanceof Error && (
 			error.message?.includes('does not exist') || 
 			error.message?.includes('column') ||
 			(error as any).code === 'P2022'
 		)) {
-			return []
+			return { ownedQuizzes: [], sharedQuizzes: [], total: 0, hasMore: false }
 		}
 		throw error
 	}
 }
 
 /**
- * Main function to fetch all data needed for the Custom Quizzes page
+ * OPTIMIZATION: Main function to fetch all data needed for the Custom Quizzes page
+ * Adds caching and pagination support
  */
-export async function getCustomQuizzesPageData(): Promise<CustomQuizzesPageData> {
+export async function getCustomQuizzesPageData(limit?: number, offset: number = 0): Promise<CustomQuizzesPageData> {
 	const user = await getCurrentUser()
 
 	if (!user) {
 		return {
-			quizzes: [],
+			ownedQuizzes: [],
+			sharedQuizzes: [],
+			quizzesTotal: 0,
+			quizzesHasMore: false,
 			usage: null,
 			isPremium: false,
 		}
@@ -214,20 +270,48 @@ export async function getCustomQuizzesPageData(): Promise<CustomQuizzesPageData>
 
 	if (!isPremium) {
 		return {
-			quizzes: [],
+			ownedQuizzes: [],
+			sharedQuizzes: [],
+			quizzesTotal: 0,
+			quizzesHasMore: false,
 			usage: null,
 			isPremium: false,
 		}
 	}
 
-	// Fetch quizzes and usage in parallel
-	const [quizzes, usage] = await Promise.all([
-		fetchCustomQuizzes(user.id),
-		fetchUsageData(user.id),
+	// OPTIMIZATION: Cache quizzes and usage data separately
+	// Quizzes cache for 30 seconds (frequently updated)
+	// Usage cache for 60 seconds (less frequently updated)
+	const initialLimit = limit || 12
+	const getCachedQuizzes = unstable_cache(
+		async () => fetchCustomQuizzes(user.id, initialLimit, offset),
+		[`custom-quizzes-${user.id}-${initialLimit}-${offset}`],
+		{
+			revalidate: 30,
+			tags: [`custom-quizzes-${user.id}`],
+		}
+	)
+
+	const getCachedUsage = unstable_cache(
+		async () => fetchUsageData(user.id),
+		[`custom-quizzes-usage-${user.id}`],
+		{
+			revalidate: 60,
+			tags: [`custom-quizzes-usage-${user.id}`],
+		}
+	)
+
+	// OPTIMIZATION: Fetch quizzes and usage in parallel (already parallelized)
+	const [quizzesData, usage] = await Promise.all([
+		getCachedQuizzes(),
+		getCachedUsage(),
 	])
 
 	return {
-		quizzes,
+		ownedQuizzes: quizzesData.ownedQuizzes,
+		sharedQuizzes: quizzesData.sharedQuizzes,
+		quizzesTotal: quizzesData.total,
+		quizzesHasMore: quizzesData.hasMore,
 		usage,
 		isPremium: true,
 	}

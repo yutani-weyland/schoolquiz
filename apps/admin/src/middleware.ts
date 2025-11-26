@@ -63,7 +63,21 @@ export async function middleware(request: NextRequest) {
   // or via a server-side utility since middleware has limited access to the DB.
   // However, we can ensure they are at least logged in (handled above).
 
-  return NextResponse.next()
+  // OPTIMIZATION: Add bfcache-friendly headers to enable back/forward cache
+  // This improves navigation performance when users go back/forward
+  const response = NextResponse.next()
+  
+  // Only add bfcache headers for HTML pages (not API routes or static files)
+  if (!isPublicStatic(pathname) && !pathname.startsWith('/api')) {
+    // Allow pages to be cached in bfcache
+    // Don't set cache-control: no-store as it prevents bfcache
+    response.headers.set('Cache-Control', 'private, max-age=0, must-revalidate')
+    
+    // Explicitly allow bfcache (though browsers may still block if other conditions aren't met)
+    // The main blocker was cache-control: no-store, which we're now avoiding
+  }
+
+  return response
 }
 
 export const config = {

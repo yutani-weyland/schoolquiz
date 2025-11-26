@@ -14,9 +14,16 @@ import { prisma } from '@schoolquiz/db'
 import { processReferralReward } from '@/lib/referral-rewards'
 import Stripe from 'stripe'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2025-11-17.clover' as any,
-})
+// Lazy initialization to avoid build-time errors
+function getStripe(): Stripe | null {
+  const secretKey = process.env.STRIPE_SECRET_KEY
+  if (!secretKey) {
+    return null
+  }
+  return new Stripe(secretKey, {
+    apiVersion: '2025-11-17.clover' as any,
+  })
+}
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
 
@@ -34,6 +41,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Missing webhook signature or secret' },
         { status: 400 }
+      )
+    }
+
+    const stripe = getStripe()
+    if (!stripe) {
+      console.error('[Stripe Webhook] Stripe not configured')
+      return NextResponse.json(
+        { error: 'Stripe not configured' },
+        { status: 500 }
       )
     }
 

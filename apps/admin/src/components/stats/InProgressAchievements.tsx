@@ -41,9 +41,13 @@ export function InProgressAchievements() {
     }
 
     // Defer fetching to avoid blocking initial page load
-    const timeoutId = setTimeout(() => {
+      const timeoutId = setTimeout(() => {
       const fetchAchievements = async () => {
         try {
+          if (!session?.user?.id) {
+            setIsLoading(false);
+            return;
+          }
           // Use shared fetch utility with automatic deduplication
           const { fetchAchievements } = await import('@/lib/achievement-fetch');
         

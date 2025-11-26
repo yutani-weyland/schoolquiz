@@ -31,11 +31,39 @@ export async function getApiUser() {
  * Require authentication in API routes
  * Throws UnauthorizedError if not authenticated
  * 
+ * OPTIMIZATION: Uses session data first (fast), only queries DB if needed
+ * 
  * Usage:
  *   const user = await requireApiAuth();
  *   // user is guaranteed to be non-null here
  */
 export async function requireApiAuth() {
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new UnauthorizedError('Authentication required');
+  }
+  
+  // OPTIMIZATION: Use session data if available (session callback already queries DB)
+  // This avoids duplicate database queries for tier/subscription checks
+  const sessionUser = session.user as any;
+  if (sessionUser.tier && sessionUser.id) {
+    // Session has tier data - return lightweight user object
+    // Use tier directly from session (already calculated)
+    const tier = sessionUser.tier === 'premium' ? 'premium' : 'basic';
+    
+    return {
+      id: sessionUser.id,
+      email: sessionUser.email || '',
+      name: sessionUser.name || null,
+      tier,
+      subscriptionStatus: sessionUser.subscriptionStatus || null,
+      freeTrialUntil: sessionUser.freeTrialUntil ? new Date(sessionUser.freeTrialUntil) : null,
+      platformRole: sessionUser.platformRole || null,
+    } as any;
+  }
+  
+  // Fallback: Session doesn't have tier, query database
+  // This should rarely happen if session callback is working correctly
   const user = await requireAuth();
   if (!user) {
     throw new UnauthorizedError('Authentication required');

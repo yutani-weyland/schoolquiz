@@ -46,7 +46,9 @@ export function QuizCard({ quiz, isNewest = false, index = 0, completionData: in
 	const [formattedDate, setFormattedDate] = useState<string>("");
 	const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 	const [animationKey, setAnimationKey] = useState(0);
-	const [completionData, setCompletionData] = useState<{ score: number; totalQuestions: number } | null>(initialCompletionData || null);
+	// OPTIMIZATION: Use prop directly - no state needed since we removed client-side refetching
+	// This eliminates unnecessary state updates and re-renders
+	const completionData = initialCompletionData || null;
 	const [isDownloadingPDF, setIsDownloadingPDF] = useState(false);
 	const [isNavigating, setIsNavigating] = useState(false);
 	const [prefetchTimeout, setPrefetchTimeout] = useState<NodeJS.Timeout | null>(null);
@@ -128,83 +130,9 @@ export function QuizCard({ quiz, isNewest = false, index = 0, completionData: in
 		};
 	}, [prefetchTimeout]);
 	
-	// Check for quiz completion data (only if not provided as prop)
-	React.useEffect(() => {
-		// If completion data was provided as prop, use it and skip fetching
-		if (initialCompletionData) {
-			setCompletionData(initialCompletionData);
-			return;
-		}
-
-		if (typeof window !== 'undefined') {
-			const fetchCompletionData = async () => {
-				// First check localStorage for completion data
-				const completionKey = `quiz-${quiz.slug}-completion`;
-				const completionStr = localStorage.getItem(completionKey);
-				
-				if (completionStr) {
-					try {
-						const completion = JSON.parse(completionStr);
-						if (completion && typeof completion === 'object' && 'score' in completion && 'totalQuestions' in completion) {
-							setCompletionData({
-								score: completion.score as number,
-								totalQuestions: completion.totalQuestions as number,
-							});
-							return; // Found in localStorage, no need to check API
-						}
-					} catch (err) {
-						logger.error('Failed to parse completion data from localStorage:', err);
-					}
-				}
-				
-				// If not in localStorage and user is logged in, try fetching from API
-				if (session?.user?.id) {
-					try {
-						const response = await fetch(`/api/quiz/completion?quizSlug=${encodeURIComponent(quiz.slug)}`, {
-							credentials: 'include', // Send session cookie
-						});
-						
-						// Check if response is JSON before parsing
-						const contentType = response.headers.get('content-type');
-						if (response.ok && contentType && contentType.includes('application/json')) {
-							const data = await response.json();
-							if (data.completion && data.completion.score !== undefined && data.completion.totalQuestions !== undefined) {
-								setCompletionData({
-									score: data.completion.score,
-									totalQuestions: data.completion.totalQuestions,
-								});
-								// Also save to localStorage for future use
-								localStorage.setItem(completionKey, JSON.stringify({
-									score: data.completion.score,
-									totalQuestions: data.completion.totalQuestions,
-									completedAt: data.completion.completedAt,
-								}));
-							}
-						} else if (!response.ok) {
-							// For error responses, try to parse JSON if available, otherwise log error
-							if (contentType && contentType.includes('application/json')) {
-								try {
-									const errorData = await response.json();
-									logger.warn('Quiz completion API error:', errorData);
-								} catch {
-									// If JSON parsing fails, it's probably HTML - just log status
-									logger.warn(`Quiz completion API returned ${response.status} (non-JSON response)`);
-								}
-							} else {
-								logger.warn(`Quiz completion API returned ${response.status} with content-type: ${contentType}`);
-							}
-						}
-					} catch (err) {
-						logger.error('Failed to fetch completion data from API:', err);
-					}
-				} else {
-					setCompletionData(null);
-				}
-			};
-			
-			fetchCompletionData();
-		}
-	}, [quiz.slug, initialCompletionData]);
+	// OPTIMIZATION: Removed redundant client-side completion fetching
+	// Completion data is always provided as prop from server - trust it, no refetch
+	// This eliminates unnecessary API calls and reduces client-side work
 	
 	const text = textOn(quiz.colorHex);
 	const invert = text === "white" ? "text-white" : "text-gray-900";

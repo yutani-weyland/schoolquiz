@@ -1,46 +1,56 @@
 import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
-import { getCustomQuizzesPageData } from './custom-quizzes-server'
+import { getCustomQuizzesPageDataV2 } from './custom-quizzes-server-v2'
 import { CustomQuizzesClient } from './CustomQuizzesClient'
+import { CustomQuizzesShell } from './CustomQuizzesShell'
+import { getCustomQuizzesContext } from './custom-quizzes-context-server'
 import { Skeleton } from '@/components/ui/Skeleton'
 
-// Force dynamic rendering for user-specific data
-export const dynamic = 'force-dynamic'
+// OPTIMIZATION: Allow caching - user-specific data is cached per user via cache keys
+// Revalidate every 30 seconds for fresh data
+export const revalidate = 30
 
 /**
- * Server Component - Custom Quizzes Page
- * Fetches data server-side and streams to client component
+ * OPTIMIZATION: Server Component - Custom Quizzes Page
+ * Uses summary queries for dramatically improved performance
+ * Supports tab-based filtering (All/Mine/Shared/Groups/Organisation)
  */
-export default async function MyCustomQuizzesPage() {
-	const pageData = await getCustomQuizzesPageData()
+export default async function MyCustomQuizzesPage({
+	searchParams,
+}: {
+	searchParams?: Promise<{ tab?: string; search?: string }>
+}) {
+	// OPTIMIZATION: Next.js 15 requires awaiting searchParams
+	const params = await searchParams
+	// Get tab from URL (defaults to 'all')
+	const tab = (params?.tab as any) || 'all'
+	const searchQuery = params?.search || undefined
+
+	// OPTIMIZATION: Fetch page data and context in parallel
+	const [pageData, context] = await Promise.all([
+		getCustomQuizzesPageDataV2(tab, {
+			limit: 20,
+			offset: 0,
+			searchQuery,
+		}),
+		getCustomQuizzesContext(),
+	])
 
 	// Redirect if not premium
 	if (!pageData.isPremium) {
 		redirect('/premium')
 	}
 
+	// OPTIMIZATION: Server-rendered shell reduces client JS bundle
+	// OPTIMIZATION: Granular Suspense boundaries allow better streaming
+	// Each section can load independently - if one is ready, show it immediately
 	return (
-		<Suspense fallback={
-			<div className="min-h-screen bg-white dark:bg-[#0F1419]">
-				<div className="max-w-7xl mx-auto px-6 py-8">
-					<div className="mb-8">
-						<Skeleton className="h-8 w-64 mb-2" />
-						<Skeleton className="h-4 w-96" />
-					</div>
-					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-						{Array.from({ length: 6 }).map((_, i) => (
-							<div key={i} className="bg-white dark:bg-gray-800 rounded-3xl p-6 border">
-								<Skeleton className="h-32 w-full rounded-xl mb-4" />
-								<Skeleton className="h-4 w-full mb-2" />
-								<Skeleton className="h-4 w-3/4 mb-4" />
-								<Skeleton className="h-10 w-full rounded-full" />
-							</div>
-						))}
-					</div>
-				</div>
-			</div>
-		}>
-			<CustomQuizzesClient initialData={pageData} />
-		</Suspense>
+		<CustomQuizzesShell>
+			<CustomQuizzesClient 
+				initialData={pageData} 
+				initialTab={tab}
+				context={context}
+			/>
+		</CustomQuizzesShell>
 	)
 }

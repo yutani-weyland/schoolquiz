@@ -88,6 +88,7 @@ async function StatsData() {
 export default async function StatsPage() {
   return (
     <Suspense fallback={<StatsSkeleton />}>
+      {/* @ts-expect-error - Async Server Component */}
       <StatsData />
     </Suspense>
   )

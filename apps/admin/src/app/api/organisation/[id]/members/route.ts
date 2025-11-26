@@ -29,22 +29,28 @@ export async function GET(
     }
     requirePermission(context, 'org:view');
 
+    // OPTIMIZATION: Skip profile relation for performance - it requires an extra join and is slow
+    // Profile data can be loaded separately if needed
     const members = await prisma.organisationMember.findMany({
       where: {
         organisationId,
         deletedAt: null,
       },
-      include: {
+      select: {
+        id: true,
+        userId: true,
+        role: true,
+        status: true,
+        seatAssignedAt: true,
+        createdAt: true,
         user: {
           select: {
             id: true,
             email: true,
             name: true,
-            profile: {
-              select: {
-                displayName: true,
-              },
-            },
+            teamName: true,
+            // OPTIMIZATION: Skip profile relation - it requires an extra join and is slow
+            // Profile data can be loaded separately if needed
           },
         },
       },

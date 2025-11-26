@@ -792,12 +792,6 @@ export default function CreateQuiz() {
               <a href="/create-quiz" className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-700 rounded-full">
                 Quizzes
               </a>
-              <a href="/explore-quizzes" className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors">
-                Explore
-              </a>
-              <a href="/dashboard" className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors">
-                Dashboard
-              </a>
             </nav>
               
               <ThemeToggle />

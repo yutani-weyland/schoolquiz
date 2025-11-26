@@ -6,7 +6,7 @@ import { Loader2 } from 'lucide-react';
 
 export default function QuizIntroLoading() {
 	return (
-		<div className="min-h-screen flex items-center justify-center">
+		<div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
 			<motion.div
 				className="flex flex-col items-center gap-4"
 				initial={{ opacity: 0, scale: 0.9 }}

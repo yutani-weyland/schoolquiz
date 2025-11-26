@@ -159,11 +159,30 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 		}
 	}, [quiz.slug, isPremium, isLoading, isNewest, loggedIn]);
 
-	// Prefetch play page route when intro page loads
+	// OPTIMIZATION: Aggressive prefetching - prefetch both route AND data
 	// This makes the play page feel instant when user clicks "Start Quiz"
 	useEffect(() => {
-		// Just prefetch the route - Next.js will handle data fetching efficiently
+		// Prefetch the route (Next.js will handle this efficiently)
 		router.prefetch(`/quizzes/${quiz.slug}/play`);
+		
+		// Also prefetch the API data in the background for instant loading
+		// Use link prefetching for maximum browser optimization
+		if (typeof window !== 'undefined') {
+			const link = document.createElement('link');
+			link.rel = 'prefetch';
+			link.href = `/api/quizzes/${quiz.slug}/play-data`;
+			link.as = 'fetch';
+			link.crossOrigin = 'anonymous';
+			document.head.appendChild(link);
+			
+			// Also trigger a fetch in the background to warm up the cache
+			fetch(`/api/quizzes/${quiz.slug}/play-data`, {
+				method: 'GET',
+				credentials: 'include',
+			}).catch(() => {
+				// Silently fail - prefetch is best effort
+			});
+		}
 	}, [quiz.slug, router]);
 	
 	const remainingQuizzes = loggedIn && !isPremium ? getRemainingFreeQuizzes() : 3;

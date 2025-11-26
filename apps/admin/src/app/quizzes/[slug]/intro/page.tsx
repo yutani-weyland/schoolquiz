@@ -1,61 +1,113 @@
-"use client";
+/**
+ * Server Component - Quiz Intro Page
+ * OPTIMIZATION: Server-side rendering with database fetching for maximum performance
+ */
 
-import React, { useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
-import QuizIntro from "@/components/quiz/QuizIntro";
-import { Quiz } from "@/components/quiz/QuizCard";
+import { notFound, redirect } from 'next/navigation';
+import { prisma } from '@schoolquiz/db';
 import { getQuizColor } from '@/lib/colors';
+import QuizIntro from '@/components/quiz/QuizIntro';
+import { Quiz } from '@/components/quiz/QuizCard';
 
-const DATA: Quiz[] = [
-	{ id: 12, slug: "12", title: "Shape Up, Pumpkins, Famous First Words, Crazes, and Next In Sequence.", blurb: "A weekly selection mixing patterns, pop culture and logic.", weekISO: "2024-01-15", colorHex: getQuizColor(12), status: "available" },
-	{ id: 11, slug: "11", title: "Opposite Day, Lights, Common Ground, Robots Etc, and First Ladies.", blurb: "Wordplay meets trivia.", weekISO: "2024-01-08", colorHex: getQuizColor(11), status: "available" },
-	{ id: 10, slug: "10", title: "Back to the Past, Name That Nation, Name the Other, Analog Games, and What Does It Stand For?", blurb: "History, geography and acronyms.", weekISO: "2024-01-01", colorHex: getQuizColor(10), status: "available" },
-	{ id: 9, slug: "9", title: "Holiday Trivia, Winter Sports, Year End Review, and Festive Fun.", blurb: "Seasonal mixed bag.", weekISO: "2023-12-25", colorHex: getQuizColor(9), status: "available" },
-	{ id: 8, slug: "8", title: "Movie Magic, Tech Trends, Sports Moments, and Pop Culture.", blurb: "Headlines and highlights.", weekISO: "2023-12-18", colorHex: getQuizColor(8), status: "available" },
-	{ id: 7, slug: "7", title: "World Wonders, Historical Events, Science Facts, and Geography.", blurb: "Curiosities around the world.", weekISO: "2023-12-11", colorHex: getQuizColor(7), status: "available" },
-	{ id: 6, slug: "6", title: "Literature Classics, Music Legends, Art Movements, and Cultural Icons.", blurb: "Explore the arts and humanities.", weekISO: "2023-12-04", colorHex: getQuizColor(6), status: "available" },
-	{ id: 5, slug: "5", title: "Space Exploration, Ocean Depths, Animal Kingdom, and Natural Phenomena.", blurb: "Discover the wonders of nature.", weekISO: "2023-11-27", colorHex: getQuizColor(5), status: "available" },
-	{ id: 4, slug: "4", title: "Food & Drink, Cooking Techniques, World Cuisines, and Culinary History.", blurb: "A feast for the mind.", weekISO: "2023-11-20", colorHex: getQuizColor(4), status: "available" },
-	{ id: 3, slug: "3", title: "Sports Legends, Olympic Moments, World Records, and Athletic Achievements.", blurb: "Celebrate sporting excellence.", weekISO: "2023-11-13", colorHex: getQuizColor(3), status: "available" },
-	{ id: 2, slug: "2", title: "Mathematics Puzzles, Logic Problems, Number Patterns, and Brain Teasers.", blurb: "Exercise your logical mind.", weekISO: "2023-11-06", colorHex: getQuizColor(2), status: "available" },
-	{ id: 1, slug: "1", title: "Famous Inventions, Scientific Discoveries, Medical Breakthroughs, and Innovation.", blurb: "Celebrate human ingenuity.", weekISO: "2023-10-30", colorHex: getQuizColor(1), status: "available" }
-];
+// Enable dynamic rendering for real-time data
+export const dynamic = 'force-dynamic';
+export const revalidate = 60; // Revalidate every minute
 
-export default function QuizIntroPage() {
-	const params = useParams();
-	const router = useRouter();
-	const slug = String(params?.slug ?? "");
-	const quiz = DATA.find((q) => q.slug === slug);
-	
-	useEffect(() => {
+/**
+ * Fetch quiz metadata (lightweight - no questions/rounds)
+ * OPTIMIZATION: Only fetch what's needed for intro page
+ */
+async function getQuizMetadata(slug: string): Promise<Quiz | null> {
+	try {
+		const quiz = await prisma.quiz.findUnique({
+			where: { slug },
+			select: {
+				id: true,
+				slug: true,
+				title: true,
+				blurb: true,
+				weekISO: true,
+				colorHex: true,
+				status: true,
+				quizType: true,
+			},
+		});
+
 		if (!quiz) {
-			router.replace("/quizzes");
-			return;
+			return null;
 		}
-		
-		// Prefetch play page when intro loads (user is likely to click "Start Quiz")
-		router.prefetch(`/quizzes/${quiz.slug}/play`);
-	}, [quiz, router]);
 
-	if (!quiz) return null;
+		return {
+			id: quiz.slug ? parseInt(quiz.slug, 10) || 0 : 0,
+			slug: quiz.slug || slug,
+			title: quiz.title,
+			blurb: quiz.blurb || '',
+			weekISO: quiz.weekISO || new Date().toISOString().split('T')[0],
+			colorHex: quiz.colorHex || getQuizColor(0),
+			status: quiz.status as 'available' | 'draft' | 'scheduled' | 'published' | 'archived',
+		};
+	} catch (error) {
+		console.error(`[Quiz Intro] Error fetching quiz ${slug}:`, error);
+		return null;
+	}
+}
 
-	const isNewest = DATA[0].slug === quiz.slug;
+/**
+ * OPTIMIZATION: Fetch newest quiz slug in parallel with quiz metadata
+ */
+async function getNewestQuizSlug(): Promise<string | null> {
+	try {
+		const newestQuiz = await prisma.quiz.findFirst({
+			where: {
+				quizType: 'OFFICIAL',
+				status: 'published',
+				slug: { not: null },
+			},
+			select: { slug: true },
+			orderBy: [
+				{ weekISO: 'desc' },
+				{ createdAt: 'desc' },
+			],
+		});
+		return newestQuiz?.slug || null;
+	} catch (error) {
+		console.error('[Quiz Intro] Error fetching newest quiz:', error);
+		return null;
+	}
+}
+
+export default async function QuizIntroPage({
+	params,
+}: {
+	params: Promise<{ slug: string }>;
+}) {
+	const { slug } = await params;
+
+	// OPTIMIZATION: Fetch quiz metadata and newest slug in parallel
+	const [quiz, newestQuizSlug] = await Promise.all([
+		getQuizMetadata(slug),
+		getNewestQuizSlug(),
+	]);
+
+	if (!quiz) {
+		notFound();
+	}
+
+	const isNewest = newestQuizSlug === quiz.slug;
 
 	return (
 		<>
-			{/* Set background color immediately to prevent flash - inline script runs before React */}
+			{/* Set background color immediately to prevent flash */}
 			<script
 				dangerouslySetInnerHTML={{
 					__html: `
 						(function() {
 							const quizColor = ${JSON.stringify(quiz.colorHex)};
-							// Set background immediately, using setProperty with important to override CSS
 							if (document.body) {
 								document.body.style.setProperty('background-color', quizColor, 'important');
 							}
 							if (document.documentElement) {
 								document.documentElement.style.setProperty('background-color', quizColor, 'important');
-								// Remove dark class to prevent black background flash
 								document.documentElement.classList.remove('dark');
 							}
 						})();

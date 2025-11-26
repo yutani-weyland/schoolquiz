@@ -59,6 +59,7 @@ export default async function ProfilePage({ params, searchParams }: PageProps) {
 
   return (
     <Suspense fallback={<ProfileSkeleton />}>
+      {/* @ts-expect-error Server Component */}
       <ProfileData userId={userId} selectedSeason={selectedSeason} />
     </Suspense>
   )

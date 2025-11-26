@@ -189,10 +189,7 @@ export function ShareQuizModal({
       if (toRemove.length > 0) {
         const res = await fetch(`/api/premium/custom-quizzes/${quizId}/share?userIds=${toRemove.join(',')}`, {
           method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'X-User-Id': userId,
-          },
+          credentials: 'include', // Send session cookie
         })
 
         if (!res.ok) {

@@ -41,6 +41,7 @@ interface SortableLeagueItemProps {
     isSelected: boolean
     onSelect: () => void
     leagueAccentColor: string
+    isCreator?: boolean
 }
 
 export function SortableLeagueItem({
@@ -78,8 +79,8 @@ export function SortableLeagueItem({
             <button
                 onClick={onSelect}
                 className={`w-full text-left p-2.5 rounded-lg transition-all relative group ${isSelected
-                        ? 'text-white shadow-md'
-                        : 'bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
+                    ? 'text-white shadow-md'
+                    : 'bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
                     }`}
                 style={isSelected ? { backgroundColor: league.color || leagueAccentColor } : {}}
             >
@@ -95,18 +96,18 @@ export function SortableLeagueItem({
                         <div className="flex items-center gap-2">
                             <div className="font-medium text-sm truncate">{league.name || 'Unnamed League'}</div>
                             {isCreator && (
-                                <span className={`text-xs px-1.5 py-0.5 rounded ${isSelected 
-                                    ? 'bg-white/20 text-white' 
+                                <span className={`text-xs px-1.5 py-0.5 rounded ${isSelected
+                                    ? 'bg-white/20 text-white'
                                     : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
-                                }`}>
+                                    }`}>
                                     Admin
                                 </span>
                             )}
                             {!isCreator && (
-                                <span className={`text-xs px-1.5 py-0.5 rounded ${isSelected 
-                                    ? 'bg-white/20 text-white' 
+                                <span className={`text-xs px-1.5 py-0.5 rounded ${isSelected
+                                    ? 'bg-white/20 text-white'
                                     : 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-400'
-                                }`}>
+                                    }`}>
                                     Member
                                 </span>
                             )}

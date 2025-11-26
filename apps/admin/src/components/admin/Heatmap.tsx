@@ -38,7 +38,7 @@ export function Heatmap({ data, onCellClick }: HeatmapProps) {
         hoverTarget="cell"
         onClick={(cell) => {
           if (onCellClick) {
-            onCellClick(cell.serieId, cell.data.x);
+            onCellClick(cell.serieId, String(cell.data.x));
           }
         }}
         tooltip={({ cell }) => (

@@ -166,7 +166,7 @@ export function OrganisationLeaguesSection({ organisationName, onJoinByCode }: O
                             <Users className="w-3 h-3" />
                             <span>{league._count.members}</span>
                           </div>
-                          <span className="truncate">Created by {league.creator.profile?.displayName || league.creator.name || league.creator.email}</span>
+                          <span className="truncate">Created by {league.creator.name || league.creator.email}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">

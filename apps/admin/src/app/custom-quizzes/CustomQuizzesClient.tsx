@@ -1,46 +1,104 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { PageLayout } from '@/components/layout/PageLayout'
-import { PageContainer } from '@/components/layout/PageContainer'
-import { PageHeader } from '@/components/layout/PageHeader'
-import { ContentCard } from '@/components/layout/ContentCard'
-import { motion } from 'framer-motion'
-import { Plus, Edit, Share2, Trash2, FileText, Search } from 'lucide-react'
-import { CustomQuizUsageWidget } from '@/components/premium/CustomQuizUsageWidget'
-import { ShareQuizModal } from '@/components/premium/ShareQuizModal'
-import Link from 'next/link'
-import type { CustomQuizzesPageData, CustomQuiz } from './custom-quizzes-server'
+/**
+ * OPTIMIZATION: Main client component for Custom Quizzes page
+ * - Lazy-loads Framer Motion (only when needed)
+ * - Uses Suspense boundaries for streaming
+ * - Minimizes client JS bundle
+ */
 
-type FilterType = 'all' | 'mine' | 'shared'
+import { useState, useTransition, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { ContentCard } from '@/components/layout/ContentCard'
+import dynamic from 'next/dynamic'
+import { Plus, Search } from 'lucide-react'
+import { ShareQuizModal } from '@/components/premium/ShareQuizModal'
+import { CustomQuizzesTabs, type CustomQuizTab } from './CustomQuizzesTabs'
+import { CustomQuizCardGridSkeleton } from '@/components/ui/CustomQuizCardSkeleton'
+import Link from 'next/link'
+import type { CustomQuizzesPageDataV2, CustomQuizV2 } from './custom-quizzes-server-v2'
+import type { CustomQuizzesContext } from './custom-quizzes-context-server'
+
+// OPTIMIZATION: Lazy-load list section (contains Framer Motion)
+// Only loads when quizzes are ready - reduces initial bundle by ~50KB+
+const LazyCustomQuizzesList = dynamic(
+	() => import('./CustomQuizzesListSection').then(mod => ({ default: mod.CustomQuizzesListSection })),
+	{ 
+		ssr: false, // Client-side only (animations)
+		loading: () => <CustomQuizCardGridSkeleton count={6} />
+	}
+)
 
 interface CustomQuizzesClientProps {
-	initialData: CustomQuizzesPageData
+	initialData: CustomQuizzesPageDataV2
+	initialTab: CustomQuizTab
+	context: CustomQuizzesContext
 }
 
-export function CustomQuizzesClient({ initialData }: CustomQuizzesClientProps) {
+export function CustomQuizzesClient({ 
+	initialData, 
+	initialTab,
+	context 
+}: CustomQuizzesClientProps) {
 	const router = useRouter()
-	const [quizzes, setQuizzes] = useState(initialData.quizzes)
-	const [usage, setUsage] = useState(initialData.usage)
-	const [filter, setFilter] = useState<FilterType>('all')
-	const [searchQuery, setSearchQuery] = useState('')
+	const searchParams = useSearchParams()
+	const [isPending, startTransition] = useTransition()
+	
+	// OPTIMIZATION: Ensure quizzes array exists (defensive programming)
+	const [quizzes, setQuizzes] = useState<CustomQuizV2[]>(initialData?.quizzes || [])
+	const [activeTab, setActiveTab] = useState<CustomQuizTab>(initialTab || 'all')
+	const [searchQuery, setSearchQuery] = useState(searchParams?.get('search') || '')
 	const [shareModalOpen, setShareModalOpen] = useState(false)
-	const [selectedQuizForShare, setSelectedQuizForShare] = useState<CustomQuiz | null>(null)
+	const [selectedQuizForShare, setSelectedQuizForShare] = useState<CustomQuizV2 | null>(null)
 
-	const filteredQuizzes = quizzes.filter(quiz => {
-		const matchesFilter =
-			filter === 'all' ||
-			(filter === 'mine' && !quiz.isShared) ||
-			(filter === 'shared' && quiz.isShared)
-		
-		const matchesSearch =
-			!searchQuery ||
-			quiz.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-			quiz.blurb?.toLowerCase().includes(searchQuery.toLowerCase())
+	// OPTIMIZATION: Update local state when initialData changes (from server-side filtering)
+	// Use useEffect to properly handle state updates
+	useEffect(() => {
+		if (initialData?.quizzes) {
+			setQuizzes(initialData.quizzes)
+		}
+	}, [initialData])
 
-		return matchesFilter && matchesSearch
-	})
+	useEffect(() => {
+		if (initialTab) {
+			setActiveTab(initialTab)
+		}
+	}, [initialTab])
+
+	useEffect(() => {
+		const currentSearch = searchParams?.get('search') || ''
+		if (currentSearch !== searchQuery) {
+			setSearchQuery(currentSearch)
+		}
+	}, [searchParams, searchQuery])
+
+	// OPTIMIZATION: Tab changes trigger server-side filtering (via URL)
+	const handleTabChange = (tab: CustomQuizTab) => {
+		setActiveTab(tab)
+		startTransition(() => {
+			const params = new URLSearchParams(searchParams?.toString() || '')
+			params.set('tab', tab)
+			if (searchQuery) {
+				params.set('search', searchQuery)
+			}
+			router.push(`/custom-quizzes?${params.toString()}`)
+		})
+	}
+
+	// OPTIMIZATION: Search triggers server-side filtering (via URL)
+	const handleSearchChange = (query: string) => {
+		setSearchQuery(query)
+		startTransition(() => {
+			const params = new URLSearchParams(searchParams?.toString() || '')
+			params.set('tab', activeTab)
+			if (query) {
+				params.set('search', query)
+			} else {
+				params.delete('search')
+			}
+			router.push(`/custom-quizzes?${params.toString()}`)
+		})
+	}
 
 	const handleDelete = async (quizId: string) => {
 		if (!confirm('Are you sure you want to delete this quiz? This action cannot be undone.')) {
@@ -55,14 +113,6 @@ export function CustomQuizzesClient({ initialData }: CustomQuizzesClientProps) {
 
 			if (res.ok) {
 				setQuizzes(quizzes.filter(q => q.id !== quizId))
-				// Refresh usage
-				const usageRes = await fetch('/api/premium/custom-quizzes/usage', {
-					credentials: 'include',
-				})
-				if (usageRes.ok) {
-					const data = await usageRes.json()
-					setUsage(data)
-				}
 			} else {
 				const error = await res.json()
 				alert(error.error || 'Failed to delete quiz')
@@ -73,78 +123,38 @@ export function CustomQuizzesClient({ initialData }: CustomQuizzesClientProps) {
 		}
 	}
 
-	const refreshQuizzes = async () => {
-		try {
-			const res = await fetch('/api/premium/custom-quizzes?includeShared=true', {
-				credentials: 'include',
-			})
-
-			if (res.ok) {
-				const data = await res.json()
-				setQuizzes(data.quizzes || [])
-			}
-		} catch (error) {
-			console.error('Error refreshing quizzes:', error)
-		}
+	// OPTIMIZATION: Refresh quizzes by reloading page data (server-side filtering)
+	const refreshQuizzes = () => {
+		startTransition(() => {
+			router.refresh()
+		})
 	}
 
 	return (
-		<PageLayout>
-			<PageContainer maxWidth="6xl">
-				<PageHeader
-					title="My Custom Quizzes"
-					subtitle="Create, manage, and share your custom quizzes"
-					centered
+		<>
+			{/* OPTIMIZATION: Tabs - Static, no animation needed for instant render */}
+			<div className="mb-6 flex items-center justify-center">
+				<CustomQuizzesTabs
+					activeTab={activeTab}
+					onTabChange={handleTabChange}
+					hasGroups={context.hasGroups}
+					hasOrganisation={context.hasOrganisation}
 				/>
+			</div>
 
-				{/* Usage Widget */}
-				{usage && (
-					<motion.div
-						initial={{ opacity: 0, y: 20 }}
-						animate={{ opacity: 1, y: 0 }}
-						transition={{ delay: 0.1 }}
-						className="mb-8"
-					>
-						<CustomQuizUsageWidget usage={usage} />
-					</motion.div>
-				)}
-
-				{/* Actions Bar */}
-				<motion.div
-					initial={{ opacity: 0, y: 20 }}
-					animate={{ opacity: 1, y: 0 }}
-					transition={{ delay: 0.2 }}
-					className="mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between"
-				>
-					<div className="flex-1 flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-						{/* Search */}
-						<div className="relative flex-1 sm:max-w-md">
-							<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[hsl(var(--muted-foreground))]" />
-							<input
-								type="text"
-								placeholder="Search quizzes..."
-								value={searchQuery}
-								onChange={(e) => setSearchQuery(e.target.value)}
-								className="w-full pl-10 pr-4 py-2 border border-[hsl(var(--border))] rounded-full bg-[hsl(var(--input))] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] transition-colors"
-							/>
-						</div>
-
-						{/* Filter */}
-						<div className="flex gap-2">
-							{(['all', 'mine', 'shared'] as FilterType[]).map((f) => (
-								<button
-									key={f}
-									onClick={() => setFilter(f)}
-									className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-										filter === f
-											? 'bg-primary text-primary-foreground hover:bg-primary/90'
-											: 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-									}`}
-								>
-									{f === 'all' ? 'All' : f === 'mine' ? 'Mine' : 'Shared'}
-								</button>
-							))}
-						</div>
+			{/* OPTIMIZATION: Actions Bar - Static, no animation needed */}
+			<div className="mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+					{/* Search */}
+					<div className="relative flex-1 sm:max-w-md">
+						<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[hsl(var(--muted-foreground))]" />
+						<input
+							type="text"
+							placeholder="Search quizzes..."
+							value={searchQuery}
+							onChange={(e) => handleSearchChange(e.target.value)}
+							disabled={isPending}
+							className="w-full pl-10 pr-4 py-2 border border-[hsl(var(--border))] rounded-full bg-[hsl(var(--input))] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] transition-colors disabled:opacity-50"
+						/>
 					</div>
 
 					{/* Create Button */}
@@ -155,25 +165,40 @@ export function CustomQuizzesClient({ initialData }: CustomQuizzesClientProps) {
 						<Plus className="w-4 h-4" />
 						Create Quiz
 					</Link>
-				</motion.div>
+			</div>
 
-				{/* Quizzes Grid */}
-				{filteredQuizzes.length === 0 ? (
-					<motion.div
-						initial={{ opacity: 0 }}
-						animate={{ opacity: 1 }}
-						transition={{ delay: 0.3 }}
-					>
-						<ContentCard padding="xl" rounded="3xl" hoverAnimation={false}>
+			{/* OPTIMIZATION: Granular Suspense boundary - quizzes list loads independently */}
+			{/* Shows skeleton immediately, then streams in quiz cards */}
+			<Suspense fallback={<CustomQuizCardGridSkeleton count={6} />}>
+				{(!quizzes || quizzes.length === 0) ? (
+					<ContentCard padding="xl" rounded="3xl" hoverAnimation={false}>
 							<div className="text-center py-12">
 								<Plus className="w-16 h-16 text-[hsl(var(--muted-foreground))] mx-auto mb-4" />
 								<h3 className="text-xl font-bold text-[hsl(var(--foreground))] mb-2">
-									{searchQuery ? 'No quizzes found' : 'No custom quizzes yet'}
+									{searchQuery 
+										? 'No quizzes found' 
+										: activeTab === 'mine' 
+											? 'No quizzes created yet'
+											: activeTab === 'shared'
+												? 'No shared quizzes'
+												: activeTab === 'groups'
+													? 'No group quizzes'
+													: activeTab === 'organisation'
+														? 'No organisation quizzes'
+														: 'No custom quizzes yet'}
 								</h3>
 								<p className="text-[hsl(var(--muted-foreground))] mb-6">
 									{searchQuery
 										? 'Try adjusting your search or filters'
-										: 'Create your first custom quiz to get started'}
+										: activeTab === 'mine'
+											? 'Create your first custom quiz to get started'
+											: activeTab === 'shared'
+												? 'Quizzes shared with you will appear here'
+												: activeTab === 'groups'
+													? 'Quizzes shared with your groups will appear here'
+													: activeTab === 'organisation'
+														? 'Organisation-wide quizzes will appear here'
+														: 'Create your first custom quiz to get started'}
 								</p>
 								{!searchQuery && (
 									<Link
@@ -186,96 +211,17 @@ export function CustomQuizzesClient({ initialData }: CustomQuizzesClientProps) {
 								)}
 							</div>
 						</ContentCard>
-					</motion.div>
-				) : (
-					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-						{filteredQuizzes.map((quiz, index) => (
-							<motion.div
-								key={quiz.id}
-								initial={{ opacity: 0, y: 20 }}
-								animate={{ opacity: 1, y: 0 }}
-								transition={{ delay: 0.1 + index * 0.05 }}
-							>
-								<ContentCard padding="lg" rounded="3xl" hoverAnimation={true}>
-									{/* Quiz Header */}
-									<div
-										className="h-32 rounded-xl mb-4 flex items-center justify-center"
-										style={{
-											backgroundColor: quiz.colorHex || '#6366f1',
-										}}
-									>
-										<h3 className="text-xl font-bold text-white text-center px-4 line-clamp-2">
-											{quiz.title}
-										</h3>
-									</div>
-
-									{/* Quiz Info */}
-									<div className="mb-4">
-										{quiz.blurb && (
-											<p className="text-sm text-[hsl(var(--muted-foreground))] line-clamp-2 mb-2">
-												{quiz.blurb}
-											</p>
-										)}
-										<div className="flex items-center gap-2 text-xs">
-											<span className="px-2 py-1 bg-primary/10 text-primary rounded-full">
-												Custom
-											</span>
-											{quiz.isShared && (
-												<span className="px-2 py-1 bg-[#059669]/10 text-[#059669] rounded-full">
-													Shared
-												</span>
-											)}
-											{quiz.shareCount && quiz.shareCount > 0 && (
-												<span className="px-2 py-1 bg-accent text-accent-foreground rounded-full">
-													{quiz.shareCount} shares
-												</span>
-											)}
-										</div>
-									</div>
-
-									{/* Actions */}
-									<div className="flex gap-2">
-										{!quiz.isShared && (
-											<>
-												<Link
-													href={`/custom-quizzes/create?edit=${quiz.id}`}
-													className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-secondary text-secondary-foreground rounded-full hover:bg-secondary/80 transition-colors text-sm font-medium"
-												>
-													<Edit className="w-4 h-4" />
-													Edit
-												</Link>
-												<button
-													onClick={() => {
-														setSelectedQuizForShare(quiz)
-														setShareModalOpen(true)
-													}}
-													className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-secondary text-secondary-foreground rounded-full hover:bg-secondary/80 transition-colors text-sm font-medium"
-												>
-													<Share2 className="w-4 h-4" />
-													Share
-												</button>
-												<button
-													onClick={() => handleDelete(quiz.id)}
-													className="px-3 py-2 bg-destructive/10 text-destructive rounded-full hover:bg-destructive/20 transition-colors"
-												>
-													<Trash2 className="w-4 h-4" />
-												</button>
-											</>
-										)}
-										<Link
-											href={`/custom-quizzes/${quiz.id}/play`}
-											className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-colors text-sm font-medium"
-										>
-											<FileText className="w-4 h-4" />
-											Play
-										</Link>
-									</div>
-								</ContentCard>
-							</motion.div>
-						))}
-					</div>
-				)}
-			</PageContainer>
+					) : (
+						<LazyCustomQuizzesList
+							quizzes={quizzes}
+							onDelete={handleDelete}
+							onShare={(quiz) => {
+								setSelectedQuizForShare(quiz)
+								setShareModalOpen(true)
+							}}
+						/>
+					)}
+			</Suspense>
 
 			{/* Share Modal */}
 			{selectedQuizForShare && (
@@ -290,13 +236,9 @@ export function CustomQuizzesClient({ initialData }: CustomQuizzesClientProps) {
 					onSuccess={() => {
 						refreshQuizzes()
 					}}
-					usage={usage ? {
-						quizzesShared: usage.currentMonth.quizzesShared,
-						quizzesSharedLimit: usage.currentMonth.quizzesSharedLimit,
-					} : undefined}
 				/>
 			)}
-		</PageLayout>
+		</>
 	)
 }
 

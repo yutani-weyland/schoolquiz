@@ -112,7 +112,7 @@ model Quiz {
   theme           String?
   seasonalTag     String?
   publicationDate DateTime?
-  status          String    @default("draft") // draft, scheduled, published
+  status          String    @default("draft") // draft, scheduled, published, archived, template
   colorHex        String? // Hex color for quiz card (e.g., "#FFE135")
   createdBy       String // Teacher ID (for backward compatibility)
   createdByUserId String? // User ID (for custom quizzes)
@@ -121,6 +121,11 @@ model Quiz {
   schoolLogoUrl   String? // URL to uploaded school logo
   brandHeading    String? // Custom heading for PDF
   brandSubheading String? // Custom subheading for PDF
+  // Custom quiz metadata (denormalized for performance)
+  isOrgWide       Boolean?  @default(false) // Organisation-wide quiz
+  isTemplate      Boolean?  @default(false) // Template quiz
+  roundCount      Int?      @default(0) // Denormalized round count
+  questionCount   Int?      @default(0) // Denormalized question count
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -141,6 +146,9 @@ model Quiz {
   @@index([quizType])
   @@index([createdByUserId])
   @@index([quizType, createdByUserId])
+  @@index([quizType, status, updatedAt(sort: Desc)])
+  @@index([quizType, isOrgWide, updatedAt(sort: Desc)])
+  @@index([quizType, isTemplate, updatedAt(sort: Desc)])
   @@map("quizzes")
 }
 
@@ -306,7 +314,7 @@ model User {
   createdCustomQuizzes Quiz[]              @relation("CustomQuizCreator")
   createdQuestions     Question[]           @relation("QuestionCreator")
   customQuizUsage      CustomQuizUsage[]
-  customQuizShares     CustomQuizShare[]
+  customQuizShares     CustomQuizShare[]    @relation("CustomQuizShareUser")
   customQuizSharesReceived CustomQuizShare[] @relation("CustomQuizSharer")
 
   // Billing & Support relations
@@ -1076,20 +1084,27 @@ model Referral {
 // ============================================================================
 
 model CustomQuizShare {
-  id        String   @id @default(cuid())
-  quizId    String
-  userId    String // User who has access to this quiz
-  sharedBy  String // User who shared the quiz
-  createdAt DateTime @default(now())
+  id          String   @id @default(cuid())
+  quizId      String
+  targetType  String   @default("user") // "user" | "group" | "organisation"
+  targetId    String?  // userId or groupId; null for organisation
+  permission  String   @default("view") // "view" | "run" | "edit"
+  sharedBy    String   // User who shared the quiz
+  createdAt   DateTime @default(now())
+  
+  // Legacy field - kept for backwards compatibility, use targetId instead
+  userId      String?  // Deprecated: use targetId when targetType='user'
 
   quiz     Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
-  user     User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user     User? @relation("CustomQuizShareUser", fields: [userId], references: [id], onDelete: Cascade)
   sharer   User @relation("CustomQuizSharer", fields: [sharedBy], references: [id], onDelete: Cascade)
+  // TODO: Add relations for group and organisation when needed
 
-  @@unique([quizId, userId])
   @@index([userId])
   @@index([quizId])
   @@index([sharedBy])
+  @@index([targetType, targetId])
+  @@index([quizId, permission])
   @@map("custom_quiz_shares")
 }
 

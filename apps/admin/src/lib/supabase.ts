@@ -7,8 +7,18 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 // Only create Supabase client if environment variables are available
 // This prevents errors during static generation when env vars might not be set
+// OPTIMIZATION: Disable realtime by default to prevent WebSocket connections
+// This improves bfcache compatibility and reduces initial connection overhead
 export const supabase = supabaseUrl && supabaseKey
-  ? createClient(supabaseUrl, supabaseKey)
+  ? createClient(supabaseUrl, supabaseKey, {
+      realtime: {
+        // Disable realtime unless explicitly needed
+        // This prevents WebSocket connections that block bfcache
+        params: {
+          eventsPerSecond: 0,
+        },
+      },
+    })
   : null
 
 // Server-side Supabase client with service role key for admin operations
@@ -17,6 +27,12 @@ export const supabaseAdmin = supabaseUrl && supabaseServiceKey
       auth: {
         autoRefreshToken: false,
         persistSession: false,
+      },
+      realtime: {
+        // Disable realtime on server-side (not needed for server operations)
+        params: {
+          eventsPerSecond: 0,
+        },
       },
     })
   : null

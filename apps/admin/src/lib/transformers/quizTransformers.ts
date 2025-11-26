@@ -100,7 +100,12 @@ export function transformQuizToPlayFormat(prismaQuiz: QuizWithRelations): {
 export function transformQuestionToPrisma(
 	componentQuestion: QuizQuestion,
 	categoryId: string,
-	createdBy: string
+	createdBy: string,
+	options?: {
+		createdByUserId?: string | null;
+		quizId?: string | null;
+		isCustom?: boolean;
+	}
 ): Omit<Question, 'id' | 'createdAt' | 'updatedAt' | 'usageCount' | 'lastUsedAt' | 'isUsed'> {
 	return {
 		text: componentQuestion.question,
@@ -111,6 +116,9 @@ export function transformQuestionToPrisma(
 		status: 'published',
 		createdBy,
 		categoryId,
+		createdByUserId: options?.createdByUserId ?? null,
+		quizId: options?.quizId ?? null,
+		isCustom: options?.isCustom ?? false,
 		isPeopleQuestion: componentQuestion.roundNumber === QUIZ_CONSTANTS.PEOPLES_ROUND_NUMBER,
 	};
 }

@@ -57,10 +57,10 @@ export async function getLeaderboardsPageData(): Promise<LeaderboardsPageData> {
 	}
 
 	// Check premium status
-	const isPremium = user.tier === 'premium' || 
+	const isPremium = user.tier === 'premium' ||
 		user.subscriptionStatus === 'ACTIVE' ||
 		user.subscriptionStatus === 'TRIALING' ||
-		(user.freeTrialUntil && new Date(user.freeTrialUntil) > new Date())
+		(user.freeTrialUntil !== null && new Date(user.freeTrialUntil) > new Date())
 
 	try {
 		// Get user's organisation memberships
@@ -81,7 +81,7 @@ export async function getLeaderboardsPageData(): Promise<LeaderboardsPageData> {
 		})
 
 		const organisationIds = memberships.map(m => m.organisationId)
-		const groupIds = memberships.flatMap(m => 
+		const groupIds = memberships.flatMap(m =>
 			m.groupMembers.map(gm => gm.group.id)
 		)
 

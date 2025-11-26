@@ -2,6 +2,32 @@
 -- Run this on your Supabase database to improve query performance
 -- Note: Column names use camelCase as per Prisma schema mapping
 
+-- ============================================================================
+-- QUIZ PLAY PAGE OPTIMIZATION INDEXES
+-- ============================================================================
+-- These indexes optimize the quiz play page queries for maximum performance
+
+-- Index for finding quiz by slug (most common query)
+CREATE INDEX IF NOT EXISTS idx_quizzes_slug_lookup ON quizzes(slug) WHERE slug IS NOT NULL;
+
+-- Composite index for finding newest quiz (quizType + status + weekISO + createdAt)
+CREATE INDEX IF NOT EXISTS idx_quizzes_newest_lookup ON quizzes("quizType", status, "weekISO" DESC, "createdAt" DESC) 
+WHERE "quizType" = 'OFFICIAL' AND status = 'published' AND slug IS NOT NULL;
+
+-- Index for rounds lookup by quizId (with index ordering)
+CREATE INDEX IF NOT EXISTS idx_rounds_quiz_index ON rounds("quizId", index);
+
+-- Index for quiz_round_questions lookup (roundId + order)
+CREATE INDEX IF NOT EXISTS idx_quiz_round_questions_round_order ON quiz_round_questions("roundId", "order");
+
+-- Composite index for questions lookup (used in quiz play)
+CREATE INDEX IF NOT EXISTS idx_questions_id_lookup ON questions(id);
+
+-- Index for category lookup (used in rounds)
+CREATE INDEX IF NOT EXISTS idx_categories_id_lookup ON categories(id);
+
+-- ============================================================================
+
 -- Enable pg_trgm extension for text search (if not already enabled)
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 

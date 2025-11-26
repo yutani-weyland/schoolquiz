@@ -10,13 +10,32 @@ import { motion, AnimatePresence } from 'framer-motion'
 export function LeagueRequestsNotification() {
   const queryClient = useQueryClient()
   const [isOpen, setIsOpen] = useState(false)
+  const [hasInteracted, setHasInteracted] = useState(false)
 
+  // OPTIMIZATION: Defer API call until user interacts with notification or popover opens
+  // This prevents blocking the initial page render
   const { data: requests = [], isLoading } = useQuery({
     queryKey: ['league-requests'],
     queryFn: fetchLeagueRequests,
+    enabled: hasInteracted || isOpen, // Only fetch when user interacts or popover opens
     staleTime: 10 * 1000,
-    refetchInterval: 30 * 1000, // Poll every 30 seconds
+    refetchInterval: isOpen ? 30 * 1000 : false, // Only poll when open
   })
+
+  // Defer initial fetch until after page load
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // Use requestIdleCallback or setTimeout to defer the fetch
+      const deferredFetch = () => {
+        setHasInteracted(true)
+      }
+      if ('requestIdleCallback' in window) {
+        (window as any).requestIdleCallback(deferredFetch, { timeout: 2000 })
+      } else {
+        setTimeout(deferredFetch, 1000)
+      }
+    }
+  }, [])
 
   const respondMutation = useMutation({
     mutationFn: ({ requestId, action }: { requestId: string; action: 'approve' | 'reject' }) =>

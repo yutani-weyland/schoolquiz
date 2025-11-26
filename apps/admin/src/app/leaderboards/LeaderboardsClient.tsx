@@ -1,28 +1,108 @@
 'use client'
 
-import { useState } from 'react'
-import { motion } from 'framer-motion'
+/**
+ * OPTIMIZATION: Main client component for Leaderboards page
+ * - Lazy-loads Framer Motion (only when needed)
+ * - Uses server actions instead of API routes
+ * - Uses summary data (minimal payload)
+ * - KAHOOT-LIKE PERFORMANCE: Minimal client JS, instant interactions
+ */
+
+import { useState, useTransition, useEffect, useRef } from 'react'
 import { Trophy, Users, Building2, Search, Bell, BellOff } from 'lucide-react'
 import { useUserTier } from '@/hooks/useUserTier'
 import { UpgradeModal } from '@/components/premium/UpgradeModal'
 import { canAccessFeature } from '@/lib/feature-gating'
-import type { LeaderboardsPageData, Leaderboard } from './leaderboards-server'
+import { useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
+import { Suspense } from 'react'
+import type { LeaderboardsSummaryData, LeaderboardSummary } from './leaderboards-summary-server'
+import { joinLeaderboard, leaveLeaderboard, loadMoreLeaderboards } from './leaderboards-actions'
+import { LeaderboardCardGridSkeleton } from '@/components/ui/LeaderboardCardSkeleton'
 
-// Import springs directly - inline for demo
-const springs = {
-	micro: { type: "spring" as const, stiffness: 380, damping: 28, mass: 0.8 },
-}
+// OPTIMIZATION: Lazy-load LeaderboardsListSection to reduce initial bundle size
+// Framer Motion (~50KB+) is only loaded when this section is rendered
+const LazyLeaderboardsList = dynamic(
+	() => import('./LeaderboardsListSection').then(mod => ({ default: mod.LeaderboardsListSection })),
+	{ 
+		ssr: false, // Client-side only (animations)
+		loading: () => <LeaderboardCardGridSkeleton count={6} /> // Skeleton for initial load
+	}
+)
 
 interface LeaderboardsClientProps {
-	initialData: LeaderboardsPageData
+	initialData: LeaderboardsSummaryData
 }
 
 export function LeaderboardsClient({ initialData }: LeaderboardsClientProps) {
+	const router = useRouter()
 	const { tier, isPremium: hookIsPremium } = useUserTier()
+	const [isPending, startTransition] = useTransition()
 	const [showUpgradeModal, setShowUpgradeModal] = useState(false)
-	const [leaderboards, setLeaderboards] = useState(initialData.leaderboards)
+	const [leaderboards, setLeaderboards] = useState(initialData)
 	const [filter, setFilter] = useState<'all' | 'orgWide' | 'group' | 'adHoc'>('all')
 	const [searchQuery, setSearchQuery] = useState('')
+	const [isLoadingMore, setIsLoadingMore] = useState(false)
+	const [hasMore, setHasMore] = useState(initialData.hasMore || false)
+	const loadMoreRef = useRef<HTMLDivElement>(null)
+
+	// OPTIMIZATION: Sync state when initialData changes (from server-side refresh)
+	useEffect(() => {
+		setLeaderboards(initialData)
+		setHasMore(initialData.hasMore || false)
+	}, [initialData])
+
+	// OPTIMIZATION: Infinite scroll using Intersection Observer
+	useEffect(() => {
+		if (!hasMore || isLoadingMore || searchQuery) return // Don't load more if searching
+
+		const observer = new IntersectionObserver(
+			entries => {
+				const [entry] = entries
+				if (entry?.isIntersecting) {
+					handleLoadMore()
+				}
+			},
+			{
+				root: null, // viewport
+				rootMargin: '200px', // Load when 200px from bottom
+				threshold: 0.1,
+			}
+		)
+
+		if (loadMoreRef.current) {
+			observer.observe(loadMoreRef.current)
+		}
+
+		return () => {
+			if (loadMoreRef.current) {
+				observer.unobserve(loadMoreRef.current)
+			}
+		}
+	}, [hasMore, isLoadingMore, searchQuery])
+
+	const handleLoadMore = async () => {
+		if (isLoadingMore || !hasMore) return
+
+		setIsLoadingMore(true)
+		try {
+			const currentCount =
+				leaderboards.orgWide.length + leaderboards.group.length + leaderboards.adHoc.length
+			const newData = await loadMoreLeaderboards(currentCount, 20)
+
+			setLeaderboards(prev => ({
+				orgWide: [...prev.orgWide, ...newData.orgWide],
+				group: [...prev.group, ...newData.group],
+				adHoc: [...prev.adHoc, ...newData.adHoc],
+				isPremium: prev.isPremium,
+			}))
+			setHasMore(newData.hasMore)
+		} catch (error) {
+			console.error('Failed to load more leaderboards:', error)
+		} finally {
+			setIsLoadingMore(false)
+		}
+	}
 
 	// Use server data first, fallback to hook
 	const isPremium = initialData.isPremium || hookIsPremium
@@ -33,14 +113,13 @@ export function LeaderboardsClient({ initialData }: LeaderboardsClientProps) {
 			setShowUpgradeModal(true)
 			return
 		}
-		
+
 		try {
-			const res = await fetch(`/api/leaderboards/${leaderboardId}/join`, {
-				method: 'POST',
+			await joinLeaderboard(leaderboardId)
+			// OPTIMIZATION: Refresh via router instead of API call
+			startTransition(() => {
+				router.refresh()
 			})
-			if (!res.ok) throw new Error('Failed to join')
-			// Refresh leaderboards
-			refreshLeaderboards()
 		} catch (error) {
 			console.error('Error joining leaderboard:', error)
 			alert('Failed to join leaderboard')
@@ -49,309 +128,188 @@ export function LeaderboardsClient({ initialData }: LeaderboardsClientProps) {
 
 	const handleLeave = async (leaderboardId: string, mute: boolean = false) => {
 		try {
-			const res = await fetch(`/api/leaderboards/${leaderboardId}/leave`, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ mute }),
+			await leaveLeaderboard(leaderboardId, mute)
+			// OPTIMIZATION: Refresh via router instead of API call
+			startTransition(() => {
+				router.refresh()
 			})
-			if (!res.ok) throw new Error('Failed to leave')
-			// Refresh leaderboards
-			refreshLeaderboards()
 		} catch (error) {
 			console.error('Error leaving leaderboard:', error)
 			alert('Failed to leave leaderboard')
 		}
 	}
 
-	const refreshLeaderboards = async () => {
-		try {
-			const res = await fetch('/api/my-leaderboards')
-			if (!res.ok) throw new Error('Failed to fetch')
-			const data = await res.json()
-			
-			if (!isPremium) {
-				setLeaderboards({
-					orgWide: data.orgWide || [],
-					group: [],
-					adHoc: [],
-				})
-			} else {
-				setLeaderboards(data)
-			}
-		} catch (error) {
-			console.error('Error refreshing leaderboards:', error)
-		}
-	}
-
-	const isMember = (leaderboard: Leaderboard): boolean => {
-		return leaderboard.members.some(m => !m.leftAt)
-	}
-
-	const isMuted = (leaderboard: Leaderboard): boolean => {
-		return leaderboard.members.some(m => m.muted && !m.leftAt)
-	}
-
-	const filterLeaderboards = (list: Leaderboard[]) => {
+	const filterLeaderboards = (list: LeaderboardSummary[]) => {
 		if (!searchQuery) return list
 		const query = searchQuery.toLowerCase()
-		return list.filter(lb => 
-			lb.name.toLowerCase().includes(query) ||
-			lb.description?.toLowerCase().includes(query)
+		return list.filter(
+			lb =>
+				lb.name.toLowerCase().includes(query) ||
+				lb.description?.toLowerCase().includes(query)
 		)
 	}
 
-	const allLeaderboards = [
+	const allLeaderboards: Array<LeaderboardSummary & { section: 'orgWide' | 'group' | 'adHoc' }> = [
 		...leaderboards.orgWide.map(lb => ({ ...lb, section: 'orgWide' as const })),
 		...leaderboards.group.map(lb => ({ ...lb, section: 'group' as const })),
 		...leaderboards.adHoc.map(lb => ({ ...lb, section: 'adHoc' as const })),
 	]
 
-	const filteredLeaderboards = filter === 'all'
-		? allLeaderboards
-		: allLeaderboards.filter(lb => lb.section === filter)
+	const filteredLeaderboards =
+		filter === 'all'
+			? allLeaderboards
+			: allLeaderboards.filter(lb => lb.section === filter)
 
 	const displayLeaderboards = filterLeaderboards(filteredLeaderboards)
 
 	return (
-		<div className="min-h-screen bg-white dark:bg-[#0F1419]">
-			<div className="max-w-7xl mx-auto px-6 py-8">
-				{/* Header */}
-				<div className="mb-8">
-					<h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-						My Leaderboards
-					</h1>
-					<p className="text-gray-500 dark:text-gray-400">
-						Join competitions and track your progress
-					</p>
+		<>
+			{/* Filters */}
+			<div className="mb-6 flex flex-col sm:flex-row gap-4">
+				<div className="flex-1 relative">
+					<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+					<input
+						type="text"
+						placeholder="Search leaderboards..."
+						value={searchQuery}
+						onChange={e => setSearchQuery(e.target.value)}
+						disabled={isPending}
+						className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
+					/>
 				</div>
-
-				{/* Filters */}
-				<div className="mb-6 flex flex-col sm:flex-row gap-4">
-					<div className="flex-1 relative">
-						<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-						<input
-							type="text"
-							placeholder="Search leaderboards..."
-							value={searchQuery}
-							onChange={(e) => setSearchQuery(e.target.value)}
-							className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-						/>
-					</div>
-					<div className="flex gap-2">
-						<button
-							onClick={() => setFilter('all')}
-							className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-								filter === 'all'
-									? 'bg-blue-600 text-white'
-									: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-							}`}
-						>
-							All
-						</button>
-						<button
-							onClick={() => setFilter('orgWide')}
-							className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-								filter === 'orgWide'
-									? 'bg-blue-600 text-white'
-									: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-							}`}
-						>
-							Org-wide
-						</button>
-						{isPremium && (
-							<>
-								<button
-									onClick={() => setFilter('group')}
-									className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-										filter === 'group'
-											? 'bg-blue-600 text-white'
-											: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-									}`}
-								>
-									Group
-								</button>
-								<button
-									onClick={() => setFilter('adHoc')}
-									className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-										filter === 'adHoc'
-											? 'bg-blue-600 text-white'
-											: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-									}`}
-								>
-									Ad-hoc
-								</button>
-							</>
-						)}
-					</div>
-				</div>
-
-				{/* Leaderboards List */}
-				{displayLeaderboards.length === 0 ? (
-					<div className="text-center py-12">
-						<Trophy className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-						<p className="text-gray-500 dark:text-gray-400">
-							{searchQuery ? 'No leaderboards match your search' : 'No leaderboards available'}
-						</p>
-					</div>
-				) : (
-					<>
-						{/* Section Headers (when showing all) */}
-						{filter === 'all' && (
-							<>
-								{leaderboards.orgWide.length > 0 && (
-									<SectionHeader
-										title="Organisation-wide"
-										count={leaderboards.orgWide.length}
-										icon={Building2}
-									/>
-								)}
-								{isPremium && leaderboards.group.length > 0 && (
-									<SectionHeader
-										title="Group Leaderboards"
-										count={leaderboards.group.length}
-										icon={Users}
-									/>
-								)}
-								{isPremium && leaderboards.adHoc.length > 0 && (
-									<SectionHeader
-										title="Ad-hoc Leaderboards"
-										count={leaderboards.adHoc.length}
-										icon={Trophy}
-									/>
-								)}
-							</>
-						)}
-
-						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-							{displayLeaderboards.map((leaderboard) => {
-								const member = isMember(leaderboard)
-								const muted = isMuted(leaderboard)
-
-								return (
-									<LeaderboardCard
-										key={leaderboard.id}
-										leaderboard={leaderboard}
-										isMember={member}
-										isMuted={muted}
-										onJoin={() => handleJoin(leaderboard.id)}
-										onLeave={(mute) => handleLeave(leaderboard.id, mute)}
-									/>
-								)
-							})}
-						</div>
-					</>
-				)}
-				
-				{/* Upgrade Modal */}
-				<UpgradeModal
-					isOpen={showUpgradeModal}
-					onClose={() => setShowUpgradeModal(false)}
-					feature="Private Leagues & All Leaderboards"
-				/>
-			</div>
-		</div>
-	)
-}
-
-function LeaderboardCard({
-	leaderboard,
-	isMember,
-	isMuted,
-	onJoin,
-	onLeave,
-}: {
-	leaderboard: Leaderboard & { section?: 'orgWide' | 'group' | 'adHoc' }
-	isMember: boolean
-	isMuted: boolean
-	onJoin: () => void
-	onLeave: (mute: boolean) => void
-}) {
-	return (
-		<motion.div
-			initial={{ opacity: 0, y: 10 }}
-			animate={{ opacity: 1, y: 0 }}
-			className={`bg-white dark:bg-gray-800 rounded-lg border ${
-				isMuted
-					? 'border-gray-200 dark:border-gray-700 opacity-60'
-					: 'border-gray-200 dark:border-gray-700 hover:border-blue-500'
-			} p-6`}
-		>
-			<div className="flex items-start justify-between mb-3">
-				<div className="flex-1">
-					<h3 className="font-semibold text-gray-900 dark:text-white mb-1 flex items-center gap-2">
-						{leaderboard.name}
-						{isMuted && <BellOff className="w-4 h-4 text-gray-400" />}
-					</h3>
-					<div className="flex items-center gap-2 mb-2">
-						<span className="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-full">
-							{leaderboard.visibility === 'ORG_WIDE' ? 'Org-wide' : leaderboard.visibility === 'GROUP' ? 'Group' : 'Ad-hoc'}
-						</span>
-						{leaderboard.organisationGroup && (
-							<span className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-full">
-								{leaderboard.organisationGroup.name}
-							</span>
-						)}
-						{leaderboard.organisation && (
-							<span className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-full">
-								{leaderboard.organisation.name}
-							</span>
-						)}
-					</div>
-				</div>
-			</div>
-
-			{leaderboard.description && (
-				<p className="text-sm text-gray-600 dark:text-gray-400 mb-4 line-clamp-2">
-					{leaderboard.description}
-				</p>
-			)}
-
-			<div className="flex items-center justify-between">
-				<span className="text-sm text-gray-500 dark:text-gray-400">
-					{leaderboard.members.filter(m => !m.leftAt).length} members
-				</span>
-
 				<div className="flex gap-2">
-					{isMember ? (
+					<button
+						onClick={() => setFilter('all')}
+						disabled={isPending}
+						className={`px-4 py-2 rounded-full text-sm font-medium transition-colors disabled:opacity-50 ${
+							filter === 'all'
+								? 'bg-blue-600 text-white'
+								: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+						}`}
+					>
+						All
+					</button>
+					<button
+						onClick={() => setFilter('orgWide')}
+						disabled={isPending}
+						className={`px-4 py-2 rounded-full text-sm font-medium transition-colors disabled:opacity-50 ${
+							filter === 'orgWide'
+								? 'bg-blue-600 text-white'
+								: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+						}`}
+					>
+						Org-wide
+					</button>
+					{isPremium && (
 						<>
-							{leaderboard.visibility === 'ORG_WIDE' && (
-								<motion.button
-									whileHover={{ scale: 1.05 }}
-									whileTap={{ scale: 0.95 }}
-									onClick={() => onLeave(true)}
-									className="px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors flex items-center gap-1"
-								>
-									{isMuted ? <Bell className="w-3 h-3" /> : <BellOff className="w-3 h-3" />}
-									{isMuted ? 'Unmute' : 'Mute'}
-								</motion.button>
-							)}
-							<motion.button
-								whileHover={{ scale: 1.05 }}
-								whileTap={{ scale: 0.95 }}
-								onClick={() => onLeave(false)}
-								className="px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors"
+							<button
+								onClick={() => setFilter('group')}
+								disabled={isPending}
+								className={`px-4 py-2 rounded-full text-sm font-medium transition-colors disabled:opacity-50 ${
+									filter === 'group'
+										? 'bg-blue-600 text-white'
+										: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+								}`}
 							>
-								Leave
-							</motion.button>
+								Group
+							</button>
+							<button
+								onClick={() => setFilter('adHoc')}
+								disabled={isPending}
+								className={`px-4 py-2 rounded-full text-sm font-medium transition-colors disabled:opacity-50 ${
+									filter === 'adHoc'
+										? 'bg-blue-600 text-white'
+										: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+								}`}
+							>
+								Ad-hoc
+							</button>
 						</>
-					) : (
-						<motion.button
-							whileHover={{ scale: 1.05 }}
-							whileTap={{ scale: 0.95 }}
-							onClick={onJoin}
-							transition={springs.micro}
-							className="px-4 py-1.5 text-xs font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-full transition-colors"
-						>
-							Join
-						</motion.button>
 					)}
 				</div>
 			</div>
-		</motion.div>
+
+			{/* Leaderboards List */}
+			{displayLeaderboards.length === 0 ? (
+				<div className="text-center py-12">
+					<Trophy className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+					<p className="text-gray-500 dark:text-gray-400">
+						{searchQuery
+							? 'No leaderboards match your search'
+							: 'No leaderboards available'}
+					</p>
+				</div>
+			) : (
+				<>
+					{/* Section Headers (when showing all) */}
+					{filter === 'all' && (
+						<>
+							{leaderboards.orgWide.length > 0 && (
+								<SectionHeader
+									title="Organisation-wide"
+									count={leaderboards.orgWide.length}
+									icon={Building2}
+								/>
+							)}
+							{isPremium && leaderboards.group.length > 0 && (
+								<SectionHeader
+									title="Group Leaderboards"
+									count={leaderboards.group.length}
+									icon={Users}
+								/>
+							)}
+							{isPremium && leaderboards.adHoc.length > 0 && (
+								<SectionHeader
+									title="Ad-hoc Leaderboards"
+									count={leaderboards.adHoc.length}
+									icon={Trophy}
+								/>
+							)}
+						</>
+					)}
+
+					{/* OPTIMIZATION: Lazy-loaded list section with Framer Motion */}
+					<Suspense fallback={<LeaderboardCardGridSkeleton count={6} />}>
+						<LazyLeaderboardsList
+							leaderboards={displayLeaderboards}
+							onJoin={handleJoin}
+							onLeave={handleLeave}
+						/>
+					</Suspense>
+
+					{/* OPTIMIZATION: Infinite scroll sentinel */}
+					{hasMore && !searchQuery && (
+						<div ref={loadMoreRef} className="flex justify-center py-8">
+							{isLoadingMore ? (
+								<LeaderboardCardGridSkeleton count={3} />
+							) : (
+								// Invisible sentinel for infinite scroll
+								<div className="h-1 w-1" />
+							)}
+						</div>
+					)}
+				</>
+			)}
+
+			{/* Upgrade Modal */}
+			<UpgradeModal
+				isOpen={showUpgradeModal}
+				onClose={() => setShowUpgradeModal(false)}
+				feature="Private Leagues & All Leaderboards"
+			/>
+		</>
 	)
 }
 
-function SectionHeader({ title, count, icon: Icon }: { title: string; count: number; icon: any }) {
+function SectionHeader({
+	title,
+	count,
+	icon: Icon,
+}: {
+	title: string
+	count: number
+	icon: any
+}) {
 	return (
 		<div className="flex items-center gap-2 mt-8 mb-4">
 			<Icon className="w-5 h-5 text-gray-400" />
@@ -360,4 +318,3 @@ function SectionHeader({ title, count, icon: Icon }: { title: string; count: num
 		</div>
 	)
 }
-

@@ -90,7 +90,7 @@ export default function MyCustomQuizzesPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        
+
         if (viewType === 'official') {
           // Fetch official quizzes (weekly quiz drop)
           const quizzesRes = await fetch('/api/premium/official-quizzes', {
@@ -141,13 +141,13 @@ export default function MyCustomQuizzesPage() {
         quiz.blurb?.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
-    
+
     // For custom quizzes, filter by both filter and search
     const matchesFilter =
       filter === 'all' ||
       (filter === 'mine' && !quiz.isShared) ||
       (filter === 'shared' && quiz.isShared);
-    
+
     const matchesSearch =
       !searchQuery ||
       quiz.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -164,6 +164,11 @@ export default function MyCustomQuizzesPage() {
     try {
       const token = getAuthToken();
       const userId = getUserId();
+
+      if (!userId) {
+        alert('User session not found');
+        return;
+      }
 
       const res = await fetch(`/api/premium/custom-quizzes/${quizId}`, {
         method: 'DELETE',
@@ -229,11 +234,10 @@ export default function MyCustomQuizzesPage() {
           <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg rounded-2xl p-6">
             <div className="flex items-center gap-6">
               <span
-                className={`text-base font-semibold transition-colors whitespace-nowrap ${
-                  viewType === 'official'
+                className={`text-base font-semibold transition-colors whitespace-nowrap ${viewType === 'official'
                     ? 'text-gray-900 dark:text-white'
                     : 'text-gray-500 dark:text-gray-400'
-                }`}
+                  }`}
               >
                 Weekly Quiz Drop
               </span>
@@ -242,27 +246,24 @@ export default function MyCustomQuizzesPage() {
                   console.log('Toggle clicked, current viewType:', viewType);
                   setViewType(viewType === 'official' ? 'custom' : 'official');
                 }}
-                className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 cursor-pointer ${
-                  viewType === 'official'
+                className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 cursor-pointer ${viewType === 'official'
                     ? 'bg-blue-600'
                     : 'bg-gray-300 dark:bg-gray-600'
-                }`}
+                  }`}
                 role="switch"
                 aria-checked={viewType === 'official'}
                 aria-label="Toggle between weekly quiz drop and custom quizzes"
               >
                 <span
-                  className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-lg transition-transform duration-200 ${
-                    viewType === 'official' ? 'translate-x-7' : 'translate-x-1'
-                  }`}
+                  className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-lg transition-transform duration-200 ${viewType === 'official' ? 'translate-x-7' : 'translate-x-1'
+                    }`}
                 />
               </button>
               <span
-                className={`text-base font-semibold transition-colors whitespace-nowrap ${
-                  viewType === 'custom'
+                className={`text-base font-semibold transition-colors whitespace-nowrap ${viewType === 'custom'
                     ? 'text-gray-900 dark:text-white'
                     : 'text-gray-500 dark:text-gray-400'
-                }`}
+                  }`}
               >
                 My Custom Quizzes
               </span>
@@ -336,11 +337,10 @@ export default function MyCustomQuizzesPage() {
                   <button
                     key={f}
                     onClick={() => setFilter(f)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      filter === f
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filter === f
                         ? 'bg-blue-600 text-white'
                         : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                    }`}
+                      }`}
                   >
                     {f === 'all' ? 'All' : f === 'mine' ? 'Mine' : 'Shared'}
                   </button>
@@ -396,8 +396,8 @@ export default function MyCustomQuizzesPage() {
                       ? 'No quizzes found'
                       : 'No official quizzes available'
                     : searchQuery
-                    ? 'No quizzes found'
-                    : 'No custom quizzes yet'}
+                      ? 'No quizzes found'
+                      : 'No custom quizzes yet'}
                 </h3>
                 <p className="text-gray-600 dark:text-gray-400 mb-6">
                   {viewType === 'official'
@@ -405,8 +405,8 @@ export default function MyCustomQuizzesPage() {
                       ? 'Try adjusting your search'
                       : 'Check back later for new weekly quizzes'
                     : searchQuery
-                    ? 'Try adjusting your search or filters'
-                    : 'Create your first custom quiz to get started'}
+                      ? 'Try adjusting your search or filters'
+                      : 'Create your first custom quiz to get started'}
                 </p>
                 {viewType === 'custom' && !searchQuery && (
                   <Link

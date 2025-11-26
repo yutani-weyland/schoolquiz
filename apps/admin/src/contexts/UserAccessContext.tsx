@@ -4,7 +4,6 @@ import React, { createContext, useContext, useState, useEffect, useMemo, useRef,
 import { useSession } from 'next-auth/react';
 import { storage, getAuthToken, getUserId, getUserName, getUserEmail, getUserTier } from '@/lib/storage';
 import { logger } from '@/lib/logger';
-import { fetchSubscription } from '@/lib/subscription-fetch';
 
 export type AccessTier = 'visitor' | 'free' | 'premium';
 
@@ -146,33 +145,47 @@ export function UserAccessProvider({ children }: UserAccessProviderProps) {
 
         // If session doesn't have tier but user is logged in, fetch from API
         // This handles cases where session hasn't been refreshed yet
+        // OPTIMIZATION: Defer this API call to avoid blocking initial render
+        // Use requestIdleCallback if available, otherwise setTimeout with small delay
         if (isLoggedIn && sessionUserId) {
-          logger.debug('Session tier not available, fetching from API', { sessionUserId });
-          try {
-            const subscriptionResponse = await fetch('/api/user/subscription', {
-              credentials: 'include', // Send session cookie
-            });
-
-            if (subscriptionResponse.ok) {
-              const subscriptionData = await subscriptionResponse.json();
-              const isPremium = subscriptionData.tier === 'premium';
-              const tierToSet = isPremium ? 'premium' : 'free';
-              logger.debug('Got tier from API', { tier: tierToSet });
-              clearTimeout(timeoutId);
-              setTier(tierToSet);
-              setIsLoading(false);
-              isFetchingRef.current = false;
-              return;
-            } else {
-              const errorText = await subscriptionResponse.text();
-              logger.warn('Subscription API returned non-OK status', { 
-                status: subscriptionResponse.status, 
-                error: errorText 
+          logger.debug('Session tier not available, will fetch from API after initial render', { sessionUserId });
+          // OPTIMIZATION: Defer subscription API call to avoid blocking LCP
+          // Use requestIdleCallback if available, otherwise setTimeout with small delay
+          const fetchSubscription = async () => {
+            try {
+              const subscriptionResponse = await fetch('/api/user/subscription', {
+                credentials: 'include', // Send session cookie
               });
+
+              if (subscriptionResponse.ok) {
+                const subscriptionData = await subscriptionResponse.json();
+                const isPremium = subscriptionData.tier === 'premium';
+                const tierToSet = isPremium ? 'premium' : 'free';
+                logger.debug('Got tier from API', { tier: tierToSet });
+                clearTimeout(timeoutId);
+                setTier(tierToSet);
+                setIsLoading(false);
+                isFetchingRef.current = false;
+                return;
+              } else {
+                const errorText = await subscriptionResponse.text();
+                logger.warn('Subscription API returned non-OK status', { 
+                  status: subscriptionResponse.status, 
+                  error: errorText 
+                });
+              }
+            } catch (apiError) {
+              logger.error('Failed to fetch subscription from API', apiError);
+              // Fall through to localStorage/fallback
             }
-          } catch (apiError) {
-            logger.error('Failed to fetch subscription from API', apiError);
-            // Fall through to localStorage/fallback
+          };
+
+          // Defer API call: use requestIdleCallback if available (runs when browser is idle)
+          // Otherwise use setTimeout with small delay to allow initial render
+          if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+            (window as any).requestIdleCallback(fetchSubscription, { timeout: 2000 });
+          } else {
+            setTimeout(fetchSubscription, 100); // Small delay to allow initial render
           }
         }
 

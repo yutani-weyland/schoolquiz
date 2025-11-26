@@ -112,7 +112,7 @@ export function ProfileClient({
 
   const isOwnProfile = profile.isOwnProfile
   const favouriteAchievementIds = profile.favouriteAchievementIds || []
-  const favouriteAchievements = achievements.filter((a) =>
+  const favouriteAchievements = achievements.filter((a: any) =>
     favouriteAchievementIds.includes(a.achievementId)
   )
 

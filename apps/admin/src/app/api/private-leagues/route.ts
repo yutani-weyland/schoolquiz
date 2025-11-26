@@ -168,20 +168,23 @@ export async function GET(request: NextRequest) {
       }
       
       // Only include members if explicitly requested (reduces payload by 80-90%)
+      // OPTIMIZATION: Use select instead of include, skip profile relation for performance
       if (includeMembers) {
         includeStructure.members = {
           where: {
             leftAt: null,
           },
-          take: 50, // Limit members to prevent huge payloads
-          include: {
+          take: 10, // OPTIMIZATION: Reduced from 50 to 10 for list view (enough for preview)
+          select: {
+            id: true,
+            userId: true,
+            joinedAt: true,
             user: {
               select: {
                 id: true,
                 name: true,
-                email: true,
-                teamName: true,
-                // Skip profile for performance - can be loaded separately if needed
+                // OPTIMIZATION: Only fetch name - email and teamName slow down queries unnecessarily
+                // If needed, can be fetched separately via /members endpoint
               },
             },
           },

@@ -192,6 +192,10 @@ export function RecentAchievements() {
     // Defer fetching to avoid blocking initial page load
     const timeoutId = setTimeout(async () => {
       try {
+        if (!session?.user?.id) {
+          setIsLoading(false);
+          return;
+        }
         // Use shared fetch utilities with automatic deduplication
         const { fetchUserAchievements, fetchAchievements } = await import('@/lib/achievement-fetch');
         
@@ -207,6 +211,10 @@ export function RecentAchievements() {
         }
 
         // Fetch all achievements to get in-progress ones
+        if (!session?.user?.id) {
+          setIsLoading(false);
+          return;
+        }
         const allData = await fetchAchievements(session.user.id, null);
         // Filter for in-progress achievements (have progress but not unlocked)
         const inProgress = (allData.achievements || []).filter((achievement: AllAchievement) => {

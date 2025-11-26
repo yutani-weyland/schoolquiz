@@ -111,7 +111,7 @@ export function OrganisationBrandingTab() {
         logoUrl = uploadData.url
       } else if (!logoUrl) {
         // User removed the logo
-        logoUrl = null
+        logoUrl = null as any
       }
 
       // Save branding

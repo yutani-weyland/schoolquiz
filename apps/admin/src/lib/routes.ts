@@ -16,7 +16,6 @@ export const ROUTES = {
         dashboard: '/admin/dashboard',
     },
     user: {
-        dashboard: '/dashboard',
         quizzes: '/quizzes',
         createQuiz: '/create-quiz',
     },
@@ -29,7 +28,7 @@ export function getHomeRouteForUser(role: string = 'teacher') {
     if (role === 'PlatformAdmin' || role === 'admin') {
         return ROUTES.admin.root;
     }
-    return ROUTES.user.dashboard;
+    return ROUTES.user.quizzes;
 }
 
 /**

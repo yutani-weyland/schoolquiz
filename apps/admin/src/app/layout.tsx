@@ -1,14 +1,16 @@
 import type { Metadata } from "next";
-import { cookies, headers } from "next/headers";
 import Script from "next/script";
 import { Atkinson_Hyperlegible, Cinzel, Inter } from "next/font/google";
+// OPTIMIZATION: CSS is loaded normally - Next.js will optimize it automatically
+// For critical CSS, consider using CSS-in-JS or inline critical styles
 import "./globals.css";
 import { UserAccessProvider } from "@/contexts/UserAccessContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ReactQueryProvider } from "@/providers/ReactQueryProvider";
 import { SessionProviderWrapper } from "@/providers/SessionProviderWrapper";
-import { NavigationProgress } from "@/components/ui/NavigationProgress";
-import { getThemeFromCookie, Theme } from "@/lib/theme";
+// OPTIMIZATION: Lazy load NavigationProgress to reduce initial bundle size
+// It uses framer-motion which is heavy, and navigation progress isn't critical for initial render
+import { LazyNavigationProgressWrapper } from "@/components/ui/LazyNavigationProgress";
 
 // Optimized font loading with next/font
 const atkinson = Atkinson_Hyperlegible({
@@ -41,19 +43,18 @@ export const metadata: Metadata = {
 // Routes that need cookies (like admin pages) will automatically be dynamic
 // export const dynamic = "force-dynamic"; // Removed - let routes decide individually
 
-export default async function RootLayout({
+export default function RootLayout({
 	children
 }: {
 	children: React.ReactNode;
 }) {
-	// Read theme from cookie server-side
-	const cookieStore = await cookies();
-	const themeCookie = cookieStore.get("sq_theme");
-	const serverTheme = themeCookie?.value ? decodeURIComponent(themeCookie.value) : "";
-	// Default to "light" for SSR - pre-paint script will set "color" for quiz pages before React hydrates
-	// suppressHydrationWarning on html tag will handle the mismatch
-	const ssrTheme = (serverTheme === "dark" || serverTheme === "light" || serverTheme === "color") ? serverTheme : "light";
-	const isDark = ssrTheme === "dark";
+	// OPTIMIZATION: Layout is now synchronous - no cookie reading blocks initial render
+	// The client-side script (sq-theme-prepaint) handles theme setting before React hydrates
+	// This allows the HTML shell to render immediately, improving LCP significantly
+	// Default to "light" for SSR - client script will update if needed
+	// suppressHydrationWarning on html tag will handle any mismatch
+	const ssrTheme = "light"; // Default - client script will update
+	const isDark = false; // Default - client script will update
 
 	return (
 		<html
@@ -63,6 +64,9 @@ export default async function RootLayout({
 			suppressHydrationWarning
 		>
 			<head>
+				{/* OPTIMIZATION: Preconnect to critical origins to reduce connection time */}
+				<link rel="preconnect" href={process.env.NEXT_PUBLIC_SUPABASE_URL || ''} crossOrigin="anonymous" />
+				<link rel="dns-prefetch" href={process.env.NEXT_PUBLIC_SUPABASE_URL || ''} />
 				<script
 					dangerouslySetInnerHTML={{
 						__html: `
@@ -129,7 +133,7 @@ export default async function RootLayout({
 				</Script>
 			</head>
 			<body className="bg-gray-50 dark:bg-[#0F1419] text-[hsl(var(--foreground))] overflow-x-hidden" suppressHydrationWarning>
-				<NavigationProgress />
+				<LazyNavigationProgressWrapper />
 				<SessionProviderWrapper>
 					<ReactQueryProvider>
 						<ThemeProvider>

@@ -47,12 +47,14 @@ export const AnalyticsBarChart = dynamic(
 )
 
 // Export recharts components for use in analytics pages
+// Note: This is a workaround for dynamic import of a module namespace
+// The actual usage should import specific components from recharts directly
 export const RechartsComponents = dynamic(
   () => import('recharts').then(mod => ({
-    default: mod
+    default: () => null as any, // Placeholder - components should be imported directly
   })),
   {
     ssr: false,
   }
-)
+) as any
 
