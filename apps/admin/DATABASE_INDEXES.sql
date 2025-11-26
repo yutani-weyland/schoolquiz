@@ -215,6 +215,84 @@ BEGIN
   END IF;
 END $$;
 
+-- ============================================
+-- STATS & ANALYSIS PERFORMANCE INDEXES
+-- ============================================
+
+-- Quiz completion lookups (most common stats query)
+-- Used for: summary stats, streaks, performance over time
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'quiz_completions') THEN
+    -- User completions ordered by date (for streaks and performance over time)
+    CREATE INDEX IF NOT EXISTS idx_quiz_completion_user_date 
+    ON quiz_completions(user_id, completed_at DESC);
+    
+    -- User completions ordered by score (for perfect scores query)
+    CREATE INDEX IF NOT EXISTS idx_quiz_completion_user_score 
+    ON quiz_completions(user_id, score DESC, total_questions DESC);
+    
+    -- Perfect scores lookup (score = total_questions)
+    CREATE INDEX IF NOT EXISTS idx_quiz_completion_perfect 
+    ON quiz_completions(user_id, completed_at DESC) 
+    WHERE score = total_questions;
+    
+    -- Public stats aggregation (all users)
+    CREATE INDEX IF NOT EXISTS idx_quiz_completion_public_stats 
+    ON quiz_completions(completed_at DESC);
+  END IF;
+END $$;
+
+-- League stats lookups (for league comparisons)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'private_league_stats') THEN
+    -- League stats by league and user (for user stats lookup)
+    CREATE INDEX IF NOT EXISTS idx_league_stats_league_user 
+    ON private_league_stats(league_id, user_id, quiz_slug);
+    
+    -- League ranking queries (for user rank calculation)
+    CREATE INDEX IF NOT EXISTS idx_league_stats_ranking 
+    ON private_league_stats(league_id, quiz_slug, total_correct_answers DESC);
+    
+    -- League aggregate queries (for league average)
+    CREATE INDEX IF NOT EXISTS idx_league_stats_aggregate 
+    ON private_league_stats(league_id, quiz_slug) 
+    WHERE quiz_slug IS NULL;
+  END IF;
+END $$;
+
+-- Season stats lookup
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'season_stats') THEN
+    CREATE INDEX IF NOT EXISTS idx_season_stats_user_season 
+    ON season_stats(user_id, season_id);
+  END IF;
+END $$;
+
+-- Private league member lookups (for league comparisons)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'private_league_members') THEN
+    -- User's active league memberships
+    CREATE INDEX IF NOT EXISTS idx_league_member_user_active 
+    ON private_league_members(user_id, left_at) 
+    WHERE left_at IS NULL;
+  END IF;
+END $$;
+
+-- Quiz lookups for category performance (if needed)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'quizzes') THEN
+    -- Quiz slug lookup for category performance
+    CREATE INDEX IF NOT EXISTS idx_quizzes_slug_for_stats 
+    ON quizzes(slug) 
+    WHERE slug IS NOT NULL;
+  END IF;
+END $$;
+
 -- Note: These indexes will slightly slow down INSERT/UPDATE operations
 -- but significantly speed up SELECT queries. Monitor your database performance
 -- and remove any indexes that aren't being used.
