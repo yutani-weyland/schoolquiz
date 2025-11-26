@@ -12,7 +12,7 @@ import { UpgradeModal } from "@/components/premium/UpgradeModal";
 import { canAccessQuiz, canAccessFeature } from "@/lib/feature-gating";
 import { sessionStorage } from "@/lib/storage";
 import { logger } from "@/lib/logger";
-import { SimpleAnimatedTooltip } from "@/components/ui/animated-tooltip";
+import * as Tooltip from '@radix-ui/react-tooltip';
 
 export type Quiz = {
 	id: number;
@@ -503,86 +503,122 @@ export function QuizCard({ quiz, isNewest = false, index = 0, completionData: in
 								? "Continue quiz" 
 								: "Play quiz"}
 						</motion.button>
-						<div className="flex items-center gap-2">
-							{/* PDF Download Button - Premium Only */}
-							{canDownloadPDF && (
-								<div className="relative z-[100]">
-									<SimpleAnimatedTooltip content="Download PDF" position="top" offsetY={20} preventFlip>
-										<motion.button
-											type="button"
-											aria-label="Download PDF"
-											disabled={isDownloadingPDF}
-											className={`inline-flex h-12 w-12 items-center justify-center rounded-full ${
-												text === "white" ? "bg-white/15 text-white hover:bg-white/25" : "bg-black/5 text-gray-900 hover:bg-black/10"
-											} ${isDownloadingPDF ? "opacity-50 cursor-not-allowed" : ""}`}
-											onClick={handleDownloadPDF}
-											whileHover={!isDownloadingPDF ? { 
-												scale: 1.1,
-												transition: { type: "spring", stiffness: 400, damping: 10 }
-											} : {}}
-											whileTap={!isDownloadingPDF ? { scale: 0.85 } : {}}
-										>
-											<FileDown className={`h-6 w-6 ${isDownloadingPDF ? "animate-pulse" : ""}`} />
-										</motion.button>
-									</SimpleAnimatedTooltip>
-								</div>
-							)}
-							{!canDownloadPDF && (
-								<div className="relative z-[100]">
-									<SimpleAnimatedTooltip content="Download PDF (Premium)" position="top" offsetY={20} preventFlip>
-										<motion.div className="relative">
+						<Tooltip.Provider delayDuration={300}>
+							<div className="flex items-center gap-2">
+								{/* PDF Download Button - Premium Only */}
+								{canDownloadPDF && (
+									<Tooltip.Root>
+										<Tooltip.Trigger asChild>
 											<motion.button
 												type="button"
-												aria-label="Download PDF (Premium)"
+												aria-label="Download PDF"
+												disabled={isDownloadingPDF}
 												className={`inline-flex h-12 w-12 items-center justify-center rounded-full ${
-													text === "white" ? "bg-white/10 text-white/60 hover:bg-white/20" : "bg-black/5 text-gray-900/60 hover:bg-black/10"
+													text === "white" ? "bg-white/15 text-white hover:bg-white/25" : "bg-black/5 text-gray-900 hover:bg-black/10"
+												} ${isDownloadingPDF ? "opacity-50 cursor-not-allowed" : ""}`}
+												onClick={handleDownloadPDF}
+												whileHover={!isDownloadingPDF ? { 
+													scale: 1.1,
+													transition: { type: "spring", stiffness: 400, damping: 10 }
+												} : {}}
+												whileTap={!isDownloadingPDF ? { scale: 0.85 } : {}}
+											>
+												<FileDown className={`h-6 w-6 ${isDownloadingPDF ? "animate-pulse" : ""}`} />
+											</motion.button>
+										</Tooltip.Trigger>
+										<Tooltip.Portal>
+											<Tooltip.Content
+												className="z-50 rounded-lg bg-black/95 backdrop-blur-sm px-4 py-2.5 text-sm font-medium text-white shadow-xl border border-white/10"
+												side="top"
+												align="center"
+												sideOffset={8}
+											>
+												Download PDF
+												<Tooltip.Arrow className="fill-black/95" />
+											</Tooltip.Content>
+										</Tooltip.Portal>
+									</Tooltip.Root>
+								)}
+								{!canDownloadPDF && (
+									<Tooltip.Root>
+										<Tooltip.Trigger asChild>
+											<motion.div className="relative">
+												<motion.button
+													type="button"
+													aria-label="Download PDF (Premium)"
+													className={`inline-flex h-12 w-12 items-center justify-center rounded-full ${
+														text === "white" ? "bg-white/10 text-white/60 hover:bg-white/20" : "bg-black/5 text-gray-900/60 hover:bg-black/10"
+													}`}
+													onClick={(e) => {
+														e.preventDefault();
+														e.stopPropagation();
+														setShowUpgradeModal(true);
+													}}
+													whileHover={{ 
+														scale: 1.1,
+														transition: { type: "spring", stiffness: 400, damping: 10 }
+													}}
+													whileTap={{ scale: 0.85 }}
+												>
+													<FileDown className="h-6 w-6" />
+												</motion.button>
+												<Crown className="absolute -top-1 -right-1 h-3 w-3 text-yellow-400" />
+											</motion.div>
+										</Tooltip.Trigger>
+										<Tooltip.Portal>
+											<Tooltip.Content
+												className="z-50 rounded-lg bg-black/95 backdrop-blur-sm px-4 py-2.5 text-sm font-medium text-white shadow-xl border border-white/10"
+												side="top"
+												align="center"
+												sideOffset={8}
+											>
+												Download PDF (Premium)
+												<Tooltip.Arrow className="fill-black/95" />
+											</Tooltip.Content>
+										</Tooltip.Portal>
+									</Tooltip.Root>
+								)}
+								<div className="relative">
+									<Tooltip.Root>
+										<Tooltip.Trigger asChild>
+											<motion.button
+												type="button"
+												aria-label="Share quiz"
+												className={`inline-flex h-12 w-12 items-center justify-center rounded-full ${
+													text === "white" ? "bg-white/15 text-white hover:bg-white/25" : "bg-black/5 text-gray-900 hover:bg-black/10"
 												}`}
 												onClick={(e) => {
 													e.preventDefault();
 													e.stopPropagation();
-													setShowUpgradeModal(true);
+													setShowShareMenu(!showShareMenu);
 												}}
 												whileHover={{ 
 													scale: 1.1,
-													transition: { type: "spring", stiffness: 400, damping: 10 }
+													rotate: [0, -12, 12, 0],
+													transition: { 
+														rotate: { duration: 0.5, ease: "easeInOut" },
+														scale: { type: "spring", stiffness: 400, damping: 10 }
+													}
 												}}
-												whileTap={{ scale: 0.85 }}
+												whileTap={{ scale: 0.85, rotate: -8 }}
 											>
-												<FileDown className="h-6 w-6" />
+												<Share2 className="h-6 w-6" />
 											</motion.button>
-											<Crown className="absolute -top-1 -right-1 h-3 w-3 text-yellow-400" />
-										</motion.div>
-									</SimpleAnimatedTooltip>
-								</div>
-							)}
-							<div className="relative z-[100]">
-								<SimpleAnimatedTooltip content="Share quiz" position="top" offsetY={20} preventFlip>
-									<motion.button
-										type="button"
-										aria-label="Share quiz"
-										className={`inline-flex h-12 w-12 items-center justify-center rounded-full ${
-											text === "white" ? "bg-white/15 text-white hover:bg-white/25" : "bg-black/5 text-gray-900 hover:bg-black/10"
-										}`}
-										onClick={(e) => {
-											e.preventDefault();
-											e.stopPropagation();
-											setShowShareMenu(!showShareMenu);
-										}}
-										whileHover={{ 
-											scale: 1.1,
-											rotate: [0, -12, 12, 0],
-											transition: { 
-												rotate: { duration: 0.5, ease: "easeInOut" },
-												scale: { type: "spring", stiffness: 400, damping: 10 }
-											}
-										}}
-										whileTap={{ scale: 0.85, rotate: -8 }}
-									>
-										<Share2 className="h-6 w-6" />
-									</motion.button>
-								</SimpleAnimatedTooltip>
+										</Tooltip.Trigger>
+										<Tooltip.Portal>
+											<Tooltip.Content
+												className="z-50 rounded-lg bg-black/95 backdrop-blur-sm px-4 py-2.5 text-sm font-medium text-white shadow-xl border border-white/10"
+												side="top"
+												align="center"
+												sideOffset={8}
+											>
+												Share quiz
+												<Tooltip.Arrow className="fill-black/95" />
+											</Tooltip.Content>
+										</Tooltip.Portal>
+									</Tooltip.Root>
 
-							<AnimatePresence>
+									<AnimatePresence>
 								{showShareMenu && (
 									<motion.div
 										initial={{ opacity: 0, scale: 0.9, y: 10 }}
@@ -667,9 +703,10 @@ export function QuizCard({ quiz, isNewest = false, index = 0, completionData: in
 										</div>
 									</motion.div>
 								)}
-							</AnimatePresence>
+									</AnimatePresence>
+								</div>
 							</div>
-						</div>
+						</Tooltip.Provider>
 					</div>
 				</div>
 			</motion.div>
