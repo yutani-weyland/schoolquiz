@@ -92,18 +92,19 @@ WHERE event_object_table = 'quiz_completions'
 -- STEP 5: Final verification
 -- ============================================
 SELECT '=== Final verification ===' as step;
+
 SELECT 
-  'user_stats_summary' as table_name,
-  COUNT(*) as record_count
+  'user_stats_summary'::text as table_name,
+  COUNT(*)::bigint as record_count
 FROM user_stats_summary
 UNION ALL
 SELECT 
-  'user_category_stats' as table_name,
-  COUNT(*) as record_count
+  'user_category_stats'::text as table_name,
+  COUNT(*)::bigint as record_count
 FROM user_category_stats
 UNION ALL
 SELECT 
-  'public_stats_summary' as table_name,
-  COUNT(*) as record_count
+  'public_stats_summary'::text as table_name,
+  COUNT(*)::bigint as record_count
 FROM public_stats_summary;
 
