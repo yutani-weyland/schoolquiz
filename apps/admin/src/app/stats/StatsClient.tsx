@@ -179,19 +179,6 @@ export function StatsClient({ initialCriticalData, deferredDataPromise, isPremiu
             </>
         );
     }
-                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-                            >
-                                Retry
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <Footer />
-            </>
-        );
-    }
-
-    if (!stats) {
         return (
             <>
                 <SiteHeader />
