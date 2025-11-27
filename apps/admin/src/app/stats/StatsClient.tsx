@@ -179,18 +179,6 @@ export function StatsClient({ initialCriticalData, deferredDataPromise, isPremiu
             </>
         );
     }
-        return (
-            <>
-                <SiteHeader />
-                <div className="max-w-6xl mx-auto px-4 sm:px-8 py-8">
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-12 text-center shadow-sm">
-                        <p className="text-gray-600 dark:text-gray-400">No stats available yet. Start playing quizzes to see your stats!</p>
-                    </div>
-                </div>
-                <Footer />
-            </>
-        );
-    }
 
     return (
         <>
