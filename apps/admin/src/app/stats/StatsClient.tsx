@@ -115,12 +115,17 @@ async function fetchStats(): Promise<StatsData> {
 
 export function StatsClient({ initialData, isPremium }: StatsClientProps) {
     // Use React Query with initial data from server
+    // Only refetch if user explicitly requests it (e.g., refresh button)
+    // The server component already provides fresh data on page load
     const { data: stats, isLoading, error } = useQuery({
         queryKey: ['stats'],
         queryFn: fetchStats,
         initialData: initialData || undefined,
-        enabled: isPremium,
+        enabled: isPremium && !!initialData, // Only enable if we have initial data (server-provided)
         staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+        refetchOnMount: false, // Don't refetch on mount - use server data
+        refetchOnWindowFocus: false, // Don't refetch on window focus
+        refetchOnReconnect: false, // Don't refetch on reconnect
         retry: 1,
     });
 

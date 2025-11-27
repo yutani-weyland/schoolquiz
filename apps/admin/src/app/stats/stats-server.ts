@@ -1,10 +1,11 @@
 /**
  * Server-side data fetching for stats page
  * Uses NextAuth for authentication
+ * OPTIMIZED: Calls summary functions directly instead of going through API route
  */
 
 import { auth } from '@schoolquiz/auth'
-import { unstable_cache } from 'next/cache'
+import { getStatsSummary } from './stats-summary-server'
 
 export interface StatsData {
   summary: {
@@ -51,83 +52,9 @@ export interface StatsData {
 }
 
 /**
- * Fetch stats from API (server-side)
- * Uses NextAuth session for authentication
- */
-async function fetchStatsFromAPI(userId: string): Promise<StatsData> {
-  try {
-    // Call the stats API endpoint
-    // Construct absolute URL for server-side fetch
-    const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http'
-    const host = process.env.VERCEL_URL || process.env.NEXT_PUBLIC_BASE_URL || 'localhost:3001'
-    const baseUrl = `${protocol}://${host}`
-    
-    // For server-side fetch, we need to forward cookies
-    // The API route will use NextAuth session
-    const response = await fetch(`${baseUrl}/api/stats`, {
-      headers: {
-        'X-User-Id': userId,
-      },
-      cache: 'no-store', // Don't cache the fetch itself, we'll use unstable_cache
-    })
-
-    if (!response.ok) {
-      // Return empty stats for prototyping
-      if (response.status === 500 || response.status === 503) {
-        return getEmptyStats()
-      }
-      throw new Error(`Failed to fetch stats: ${response.status}`)
-    }
-
-    return response.json()
-  } catch (error) {
-    console.error('[stats-server] Error fetching stats:', error)
-    // Return empty stats on error for graceful degradation
-    return getEmptyStats()
-  }
-}
-
-/**
- * Get empty stats structure (for prototyping/fallback)
- */
-function getEmptyStats(): StatsData {
-  return {
-    summary: {
-      averageScore: 0,
-      totalQuestionsAttempted: 0,
-      totalQuizzesPlayed: 0,
-      totalCorrectAnswers: 0,
-      perfectScores: 0,
-    },
-    streaks: {
-      currentQuestionStreak: 0,
-      bestQuestionStreak: 0,
-      currentQuizStreak: 0,
-      bestQuizStreak: 0,
-    },
-    categories: {
-      strongest: [],
-      weakest: [],
-      all: [],
-    },
-    weeklyStreak: [],
-    performanceOverTime: [],
-    comparisons: {
-      public: {
-        averageScore: 0,
-        totalUsers: 0,
-      },
-      leagues: [],
-    },
-    seasonStats: null,
-  }
-}
-
-/**
  * Get stats data (server-side)
  * Uses NextAuth session for authentication
- * Note: Cannot use unstable_cache here because it requires cookies for auth
- * The API route itself should handle caching if needed
+ * OPTIMIZED: Calls summary functions directly (no API route needed)
  */
 export async function getStatsData(): Promise<StatsData | null> {
   const session = await auth()
@@ -136,8 +63,8 @@ export async function getStatsData(): Promise<StatsData | null> {
     return null
   }
 
-  // Fetch stats directly (no caching - Next.js 15 doesn't allow cookies in cached functions)
-  // The API route can handle its own caching if needed
-  return fetchStatsFromAPI(session.user.id)
+  // Call summary functions directly - no API route needed
+  // This is faster and avoids authentication issues with server-side fetches
+  return getStatsSummary(session.user.id)
 }
 
