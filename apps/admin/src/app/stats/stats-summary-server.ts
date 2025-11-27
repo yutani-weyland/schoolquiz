@@ -549,14 +549,12 @@ async function getLeagueComparisons(userId: string) {
         _avg: { totalCorrectAnswers: true },
       })
       
-      // Get user's stats
-      const userStats = await prisma.privateLeagueStats.findUnique({
+      // Get user's stats (use findFirst since quizSlug can be null)
+      const userStats = await prisma.privateLeagueStats.findFirst({
         where: {
-          leagueId_userId_quizSlug: {
-            leagueId,
-            userId,
-            quizSlug: null,
-          },
+          leagueId,
+          userId,
+          quizSlug: null,
         },
         select: {
           totalCorrectAnswers: true,
@@ -569,8 +567,8 @@ async function getLeagueComparisons(userId: string) {
         SELECT rank
         FROM (
           SELECT 
-            user_id as "userId",
-            ROW_NUMBER() OVER (ORDER BY total_correct_answers DESC) as rank
+            "userId",
+            ROW_NUMBER() OVER (ORDER BY "totalCorrectAnswers" DESC) as rank
           FROM private_league_stats
           WHERE "leagueId" = ${leagueId} AND "quizSlug" IS NULL
         ) ranked
