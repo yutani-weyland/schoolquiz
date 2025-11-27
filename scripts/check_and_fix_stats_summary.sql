@@ -32,7 +32,13 @@ SELECT
     WHEN COUNT(*) = 0 THEN 'EMPTY - Needs population'
     ELSE 'POPULATED'
   END as status,
-  *
+  id,
+  total_users,
+  total_quizzes_played,
+  total_questions_attempted,
+  total_correct_answers,
+  average_score,
+  updated_at
 FROM public_stats_summary WHERE id = 'global';
 
 -- ============================================
