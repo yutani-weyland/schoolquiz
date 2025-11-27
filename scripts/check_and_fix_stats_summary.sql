@@ -1,5 +1,5 @@
--- Diagnostic script to check and fix stats summary tables
--- This checks if tables are populated and populates them if needed
+-- Diagnostic and population script for stats summary tables
+-- Run this in your Supabase SQL editor to check and populate summary tables
 
 -- ============================================
 -- STEP 1: Check if tables exist and have data
@@ -31,7 +31,12 @@ SELECT
   CASE 
     WHEN COUNT(*) = 0 THEN 'EMPTY - Needs population'
     ELSE 'POPULATED'
-  END as status,
+  END as status
+FROM public_stats_summary WHERE id = 'global';
+
+-- Show public stats details separately
+SELECT '=== Public stats details ===' as step;
+SELECT 
   id,
   total_users,
   total_quizzes_played,
@@ -92,7 +97,6 @@ WHERE event_object_table = 'quiz_completions'
 -- STEP 5: Final verification
 -- ============================================
 SELECT '=== Final verification ===' as step;
-
 SELECT 
   'user_stats_summary'::text as table_name,
   COUNT(*)::bigint as record_count
@@ -107,4 +111,3 @@ SELECT
   'public_stats_summary'::text as table_name,
   COUNT(*)::bigint as record_count
 FROM public_stats_summary;
-
