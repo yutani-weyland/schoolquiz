@@ -11,7 +11,6 @@ import { CategoryPerformance } from '@/components/stats/CategoryPerformance';
 import { StreakOverview } from '@/components/stats/StreakOverview';
 import { StreakCards } from '@/components/stats/StreakCards';
 import { PerformanceChart } from '@/components/stats/PerformanceChart';
-import { ComparisonCharts } from '@/components/stats/ComparisonCharts';
 import { RecentAchievements } from '@/components/stats/RecentAchievements';
 
 interface StatsData {
@@ -136,14 +135,6 @@ function DeferredStats({
                 <PerformanceChart data={deferredData.performanceOverTime} />
             )}
 
-            {/* Comparisons (public stats only, league comparisons disabled) */}
-            {deferredData.comparisons && (
-                <ComparisonCharts
-                    publicStats={deferredData.comparisons.public}
-                    leagueComparisons={[]} // Disabled - too slow (4.3s)
-                    userAverage={userAverage}
-                />
-            )}
         </>
     );
 }
