@@ -55,7 +55,12 @@ async function getSummaryStats(userId: string) {
     }
   } catch (error: any) {
     // Table doesn't exist yet or error - fall back to aggregation
-    console.log('[Stats Summary] Pre-computed table not available, using aggregation fallback')
+    console.warn('[Stats Summary] Pre-computed table not available, using aggregation fallback:', error?.message || 'Unknown error')
+  }
+  
+  // If table exists but is empty, log a warning
+  if (summaryResult && summaryResult.length === 0) {
+    console.warn('[Stats Summary] Pre-computed table exists but is empty. Run populate_all_user_stats() to populate existing data.')
   }
   
   // Fallback: Aggregate query - compute in database
