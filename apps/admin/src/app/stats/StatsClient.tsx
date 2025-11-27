@@ -116,7 +116,7 @@ async function fetchStats(): Promise<StatsData> {
     return response.json();
 }
 
-// Component for deferred data (performance chart, comparisons)
+// Component for deferred data (performance chart)
 function DeferredStats({ 
     deferredDataPromise, 
     userAverage 
@@ -134,9 +134,15 @@ function DeferredStats({
             {deferredData.performanceOverTime && deferredData.performanceOverTime.length > 0 && (
                 <PerformanceChart data={deferredData.performanceOverTime} />
             )}
-
         </>
     );
+}
+
+// Component for deferred achievements (loads after everything else)
+function DeferredAchievements() {
+    // Wait a bit to ensure critical stats are rendered first
+    // This component will only render after Suspense resolves
+    return <RecentAchievements />;
 }
 
 export function StatsClient({ initialCriticalData, deferredDataPromise, isPremium, initialData }: StatsClientProps) {
@@ -185,9 +191,6 @@ export function StatsClient({ initialCriticalData, deferredDataPromise, isPremiu
                     {/* Summary Stats */}
                     <SummaryStats summary={criticalStats.summary} />
 
-                    {/* Recent Achievements & In Progress */}
-                    <RecentAchievements />
-
                     {/* Streak Cards */}
                     <StreakCards streaks={criticalStats.streaks} />
 
@@ -200,13 +203,10 @@ export function StatsClient({ initialCriticalData, deferredDataPromise, isPremiu
                     {/* Weekly Streak Overview - MOVED UP */}
                     <StreakOverview weeklyStreak={criticalStats.weeklyStreak} />
 
-                    {/* Deferred Data (Performance Chart, Comparisons) - Loads after first paint */}
+                    {/* Deferred Data (Performance Chart) - Loads after first paint */}
                     {deferredDataPromise && (
                         <Suspense fallback={
-                            <div className="space-y-6">
-                                <div className="h-64 bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse" />
-                                <div className="h-48 bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse" />
-                            </div>
+                            <div className="h-64 bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse" />
                         }>
                             <DeferredStats 
                                 deferredDataPromise={deferredDataPromise}
@@ -214,6 +214,13 @@ export function StatsClient({ initialCriticalData, deferredDataPromise, isPremiu
                             />
                         </Suspense>
                     )}
+
+                    {/* Recent Achievements & In Progress - Loads last, after everything else */}
+                    <Suspense fallback={
+                        <div className="h-48 bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse" />
+                    }>
+                        <DeferredAchievements />
+                    </Suspense>
                 </div>
             </main>
             <Footer />
