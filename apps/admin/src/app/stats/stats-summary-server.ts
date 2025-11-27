@@ -72,7 +72,7 @@ async function getSummaryStats(userId: string) {
   const perfectScoresResult = await prisma.$queryRaw<Array<{ count: bigint }>>`
     SELECT COUNT(*)::int as count
     FROM quiz_completions
-    WHERE user_id = ${userId} AND score = total_questions
+    WHERE "userId" = ${userId} AND score = "totalQuestions"
   `
   const perfectScoresCount = Number(perfectScoresResult[0]?.count || 0)
   
@@ -572,7 +572,7 @@ async function getLeagueComparisons(userId: string) {
             user_id as "userId",
             ROW_NUMBER() OVER (ORDER BY total_correct_answers DESC) as rank
           FROM private_league_stats
-          WHERE league_id = ${leagueId} AND quiz_slug IS NULL
+          WHERE "leagueId" = ${leagueId} AND "quizSlug" IS NULL
         ) ranked
         WHERE "userId" = ${userId}
       `
