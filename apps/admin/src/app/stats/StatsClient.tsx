@@ -1,5 +1,6 @@
 'use client'
 
+import { Suspense, use } from 'react';
 import { useSession } from 'next-auth/react';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
@@ -58,8 +59,11 @@ interface StatsData {
 }
 
 interface StatsClientProps {
-    initialData?: StatsData | null;
+    initialCriticalData?: Pick<StatsData, 'summary' | 'streaks' | 'categories' | 'weeklyStreak'> | null;
+    deferredDataPromise?: Promise<Pick<StatsData, 'performanceOverTime' | 'comparisons' | 'seasonStats'> | null>;
     isPremium: boolean;
+    // Legacy prop for backward compatibility
+    initialData?: StatsData | null;
 }
 
 // Fetch function for React Query
@@ -113,23 +117,55 @@ async function fetchStats(): Promise<StatsData> {
     return response.json();
 }
 
-export function StatsClient({ initialData, isPremium }: StatsClientProps) {
-    // Use React Query with initial data from server
-    // Only refetch if user explicitly requests it (e.g., refresh button)
-    // The server component already provides fresh data on page load
-    const { data: stats, isLoading, error } = useQuery({
-        queryKey: ['stats'],
-        queryFn: fetchStats,
-        initialData: initialData || undefined,
-        enabled: isPremium && !!initialData, // Only enable if we have initial data (server-provided)
-        staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-        refetchOnMount: false, // Don't refetch on mount - use server data
-        refetchOnWindowFocus: false, // Don't refetch on window focus
-        refetchOnReconnect: false, // Don't refetch on reconnect
-        retry: 1,
-    });
+// Component for deferred data (performance chart, comparisons)
+function DeferredStats({ 
+    deferredDataPromise, 
+    userAverage 
+}: { 
+    deferredDataPromise: Promise<Pick<StatsData, 'performanceOverTime' | 'comparisons' | 'seasonStats'> | null>;
+    userAverage: number;
+}) {
+    const deferredData = use(deferredDataPromise);
+    
+    if (!deferredData) return null;
+    
+    return (
+        <>
+            {/* Performance Over Time */}
+            {deferredData.performanceOverTime && deferredData.performanceOverTime.length > 0 && (
+                <PerformanceChart data={deferredData.performanceOverTime} />
+            )}
 
-    if (isLoading) {
+            {/* Comparisons (public stats only, league comparisons disabled) */}
+            {deferredData.comparisons && (
+                <ComparisonCharts
+                    publicStats={deferredData.comparisons.public}
+                    leagueComparisons={[]} // Disabled - too slow (4.3s)
+                    userAverage={userAverage}
+                />
+            )}
+        </>
+    );
+}
+
+export function StatsClient({ initialCriticalData, deferredDataPromise, isPremium, initialData }: StatsClientProps) {
+    // Use critical data for first paint (fast)
+    const criticalStats = initialCriticalData || (initialData ? {
+        summary: initialData.summary,
+        streaks: initialData.streaks,
+        categories: initialData.categories,
+        weeklyStreak: initialData.weeklyStreak,
+    } : null);
+    
+    // Legacy support: if only initialData is provided, use it
+    const stats = initialData || (criticalStats ? {
+        ...criticalStats,
+        performanceOverTime: [],
+        comparisons: { public: { averageScore: 0, totalUsers: 0 }, leagues: [] },
+        seasonStats: null,
+    } : null);
+
+    if (!criticalStats) {
         return (
             <>
                 <SiteHeader />
@@ -143,20 +179,6 @@ export function StatsClient({ initialData, isPremium }: StatsClientProps) {
             </>
         );
     }
-
-    if (error) {
-        return (
-            <>
-                <SiteHeader />
-                <div className="max-w-6xl mx-auto px-4 sm:px-8 py-8">
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-red-200 dark:border-red-700 p-8 shadow-sm">
-                        <div className="text-center mb-4">
-                            <h2 className="text-xl font-semibold text-red-600 dark:text-red-400 mb-2">
-                                Error Loading Stats
-                            </h2>
-                            <p className="text-red-600 dark:text-red-400 mb-4">{error.message}</p>
-                            <button
-                                onClick={() => window.location.reload()}
                                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
                             >
                                 Retry
@@ -195,34 +217,37 @@ export function StatsClient({ initialData, isPremium }: StatsClientProps) {
                     </div>
 
                     {/* Summary Stats */}
-                    <SummaryStats summary={stats.summary} />
+                    <SummaryStats summary={criticalStats.summary} />
 
                     {/* Recent Achievements & In Progress */}
                     <RecentAchievements />
 
                     {/* Streak Cards */}
-                    <StreakCards streaks={stats.streaks} />
+                    <StreakCards streaks={criticalStats.streaks} />
 
-                    {/* Performance Over Time */}
-                    {stats.performanceOverTime.length > 0 && (
-                        <PerformanceChart data={stats.performanceOverTime} />
-                    )}
-
-                    {/* Category Performance */}
+                    {/* Category Performance - FIRST PAINT */}
                     <CategoryPerformance
-                        strongest={stats.categories.strongest}
-                        weakest={stats.categories.weakest}
+                        strongest={criticalStats.categories.strongest}
+                        weakest={criticalStats.categories.weakest}
                     />
 
-                    {/* Weekly Streak Overview */}
-                    <StreakOverview weeklyStreak={stats.weeklyStreak} />
+                    {/* Weekly Streak Overview - MOVED UP */}
+                    <StreakOverview weeklyStreak={criticalStats.weeklyStreak} />
 
-                    {/* Comparisons */}
-                    <ComparisonCharts
-                        publicStats={stats.comparisons.public}
-                        leagueComparisons={stats.comparisons.leagues}
-                        userAverage={stats.summary.averageScore}
-                    />
+                    {/* Deferred Data (Performance Chart, Comparisons) - Loads after first paint */}
+                    {deferredDataPromise && (
+                        <Suspense fallback={
+                            <div className="space-y-6">
+                                <div className="h-64 bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse" />
+                                <div className="h-48 bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse" />
+                            </div>
+                        }>
+                            <DeferredStats 
+                                deferredDataPromise={deferredDataPromise}
+                                userAverage={criticalStats.summary.averageScore}
+                            />
+                        </Suspense>
+                    )}
                 </div>
             </main>
             <Footer />

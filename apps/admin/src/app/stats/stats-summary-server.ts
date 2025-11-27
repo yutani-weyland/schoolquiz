@@ -648,30 +648,18 @@ async function getSeasonStats(userId: string) {
 }
 
 /**
- * Get complete stats summary (optimized with parallel queries)
+ * Get critical stats for first paint (fast, essential data only)
+ * This loads immediately to show content to users
  */
-export async function getStatsSummary(userId: string): Promise<StatsData> {
+export async function getStatsSummaryCritical(userId: string): Promise<Pick<StatsData, 'summary' | 'streaks' | 'categories' | 'weeklyStreak'>> {
   const startTime = Date.now()
   
-  // Execute all queries in parallel
-  const [
-    summary,
-    completionWeeks,
-    performanceData,
-    publicStats,
-    leagueComparisons,
-    seasonStats,
-  ] = await Promise.all([
+  // Execute critical queries in parallel
+  const [summary, streaks, completionWeeks] = await Promise.all([
     getSummaryStats(userId),
+    getStreaks(userId),
     getCompletionWeeks(userId),
-    getPerformanceOverTime(userId),
-    getPublicStats(),
-    getLeagueComparisons(userId),
-    getSeasonStats(userId),
   ])
-  
-  // Get streaks from pre-computed table (or calculate if not available)
-  const streaks = await getStreaks(userId)
   
   // Fetch completions with scores for weekly streak and category performance
   const completionsWithScores = await prisma.quizCompletion.findMany({
@@ -692,7 +680,7 @@ export async function getStatsSummary(userId: string): Promise<StatsData> {
   const categoryStats = await getCategoryPerformance(userId, completionsWithScores)
   
   const totalTime = Date.now() - startTime
-  console.log(`[Stats Summary] Total stats summary took ${totalTime}ms`)
+  console.log(`[Stats Summary] Critical stats took ${totalTime}ms`)
   
   return {
     summary,
@@ -703,12 +691,52 @@ export async function getStatsSummary(userId: string): Promise<StatsData> {
       all: categoryStats,
     },
     weeklyStreak,
+  }
+}
+
+/**
+ * Get deferred stats (non-critical, can load after first paint)
+ * This includes heavy queries like league comparisons
+ */
+export async function getStatsSummaryDeferred(userId: string): Promise<Pick<StatsData, 'performanceOverTime' | 'comparisons' | 'seasonStats'>> {
+  const startTime = Date.now()
+  
+  // Execute deferred queries in parallel
+  const [performanceData, publicStats, seasonStats] = await Promise.all([
+    getPerformanceOverTime(userId),
+    getPublicStats(),
+    getSeasonStats(userId),
+  ])
+  
+  // League comparisons removed - too slow (4.3s)
+  // Can be re-enabled later with optimizations
+  
+  const totalTime = Date.now() - startTime
+  console.log(`[Stats Summary] Deferred stats took ${totalTime}ms`)
+  
+  return {
     performanceOverTime: performanceData,
     comparisons: {
       public: publicStats,
-      leagues: leagueComparisons,
+      leagues: [], // Disabled for now
     },
     seasonStats,
+  }
+}
+
+/**
+ * Get complete stats summary (for backward compatibility)
+ * NOTE: Use getStatsSummaryCritical + getStatsSummaryDeferred for better performance
+ */
+export async function getStatsSummary(userId: string): Promise<StatsData> {
+  const [critical, deferred] = await Promise.all([
+    getStatsSummaryCritical(userId),
+    getStatsSummaryDeferred(userId),
+  ])
+  
+  return {
+    ...critical,
+    ...deferred,
   }
 }
 

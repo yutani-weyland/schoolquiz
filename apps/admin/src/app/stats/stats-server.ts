@@ -5,7 +5,7 @@
  */
 
 import { auth } from '@schoolquiz/auth'
-import { getStatsSummary } from './stats-summary-server'
+import { getStatsSummary, getStatsSummaryCritical, getStatsSummaryDeferred } from './stats-summary-server'
 
 export interface StatsData {
   summary: {
@@ -52,9 +52,40 @@ export interface StatsData {
 }
 
 /**
- * Get stats data (server-side)
+ * Get critical stats data for first paint (server-side)
+ * Uses NextAuth session for authentication
+ * OPTIMIZED: Only loads essential data for fast initial render
+ */
+export async function getStatsDataCritical(): Promise<Pick<StatsData, 'summary' | 'streaks' | 'categories' | 'weeklyStreak'> | null> {
+  const session = await auth()
+  
+  if (!session?.user?.id) {
+    return null
+  }
+
+  return getStatsSummaryCritical(session.user.id)
+}
+
+/**
+ * Get deferred stats data (server-side)
+ * Uses NextAuth session for authentication
+ * OPTIMIZED: Loads non-critical data after first paint
+ */
+export async function getStatsDataDeferred(): Promise<Pick<StatsData, 'performanceOverTime' | 'comparisons' | 'seasonStats'> | null> {
+  const session = await auth()
+  
+  if (!session?.user?.id) {
+    return null
+  }
+
+  return getStatsSummaryDeferred(session.user.id)
+}
+
+/**
+ * Get complete stats data (server-side)
  * Uses NextAuth session for authentication
  * OPTIMIZED: Calls summary functions directly (no API route needed)
+ * NOTE: For better performance, use getStatsDataCritical + getStatsDataDeferred
  */
 export async function getStatsData(): Promise<StatsData | null> {
   const session = await auth()

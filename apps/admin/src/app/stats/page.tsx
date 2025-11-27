@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
-import { getStatsData } from './stats-server'
+import { getStatsDataCritical, getStatsDataDeferred } from './stats-server'
 import { getCurrentUser } from '@/lib/auth'
 import { StatsClient } from './StatsClient'
 import { LockedFeature } from '@/components/access/LockedFeature'
@@ -74,12 +74,13 @@ async function StatsData() {
     )
   }
 
-  // Fetch stats data
-  const stats = await getStatsData()
+  // Fetch critical stats for first paint (fast)
+  const criticalStats = await getStatsDataCritical()
 
   return (
     <StatsClient 
-      initialData={stats || undefined} 
+      initialCriticalData={criticalStats || undefined}
+      deferredDataPromise={getStatsDataDeferred()}
       isPremium={isPremium}
     />
   )
