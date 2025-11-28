@@ -226,8 +226,8 @@ BEGIN
     COALESCE(SUM("totalQuestions"), 0)::INTEGER as total_questions,
     COALESCE(SUM(score), 0)::INTEGER as total_correct,
     CASE 
-      WHEN COALESCE(SUM(total_questions), 0) > 0 
-      THEN ROUND((COALESCE(SUM(score), 0)::DECIMAL / COALESCE(SUM(total_questions), 1)) * 100, 2)
+      WHEN COALESCE(SUM("totalQuestions"), 0) > 0 
+      THEN ROUND((COALESCE(SUM(score), 0)::DECIMAL / COALESCE(SUM("totalQuestions"), 1)) * 100, 2)
       ELSE 0
     END as avg_score
   INTO v_stats
@@ -299,3 +299,4 @@ $$;
 -- Note: Run populate_all_user_stats() manually after migration to populate existing data
 -- SELECT populate_all_user_stats();
 
+    
