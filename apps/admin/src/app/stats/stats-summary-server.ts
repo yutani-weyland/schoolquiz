@@ -728,7 +728,11 @@ async function getSeasonStats(userId: string) {
     const queryTime = Date.now() - startTime
     console.log(`[Stats Summary] Season stats query took ${queryTime}ms`)
     
-    return stats
+    // Ensure averageScore is never null (convert to 0 if null)
+    return stats ? {
+      ...stats,
+      averageScore: stats.averageScore ?? 0,
+    } : null
   } catch (err) {
     console.error('[Stats Summary] Error getting season stats:', err)
     return null
