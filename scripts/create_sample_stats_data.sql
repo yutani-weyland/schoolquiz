@@ -22,13 +22,14 @@ BEGIN
   
   RAISE NOTICE 'Using user ID: %', v_user_id;
   
-  -- Check if user already has completions
-  SELECT COUNT(*) INTO v_quiz_count FROM quiz_completions WHERE "userId" = v_user_id;
+  -- Clear existing sample completions for this user to ensure fresh sample data
+  -- Only delete sample completions (those with IDs starting with 'sample_')
+  DELETE FROM quiz_completions 
+  WHERE "userId" = v_user_id 
+    AND id LIKE 'sample_%';
+  RAISE NOTICE 'Cleared existing sample quiz_completions for user %', v_user_id;
   
-  IF v_quiz_count > 0 THEN
-    RAISE NOTICE 'User already has % completions. Skipping sample data creation.', v_quiz_count;
-  ELSE
-    RAISE NOTICE 'Creating sample quiz completions...';
+  RAISE NOTICE 'Creating sample quiz completions...';
     
     -- Create completions for the last 20 weeks (simulating weekly quiz completion)
     FOR v_weeks_ago IN 0..19 LOOP
@@ -73,7 +74,12 @@ BEGIN
         v_completion_date,
         FLOOR(RANDOM() * 300 + 120)::INTEGER -- 2-7 minutes
       )
-      ON CONFLICT (id) DO NOTHING;
+      ON CONFLICT ("userId", "quizSlug") DO UPDATE SET
+        score = EXCLUDED.score,
+        "totalQuestions" = EXCLUDED."totalQuestions",
+        "completedAt" = EXCLUDED."completedAt",
+        "timeSeconds" = EXCLUDED."timeSeconds",
+        id = EXCLUDED.id;
       
       -- Add some perfect scores (every 4th quiz)
       IF v_weeks_ago % 4 = 0 THEN
