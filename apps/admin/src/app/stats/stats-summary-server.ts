@@ -751,7 +751,7 @@ export async function getStatsSummaryCritical(userId: string): Promise<Pick<Stat
   const getCachedStats = unstable_cache(
     async () => {
       // Execute ALL critical queries in parallel for maximum performance
-      const [summaryAndStreaks, categoryStats, completionsWithScores] = await Promise.all([
+      const [summaryAndStreaks, categoryStats, weeklyCompletions] = await Promise.all([
         getSummaryStatsAndStreaks(userId), // Combined query (saves 1 round trip)
         getCategoryPerformance(userId), // Function will use pre-computed table first
         // OPTIMIZATION: Use raw SQL to get weekly completions (database calculates weeks)
