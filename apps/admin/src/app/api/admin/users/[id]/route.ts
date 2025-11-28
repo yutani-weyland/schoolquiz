@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import { prisma } from '@schoolquiz/db'
+import { validateRequest, validateParams } from '@/lib/api-validation'
+import { AdminUpdateUserSchema } from '@/lib/validation/schemas'
+import { handleApiError } from '@/lib/api-error'
+import { z } from 'zod'
 
+const ParamsSchema = z.object({ id: z.string().min(1) })
 
 /**
  * GET /api/admin/users/[id]
@@ -262,29 +267,18 @@ export async function PATCH(
 
     // TODO: Add proper admin role check
 
-    const { id } = await params
-    const body = await request.json()
+    const { id } = await validateParams(await params, ParamsSchema)
+    // Validate request body with Zod
+    const body = await validateRequest(request, AdminUpdateUserSchema)
 
-    // Validate allowed fields
-    const allowedFields = [
-      'name',
-      'tier',
-      'platformRole',
-      'subscriptionStatus',
-      'subscriptionPlan',
-      'subscriptionEndsAt',
-    ]
     const updateData: any = {}
-
-    for (const field of allowedFields) {
-      if (field in body) {
-        updateData[field] = body[field]
-      }
-    }
-
-    // Handle date fields
-    if (body.subscriptionEndsAt) {
-      updateData.subscriptionEndsAt = new Date(body.subscriptionEndsAt)
+    if (body.name !== undefined) updateData.name = body.name
+    if (body.tier !== undefined) updateData.tier = body.tier
+    if (body.platformRole !== undefined) updateData.platformRole = body.platformRole
+    if (body.subscriptionStatus !== undefined) updateData.subscriptionStatus = body.subscriptionStatus
+    if (body.subscriptionPlan !== undefined) updateData.subscriptionPlan = body.subscriptionPlan
+    if (body.subscriptionEndsAt !== undefined) {
+      updateData.subscriptionEndsAt = body.subscriptionEndsAt ? new Date(body.subscriptionEndsAt) : null
     }
 
     const user = await prisma.user.update({
@@ -319,11 +313,7 @@ export async function PATCH(
         { status: 404 }
       )
     }
-    console.error('Error updating user:', error)
-    return NextResponse.json(
-      { error: 'Failed to update user', details: error.message },
-      { status: 500 }
-    )
+    return handleApiError(error)
   }
 }
 

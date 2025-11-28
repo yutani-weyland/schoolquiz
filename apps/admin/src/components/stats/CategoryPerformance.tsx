@@ -3,7 +3,8 @@
 import { motion } from 'framer-motion';
 import { memo } from 'react';
 import { TrendingUp, TrendingDown, Award, AlertCircle } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+// OPTIMIZATION: Lazy-load recharts to reduce initial bundle size
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from './recharts-lazy';
 
 interface CategoryPerformanceProps {
   strongest: Array<{ name: string; percentage: number; correct: number; total: number; quizzes: number }>;
@@ -52,7 +53,7 @@ export const CategoryPerformance = memo(function CategoryPerformance({ strongest
                   border: '1px solid #e5e7eb',
                   borderRadius: '8px',
                 }}
-                formatter={(value: number) => [`${value.toFixed(1)}%`, 'Score']}
+                formatter={(value: any) => [`${Number(value).toFixed(1)}%`, 'Score']}
               />
               <Bar dataKey="percentage" radius={[0, 8, 8, 0]}>
                 {strongest.map((entry, index) => (
@@ -104,7 +105,7 @@ export const CategoryPerformance = memo(function CategoryPerformance({ strongest
                   border: '1px solid #e5e7eb',
                   borderRadius: '8px',
                 }}
-                formatter={(value: number) => [`${value.toFixed(1)}%`, 'Score']}
+                formatter={(value: any) => [`${Number(value).toFixed(1)}%`, 'Score']}
               />
               <Bar dataKey="percentage" radius={[0, 8, 8, 0]}>
                 {weakest.map((entry, index) => (

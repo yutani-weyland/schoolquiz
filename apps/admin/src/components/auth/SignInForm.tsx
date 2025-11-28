@@ -52,11 +52,26 @@ export default function SignInForm() {
       const callbackUrl = searchParams.get('callbackUrl');
       let redirectUrl = callbackUrl || '/quizzes';
       
-      // Use window.location.href for full page reload to ensure:
-      // 1. Session cookie is properly set and sent
-      // 2. Server components get the updated session
-      // 3. Middleware sees the authenticated state
-      window.location.href = redirectUrl;
+      // OPTIMIZATION: Prefetch the destination page before redirecting
+      // This makes the navigation feel instant
+      router.prefetch(redirectUrl);
+      
+      // OPTIMIZATION: Use router.push for faster client-side navigation
+      // Next.js router handles client-side navigation which is much faster than full page reload
+      // The session cookie is already set by NextAuth, so router.push will work correctly
+      // Small delay to ensure session cookie is fully set before navigation
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      // Use router.push for fast client-side navigation
+      // If this doesn't work reliably, fall back to window.location.href
+      try {
+        router.push(redirectUrl);
+        // Refresh server components after navigation to ensure they see the new session
+        setTimeout(() => router.refresh(), 100);
+      } catch (error) {
+        // Fallback to full page reload if router.push fails
+        window.location.href = redirectUrl;
+      }
     } catch (err: any) {
       setError(err.message || "Something went wrong. Please try again.");
       setLoading(false);

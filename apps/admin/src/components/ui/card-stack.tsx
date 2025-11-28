@@ -26,8 +26,8 @@ function CardItem({ children, index, totalCards, spreadProgress }: CardItemProps
   // Initial stacked position - centered with slight overlap
   const defaultX = index * 10 - centerOffset;
   const defaultY = index * 2;
-  // Right leaning: positive rotation (cards lean to the right like a deck) - reduced for better readability
-  const defaultRotate = index * 0.8;
+  // Right leaning: positive rotation (cards lean to the right like a deck) - increased angle to match design
+  const defaultRotate = index * 1.2;
 
   // Use viewport-based card width that scales proportionally
   // Base width: 380px max on xl/2xl screens, scales down proportionally
@@ -48,9 +48,9 @@ function CardItem({ children, index, totalCards, spreadProgress }: CardItemProps
     index * (cardWidth - cardOverlap) -
     expandedCenterOffset +
     cardWidth / 2;
-  const maxSpreadY = 0;
-  // Right leaning spread: positive rotation - reduced for better readability
-  const maxSpreadRotate = index * 1.5 - (totalCards - 1) * 0.75;
+  const maxSpreadY = -index * 3; // Slight upward angle as cards fan out
+  // Right leaning spread: positive rotation - increased angle to match design
+  const maxSpreadRotate = index * 2.5 - (totalCards - 1) * 1.25;
 
   const xTransform = useTransform(spreadProgress, (progress) => {
     return defaultX + (maxSpreadX - defaultX) * progress;

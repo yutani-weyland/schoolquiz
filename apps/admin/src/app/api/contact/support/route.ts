@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
+import { validateRequest } from '@/lib/api-validation';
+import { ContactSupportSchema } from '@/lib/validation/schemas';
+import { handleApiError } from '@/lib/api-error';
 
 /**
  * POST /api/contact/support
@@ -8,14 +11,8 @@ import { requireAuth } from '@/lib/auth';
 export async function POST(request: NextRequest) {
   try {
     const user = await requireAuth();
-    const { subject, message } = await request.json();
-
-    if (!subject || !message) {
-      return NextResponse.json(
-        { error: 'Subject and message are required' },
-        { status: 400 }
-      );
-    }
+    // Validate request body with Zod
+    const { subject, message } = await validateRequest(request, ContactSupportSchema);
 
     // TODO: Check premium status
     // For now, we'll just require authentication
@@ -49,8 +46,7 @@ export async function POST(request: NextRequest) {
       message: 'Support request submitted successfully',
     });
   } catch (error: any) {
-    console.error('Error submitting support request:', error);
-    
+    // Handle authentication errors
     if (error.message === 'Unauthorized') {
       return NextResponse.json(
         { error: 'Authentication required' },
@@ -58,10 +54,8 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    return NextResponse.json(
-      { error: error.message || 'Failed to submit support request' },
-      { status: 500 }
-    );
+    // Use centralized error handling (handles ValidationError automatically)
+    return handleApiError(error);
   }
 }
 

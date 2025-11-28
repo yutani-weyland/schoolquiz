@@ -1,4 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { validateRequest, validateParams } from '@/lib/api-validation'
+import { CreateRoundSchema } from '@/lib/validation/schemas'
+import { handleApiError } from '@/lib/api-error'
+import { z } from 'zod'
+
+const ParamsSchema = z.object({ id: z.string().min(1) })
 
 // Import the shared round templates storage
 // In production, this would be a database
@@ -131,7 +137,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params
+    const { id } = await validateParams(await params, ParamsSchema)
     const round = roundTemplates[id]
 
     if (!round) {
@@ -143,11 +149,7 @@ export async function GET(
 
     return NextResponse.json({ round })
   } catch (error: any) {
-    console.error('Error fetching round template:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch round template', details: error.message },
-      { status: 500 }
-    )
+    return handleApiError(error)
   }
 }
 
@@ -160,10 +162,8 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params
-    const body = await request.json()
-    const { title, categoryId, blurb, questions } = body
-
+    const { id } = await validateParams(await params, ParamsSchema)
+    
     if (!roundTemplates[id]) {
       return NextResponse.json(
         { error: 'Round template not found' },
@@ -171,24 +171,9 @@ export async function PUT(
       )
     }
 
-    if (!title || !categoryId || !questions || questions.length !== 6) {
-      return NextResponse.json(
-        { error: 'Missing required fields: title, categoryId, and exactly 6 questions' },
-        { status: 400 }
-      )
-    }
-
-    // Validate all questions have text and answer
-    const incompleteQuestions = questions.filter(
-      (q: any) => !q.text?.trim() || !q.answer?.trim()
-    )
-
-    if (incompleteQuestions.length > 0) {
-      return NextResponse.json(
-        { error: 'All questions must have text and answer' },
-        { status: 400 }
-      )
-    }
+    // Validate request body with Zod
+    const body = await validateRequest(request, CreateRoundSchema)
+    const { title, categoryId, blurb, questions } = body
 
     // Get category name
     const categories: Record<string, string> = {
@@ -221,11 +206,7 @@ export async function PUT(
 
     return NextResponse.json({ round })
   } catch (error: any) {
-    console.error('Error updating round template:', error)
-    return NextResponse.json(
-      { error: 'Failed to update round template', details: error.message },
-      { status: 500 }
-    )
+    return handleApiError(error)
   }
 }
 
@@ -238,7 +219,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params
+    const { id } = await validateParams(await params, ParamsSchema)
 
     if (!roundTemplates[id]) {
       return NextResponse.json(
@@ -251,11 +232,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true })
   } catch (error: any) {
-    console.error('Error deleting round template:', error)
-    return NextResponse.json(
-      { error: 'Failed to delete round template', details: error.message },
-      { status: 500 }
-    )
+    return handleApiError(error)
   }
 }
 

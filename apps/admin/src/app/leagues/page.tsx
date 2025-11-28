@@ -8,12 +8,12 @@ import { useUserTier } from '@/hooks/useUserTier'
 import { useUserAccess } from '@/contexts/UserAccessContext'
 import dynamic from 'next/dynamic'
 import { Footer } from '@/components/Footer'
-import { 
-  fetchLeagues, 
-  fetchLeagueDetails, 
+import {
+  fetchLeagues,
+  fetchLeagueDetails,
   fetchLeagueMembers,
-  getCachedLeagues, 
-  cacheLeagues, 
+  getCachedLeagues,
+  cacheLeagues,
   type League,
 } from '@/lib/leagues-fetch'
 import { LeaguesGrid } from '@/components/leagues/LeaguesGrid'
@@ -23,7 +23,7 @@ import { PageHeader } from '@/components/layout/PageHeader'
 // Lazy load SiteHeader
 const LazySiteHeader = dynamic(
   () => import("@/components/SiteHeader").then(mod => ({ default: mod.SiteHeader })),
-  { 
+  {
     ssr: true,
     loading: () => (
       <header className="fixed top-0 left-0 right-0 z-50 h-16 bg-white dark:bg-[#0F1419] border-b border-gray-200 dark:border-gray-700" />
@@ -158,20 +158,20 @@ export default function LeaguesPage() {
     queryFn: async ({ queryKey }) => {
       const [, orgId, leagueId] = queryKey as [string, string | undefined, string | null]
       if (!orgId) return []
-      
+
       const response = await fetch(`/api/organisation/${orgId}/members`, {
         credentials: 'include',
       })
       if (!response.ok) return []
       const data = await response.json()
-      
+
       // Get league details from cache if available to filter existing members
       const cachedLeagues = queryClient.getQueryData<League[]>(['private-leagues']) || []
-      const leagueDetails = leagueId 
-        ? (queryClient.getQueryData<League>(['league-details', leagueId]) || 
-           cachedLeagues.find(l => l.id === leagueId))
+      const leagueDetails = leagueId
+        ? (queryClient.getQueryData<League>(['league-details', leagueId]) ||
+          cachedLeagues.find(l => l.id === leagueId))
         : null
-      
+
       // Filter out current user and existing league members
       const existingMemberIds = new Set(leagueDetails?.members?.map(m => m.userId) || [])
       return (data.members || []).filter((m: any) =>
@@ -193,7 +193,7 @@ export default function LeaguesPage() {
 
     // Prefetch details for first 6 visible leagues (typically what's on screen)
     const leaguesToPrefetch = leagues.slice(0, 6)
-    
+
     leaguesToPrefetch.forEach((league) => {
       // Prefetch league details (lightweight, no members)
       queryClient.prefetchQuery({
@@ -201,7 +201,7 @@ export default function LeaguesPage() {
         queryFn: () => fetchLeagueDetails(league.id, false),
         staleTime: 30 * 1000,
       })
-      
+
       // Prefetch first page of members (for members modal)
       queryClient.prefetchQuery({
         queryKey: ['league-members', league.id],
@@ -293,7 +293,7 @@ export default function LeaguesPage() {
       // Invite each member
       await Promise.all(
         memberIds.map(memberId => {
-          const member = orgMembers.find(m => m.user?.id === memberId)
+          const member = orgMembers.find((m: any) => m.user?.id === memberId)
           const email = member?.user?.email
           if (!email) return Promise.resolve()
           return inviteMutation.mutateAsync({ leagueId: selectedLeagueId, email })
@@ -486,7 +486,7 @@ export default function LeaguesPage() {
               </button>
             </div>
           </div>
-          <UpgradeModal isOpen={showUpgradeModal} onClose={() => setShowUpgradeModal(false)} />
+          <LazyUpgradeModal isOpen={showUpgradeModal} onClose={() => setShowUpgradeModal(false)} />
         </main>
         <Footer />
       </>
@@ -554,27 +554,27 @@ export default function LeaguesPage() {
                 Retry
               </button>
             </div>
-                  ) : (
-                    <LeaguesGrid
-                      leagues={leagues}
-                      currentUserId={currentUserId}
-                      activeTab={activeTab}
-                      onCreateLeague={() => setShowCreateModal(true)}
-                      onInvite={(leagueId) => {
-                        setSelectedLeagueId(leagueId)
-                        setShowInviteModal(true)
-                      }}
-                      onManage={(leagueId) => {
-                        setSelectedLeagueId(leagueId)
-                        setShowManageModal(true)
-                      }}
-                      onViewMembers={(leagueId) => {
-                        setSelectedLeagueId(leagueId)
-                        setShowMembersModal(true)
-                      }}
-                      isCreator={isCreator}
-                    />
-                  )}
+          ) : (
+            <LeaguesGrid
+              leagues={leagues}
+              currentUserId={currentUserId}
+              activeTab={activeTab}
+              onCreateLeague={() => setShowCreateModal(true)}
+              onInvite={(leagueId) => {
+                setSelectedLeagueId(leagueId)
+                setShowInviteModal(true)
+              }}
+              onManage={(leagueId) => {
+                setSelectedLeagueId(leagueId)
+                setShowManageModal(true)
+              }}
+              onViewMembers={(leagueId) => {
+                setSelectedLeagueId(leagueId)
+                setShowMembersModal(true)
+              }}
+              isCreator={isCreator}
+            />
+          )}
         </div>
       </main>
       <Footer />

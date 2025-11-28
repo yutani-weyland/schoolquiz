@@ -3,7 +3,8 @@
 import { motion } from 'framer-motion';
 import { memo, useMemo } from 'react';
 import { Users, Trophy, TrendingUp } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend } from 'recharts';
+// OPTIMIZATION: Lazy-load recharts to reduce initial bundle size
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend } from './recharts-lazy';
 
 interface ComparisonChartsProps {
   publicStats: {
@@ -64,7 +65,7 @@ export const ComparisonCharts = memo(function ComparisonCharts({ publicStats, le
                 border: '1px solid #e5e7eb',
                 borderRadius: '8px',
               }}
-              formatter={(value: number) => [`${value.toFixed(1)}%`, 'Average Score']}
+              formatter={(value: any) => [`${Number(value).toFixed(1)}%`, 'Average Score']}
             />
             <Bar dataKey="score" radius={[8, 8, 0, 0]}>
               {publicComparisonData.map((entry, index) => (
@@ -123,7 +124,7 @@ export const ComparisonCharts = memo(function ComparisonCharts({ publicStats, le
                         border: '1px solid #e5e7eb',
                         borderRadius: '8px',
                       }}
-                      formatter={(value: number) => [`${value.toFixed(1)}%`, 'Average Score']}
+                      formatter={(value: any) => [`${Number(value).toFixed(1)}%`, 'Average Score']}
                     />
                     <Bar dataKey="score" radius={[8, 8, 0, 0]}>
                       <Cell fill="#8B5CF6" />

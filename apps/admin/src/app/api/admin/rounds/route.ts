@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { validateRequest } from '@/lib/api-validation'
+import { CreateRoundSchema } from '@/lib/validation/schemas'
+import { handleApiError } from '@/lib/api-error'
 
 /**
  * POST /api/admin/rounds
@@ -9,15 +12,9 @@ export async function POST(request: NextRequest) {
     // Skip auth for testing
     // TODO: Re-enable authentication in production
 
-    const body = await request.json()
+    // Validate request body with Zod
+    const body = await validateRequest(request, CreateRoundSchema)
     const { title, categoryId, blurb, questions } = body
-
-    if (!title || !categoryId || !questions || questions.length === 0) {
-      return NextResponse.json(
-        { error: 'Missing required fields: title, categoryId, questions' },
-        { status: 400 }
-      )
-    }
 
     // TODO: Save to database
     // For now, just return success
@@ -38,11 +35,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ round }, { status: 201 })
   } catch (error: any) {
-    console.error('Error creating round:', error)
-    return NextResponse.json(
-      { error: 'Failed to create round', details: error.message },
-      { status: 500 }
-    )
+    return handleApiError(error)
   }
 }
 

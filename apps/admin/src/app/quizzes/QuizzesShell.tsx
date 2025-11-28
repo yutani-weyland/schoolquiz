@@ -57,7 +57,7 @@ export async function QuizzesShell({ children }: QuizzesShellProps) {
               <h1 className="w-full">{greeting}</h1>
             </div>
             <p className="text-lg md:text-xl text-gray-600 dark:text-gray-400 leading-relaxed">
-              Browse your weekly quizzes
+              Explore all School Quiz editions
             </p>
           </div>
           {children}

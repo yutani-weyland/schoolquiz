@@ -80,16 +80,19 @@ const nextAuthConfig = NextAuth({
         }
 
         // Try User model first (newer system)
+        // OPTIMIZATION: Don't include organisationMembers in authorize - not needed for auth
+        // This reduces query time significantly. Org data can be fetched later if needed.
         let user
         try {
           user = await db.user.findUnique({
             where: { email },
-            include: {
-              organisationMembers: {
-                where: { status: 'ACTIVE' },
-                include: { organisation: true },
-                take: 1,
-              },
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              passwordHash: true,
+              platformRole: true,
+              // Don't fetch org data here - it's expensive and not needed for authentication
             },
           })
         } catch (dbError: any) {
@@ -126,13 +129,19 @@ const nextAuthConfig = NextAuth({
             throw new Error('Invalid email or password')
           }
 
-          // Update last login (non-critical - don't fail auth if update fails)
-          await db.user.update({
-            where: { id: user.id },
-            data: { lastLoginAt: new Date() },
-          }).catch((error: any) => {
-            // Log but don't fail authentication
-            console.warn('[NextAuth] Failed to update lastLoginAt:', error instanceof Error ? error.message : 'Unknown error')
+          // OPTIMIZATION: Update last login asynchronously (fire and forget)
+          // Don't block authentication on this non-critical update
+          // Use setImmediate to defer to next event loop tick
+          setImmediate(() => {
+            db.user.update({
+              where: { id: user.id },
+              data: { lastLoginAt: new Date() },
+            }).catch((error: any) => {
+              // Silently fail - this is non-critical
+              if (process.env.NODE_ENV === 'development') {
+                console.warn('[NextAuth] Failed to update lastLoginAt:', error instanceof Error ? error.message : 'Unknown error')
+              }
+            })
           })
 
           return {
@@ -174,13 +183,18 @@ const nextAuthConfig = NextAuth({
           // For now, we'll skip password verification for legacy users
           // TODO: Migrate legacy teachers to User model with passwords
           
-          // Update last login (non-critical - don't fail auth if update fails)
-          await db.teacher.update({
-            where: { id: teacher.id },
-            data: { lastLoginAt: new Date() },
-          }).catch((error: any) => {
-            // Log but don't fail authentication
-            console.warn('[NextAuth] Failed to update lastLoginAt:', error instanceof Error ? error.message : 'Unknown error')
+          // OPTIMIZATION: Update last login asynchronously (fire and forget)
+          // Don't block authentication on this non-critical update
+          setImmediate(() => {
+            db.teacher.update({
+              where: { id: teacher.id },
+              data: { lastLoginAt: new Date() },
+            }).catch((error: any) => {
+              // Silently fail - this is non-critical
+              if (process.env.NODE_ENV === 'development') {
+                console.warn('[NextAuth] Failed to update lastLoginAt:', error instanceof Error ? error.message : 'Unknown error')
+              }
+            })
           })
 
           return {

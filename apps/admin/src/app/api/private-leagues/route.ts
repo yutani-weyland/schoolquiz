@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@schoolquiz/db'
 import { requireApiAuth } from '@/lib/api-auth'
 import { ForbiddenError, handleApiError, ApiError } from '@/lib/api-error'
+import { validateRequest } from '@/lib/api-validation'
+import { CreatePrivateLeagueSchema } from '@/lib/validation/schemas'
 
 async function getUserFromToken(request: NextRequest) {
   const authHeader = request.headers.get('Authorization')
@@ -370,17 +372,8 @@ export async function POST(request: NextRequest) {
       throw new ForbiddenError('Private leagues are only available to premium users')
     }
     
-    let body: any
-    try {
-      body = await request.json()
-    } catch (parseError: any) {
-      console.error('Failed to parse request body:', parseError)
-      return NextResponse.json(
-        { error: 'Invalid request body', details: parseError.message },
-        { status: 400 }
-      )
-    }
-    
+    // Validate request body with Zod
+    const body = await validateRequest(request, CreatePrivateLeagueSchema)
     const { name, description, color, organisationId } = body
     
     // Get user's organization if organisationId not provided but user is in an org
@@ -413,12 +406,7 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    if (!name || name.trim().length === 0) {
-      return NextResponse.json(
-        { error: 'League name is required' },
-        { status: 400 }
-      )
-    }
+    // Name is already validated by Zod schema
     
     // Check if DATABASE_URL is set - if not, use in-memory storage for development
     const hasDatabase = !!process.env.DATABASE_URL

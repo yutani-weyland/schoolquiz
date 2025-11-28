@@ -1,13 +1,32 @@
 'use client';
 
 import Link from 'next/link';
+import { SpeculationRules } from '@/components/SpeculationRules';
 
 export function Footer() {
 	const currentYear = new Date().getFullYear();
 	const startYear = 2024;
 
+	// Footer links to prerender
+	const footerUrls = [
+		'/quizzes',
+		'/about',
+		'/contact',
+		'/help',
+		'/achievements',
+		'/account',
+		'/upgrade',
+		'/privacy',
+		'/terms',
+	];
+
 	return (
 		<footer className="relative bg-[#3B82F6] text-white pt-20 pb-8 px-4 md:px-8">
+			{/* Prerender footer links on hover */}
+			<SpeculationRules 
+				urls={footerUrls}
+				eagerness="conservative" // Only prerender on hover/focus
+			/>
 			{/* Rounded top corners effect - page background curving down into footer */}
 			{/* Matches the actual page background: bg-gray-50 in light mode, bg-[#0F1419] in dark mode */}
 			<div 

@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@schoolquiz/db';
 import { requireAuth } from '@/lib/auth';
 import { LeaderboardVisibility } from '@prisma/client';
+import { validateRequest, validateParams } from '@/lib/api-validation';
+import { LeaveLeaderboardSchema } from '@/lib/validation/schemas';
+import { handleApiError } from '@/lib/api-error';
+import { z } from 'zod';
+
+const ParamsSchema = z.object({ id: z.string().min(1) });
 
 /**
  * POST /api/leaderboards/:id/leave
@@ -13,9 +19,9 @@ export async function POST(
 ) {
   try {
     const user = await requireAuth();
-    const { id: leaderboardId } = await params;
-    const body = await request.json();
-    const { mute = false } = body;
+    const { id: leaderboardId } = await validateParams(await params, ParamsSchema);
+    // Validate request body with Zod
+    const { mute = false } = await validateRequest(request, LeaveLeaderboardSchema);
 
     const member = await prisma.leaderboardMember.findUnique({
       where: {
@@ -54,11 +60,7 @@ export async function POST(
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    console.error('Error leaving leaderboard:', error);
-    return NextResponse.json(
-      { error: error.message || 'Failed to leave leaderboard' },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }
 

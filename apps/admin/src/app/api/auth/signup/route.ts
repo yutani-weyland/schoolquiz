@@ -8,6 +8,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@schoolquiz/db'
 import crypto from 'crypto'
 import jwt from 'jsonwebtoken'
+import { validateRequest } from '@/lib/api-validation'
+import { SignupSchema } from '@/lib/validation/schemas'
+import { handleApiError } from '@/lib/api-error'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production'
 
@@ -20,41 +23,9 @@ function generateReferralCode(): string {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
+    // Validate request body with Zod
+    const body = await validateRequest(request, SignupSchema)
     const { method, email, phone, signupCode, password, referralCode } = body
-
-    // Validate required fields
-    if (method === 'email' && !email) {
-      return NextResponse.json(
-        { error: 'Email is required' },
-        { status: 400 }
-      )
-    }
-
-    if (method === 'phone' && !phone) {
-      return NextResponse.json(
-        { error: 'Phone is required' },
-        { status: 400 }
-      )
-    }
-
-    if (method === 'code' && !signupCode) {
-      return NextResponse.json(
-        { error: 'Signup code is required' },
-        { status: 400 }
-      )
-    }
-
-    // Validate email format if provided
-    if (email) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-      if (!emailRegex.test(email.trim())) {
-        return NextResponse.json(
-          { error: 'Invalid email format' },
-          { status: 400 }
-        )
-      }
-    }
 
     // Check if user already exists
     if (email) {
@@ -162,8 +133,6 @@ export async function POST(request: NextRequest) {
       referralCode: userReferralCode,
     })
   } catch (error: any) {
-    console.error('Error during signup:', error)
-
     // Handle unique constraint violations
     if (error.code === 'P2002') {
       const field = error.meta?.target?.[0]
@@ -173,10 +142,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    return NextResponse.json(
-      { error: error.message || 'Failed to create account' },
-      { status: 500 }
-    )
+    // Use centralized error handling (handles ValidationError automatically)
+    return handleApiError(error)
   }
 }
 

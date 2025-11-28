@@ -328,7 +328,7 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
                   <div className="p-4 overflow-y-auto flex-1">
                   {/* User Profile Section - Only for logged-in users */}
                   {isLoggedIn && (
-                    <div className="px-0 py-0 mb-4 pb-4 border-b border-gray-100 dark:border-gray-700/50">
+                    <div className="px-0 py-3 mb-4 pb-4 border-b border-gray-100 dark:border-gray-700/50">
                       <div className="flex items-center gap-3 pl-4">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">

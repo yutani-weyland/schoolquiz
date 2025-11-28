@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { validateRequest } from '@/lib/api-validation';
+import { ContactSuggestionSchema } from '@/lib/validation/schemas';
+import { handleApiError } from '@/lib/api-error';
 
 /**
  * POST /api/contact/suggestion
@@ -6,14 +9,8 @@ import { NextRequest, NextResponse } from 'next/server';
  */
 export async function POST(request: NextRequest) {
   try {
-    const { name, email, subject, message } = await request.json();
-
-    if (!name || !email || !subject || !message) {
-      return NextResponse.json(
-        { error: 'All fields are required' },
-        { status: 400 }
-      );
-    }
+    // Validate request body with Zod
+    const { name, email, subject, message } = await validateRequest(request, ContactSuggestionSchema);
 
     // TODO: In production, this would:
     // 1. Save to database
@@ -34,11 +31,8 @@ export async function POST(request: NextRequest) {
       message: 'Suggestion submitted successfully',
     });
   } catch (error: any) {
-    console.error('Error submitting suggestion:', error);
-    return NextResponse.json(
-      { error: error.message || 'Failed to submit suggestion' },
-      { status: 500 }
-    );
+    // Use centralized error handling (handles ValidationError automatically)
+    return handleApiError(error);
   }
 }
 

@@ -2,7 +2,8 @@
 
 import { motion } from 'framer-motion';
 import { memo, useMemo } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
+// OPTIMIZATION: Lazy-load recharts to reduce initial bundle size
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from './recharts-lazy';
 import { TrendingUp } from 'lucide-react';
 
 interface PerformanceChartProps {

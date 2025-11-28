@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
+import { SpeculationRules } from '@/components/SpeculationRules'
 import {
   Search,
   BookOpen,
@@ -620,10 +621,28 @@ export function CommandPalette() {
     return groups
   }, [filteredCommands])
 
+  // Prerender top search results (limit to top 5 to avoid excessive prerendering)
+  const topResultUrls = useMemo(() => {
+    if (!isOpen || filteredCommands.length === 0) return []
+    
+    return filteredCommands
+      .slice(0, 5) // Top 5 results
+      .map(cmd => cmd.url)
+      .filter((url): url is string => !!url && typeof url === 'string')
+  }, [isOpen, filteredCommands])
+
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center pt-[20vh] p-4">
+    <>
+      {/* Prerender top command palette results */}
+      {isOpen && topResultUrls.length > 0 && (
+        <SpeculationRules 
+          urls={topResultUrls}
+          eagerness="moderate" // Prerender on hover + after 2s of mouse inactivity
+        />
+      )}
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center pt-[20vh] p-4">
       <div className="bg-[hsl(var(--card))] rounded-2xl border border-[hsl(var(--border))] shadow-2xl max-w-2xl w-full max-h-[60vh] flex flex-col animate-in fade-in-0 zoom-in-95 duration-200">
         {/* Search Input */}
         <div className="p-4 border-b border-[hsl(var(--border))]">
@@ -797,6 +816,7 @@ export function CommandPalette() {
         </div>
       </div>
     </div>
+    </>
   )
 }
 

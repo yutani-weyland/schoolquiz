@@ -4,13 +4,90 @@ const nextConfig = {
 
   // Enable experimental features for better performance
   experimental: {
-    optimizePackageImports: ['framer-motion', 'lucide-react', '@radix-ui/react-icons'],
-    // Enable Partial Prerendering for instant page loads
-    // ppr: 'incremental', // Requires Next.js canary version
+    optimizePackageImports: [
+      'framer-motion', 
+      'lucide-react', 
+      '@radix-ui/react-icons',
+      'recharts', // Optimize recharts imports for better tree-shaking
+      '@tanstack/react-table', // Optimize react-table imports
+      '@tanstack/react-virtual', // Optimize react-virtual imports
+    ],
   },
 
   // Compress responses
   compress: true,
+
+  // Security headers to protect against XSS, clickjacking, and other attacks
+  async headers() {
+    // Extract Supabase domain from environment variable for CSP
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    const supabaseDomain = supabaseUrl ? new URL(supabaseUrl).origin : '*.supabase.co';
+
+    // Build Content Security Policy directives
+    const cspDirectives = [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // 'unsafe-eval' needed for Next.js dev mode, 'unsafe-inline' for inline scripts
+      "style-src 'self' 'unsafe-inline' fonts.googleapis.com", // Allow inline styles and Google Fonts CSS
+      "font-src 'self' fonts.gstatic.com data:", // Google Fonts and data URIs for fonts
+      "img-src 'self' data: blob: https:", // Allow images from same origin, data URIs, blobs, and HTTPS
+      "connect-src 'self' " + supabaseDomain + " *.supabase.co wss://*.supabase.co", // API connections to Supabase
+      "frame-src 'none'", // Prevent embedding in frames (X-Frame-Options will also handle this)
+      "object-src 'none'", // Prevent plugins
+      "base-uri 'self'", // Restrict base tag URLs
+      "form-action 'self'", // Restrict form submissions
+      "frame-ancestors 'none'", // Prevent embedding (redundant with X-Frame-Options but part of CSP)
+      // Only upgrade to HTTPS in production (dev server runs on HTTP)
+      ...(process.env.NODE_ENV === 'production' ? ["upgrade-insecure-requests"] : []),
+    ];
+
+    return [
+      {
+        // Apply security headers to all routes
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Content-Security-Policy',
+            value: cspDirectives.join('; '),
+          },
+          // Only enable HSTS in production (dev server runs on HTTP)
+          ...(process.env.NODE_ENV === 'production' ? [{
+            key: 'Strict-Transport-Security',
+            value: 'max-age=31536000; includeSubDomains; preload', // HSTS: 1 year, include subdomains, allow preload
+          }] : []),
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY', // Prevent clickjacking attacks
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff', // Prevent MIME type sniffing
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'strict-origin-when-cross-origin', // Limit referrer information
+          },
+          {
+            key: 'Permissions-Policy',
+            value: [
+              'camera=()',
+              'microphone=()',
+              'geolocation=()',
+              // Note: 'interest-cohort' (FLoC) has been deprecated and removed from browsers
+              // Removed to avoid "Unrecognized feature" warnings
+            ].filter(Boolean).join(', '),
+          },
+          {
+            key: 'X-DNS-Prefetch-Control',
+            value: 'on', // Enable DNS prefetching for performance
+          },
+          {
+            key: 'X-XSS-Protection',
+            value: '1; mode=block', // Legacy XSS protection (CSP is primary protection)
+          },
+        ],
+      },
+    ];
+  },
 
   // OPTIMIZATION: Enable CSS minification (saves ~5.7 KiB according to Lighthouse)
   swcMinify: true,

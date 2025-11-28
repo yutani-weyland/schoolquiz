@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { validateRequest } from '@/lib/api-validation'
+import { CreateQuestionSchema } from '@/lib/validation/schemas'
+import { handleApiError } from '@/lib/api-error'
 
 /**
  * POST /api/admin/questions
@@ -9,15 +12,9 @@ export async function POST(request: NextRequest) {
     // Skip auth for testing
     // TODO: Re-enable authentication in production
 
-    const body = await request.json()
+    // Validate request body with Zod
+    const body = await validateRequest(request, CreateQuestionSchema)
     const { text, answer, explanation, categoryId, createdBy } = body
-
-    if (!text || !answer || !categoryId) {
-      return NextResponse.json(
-        { error: 'Missing required fields: text, answer, categoryId' },
-        { status: 400 }
-      )
-    }
 
     // TODO: Save to database
     // For now, just return success
@@ -34,11 +31,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ question }, { status: 201 })
   } catch (error: any) {
-    console.error('Error creating question:', error)
-    return NextResponse.json(
-      { error: 'Failed to create question', details: error.message },
-      { status: 500 }
-    )
+    return handleApiError(error)
   }
 }
 

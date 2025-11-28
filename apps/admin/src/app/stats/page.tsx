@@ -6,30 +6,25 @@ import { StatsClient } from './StatsClient'
 import { LockedFeature } from '@/components/access/LockedFeature'
 import { SiteHeader } from '@/components/SiteHeader'
 import { Footer } from '@/components/Footer'
+import { RouteLoading } from '@/components/ui/RouteLoading'
+import { PageHeaderSkeleton } from '@/components/ui/Skeleton'
 
 // Force dynamic rendering for user-specific data
 export const dynamic = 'force-dynamic'
 
-// Loading skeleton component
+// Loading skeleton component - uses RouteLoading for consistency
 function StatsSkeleton() {
   return (
-    <>
-      <SiteHeader />
-      <main className="min-h-screen bg-white dark:bg-[#0F1419] text-gray-900 dark:text-white pt-24 sm:pt-32 pb-16 px-4 sm:px-8 overflow-visible">
-        <div className="max-w-6xl mx-auto overflow-visible">
-          <div className="text-center mb-8 sm:mb-12">
-            <div className="h-12 bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse mb-4 max-w-md mx-auto" />
-            <div className="h-6 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse max-w-lg mx-auto" />
-          </div>
-          <div className="space-y-6">
-            <div className="h-32 bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse" />
-            <div className="h-64 bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse" />
-            <div className="h-48 bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse" />
-          </div>
+    <RouteLoading>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 overflow-visible">
+        <PageHeaderSkeleton />
+        <div className="space-y-6">
+          <div className="h-32 bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse" />
+          <div className="h-64 bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse" />
+          <div className="h-48 bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse" />
         </div>
-      </main>
-      <Footer />
-    </>
+      </div>
+    </RouteLoading>
   )
 }
 
@@ -52,7 +47,7 @@ async function StatsData() {
     return (
       <>
         <SiteHeader />
-        <div className="max-w-6xl mx-auto px-4 sm:px-8 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <LockedFeature
             tierRequired="premium"
             onUpgradeClick={() => window.location.href = '/upgrade'}

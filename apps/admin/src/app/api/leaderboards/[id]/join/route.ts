@@ -3,6 +3,11 @@ import { prisma } from '@schoolquiz/db';
 import { requireAuth } from '@/lib/auth';
 import { getOrganisationContext, canWrite } from '@schoolquiz/db';
 import { LeaderboardVisibility } from '@prisma/client';
+import { validateParams } from '@/lib/api-validation';
+import { handleApiError } from '@/lib/api-error';
+import { z } from 'zod';
+
+const ParamsSchema = z.object({ id: z.string().min(1) });
 
 /**
  * POST /api/leaderboards/:id/join
@@ -14,7 +19,7 @@ export async function POST(
 ) {
   try {
     const user = await requireAuth();
-    const { id: leaderboardId } = await params;
+    const { id: leaderboardId } = await validateParams(await params, ParamsSchema);
 
     const leaderboard = await prisma.leaderboard.findUnique({
       where: { id: leaderboardId },
@@ -118,11 +123,14 @@ export async function POST(
 
     return NextResponse.json({ member });
   } catch (error: any) {
-    console.error('Error joining leaderboard:', error);
-    return NextResponse.json(
-      { error: error.message || 'Failed to join leaderboard' },
-      { status: 500 }
-    );
+    // Handle permission errors
+    if (error.message?.includes('Permission') || error.message?.includes('403')) {
+      return NextResponse.json(
+        { error: error.message || 'Permission denied' },
+        { status: 403 }
+      );
+    }
+    return handleApiError(error);
   }
 }
 

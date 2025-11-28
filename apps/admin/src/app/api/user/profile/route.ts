@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireApiAuth } from "@/lib/api-auth";
 import { handleApiError } from "@/lib/api-error";
 import { prisma } from "@schoolquiz/db";
+import { validateRequest } from '@/lib/api-validation';
+import { UpdateProfileSchema } from '@/lib/validation/schemas';
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,13 +13,19 @@ export async function GET(request: NextRequest) {
     const userWithProfile = await prisma.user.findUnique({
       where: { id: user.id },
       include: {
-        organisation: {
-          select: {
-            id: true,
-            name: true,
+        organisationMembers: {
+          where: { status: 'ACTIVE' },
+          include: {
+            organisation: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
+          take: 1,
         },
-      } as any,
+      },
     });
 
     if (!userWithProfile) {
@@ -27,12 +35,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Get organisation name from first active membership
+    const organisationName = userWithProfile.organisationMembers?.[0]?.organisation?.name || null;
+
     return NextResponse.json({
       id: userWithProfile.id,
       email: userWithProfile.email,
       name: userWithProfile.name,
       teamName: userWithProfile.teamName || "",
-      organisationName: (userWithProfile as any).organisation?.name,
+      organisationName,
       profileVisibility: userWithProfile.profileVisibility || "PUBLIC",
       avatar: userWithProfile.avatar || "👤",
     });
@@ -44,54 +55,23 @@ export async function GET(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const user = await requireApiAuth();
-    const body = await request.json();
+    // Validate request body with Zod
+    const body = await validateRequest(request, UpdateProfileSchema);
     const { teamName, profileVisibility, avatar } = body;
 
     const updates: any = {};
     
-    // Validate and update team name
+    // Apply updates (Zod already validated them)
     if (teamName !== undefined) {
-      if (typeof teamName !== 'string') {
-        return NextResponse.json(
-          { error: "Team name must be a string" },
-          { status: 400 }
-        );
-      }
-      if (teamName.length > 50) {
-        return NextResponse.json(
-          { error: "Team name must be 50 characters or less" },
-          { status: 400 }
-        );
-      }
       updates.teamName = teamName.trim();
     }
 
-    // Validate and update profile visibility
     if (profileVisibility !== undefined) {
-      if (!['PUBLIC', 'LEAGUES_ONLY', 'PRIVATE'].includes(profileVisibility)) {
-        return NextResponse.json(
-          { error: "Invalid profile visibility setting" },
-          { status: 400 }
-        );
-      }
       updates.profileVisibility = profileVisibility;
     }
 
-    // Validate and update avatar (must be a single emoji)
+    // Avatar is already validated by Zod schema (refine)
     if (avatar !== undefined) {
-      if (typeof avatar !== 'string') {
-        return NextResponse.json(
-          { error: "Avatar must be a string" },
-          { status: 400 }
-        );
-      }
-      // Validate it's a single emoji or empty
-      if (avatar !== '' && !/^[\p{Emoji}]$/u.test(avatar)) {
-        return NextResponse.json(
-          { error: "Avatar must be a single emoji" },
-          { status: 400 }
-        );
-      }
       updates.avatar = avatar;
     }
     
@@ -100,21 +80,30 @@ export async function PUT(request: NextRequest) {
       where: { id: user.id },
       data: updates,
       include: {
-        organisation: {
-          select: {
-            id: true,
-            name: true,
+        organisationMembers: {
+          where: { status: 'ACTIVE' },
+          include: {
+            organisation: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
+          take: 1,
         },
-      } as any,
+      },
     });
+
+    // Get organisation name from first active membership
+    const organisationName = updatedUser.organisationMembers?.[0]?.organisation?.name || null;
 
     return NextResponse.json({
       id: updatedUser.id,
       email: updatedUser.email,
       name: updatedUser.name,
       teamName: updatedUser.teamName || "",
-      organisationName: (updatedUser as any).organisation?.name,
+      organisationName,
       profileVisibility: updatedUser.profileVisibility || "PUBLIC",
       avatar: updatedUser.avatar || "👤",
     });

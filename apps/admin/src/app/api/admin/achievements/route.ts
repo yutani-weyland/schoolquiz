@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import { prisma } from '@schoolquiz/db'
+import { validateRequest, validateQuery } from '@/lib/api-validation'
+import { CreateAchievementSchema, AchievementQuerySchema } from '@/lib/validation/schemas'
+import { handleApiError } from '@/lib/api-error'
 
 /**
  * GET /api/admin/achievements
@@ -17,9 +20,10 @@ export async function GET(request: NextRequest) {
     // TODO: Add proper admin role check
     // For now, allow any authenticated user (can be tightened later)
 
-    const searchParams = request.nextUrl.searchParams
-    const search = searchParams.get('search') || ''
-    const limit = parseInt(searchParams.get('limit') || '100', 10)
+    // Validate query parameters
+    const query = await validateQuery(request, AchievementQuerySchema)
+    const search = query.search || ''
+    const limit = query.limit || 100
 
     // Build where clause for search
     const where: any = {}
@@ -49,11 +53,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ achievements })
   } catch (error: any) {
-    console.error('Error fetching achievements:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch achievements', details: error.message },
-      { status: 500 }
-    )
+    return handleApiError(error)
   }
 }
 
@@ -70,16 +70,8 @@ export async function POST(request: NextRequest) {
 
     // TODO: Add proper admin role check
 
-    let body
-    try {
-      body = await request.json()
-    } catch (error) {
-      return NextResponse.json(
-        { error: 'Invalid JSON in request body' },
-        { status: 400 }
-      )
-    }
-
+    // Validate request body with Zod
+    const body = await validateRequest(request, CreateAchievementSchema)
     const {
       slug,
       name,
@@ -98,14 +90,6 @@ export async function POST(request: NextRequest) {
       series,
       cardVariant,
     } = body
-
-    // Validation
-    if (!slug || !name || !shortDescription || !category || !rarity || !unlockConditionType) {
-      return NextResponse.json(
-        { error: 'Missing required fields: slug, name, shortDescription, category, rarity, unlockConditionType' },
-        { status: 400 }
-      )
-    }
 
     // Check if slug already exists
     const existing = await prisma.achievement.findUnique({
@@ -162,11 +146,16 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ achievement }, { status: 201 })
   } catch (error: any) {
-    console.error('Error creating achievement:', error)
-    return NextResponse.json(
-      { error: 'Failed to create achievement', details: error.message },
-      { status: 500 }
-    )
+    // Handle unique constraint violations
+    if (error.code === 'P2002') {
+      return NextResponse.json(
+        { error: 'Achievement with this slug already exists' },
+        { status: 409 }
+      )
+    }
+    
+    // Use centralized error handling (handles ValidationError automatically)
+    return handleApiError(error)
   }
 }
 

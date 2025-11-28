@@ -34,17 +34,55 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Get referral stats
-    const referralsMade = await (prisma as any).referral.count({
-      where: { referrerId: user.id },
-    })
+    // Get referral stats and detailed list
+    // Use try-catch to handle cases where referrals table might not exist or have issues
+    let referrals: any[] = [];
+    try {
+      referrals = await (prisma as any).referral.findMany({
+        where: { referrerId: user.id },
+        include: {
+          referredUser: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              tier: true,
+              subscriptionStatus: true,
+              createdAt: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+    } catch (error: any) {
+      // If referral table doesn't exist or query fails, log and continue with empty array
+      console.warn('[Referral API] Error fetching referrals:', error?.message || error);
+      referrals = [];
+    }
 
-    const rewardedReferrals = await (prisma as any).referral.count({
-      where: {
-        referrerId: user.id,
-        status: 'REWARDED',
-      },
-    })
+    const referralsMade = referrals.length
+    const rewardedReferrals = referrals.filter((r: any) => r.status === 'REWARDED').length
+
+    // Format referral data for frontend
+    // Handle cases where referredUser might be null (deleted user, etc.)
+    const referralList = referrals
+      .filter((ref: any) => ref.referredUser) // Filter out referrals with deleted users
+      .map((ref: any) => ({
+        id: ref.id,
+        referredUserId: ref.referredUserId,
+        status: ref.status,
+        rewardGrantedAt: ref.rewardGrantedAt,
+        createdAt: ref.createdAt,
+        user: {
+          email: ref.referredUser.email,
+          name: ref.referredUser.name || ref.referredUser.email.split('@')[0],
+          tier: ref.referredUser.tier,
+          subscriptionStatus: ref.referredUser.subscriptionStatus,
+          signedUpAt: ref.referredUser.createdAt,
+        },
+      }))
 
     return NextResponse.json({
       referralCode,
@@ -52,6 +90,7 @@ export async function GET(request: NextRequest) {
       maxFreeMonths: 3,
       referralsMade,
       rewardedReferrals,
+      referrals: referralList,
     });
   } catch (error: any) {
     return handleApiError(error);

@@ -1,5 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@schoolquiz/db'
+import { validateQuery } from '@/lib/api-validation'
+import { handleApiError } from '@/lib/api-error'
+import { z } from 'zod'
+
+const QuestionsBankQuerySchema = z.object({
+  search: z.string().optional(),
+  categoryId: z.string().optional(),
+  sortBy: z.enum(['question', 'answer', 'category', 'updatedAt']).default('updatedAt').optional(),
+  sortOrder: z.enum(['asc', 'desc']).default('desc').optional(),
+})
 
 /**
  * GET /api/admin/questions/bank
@@ -7,11 +17,12 @@ import { prisma } from '@schoolquiz/db'
  */
 export async function GET(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams
-    const search = searchParams.get('search') || ''
-    const categoryId = searchParams.get('categoryId') || ''
-    const sortBy = searchParams.get('sortBy') || 'updatedAt'
-    const sortOrder = searchParams.get('sortOrder') || 'desc'
+    // Validate query parameters
+    const query = await validateQuery(request, QuestionsBankQuerySchema)
+    const search = query.search || ''
+    const categoryId = query.categoryId || ''
+    const sortBy = query.sortBy || 'updatedAt'
+    const sortOrder = query.sortOrder || 'desc'
 
     try {
       // Build where clause
@@ -173,11 +184,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ questions: filtered })
     }
   } catch (error: any) {
-    console.error('Error fetching questions:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch questions', details: error.message },
-      { status: 500 }
-    )
+    return handleApiError(error)
   }
 }
 
@@ -187,15 +194,12 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
+    const { validateRequest } = await import('@/lib/api-validation')
+    const { CreateQuestionSchema } = await import('@/lib/validation/schemas')
+    
+    // Validate request body with Zod
+    const body = await validateRequest(request, CreateQuestionSchema)
     const { text, answer, explanation, categoryId } = body
-
-    if (!text || !answer || !categoryId) {
-      return NextResponse.json(
-        { error: 'Missing required fields: text, answer, categoryId' },
-        { status: 400 }
-      )
-    }
 
     try {
       // Verify category exists
@@ -249,18 +253,16 @@ export async function POST(request: NextRequest) {
         },
       }, { status: 201 })
     } catch (dbError: any) {
-      console.error('Database error creating question:', dbError)
-      return NextResponse.json(
-        { error: 'Failed to create question', details: dbError.message },
-        { status: 500 }
-      )
+      if (dbError.code === 'P2002') {
+        return NextResponse.json(
+          { error: 'Question already exists' },
+          { status: 409 }
+        )
+      }
+      throw dbError
     }
   } catch (error: any) {
-    console.error('Error creating question:', error)
-    return NextResponse.json(
-      { error: 'Failed to create question', details: error.message },
-      { status: 500 }
-    )
+    return handleApiError(error)
   }
 }
 

@@ -2,9 +2,26 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { motion } from 'framer-motion';
-import { Copy, Check, Users, Sparkles, Gift, TrendingUp } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Copy, Check, Users, Sparkles, Gift, TrendingUp, Loader2, CheckCircle2, Clock, Mail, Calendar, Crown } from 'lucide-react';
 import { useUserTier } from '@/hooks/useUserTier';
+
+interface ReferredUser {
+  email: string;
+  name: string;
+  tier: string;
+  subscriptionStatus: string;
+  signedUpAt: string;
+}
+
+interface Referral {
+  id: string;
+  referredUserId: string;
+  status: 'PENDING' | 'REWARDED';
+  rewardGrantedAt: string | null;
+  createdAt: string;
+  user: ReferredUser;
+}
 
 interface ReferralData {
   referralCode: string;
@@ -12,6 +29,7 @@ interface ReferralData {
   maxFreeMonths: number;
   referralsMade: number;
   rewardedReferrals: number;
+  referrals: Referral[];
 }
 
 export function ReferralTab() {
@@ -30,7 +48,7 @@ export function ReferralTab() {
       }
 
       const response = await fetch('/api/user/referral', {
-        credentials: 'include', // Send session cookie
+        credentials: 'include',
       });
 
       if (response.ok) {
@@ -54,9 +72,8 @@ export function ReferralTab() {
 
   if (loading) {
     return (
-      <div className="text-center py-12">
-        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-        <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
       </div>
     );
   }
@@ -71,7 +88,7 @@ export function ReferralTab() {
     );
   }
 
-  const { referralCode, freeMonthsGranted, maxFreeMonths, referralsMade, rewardedReferrals } = referralData;
+  const { referralCode, freeMonthsGranted, maxFreeMonths, referralsMade, rewardedReferrals, referrals } = referralData;
   const progress = Math.min(freeMonthsGranted, maxFreeMonths);
   const progressPercentage = (progress / maxFreeMonths) * 100;
   const referralLink = referralCode
@@ -87,6 +104,45 @@ export function ReferralTab() {
     } catch (error) {
       console.error('Failed to copy:', error);
     }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-AU', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
+  const getStatusBadge = (referral: Referral) => {
+    const isPremium = referral.user.tier === 'premium' || 
+                     referral.user.subscriptionStatus === 'ACTIVE' || 
+                     referral.user.subscriptionStatus === 'TRIALING';
+
+    if (referral.status === 'REWARDED') {
+      return {
+        label: 'Rewarded',
+        icon: CheckCircle2,
+        color: 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400',
+        borderColor: 'border-green-200 dark:border-green-800',
+      };
+    }
+
+    if (isPremium) {
+      return {
+        label: 'Upgraded - Reward Pending',
+        icon: Crown,
+        color: 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400',
+        borderColor: 'border-blue-200 dark:border-blue-800',
+      };
+    }
+
+    return {
+      label: 'Signed Up',
+      icon: Clock,
+      color: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-400',
+      borderColor: 'border-gray-200 dark:border-gray-700',
+    };
   };
 
   return (
@@ -109,17 +165,26 @@ export function ReferralTab() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-2 mb-1">
             <Users className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-            <span className="text-xs text-gray-500 dark:text-gray-400">Referrals Made</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">Total Referrals</span>
           </div>
           <p className="text-2xl font-bold text-gray-900 dark:text-white">{referralsMade}</p>
         </div>
         <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-2 mb-1">
-            <TrendingUp className="w-4 h-4 text-green-500 dark:text-green-400" />
+            <Crown className="w-4 h-4 text-blue-500 dark:text-blue-400" />
+            <span className="text-xs text-gray-500 dark:text-gray-400">Upgraded</span>
+          </div>
+          <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+            {referrals.filter(r => r.user.tier === 'premium' || r.user.subscriptionStatus === 'ACTIVE' || r.user.subscriptionStatus === 'TRIALING').length}
+          </p>
+        </div>
+        <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center gap-2 mb-1">
+            <CheckCircle2 className="w-4 h-4 text-green-500 dark:text-green-400" />
             <span className="text-xs text-gray-500 dark:text-gray-400">Rewarded</span>
           </div>
           <p className="text-2xl font-bold text-green-600 dark:text-green-400">{rewardedReferrals}</p>
@@ -193,6 +258,84 @@ export function ReferralTab() {
         </div>
       )}
 
+      {/* Referrals List */}
+      {referrals && referrals.length > 0 && (
+        <div className="space-y-3">
+          <h4 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+            <Users className="w-4 h-4" />
+            Your Referrals ({referrals.length})
+          </h4>
+          <div className="space-y-2">
+            <AnimatePresence>
+              {referrals.map((referral, index) => {
+                const statusBadge = getStatusBadge(referral);
+                const StatusIcon = statusBadge.icon;
+                const isPremium = referral.user.tier === 'premium' || 
+                                 referral.user.subscriptionStatus === 'ACTIVE' || 
+                                 referral.user.subscriptionStatus === 'TRIALING';
+
+                return (
+                  <motion.div
+                    key={referral.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ delay: index * 0.05 }}
+                    className={`p-4 rounded-xl border ${statusBadge.borderColor} bg-white dark:bg-gray-800/50`}
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-gray-900 dark:text-white truncate">
+                              {referral.user.name}
+                            </p>
+                            <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                              <Mail className="w-3 h-3" />
+                              <span className="truncate">{referral.user.email}</span>
+                            </div>
+                          </div>
+                          {isPremium && (
+                            <Crown className="w-4 h-4 text-blue-500 dark:text-blue-400 flex-shrink-0" />
+                          )}
+                        </div>
+                        <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+                          <div className="flex items-center gap-1">
+                            <Calendar className="w-3 h-3" />
+                            <span>Signed up {formatDate(referral.user.signedUpAt)}</span>
+                          </div>
+                          {referral.rewardGrantedAt && (
+                            <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
+                              <Gift className="w-3 h-3" />
+                              <span>Rewarded {formatDate(referral.rewardGrantedAt)}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex-shrink-0">
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${statusBadge.color}`}>
+                          <StatusIcon className="w-3.5 h-3.5" />
+                          {statusBadge.label}
+                        </span>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+          </div>
+        </div>
+      )}
+
+      {referrals && referrals.length === 0 && (
+        <div className="text-center py-8 px-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
+          <Users className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            No referrals yet. Share your link to get started!
+          </p>
+        </div>
+      )}
+
       {/* Success Message */}
       {progress >= maxFreeMonths && (
         <motion.div
@@ -239,4 +382,3 @@ export function ReferralTab() {
     </div>
   );
 }
-

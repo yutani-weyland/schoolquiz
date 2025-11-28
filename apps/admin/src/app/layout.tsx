@@ -11,26 +11,30 @@ import { SessionProviderWrapper } from "@/providers/SessionProviderWrapper";
 // OPTIMIZATION: Lazy load NavigationProgress to reduce initial bundle size
 // It uses framer-motion which is heavy, and navigation progress isn't critical for initial render
 import { LazyNavigationProgressWrapper } from "@/components/ui/LazyNavigationProgress";
+import { SiteSpeculationRules } from "@/components/SiteSpeculationRules";
+import { CriticalSkeletonCSS } from "@/components/CriticalSkeletonCSS";
 
 // Optimized font loading with next/font
-const atkinson = Atkinson_Hyperlegible({
-	weight: ['400', '700'],
-	subsets: ['latin'],
-	display: 'swap',
-	variable: '--font-atkinson',
-});
-
-const cinzel = Cinzel({
-	weight: ['400', '500', '600', '700'],
-	subsets: ['latin'],
-	display: 'swap',
-	variable: '--font-cinzel',
-});
-
+// REVERTED: Keep display: 'swap' to maintain visual consistency
+// The fonts are important to the site's design, so we want them to load even if slightly delayed
 const inter = Inter({
 	subsets: ['latin'],
 	display: 'swap',
 	variable: '--font-inter',
+});
+
+const atkinson = Atkinson_Hyperlegible({
+	weight: ['400', '700'],
+	subsets: ['latin'],
+	display: 'swap', // Keep swap - font is important for design
+	variable: '--font-atkinson',
+});
+
+const cinzel = Cinzel({
+	weight: ['400', '500', '600', '700'], // Restored all weights
+	subsets: ['latin'],
+	display: 'swap', // Keep swap - font is important for design
+	variable: '--font-cinzel',
 });
 
 export const metadata: Metadata = {
@@ -67,6 +71,10 @@ export default function RootLayout({
 				{/* OPTIMIZATION: Preconnect to critical origins to reduce connection time */}
 				<link rel="preconnect" href={process.env.NEXT_PUBLIC_SUPABASE_URL || ''} crossOrigin="anonymous" />
 				<link rel="dns-prefetch" href={process.env.NEXT_PUBLIC_SUPABASE_URL || ''} />
+				
+				{/* OPTIMIZATION: Prefetch likely next pages for faster navigation */}
+				<link rel="prefetch" href="/quizzes" />
+				<link rel="prefetch" href="/account" />
 				<script
 					dangerouslySetInnerHTML={{
 						__html: `
@@ -133,11 +141,13 @@ export default function RootLayout({
 				</Script>
 			</head>
 			<body className="bg-gray-50 dark:bg-[#0F1419] text-[hsl(var(--foreground))] overflow-x-hidden" suppressHydrationWarning>
+				<CriticalSkeletonCSS />
 				<LazyNavigationProgressWrapper />
 				<SessionProviderWrapper>
 					<ReactQueryProvider>
 						<ThemeProvider>
 							<UserAccessProvider>
+								<SiteSpeculationRules />
 								{children}
 							</UserAccessProvider>
 						</ThemeProvider>

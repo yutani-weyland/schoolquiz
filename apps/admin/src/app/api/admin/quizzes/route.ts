@@ -10,37 +10,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@schoolquiz/db';
 import { requireAdmin } from '@/lib/auth-helpers';
 import { requireAuth } from '@/lib/auth';
+import { validateRequest, validateQuery } from '@/lib/api-validation';
+import { CreateQuizSchema, AdminQuizzesQuerySchema } from '@/lib/validation/schemas';
+import { handleApiError } from '@/lib/api-error';
+import { getCurrentUser } from '@/lib/auth';
+import { can } from '@/lib/permissions';
 
 // Helper to generate CUID-like IDs
 function generateId(): string {
   return `c${Date.now().toString(36)}${Math.random().toString(36).substr(2, 9)}`;
 }
 
-interface QuestionInput {
-  id: string;
-  question: string;
-  answer: string;
-  explanation?: string;
-  category: string;
-}
 
-interface RoundInput {
-  id: string;
-  category: string;
-  title: string;
-  blurb: string;
-  questions: QuestionInput[];
-  kind?: 'standard' | 'finale';
-}
-
-interface QuizInput {
-  number: number;
-  title: string;
-  description: string;
-  status: 'draft' | 'scheduled' | 'published';
-  scheduledDate?: string;
-  rounds: RoundInput[];
-}
 
 export async function GET(request: NextRequest) {
   try {
@@ -49,14 +30,14 @@ export async function GET(request: NextRequest) {
       // Silently allow in development - auth will be implemented later
     });
 
-    // Get search params from NextRequest
-    const searchParams = request.nextUrl.searchParams;
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '50');
-    const search = searchParams.get('search') || '';
-    const status = searchParams.get('status') || '';
-    const sortBy = searchParams.get('sortBy') || 'createdAt';
-    const sortOrder = searchParams.get('sortOrder') || 'desc';
+    // Validate query parameters with Zod
+    const query = await validateQuery(request, AdminQuizzesQuerySchema);
+    const page = query.page || 1;
+    const limit = query.limit || 50;
+    const search = query.search || '';
+    const status = query.status || '';
+    const sortBy = query.sortBy || 'createdAt';
+    const sortOrder = query.sortOrder || 'desc';
 
     const skip = (page - 1) * limit;
 
@@ -90,7 +71,7 @@ export async function GET(request: NextRequest) {
     // Try optimized query first, fallback if runs relation doesn't exist
     let quizzes: any[];
     let total: number;
-    
+
     try {
       // Try optimized query with relation count
       const result = await Promise.all([
@@ -199,7 +180,7 @@ export async function GET(request: NextRequest) {
         ]);
         quizzes = result[0];
         total = result[1];
-        
+
         // Get runs count separately if possible
         let runsCounts: any[] = [];
         if (quizzes.length > 0) {
@@ -220,14 +201,14 @@ export async function GET(request: NextRequest) {
             runsCounts = [];
           }
         }
-        
+
         // Create a map of quizId -> runs count
         const runsCountMap = new Map(
-          Array.isArray(runsCounts) 
+          Array.isArray(runsCounts)
             ? runsCounts.map((r: any) => [r.quizId, r._count.id])
             : []
         );
-        
+
         // Add runs count to each quiz
         quizzes = quizzes.map((quiz: any) => ({
           ...quiz,
@@ -260,60 +241,22 @@ export async function GET(request: NextRequest) {
       meta: error?.meta,
       stack: error?.stack,
     };
-    
-    console.error('❌❌❌ ERROR IN GET /api/admin/quizzes ❌❌❌');
-    console.error('Error details:', JSON.stringify(errorDetails, null, 2));
-    console.error('Error object:', error);
-    
-    return NextResponse.json(
-      {
-        error: 'Failed to fetch quizzes',
-        details: errorDetails.message,
-        errorName: errorDetails.name,
-        errorCode: errorDetails.code,
-        // Only include stack in development
-        ...(process.env.NODE_ENV === 'development' && { stack: errorDetails.stack }),
-      },
-      { status: 500 }
-    );
+
+    return handleApiError(error);
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const body: QuizInput = await request.json();
-    console.log('📝 Creating quiz:', { number: body.number, title: body.title });
+    const user = await getCurrentUser();
 
-    // Get authenticated user (will create default if none exists, for now)
-    let user = await requireAuth().catch(async () => {
-      // Fallback: Create default teacher if auth fails (for development)
-      let teacher = await prisma.teacher.findFirst();
-      if (!teacher) {
-        const school = await prisma.school.create({
-          data: {
-            id: generateId(),
-            name: 'Default School',
-            region: 'NSW',
-          },
-        });
-        teacher = await prisma.teacher.create({
-          data: {
-            id: generateId(),
-            schoolId: school.id,
-            email: 'admin@schoolquiz.com',
-            name: 'Admin Teacher',
-            role: 'admin',
-          },
-        });
-        console.log('✅ Created default school and teacher');
-      }
-      return {
-        id: teacher.id,
-        email: teacher.email,
-        name: teacher.name,
-        role: teacher.role || 'teacher',
-      };
-    });
+    if (!user || !can(user, 'create', 'quiz')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+
+    // Validate request body with Zod
+    const body = await validateRequest(request, CreateQuizSchema);
+    console.log('📝 Creating quiz:', { number: body.number, title: body.title });
 
     // Generate slug from quiz number
     const slug = String(body.number);
@@ -363,7 +306,7 @@ export async function POST(request: NextRequest) {
         status: body.status,
         colorHex: '#FFE135', // Default yellow, can be customized later
         createdBy: user.id,
-        weekISO: body.scheduledDate 
+        weekISO: body.scheduledDate
           ? new Date(body.scheduledDate).toISOString().split('T')[0]
           : new Date().toISOString().split('T')[0],
         publicationDate: body.scheduledDate ? new Date(body.scheduledDate) : null,
@@ -433,14 +376,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error('❌ Error creating quiz:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to create quiz',
-        details: error.message,
-      },
-      { status: 500 }
-    );
+    // Use centralized error handling (handles ValidationError automatically)
+    return handleApiError(error);
   }
 }

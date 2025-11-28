@@ -7,11 +7,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@schoolquiz/db';
 import { requireAdmin } from '@/lib/auth-helpers';
+import { validateRequest, validateParams } from '@/lib/api-validation';
+import { PatchQuizSchema, PutQuizSchema, CreateQuizSchema } from '@/lib/validation/schemas';
+import { handleApiError, NotFoundError } from '@/lib/api-error';
+import { z } from 'zod';
 
 // Helper to generate CUID-like IDs
 function generateId(): string {
   return `c${Date.now().toString(36)}${Math.random().toString(36).substr(2, 9)}`;
 }
+
+const ParamsSchema = z.object({ id: z.string().min(1) });
 
 export async function GET(
   request: NextRequest,
@@ -23,7 +29,7 @@ export async function GET(
       console.warn('⚠️ Admin access check failed, allowing for development');
     });
 
-    const { id } = await params;
+    const { id } = await validateParams(await params, ParamsSchema);
 
     // Optimized query - use select instead of include for better performance
     const quiz = await prisma.quiz.findUnique({
@@ -128,14 +134,7 @@ export async function GET(
       },
     });
   } catch (error: any) {
-    console.error('❌ Error fetching quiz:', error);
-    return NextResponse.json(
-      {
-        error: 'Failed to fetch quiz',
-        details: error.message,
-      },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }
 
@@ -144,8 +143,9 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
-    const body = await request.json();
+    const { id } = await validateParams(await params, ParamsSchema);
+    // Validate request body with Zod
+    const body = await validateRequest(request, PatchQuizSchema);
 
     // Check if quiz exists
     const existingQuiz = await prisma.quiz.findUnique({
@@ -199,8 +199,9 @@ export async function PUT(
     // Require admin access
     await requireAdmin(request);
 
-    const { id } = await params;
-    const body = await request.json();
+    const { id } = await validateParams(await params, ParamsSchema);
+    // Validate request body with Zod (full update with rounds)
+    const body = await validateRequest(request, CreateQuizSchema);
 
     // Get or create a default teacher (TODO: Replace with real auth)
     let teacher = await prisma.teacher.findFirst();
@@ -333,14 +334,13 @@ export async function PUT(
       quiz: updatedQuiz,
     });
   } catch (error: any) {
-    console.error('❌ Error updating quiz:', error);
-    return NextResponse.json(
-      {
-        error: 'Failed to update quiz',
-        details: error.message,
-      },
-      { status: 500 }
-    );
+    if (error.code === 'P2025') {
+      return NextResponse.json(
+        { error: 'Quiz not found' },
+        { status: 404 }
+      );
+    }
+    return handleApiError(error);
   }
 }
 
@@ -354,7 +354,7 @@ export async function DELETE(
       console.warn('⚠️ Admin access check failed, allowing for development');
     });
 
-    const { id } = await params;
+    const { id } = await validateParams(await params, ParamsSchema);
 
     // Check if quiz exists
     const quiz = await prisma.quiz.findUnique({
@@ -378,13 +378,12 @@ export async function DELETE(
       message: 'Quiz deleted successfully',
     });
   } catch (error: any) {
-    console.error('❌ Error deleting quiz:', error);
-    return NextResponse.json(
-      {
-        error: 'Failed to delete quiz',
-        details: error.message,
-      },
-      { status: 500 }
-    );
+    if (error.code === 'P2025') {
+      return NextResponse.json(
+        { error: 'Quiz not found' },
+        { status: 404 }
+      );
+    }
+    return handleApiError(error);
   }
 }

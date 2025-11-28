@@ -1,4 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { validateRequest, validateQuery } from '@/lib/api-validation'
+import { CreateRoundSchema } from '@/lib/validation/schemas'
+import { handleApiError } from '@/lib/api-error'
+import { z } from 'zod'
+
+const RoundTemplatesQuerySchema = z.object({
+  search: z.string().optional(),
+  categoryId: z.string().optional(),
+})
 
 // TODO: Create a RoundTemplate model in the database schema
 // Currently using in-memory storage because there's no RoundTemplate model.
@@ -142,9 +151,10 @@ if (Object.keys(roundTemplates).length === 0) {
  */
 export async function GET(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams
-    const search = searchParams.get('search') || ''
-    const categoryId = searchParams.get('categoryId') || ''
+    // Validate query parameters
+    const query = await validateQuery(request, RoundTemplatesQuerySchema)
+    const search = query.search || ''
+    const categoryId = query.categoryId || ''
 
     let rounds = Object.values(roundTemplates)
 
@@ -172,11 +182,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ rounds })
   } catch (error: any) {
-    console.error('Error fetching round templates:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch round templates', details: error.message },
-      { status: 500 }
-    )
+    return handleApiError(error)
   }
 }
 
@@ -186,27 +192,9 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
+    // Validate request body with Zod
+    const body = await validateRequest(request, CreateRoundSchema)
     const { title, categoryId, blurb, questions } = body
-
-    if (!title || !categoryId || !questions || questions.length !== 6) {
-      return NextResponse.json(
-        { error: 'Missing required fields: title, categoryId, and exactly 6 questions' },
-        { status: 400 }
-      )
-    }
-
-    // Validate all questions have text and answer
-    const incompleteQuestions = questions.filter(
-      (q: any) => !q.text?.trim() || !q.answer?.trim()
-    )
-
-    if (incompleteQuestions.length > 0) {
-      return NextResponse.json(
-        { error: 'All questions must have text and answer' },
-        { status: 400 }
-      )
-    }
 
     // Get category name (would fetch from database in production)
     const categories: Record<string, string> = {
@@ -243,11 +231,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ round }, { status: 201 })
   } catch (error: any) {
-    console.error('Error creating round template:', error)
-    return NextResponse.json(
-      { error: 'Failed to create round template', details: error.message },
-      { status: 500 }
-    )
+    return handleApiError(error)
   }
 }
 

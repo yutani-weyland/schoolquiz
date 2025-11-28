@@ -2,6 +2,7 @@ import { AdminSidebar } from '@/components/admin/AdminSidebar'
 import { AdminTopbar } from '@/components/admin/AdminTopbar'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { CommandPalette } from '@/components/admin/CommandPalette'
+import { AdminSpeculationRules } from '@/components/admin/AdminSpeculationRules'
 
 interface AdminLayoutProps {
   children: React.ReactNode
@@ -51,6 +52,9 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-[hsl(var(--background))]">
+      {/* Speculation Rules for admin navigation prerendering */}
+      <AdminSpeculationRules />
+      
       {/* Sidebar - fixed on the left, full height, z-50 so it's above topbar */}
       <AdminSidebar />
       

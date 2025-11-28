@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import { prisma } from '@schoolquiz/db'
+import { validateRequest, validateParams } from '@/lib/api-validation'
+import { UpdateAchievementSchema } from '@/lib/validation/schemas'
+import { handleApiError, NotFoundError } from '@/lib/api-error'
+import { z } from 'zod'
 
 /**
  * GET /api/admin/achievements/[id]
  * Get a single achievement by ID
  */
+const ParamsSchema = z.object({ id: z.string().min(1) })
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -16,7 +22,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id } = await params
+    const { id } = await validateParams(await params, ParamsSchema)
     const achievement = await prisma.achievement.findUnique({
       where: { id },
     })
@@ -27,11 +33,7 @@ export async function GET(
 
     return NextResponse.json({ achievement })
   } catch (error: any) {
-    console.error('Error fetching achievement:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch achievement', details: error.message },
-      { status: 500 }
-    )
+    return handleApiError(error)
   }
 }
 
@@ -49,17 +51,10 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id } = await params
-    let body
-    try {
-      body = await request.json()
-    } catch (error) {
-      return NextResponse.json(
-        { error: 'Invalid JSON in request body' },
-        { status: 400 }
-      )
-    }
-
+    const { id } = await validateParams(await params, ParamsSchema)
+    
+    // Validate request body with Zod (partial update)
+    const body = await validateRequest(request, UpdateAchievementSchema)
     const {
       slug,
       name,
@@ -151,11 +146,15 @@ export async function PUT(
 
     return NextResponse.json({ achievement })
   } catch (error: any) {
-    console.error('Error updating achievement:', error)
-    return NextResponse.json(
-      { error: 'Failed to update achievement', details: error.message },
-      { status: 500 }
-    )
+    // Handle unique constraint violations
+    if (error.code === 'P2002') {
+      return NextResponse.json(
+        { error: 'Achievement with this slug already exists' },
+        { status: 409 }
+      )
+    }
+    
+    return handleApiError(error)
   }
 }
 
@@ -173,7 +172,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id } = await params
+    const { id } = await validateParams(await params, ParamsSchema)
 
     // Soft delete by setting isActive to false
     const achievement = await prisma.achievement.update({
@@ -183,11 +182,7 @@ export async function DELETE(
 
     return NextResponse.json({ achievement })
   } catch (error: any) {
-    console.error('Error deleting achievement:', error)
-    return NextResponse.json(
-      { error: 'Failed to delete achievement', details: error.message },
-      { status: 500 }
-    )
+    return handleApiError(error)
   }
 }
 

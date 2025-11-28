@@ -149,7 +149,7 @@ export function OrganisationBrandingTab() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
+        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
       </div>
     )
   }

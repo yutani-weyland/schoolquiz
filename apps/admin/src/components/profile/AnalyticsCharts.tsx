@@ -1,6 +1,7 @@
 'use client';
 
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
+// OPTIMIZATION: Lazy-load recharts to reduce initial bundle size
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from '../stats/recharts-lazy';
 import { motion } from 'framer-motion';
 
 interface PerformanceChartProps {

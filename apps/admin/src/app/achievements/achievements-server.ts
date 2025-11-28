@@ -48,6 +48,14 @@ async function getAchievementsDataUncached(userId: string | null, tier: 'visitor
 		const { getAllAchievements } = await import('@/lib/cache-helpers')
 		const allAchievements = await getAllAchievements()
 		
+		// Debug logging in development
+		if (process.env.NODE_ENV === 'development') {
+			console.log('[Achievements Server] getAllAchievements returned:', {
+				count: allAchievements?.length || 0,
+				firstFew: allAchievements?.slice(0, 3).map((a: any) => ({ id: a.id, name: a.name })),
+			})
+		}
+		
 		// Get user's unlocked achievements and progress if logged in
 		let userAchievements: Array<{ achievementId: string; unlockedAt: Date; progressValue?: number; progressMax?: number }> = []
 		let userProgress: Map<string, { progressValue: number; progressMax: number }> = new Map()
@@ -85,8 +93,17 @@ async function getAchievementsDataUncached(userId: string | null, tier: 'visitor
 		
 		const unlockedAchievementIds = new Set(userAchievements.map((ua) => ua.achievementId))
 		
+		// Debug logging in development
+		if (process.env.NODE_ENV === 'development') {
+			console.log('[Achievements Server] Processing achievements:', {
+				totalAchievements: allAchievements?.length || 0,
+				userAchievementsCount: userAchievements.length,
+				unlockedIds: Array.from(unlockedAchievementIds),
+			})
+		}
+		
 		// Map achievements with status and progress
-		const achievementsWithStatus = allAchievements.map((achievement: any) => {
+		const achievementsWithStatus = (allAchievements || []).map((achievement: any) => {
 			const userAchievement = userAchievements.find((ua) => ua.achievementId === achievement.id)
 			const isUnlocked = unlockedAchievementIds.has(achievement.id)
 			const canEarn = !achievement.isPremiumOnly || tier === 'premium'

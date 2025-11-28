@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
+import { validateRequest } from '@/lib/api-validation';
+import { JoinLeaderboardByCodeSchema } from '@/lib/validation/schemas';
+import { handleApiError } from '@/lib/api-error';
 
 /**
  * POST /api/leaderboards/join-by-code
@@ -8,14 +11,8 @@ import { requireAuth } from '@/lib/auth';
 export async function POST(request: NextRequest) {
   try {
     const user = await requireAuth();
-    const { inviteCode } = await request.json();
-
-    if (!inviteCode || typeof inviteCode !== 'string') {
-      return NextResponse.json(
-        { error: 'Invite code is required' },
-        { status: 400 }
-      );
-    }
+    // Validate request body with Zod
+    const { inviteCode } = await validateRequest(request, JoinLeaderboardByCodeSchema);
 
     // TODO: Replace with actual database lookup
     // For now, using mock data structure
@@ -52,11 +49,14 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error('Error joining leaderboard by code:', error);
-    return NextResponse.json(
-      { error: error.message || 'Failed to join leaderboard' },
-      { status: 500 }
-    );
+    // Handle authentication errors
+    if (error.message === 'Unauthorized') {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+    return handleApiError(error);
   }
 }
 

@@ -64,13 +64,13 @@ export function QuizzesClient({ initialData, quizzes }: QuizzesClientProps) {
       {/* OPTIMIZATION: Granular Suspense boundaries + lazy loading for better streaming */}
       {/* Each section can load independently - faster perceived performance */}
       {/* Framer Motion is lazy-loaded only when section is rendered */}
-      
+
       {/* Official Quizzes Section */}
       <Suspense fallback={<QuizCardGridSkeleton count={6} />}>
-        <LazyOfficialQuizzes 
-          quizzes={quizzes} 
+        <LazyOfficialQuizzes
+          quizzes={quizzes}
           completions={initialData.completions}
-          pageAnimationKey={pageAnimationKey} 
+          pageAnimationKey={pageAnimationKey}
         />
       </Suspense>
 
@@ -78,14 +78,14 @@ export function QuizzesClient({ initialData, quizzes }: QuizzesClientProps) {
       {isPremium && (
         <div className="mt-12">
           <Suspense fallback={<QuizCardGridSkeleton count={6} />}>
-            <LazyCustomQuizzes 
+            <LazyCustomQuizzes
               initialData={{
                 customQuizzes: initialData.customQuizzes,
                 customQuizzesTotal: initialData.customQuizzesTotal,
                 customQuizzesHasMore: initialData.customQuizzesHasMore,
                 isPremium: initialData.isPremium
-              }} 
-              pageAnimationKey={pageAnimationKey} 
+              }}
+              pageAnimationKey={pageAnimationKey}
             />
           </Suspense>
         </div>

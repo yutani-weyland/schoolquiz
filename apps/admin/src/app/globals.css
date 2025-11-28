@@ -59,7 +59,10 @@
   display: none;
 }
 
-@import "react-day-picker/style.css";
+/* OPTIMIZATION: react-day-picker CSS loaded asynchronously in Calendar component
+ * to avoid blocking initial render. See apps/admin/src/components/ui/calendar.tsx
+ */
+/* @import "react-day-picker/style.css"; */
 
 /* OpenMoji Font */
 @font-face {
@@ -67,7 +70,7 @@
   src: url('/fonts/OpenMoji-Color.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
-  font-display: swap;
+  font-display: swap; /* Keep swap - font is used for achievements */
 }
 
 /* OpenMoji emoji class */
@@ -90,7 +93,7 @@
   src: url('/fonts/BackIssuesBB_reg.otf') format('opentype');
   font-weight: normal;
   font-style: normal;
-  font-display: swap;
+  font-display: swap; /* Keep swap - font is important for achievement design */
 }
 
 @font-face {

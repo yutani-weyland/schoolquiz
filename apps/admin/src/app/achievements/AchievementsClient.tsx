@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import dynamic from 'next/dynamic'
 import { useUserTier } from "@/hooks/useUserTier";
 import { useUserAccess } from "@/contexts/UserAccessContext";
 import type { UserTier } from "@/lib/feature-gating";
 import { Search, Filter, Calendar, X } from "lucide-react";
 import type { Achievement, AchievementsPageData } from './achievements-server'
+import { VirtualizedAchievementGrid } from './VirtualizedAchievementGrid'
 
 // OPTIMIZATION: Lazy load heavy components to reduce initial bundle size
 // AchievementCard has animations and is ~50KB+, so lazy load it
@@ -256,9 +257,29 @@ export function AchievementsClient({ initialData }: AchievementsClientProps) {
 
 	// OPTIMIZATION: Use server-provided data directly - no client-side fetching needed
 	// Server already fetches and caches achievements, so we can trust initialData
-	const [achievements] = useState<Achievement[]>(initialData.achievements);
+	// Ensure achievements is always an array (defensive programming)
+	const [achievements, setAchievements] = useState<Achievement[]>(initialData?.achievements || []);
 	const [isBrowserOpen, setIsBrowserOpen] = useState(false);
 	const [flippedCardId, setFlippedCardId] = useState<string | null>(null);
+
+	// Debug: Log achievements data to help diagnose loading issues
+	useEffect(() => {
+		if (process.env.NODE_ENV === 'development') {
+			console.log('[AchievementsClient] Initial data:', {
+				achievementsCount: initialData?.achievements?.length || 0,
+				tier: initialData?.tier,
+				isPremium: initialData?.isPremium,
+				achievements: initialData?.achievements?.slice(0, 3), // First 3 for debugging
+			});
+		}
+	}, [initialData]);
+
+	// Update achievements if initialData changes (e.g., after Suspense resolves)
+	useEffect(() => {
+		if (initialData?.achievements && initialData.achievements.length > 0) {
+			setAchievements(initialData.achievements);
+		}
+	}, [initialData?.achievements]);
 	
 	// Filter and sort state
 	const [searchQuery, setSearchQuery] = useState('');
@@ -383,16 +404,11 @@ export function AchievementsClient({ initialData }: AchievementsClientProps) {
 			{/* This section only contains the content below the header */}
 			<section className="min-h-screen flex flex-col items-center px-6 sm:px-8 md:px-4 pb-16">
 				{/* Stats - rendered immediately with server data */}
-				<motion.div
-					initial={{ opacity: 0, y: 10 }}
-					animate={{ opacity: 1, y: 0 }}
-					transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-					className="max-w-4xl mx-auto text-center mb-8"
-				>
+				<div className="max-w-4xl mx-auto text-center mb-8">
 					<p className="text-lg text-[hsl(var(--muted-foreground))] mb-6">
 						{unlockedCount} of {totalCount} unlocked
 					</p>
-				</motion.div>
+				</div>
 
 					{/* Subtle Filters */}
 					<div className="max-w-4xl mx-auto mb-8 px-4">
@@ -486,73 +502,123 @@ export function AchievementsClient({ initialData }: AchievementsClientProps) {
 								)}
 							</div>
 						)}
-						<div className="flex flex-wrap justify-center gap-4">
-							{/* OPTIMIZATION: Render cards without heavy animations initially for faster LCP */}
-							{/* Animations can be added back with lazy-loaded Framer Motion if needed */}
-							{earnedAchievements.map((achievement, index) => {
-								const isFlipped = flippedCardId === achievement.id
-								const rotation = (index % 5 - 2) * 1 // Subtle angles: -2, -1, 0, 1, 2 degrees
-								
-								return (
-									<div
-										key={achievement.id}
-										className="relative"
-										style={{
-											width: 'clamp(120px, 25vw, 200px)',
-											maxWidth: '200px',
-											flexShrink: 0,
-											zIndex: isFlipped ? 50 : 10 + earnedAchievements.length - index,
-											transform: `rotate(${isFlipped ? 0 : rotation}deg)`,
-											transition: 'transform 0.2s ease-out',
-										}}
-										onMouseEnter={(e) => {
-											e.currentTarget.style.transform = 'rotate(0deg) scale(1.1) translateY(-8px)'
-											e.currentTarget.style.zIndex = '50'
-										}}
-										onMouseLeave={(e) => {
-											e.currentTarget.style.transform = `rotate(${rotation}deg)`
-											e.currentTarget.style.zIndex = `${10 + earnedAchievements.length - index}`
-										}}
-									>
-										<LazyAchievementCard
-											achievement={achievement}
-											status={achievement.status}
-											unlockedAt={achievement.unlockedAt}
-											quizSlug={achievement.quizSlug}
-											progressValue={achievement.progressValue}
-											progressMax={achievement.progressMax}
-											tier={tier}
-											isFlipped={isFlipped}
-											onFlipChange={(flipped) => {
-												setFlippedCardId(flipped ? achievement.id : null)
+						{/* OPTIMIZATION: Use virtualization for large lists (>30 items) */}
+						{earnedAchievements.length > 30 ? (
+							<VirtualizedAchievementGrid
+								achievements={earnedAchievements}
+								tier={tier}
+								flippedCardId={flippedCardId}
+								onFlipChange={setFlippedCardId}
+							/>
+						) : (
+							<div className="flex flex-wrap justify-center gap-4">
+								{earnedAchievements.map((achievement, index) => {
+									const isFlipped = flippedCardId === achievement.id
+									const rotation = (index % 5 - 2) * 1 // Subtle angles: -2, -1, 0, 1, 2 degrees
+									
+									return (
+										<div
+											key={achievement.id}
+											className="relative"
+											style={{
+												width: 'clamp(120px, 25vw, 200px)',
+												maxWidth: '200px',
+												flexShrink: 0,
+												zIndex: isFlipped ? 50 : 10 + earnedAchievements.length - index,
+												transform: `rotate(${isFlipped ? 0 : rotation}deg)`,
+												transition: 'transform 0.2s ease-out',
 											}}
-										/>
-									</div>
-								)
-							})}
-						</div>
+											onMouseEnter={(e) => {
+												e.currentTarget.style.transform = 'rotate(0deg) scale(1.1) translateY(-8px)'
+												e.currentTarget.style.zIndex = '50'
+											}}
+											onMouseLeave={(e) => {
+												e.currentTarget.style.transform = `rotate(${rotation}deg)`
+												e.currentTarget.style.zIndex = `${10 + earnedAchievements.length - index}`
+											}}
+										>
+											<LazyAchievementCard
+												achievement={achievement}
+												status={achievement.status}
+												unlockedAt={achievement.unlockedAt}
+												quizSlug={achievement.quizSlug}
+												progressValue={achievement.progressValue}
+												progressMax={achievement.progressMax}
+												tier={tier}
+												isFlipped={isFlipped}
+												onFlipChange={(flipped) => {
+													setFlippedCardId(flipped ? achievement.id : null)
+												}}
+											/>
+										</div>
+									)
+								})}
+							</div>
+						)}
 					</div>
 				)}
 
 				{/* No results message */}
 				{filteredAndSortedAchievements.length === 0 && (
 					<div className="text-center py-16">
-						<p className="text-[hsl(var(--muted-foreground))] mb-4">
-							{searchQuery || categoryFilter !== 'all' || statusFilter !== 'all' 
-								? 'No achievements match your filters'
-								: 'Start playing quizzes to earn achievements'}
-						</p>
-						{(searchQuery || categoryFilter !== 'all' || statusFilter !== 'all') && (
-							<button
-								onClick={() => {
-									setSearchQuery('')
-									setCategoryFilter('all')
-									setStatusFilter('all')
-								}}
-								className="text-sm text-[hsl(var(--primary))] hover:underline"
-							>
-								Clear filters
-							</button>
+						{achievements.length === 0 ? (
+							<>
+								<div className="max-w-2xl mx-auto text-center">
+									<p className="text-lg text-[hsl(var(--muted-foreground))] mb-4">
+										No achievements found in the database.
+									</p>
+									{process.env.NODE_ENV === 'development' && (
+										<>
+											<p className="text-sm text-[hsl(var(--muted-foreground))] mb-6">
+												To populate achievements, run the seed script from the project root:
+											</p>
+											<code className="block bg-gray-100 dark:bg-gray-800 p-4 rounded mb-4 text-left overflow-x-auto">
+												cd packages/db && npx tsx src/seed-achievements.ts
+											</code>
+											<p className="text-xs text-[hsl(var(--muted-foreground))] mb-4">
+												Or check your server console for detailed error logs about why achievements aren't loading.
+											</p>
+											<details className="text-left max-w-2xl mx-auto mt-4 p-4 bg-gray-100 dark:bg-gray-800 rounded">
+												<summary className="cursor-pointer font-semibold mb-2">Debug Info</summary>
+												<pre className="text-xs overflow-auto">
+													{JSON.stringify({
+														initialDataAchievementsCount: initialData?.achievements?.length || 0,
+														currentAchievementsCount: achievements.length,
+														tier: initialData?.tier,
+														isPremium: initialData?.isPremium,
+														hasInitialData: !!initialData,
+													}, null, 2)}
+												</pre>
+											</details>
+										</>
+									)}
+									{process.env.NODE_ENV === 'production' && (
+										<p className="text-sm text-[hsl(var(--muted-foreground))]">
+											Please contact support if you believe this is an error.
+										</p>
+									)}
+								</div>
+							</>
+						) : (
+							<>
+								<p className="text-[hsl(var(--muted-foreground))] mb-4">
+									{searchQuery || categoryFilter !== 'all' || statusFilter !== 'all' 
+										? 'No achievements match your filters'
+										: 'Start playing quizzes to earn achievements'}
+								</p>
+								{(searchQuery || categoryFilter !== 'all' || statusFilter !== 'all') && (
+									<button
+										onClick={() => {
+											setSearchQuery('')
+											setCategoryFilter('all')
+											setStatusFilter('all')
+										}}
+										className="text-sm text-[hsl(var(--primary))] hover:underline"
+									>
+										Clear filters
+									</button>
+								)}
+							</>
 						)}
 					</div>
 				)}

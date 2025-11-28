@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useEffect } from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { DayPicker } from "react-day-picker"
 
@@ -16,6 +17,15 @@ function Calendar({
   captionLayout = "dropdown",
   ...props
 }: CalendarProps) {
+  // OPTIMIZATION: Load react-day-picker CSS asynchronously to avoid blocking initial render
+  // This component is typically below the fold (in date pickers), so CSS doesn't need to block FCP
+  useEffect(() => {
+    // Dynamically import CSS when component mounts (non-blocking)
+    import('react-day-picker/dist/style.css').catch(() => {
+      // Silently fail if already loaded or error occurs
+    })
+  }, [])
+
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}

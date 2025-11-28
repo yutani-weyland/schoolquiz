@@ -4,6 +4,11 @@ import { requireAuth } from '@/lib/auth';
 import { getOrganisationContext, requirePermission } from '@schoolquiz/db';
 import { logOrganisationActivity } from '@schoolquiz/db';
 import { OrganisationActivityType } from '@prisma/client';
+import { validateParams } from '@/lib/api-validation';
+import { handleApiError } from '@/lib/api-error';
+import { z } from 'zod';
+
+const ParamsSchema = z.object({ id: z.string().min(1) });
 
 /**
  * DELETE /api/leaderboards/:id
@@ -15,7 +20,7 @@ export async function DELETE(
 ) {
   try {
     const user = await requireAuth();
-    const { id: leaderboardId } = await params;
+    const { id: leaderboardId } = await validateParams(await params, ParamsSchema);
 
     const leaderboard = await prisma.leaderboard.findUnique({
       where: { id: leaderboardId },
@@ -55,11 +60,14 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    console.error('Error deleting leaderboard:', error);
-    return NextResponse.json(
-      { error: error.message || 'Failed to delete leaderboard' },
-      { status: error.message?.includes('Permission') ? 403 : 500 }
-    );
+    // Handle permission errors
+    if (error.message?.includes('Permission') || error.message?.includes('403')) {
+      return NextResponse.json(
+        { error: error.message || 'Permission denied' },
+        { status: 403 }
+      );
+    }
+    return handleApiError(error);
   }
 }
 

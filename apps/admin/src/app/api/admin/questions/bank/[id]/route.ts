@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@schoolquiz/db'
+import { validateRequest, validateParams } from '@/lib/api-validation'
+import { CreateQuestionSchema } from '@/lib/validation/schemas'
+import { handleApiError } from '@/lib/api-error'
+import { z } from 'zod'
+
+const ParamsSchema = z.object({ id: z.string().min(1) })
 
 /**
  * GET /api/admin/questions/bank/[id]
@@ -10,7 +16,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params
+    const { id } = await validateParams(await params, ParamsSchema)
 
     try {
       const question = await prisma.question.findUnique({
@@ -45,18 +51,10 @@ export async function GET(
         },
       })
     } catch (dbError: any) {
-      console.error('Database error fetching question:', dbError)
-      return NextResponse.json(
-        { error: 'Failed to fetch question', details: dbError.message },
-        { status: 500 }
-      )
+      throw dbError
     }
   } catch (error: any) {
-    console.error('Error fetching question:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch question', details: error.message },
-      { status: 500 }
-    )
+    return handleApiError(error)
   }
 }
 
@@ -69,16 +67,10 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params
-    const body = await request.json()
+    const { id } = await validateParams(await params, ParamsSchema)
+    // Validate request body with Zod
+    const body = await validateRequest(request, CreateQuestionSchema)
     const { text, answer, explanation, categoryId } = body
-
-    if (!text || !answer || !categoryId) {
-      return NextResponse.json(
-        { error: 'Missing required fields: text, answer, categoryId' },
-        { status: 400 }
-      )
-    }
 
     try {
       // Verify category exists
@@ -134,18 +126,10 @@ export async function PUT(
           { status: 404 }
         )
       }
-      console.error('Database error updating question:', dbError)
-      return NextResponse.json(
-        { error: 'Failed to update question', details: dbError.message },
-        { status: 500 }
-      )
+      throw dbError
     }
   } catch (error: any) {
-    console.error('Error updating question:', error)
-    return NextResponse.json(
-      { error: 'Failed to update question', details: error.message },
-      { status: 500 }
-    )
+    return handleApiError(error)
   }
 }
 
@@ -158,7 +142,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params
+    const { id } = await validateParams(await params, ParamsSchema)
 
     try {
       await prisma.question.delete({
@@ -175,18 +159,10 @@ export async function DELETE(
           { status: 404 }
         )
       }
-      console.error('Database error deleting question:', dbError)
-      return NextResponse.json(
-        { error: 'Failed to delete question', details: dbError.message },
-        { status: 500 }
-      )
+      throw dbError
     }
   } catch (error: any) {
-    console.error('Error deleting question:', error)
-    return NextResponse.json(
-      { error: 'Failed to delete question', details: error.message },
-      { status: 500 }
-    )
+    return handleApiError(error)
   }
 }
 

@@ -7,6 +7,8 @@ import { prisma } from '@schoolquiz/db'
  * GET /api/admin/organisations/[id]
  * Get organisation details (admin only)
  */
+const ParamsSchema = z.object({ id: z.string().min(1) })
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -21,7 +23,7 @@ export async function GET(
 
     // TODO: Add proper admin role check
 
-    const { id } = await params
+    const { id } = await validateParams(await params, ParamsSchema)
 
     try {
       const organisation = await prisma.organisation.findUnique({
@@ -199,37 +201,24 @@ export async function PATCH(
 
     // TODO: Add proper admin role check
 
-    const { id } = await params
-    const body = await request.json()
+    const { id } = await validateParams(await params, ParamsSchema)
+    // Validate request body with Zod
+    const body = await validateRequest(request, AdminUpdateOrganisationSchema)
 
-    // Validate allowed fields
-    const allowedFields = [
-      'name',
-      'emailDomain',
-      'status',
-      'plan',
-      'maxSeats',
-      'currentPeriodStart',
-      'currentPeriodEnd',
-      'gracePeriodEnd',
-    ]
     const updateData: any = {}
-
-    for (const field of allowedFields) {
-      if (field in body) {
-        updateData[field] = body[field]
-      }
+    if (body.name !== undefined) updateData.name = body.name
+    if (body.emailDomain !== undefined) updateData.emailDomain = body.emailDomain
+    if (body.status !== undefined) updateData.status = body.status
+    if (body.plan !== undefined) updateData.plan = body.plan
+    if (body.maxSeats !== undefined) updateData.maxSeats = body.maxSeats
+    if (body.currentPeriodStart !== undefined) {
+      updateData.currentPeriodStart = body.currentPeriodStart ? new Date(body.currentPeriodStart) : null
     }
-
-    // Handle date fields
-    if (body.currentPeriodStart) {
-      updateData.currentPeriodStart = new Date(body.currentPeriodStart)
+    if (body.currentPeriodEnd !== undefined) {
+      updateData.currentPeriodEnd = body.currentPeriodEnd ? new Date(body.currentPeriodEnd) : null
     }
-    if (body.currentPeriodEnd) {
-      updateData.currentPeriodEnd = new Date(body.currentPeriodEnd)
-    }
-    if (body.gracePeriodEnd) {
-      updateData.gracePeriodEnd = new Date(body.gracePeriodEnd)
+    if (body.gracePeriodEnd !== undefined) {
+      updateData.gracePeriodEnd = body.gracePeriodEnd ? new Date(body.gracePeriodEnd) : null
     }
 
     const organisation = await prisma.organisation.update({
@@ -280,11 +269,7 @@ export async function PATCH(
         { status: 404 }
       )
     }
-    console.error('Error updating organisation:', error)
-    return NextResponse.json(
-      { error: 'Failed to update organisation', details: error.message },
-      { status: 500 }
-    )
+    return handleApiError(error)
   }
 }
 

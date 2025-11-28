@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import { prisma } from '@schoolquiz/db'
+import { validateRequest, validateQuery } from '@/lib/api-validation'
+import { AdminCreateOrganisationSchema, AdminOrganisationsQuerySchema } from '@/lib/validation/schemas'
+import { handleApiError } from '@/lib/api-error'
 
 import { unstable_cache } from 'next/cache'
 import { CACHE_TTL, CACHE_TAGS, createCacheKey } from '@/lib/cache-config'
@@ -165,13 +168,14 @@ export async function GET(request: NextRequest) {
 
     // TODO: Add proper admin role check
 
-    const searchParams = request.nextUrl.searchParams
-    const search = searchParams.get('search') || ''
-    const status = searchParams.get('status') || ''
-    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10))
-    const limit = Math.max(1, Math.min(100, parseInt(searchParams.get('limit') || '50', 10)))
-    const sortBy = searchParams.get('sortBy') || 'createdAt'
-    const sortOrder = (searchParams.get('sortOrder') || 'desc') as 'asc' | 'desc'
+    // Validate query parameters
+    const query = await validateQuery(request, AdminOrganisationsQuerySchema)
+    const search = query.search || ''
+    const status = query.status || ''
+    const page = query.page || 1
+    const limit = query.limit || 50
+    const sortBy = query.sortBy || 'createdAt'
+    const sortOrder = query.sortOrder || 'desc'
 
     const params = { search, status, page, limit, sortBy, sortOrder }
 
@@ -198,29 +202,7 @@ export async function GET(request: NextRequest) {
     const result = await getOrganisationsInternal(params)
     return NextResponse.json(result)
   } catch (error: any) {
-    console.error('Error fetching organisations:', error)
-    console.error('Error stack:', error.stack)
-
-    // Ensure we always return JSON, never HTML
-    try {
-      return NextResponse.json(
-        {
-          error: 'Failed to fetch organisations',
-          details: error?.message || 'Unknown error',
-          type: error?.name || 'Error'
-        },
-        { status: 500 }
-      )
-    } catch (jsonError) {
-      // If even JSON serialization fails, return a simple error
-      return new NextResponse(
-        JSON.stringify({ error: 'Internal server error' }),
-        {
-          status: 500,
-          headers: { 'Content-Type': 'application/json' }
-        }
-      )
-    }
+    return handleApiError(error)
   }
 }
 
@@ -239,22 +221,9 @@ export async function POST(request: NextRequest) {
 
     // TODO: Add proper admin role check
 
-    const body = await request.json()
+    // Validate request body with Zod
+    const body = await validateRequest(request, AdminCreateOrganisationSchema)
     const { name, emailDomain, ownerUserId, maxSeats, plan, status } = body
-
-    if (!name || !name.trim()) {
-      return NextResponse.json(
-        { error: 'Organisation name is required' },
-        { status: 400 }
-      )
-    }
-
-    if (!ownerUserId) {
-      return NextResponse.json(
-        { error: 'Owner user ID is required' },
-        { status: 400 }
-      )
-    }
 
     // Verify owner user exists
     const owner = await prisma.user.findUnique({
@@ -328,8 +297,6 @@ export async function POST(request: NextRequest) {
       },
     }, { status: 201 })
   } catch (error: any) {
-    console.error('Error creating organisation:', error)
-
     // Handle unique constraint violations
     if (error.code === 'P2002') {
       return NextResponse.json(
@@ -338,9 +305,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    return NextResponse.json(
-      { error: 'Failed to create organisation', details: error.message },
-      { status: 500 }
-    )
+    // Use centralized error handling (handles ValidationError automatically)
+    return handleApiError(error)
   }
 }

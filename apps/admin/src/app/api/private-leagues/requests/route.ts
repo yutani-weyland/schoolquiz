@@ -68,6 +68,12 @@ export async function GET(request: NextRequest) {
     try {
       const queryStart = Date.now()
       
+      // Check if privateLeagueRequest model exists
+      if (!('privateLeagueRequest' in prisma) || typeof (prisma as any).privateLeagueRequest?.findMany !== 'function') {
+        console.warn('[Requests API] privateLeagueRequest model not found in Prisma client')
+        return NextResponse.json({ requests: [] })
+      }
+      
       // Fetch requests without includes to avoid slow joins
       const requestsData = await (prisma as any).privateLeagueRequest.findMany({
         where: {
@@ -181,7 +187,13 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json({ requests })
   } catch (error: any) {
-    console.error('Error fetching league requests:', error)
+    console.error('[Requests API] Error fetching league requests:', error)
+    console.error('[Requests API] Error details:', {
+      message: error.message,
+      name: error.name,
+      code: error.code,
+      stack: error.stack?.split('\n').slice(0, 5).join('\n'),
+    })
     
     // Check if it's a database/table error
     const errorMsg = error.message || String(error)
@@ -189,13 +201,19 @@ export async function GET(request: NextRequest) {
         errorMsg.includes('Unknown model') ||
         errorMsg.includes('private_league') ||
         errorMsg.includes('P1001') || // Prisma connection error
-        errorMsg.includes('connect')) {
-      console.warn('Database/table error in league requests:', errorMsg)
+        errorMsg.includes('connect') ||
+        errorMsg.includes('Cannot find') ||
+        errorMsg.includes('is not a function')) {
+      console.warn('[Requests API] Database/table error - returning empty array:', errorMsg)
       return NextResponse.json({ requests: [] })
     }
     
     return NextResponse.json(
-      { error: 'Failed to fetch requests', details: error.message },
+      { 
+        error: 'Failed to fetch requests', 
+        details: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error',
+        ...(process.env.NODE_ENV === 'development' && { stack: error.stack }),
+      },
       { status: 500 }
     )
   }

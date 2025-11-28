@@ -1,4 +1,5 @@
-import { LineChart, Line, ResponsiveContainer } from "recharts";
+// OPTIMIZATION: Lazy-load recharts to reduce initial bundle size
+import { LineChart, Line, ResponsiveContainer } from "../stats/recharts-lazy";
 
 interface KpiCardProps {
   label: string;

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import { prisma } from '@schoolquiz/db'
+import { validateRequest, validateQuery } from '@/lib/api-validation'
+import { AdminCreateUserSchema, AdminUsersQuerySchema } from '@/lib/validation/schemas'
+import { handleApiError } from '@/lib/api-error'
 
 import { unstable_cache } from 'next/cache'
 import { CACHE_TTL, CACHE_TAGS, createCacheKey } from '@/lib/cache-config'
@@ -138,13 +141,14 @@ export async function GET(request: NextRequest) {
 
     // TODO: Add proper admin role check
 
-    const searchParams = request.nextUrl.searchParams
-    const search = searchParams.get('search') || ''
-    const tier = searchParams.get('tier') || ''
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = parseInt(searchParams.get('limit') || '50')
-    const sortBy = searchParams.get('sortBy') || 'createdAt'
-    const sortOrder = (searchParams.get('sortOrder') || 'desc') as 'asc' | 'desc'
+    // Validate query parameters
+    const query = await validateQuery(request, AdminUsersQuerySchema)
+    const search = query.search || ''
+    const tier = query.tier || ''
+    const page = query.page || 1
+    const limit = query.limit || 50
+    const sortBy = query.sortBy || 'createdAt'
+    const sortOrder = query.sortOrder || 'desc'
 
     const params = { search, tier, page, limit, sortBy, sortOrder }
 
@@ -171,11 +175,7 @@ export async function GET(request: NextRequest) {
     const result = await getUsersInternal(params)
     return NextResponse.json(result)
   } catch (error: any) {
-    console.error('Error fetching users:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch users', details: error.message },
-      { status: 500 }
-    )
+    return handleApiError(error)
   }
 }
 
@@ -194,24 +194,9 @@ export async function POST(request: NextRequest) {
 
     // TODO: Add proper admin role check
 
-    const body = await request.json()
+    // Validate request body with Zod
+    const body = await validateRequest(request, AdminCreateUserSchema)
     const { email, name, tier, platformRole, subscriptionStatus } = body
-
-    if (!email || !email.trim()) {
-      return NextResponse.json(
-        { error: 'Email is required' },
-        { status: 400 }
-      )
-    }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(email.trim())) {
-      return NextResponse.json(
-        { error: 'Invalid email format' },
-        { status: 400 }
-      )
-    }
 
     // Create user
     const user = await prisma.user.create({
@@ -260,8 +245,6 @@ export async function POST(request: NextRequest) {
       },
     }, { status: 201 })
   } catch (error: any) {
-    console.error('Error creating user:', error)
-
     // Handle unique constraint violations
     if (error.code === 'P2002') {
       return NextResponse.json(
@@ -270,10 +253,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    return NextResponse.json(
-      { error: 'Failed to create user', details: error.message },
-      { status: 500 }
-    )
+    // Use centralized error handling (handles ValidationError automatically)
+    return handleApiError(error)
   }
 }
 

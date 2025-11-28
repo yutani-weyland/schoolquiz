@@ -1,4 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { validateRequest } from '@/lib/api-validation';
+import { SigninSchema } from '@/lib/validation/schemas';
+import { handleApiError } from '@/lib/api-error';
 
 // Mock user database
 const MOCK_USERS = {
@@ -79,9 +82,10 @@ async function ensureMockUserExists(mockUser: typeof MOCK_USERS[keyof typeof MOC
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    // Validate request body with Zod
+    const body = await validateRequest(request, SigninSchema);
     const { method, email, phone, signupCode, password } = body;
 
     // Handle email + password authentication
@@ -155,13 +159,7 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   } catch (error: any) {
-    console.error('Signin error:', error);
-    return NextResponse.json(
-      { 
-        error: "Invalid request",
-        details: error?.message || 'Unknown error',
-      },
-      { status: 400 }
-    );
+    // Use centralized error handling (handles ValidationError automatically)
+    return handleApiError(error);
   }
 }

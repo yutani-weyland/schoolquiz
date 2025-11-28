@@ -1,14 +1,12 @@
 import { RouteLoading } from '@/components/ui/RouteLoading'
-import { Skeleton, LeaderboardCardSkeleton } from '@/components/ui/Skeleton'
+import { Skeleton, PageHeaderSkeleton } from '@/components/ui/Skeleton'
+import { LeaderboardCardSkeleton } from '@/components/ui/Skeleton'
 
 export default function LeaderboardsLoading() {
   return (
     <RouteLoading showFooter={false}>
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="mb-8">
-          <Skeleton className="h-8 w-64 mb-2" />
-          <Skeleton className="h-4 w-96" />
-        </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <PageHeaderSkeleton />
         
         {/* Filters skeleton */}
         <div className="mb-6 flex gap-4">
