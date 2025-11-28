@@ -263,6 +263,68 @@ export function RecentAchievements() {
     return () => clearTimeout(timeoutId);
   }, []);
 
+  // OPTIMIZATION: Use React Query for better caching, deduplication, and automatic refetching
+  // Combined endpoint fetches both user achievements and all achievements in one request
+  const { data: achievementsData, isLoading: isQueryLoading } = useQuery({
+    queryKey: ['achievements-combined', session?.user?.id],
+    queryFn: async () => {
+      if (!session?.user?.id) {
+        return {
+          userAchievements: [],
+          allAchievements: [],
+          tier: 'visitor' as const,
+        };
+      }
+
+      const response = await fetch('/api/achievements/combined', {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch achievements');
+      }
+
+      return response.json();
+    },
+    enabled: !!session?.user?.id,
+    staleTime: 3 * 60 * 1000, // Consider data fresh for 3 minutes (matches server cache)
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+    retry: 1, // Only retry once on failure
+  });
+
+  // Transform data for display
+  const queryRecentAchievements = achievementsData?.userAchievements?.slice(0, 10) || [];
+  const queryAllAchievements = achievementsData?.allAchievements || [];
+
+  // Filter for in-progress achievements (have progress but not unlocked)
+  const queryInProgressAchievements = queryAllAchievements
+    .filter((achievement: AllAchievement) => {
+      const hasProgress = achievement.progressValue !== undefined && 
+                        achievement.progressValue !== null &&
+                        achievement.progressMax !== undefined && 
+                        achievement.progressMax !== null;
+      const isInProgress = hasProgress &&
+                        (achievement.progressValue ?? 0) > 0 &&
+                        (achievement.progressValue ?? 0) < (achievement.progressMax ?? 0) &&
+                        achievement.status !== 'unlocked';
+      return isInProgress;
+    })
+    .sort((a: AllAchievement, b: AllAchievement) => {
+      const percentA = a.progressMax ? (a.progressValue || 0) / a.progressMax : 0;
+      const percentB = b.progressMax ? (b.progressValue || 0) / b.progressMax : 0;
+      return percentB - percentA;
+    })
+    .slice(0, 6);
+
+  // Use React Query data if available, otherwise fall back to useEffect data
+  const finalRecentAchievements = queryRecentAchievements.length > 0 
+    ? queryRecentAchievements 
+    : (recentAchievements.length > 0 ? recentAchievements : getMockAchievements());
+  const finalInProgressAchievements = queryInProgressAchievements.length > 0
+    ? queryInProgressAchievements
+    : inProgressAchievements;
+  const finalIsLoading = isQueryLoading || isLoading;
+
   if (finalIsLoading) {
     return (
       <motion.div
