@@ -95,15 +95,15 @@ BEGIN
   -- Calculate summary stats
   SELECT 
     COUNT(*)::INTEGER as total_quizzes,
-    COALESCE(SUM(total_questions), 0)::INTEGER as total_questions,
+    COALESCE(SUM("totalQuestions"), 0)::INTEGER as total_questions,
     COALESCE(SUM(score), 0)::INTEGER as total_correct,
-    COUNT(*) FILTER (WHERE score = total_questions)::INTEGER as perfect_scores,
+    COUNT(*) FILTER (WHERE score = "totalQuestions")::INTEGER as perfect_scores,
     CASE 
-      WHEN COALESCE(SUM(total_questions), 0) > 0 
-      THEN ROUND((COALESCE(SUM(score), 0)::DECIMAL / COALESCE(SUM(total_questions), 1)) * 100, 2)
+      WHEN COALESCE(SUM("totalQuestions"), 0) > 0 
+      THEN ROUND((COALESCE(SUM(score), 0)::DECIMAL / COALESCE(SUM("totalQuestions"), 1)) * 100, 2)
       ELSE 0
     END as avg_score,
-    MAX(completed_at) as last_completed
+    MAX("completedAt") as last_completed
   INTO v_summary
   FROM quiz_completions
   WHERE "userId" = p_user_id;
@@ -221,9 +221,9 @@ DECLARE
   v_stats RECORD;
 BEGIN
   SELECT 
-    COUNT(DISTINCT user_id)::INTEGER as total_users,
+    COUNT(DISTINCT "userId")::INTEGER as total_users,
     COUNT(*)::INTEGER as total_quizzes,
-    COALESCE(SUM(total_questions), 0)::INTEGER as total_questions,
+    COALESCE(SUM("totalQuestions"), 0)::INTEGER as total_questions,
     COALESCE(SUM(score), 0)::INTEGER as total_correct,
     CASE 
       WHEN COALESCE(SUM(total_questions), 0) > 0 
