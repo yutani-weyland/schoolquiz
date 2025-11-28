@@ -491,6 +491,7 @@ async function getCategoryPerformance(
   const categoryMap = new Map<string, { correct: number; total: number; quizzes: Set<string> }>()
   
   for (const quiz of quizzes) {
+    if (!quiz.slug) continue // Skip quizzes without slug
     const completion = completionMap.get(quiz.slug)
     if (!completion) continue
     
@@ -504,12 +505,12 @@ async function getCategoryPerformance(
       if (!round.category) continue
       
       const categoryName = round.category.name
-      const existing = categoryMap.get(categoryName) || { correct: 0, total: 0, quizzes: new Set() }
+      const existing = categoryMap.get(categoryName) || { correct: 0, total: 0, quizzes: new Set<string>() }
       
       categoryMap.set(categoryName, {
         correct: existing.correct + scorePerRound,
         total: existing.total + questionsPerRound,
-        quizzes: existing.quizzes.add(quiz.slug),
+        quizzes: existing.quizzes.add(quiz.slug), // Now guaranteed to be string
       })
     }
   }
@@ -861,7 +862,10 @@ export async function getStatsSummaryDeferred(userId: string): Promise<Pick<Stat
       public: publicStats,
       leagues: [], // Disabled for now
     },
-    seasonStats,
+    seasonStats: seasonStats ? {
+      ...seasonStats,
+      averageScore: seasonStats.averageScore ?? 0, // Convert null to 0
+    } : null,
   }
 }
 

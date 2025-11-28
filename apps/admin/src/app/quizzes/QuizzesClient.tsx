@@ -36,13 +36,8 @@ export function QuizzesClient({ initialData, quizzes }: QuizzesClientProps) {
   const pathname = usePathname()
   const router = useRouter()
 
-  // OPTIMIZATION: Update greeting when data loads (shell renders immediately with generic greeting)
-  useEffect(() => {
-    const greetingEl = document.querySelector('h1')
-    if (greetingEl && initialData.isLoggedIn && initialData.userName) {
-      greetingEl.textContent = `G'day ${initialData.userName}!`
-    }
-  }, [initialData.isLoggedIn, initialData.userName])
+  // Removed: Greeting is now rendered correctly on the server in QuizzesShell
+  // No client-side DOM manipulation needed - eliminates visual flash
 
   // Force re-animation whenever the page is navigated to (including via menu)
   useEffect(() => {

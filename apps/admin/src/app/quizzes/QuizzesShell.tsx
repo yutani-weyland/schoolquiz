@@ -7,6 +7,7 @@
 
 import dynamic from 'next/dynamic'
 import { Footer } from "@/components/Footer"
+import { getSession } from '@/lib/auth'
 
 interface QuizzesShellProps {
   children: React.ReactNode
@@ -30,20 +31,30 @@ const LazySiteHeader = dynamic(
  * Server Component - Static shell for quizzes page
  * OPTIMIZATION: Renders header and layout immediately without waiting for data
  * This improves LCP by showing header + title instantly
- * Greeting will be updated client-side when data loads
+ * Fetches session to render correct greeting from the start (no client-side update needed)
  */
-export function QuizzesShell({ children }: QuizzesShellProps) {
+export async function QuizzesShell({ children }: QuizzesShellProps) {
+  // Fetch session to get user name for greeting
+  // This is cached via getSession() so it won't cause duplicate fetches
+  const session = await getSession()
+  const userName = session?.user?.name || session?.user?.email?.split('@')[0] || null
+  const isLoggedIn = !!session?.user
+
+  // Render correct greeting from the start - no client-side update needed
+  const greeting = isLoggedIn && userName 
+    ? `G'day ${userName}!`
+    : 'Your Quizzes'
+
   return (
     <>
       <LazySiteHeader fadeLogo={true} />
       <main className="min-h-screen pt-24 pb-0">
         <div className="max-w-[1600px] mx-auto px-6 sm:px-6 lg:px-8 xl:px-12">
-          {/* Page Title - Static on server, no animation needed for initial render */}
-          {/* OPTIMIZATION: Generic greeting renders immediately, will be updated client-side */}
-          {/* This is likely the LCP element - render it ASAP */}
+          {/* Page Title - Rendered with correct greeting from server */}
+          {/* OPTIMIZATION: This is likely the LCP element - render it correctly from the start */}
           <div className="text-center mb-8">
             <div className="text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 dark:text-white mb-4 min-h-[1.2em] flex items-center justify-center">
-              <h1 className="w-full">Your Quizzes</h1>
+              <h1 className="w-full">{greeting}</h1>
             </div>
             <p className="text-lg md:text-xl text-gray-600 dark:text-gray-400 leading-relaxed">
               Browse your weekly quizzes
