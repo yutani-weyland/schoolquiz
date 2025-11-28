@@ -760,7 +760,7 @@ export async function getStatsSummaryCritical(userId: string): Promise<Pick<Stat
         prisma.$queryRaw<Array<{
           week: string
           date: string
-          completed_at: Date | null
+          completed_at: string | null  // SQL returns as ISO string, not Date object
           quiz_slug: string | null
         }>>`
           WITH weeks AS (
