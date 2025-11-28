@@ -503,7 +503,7 @@ export function QuizCard({ quiz, isNewest = false, index = 0, completionData: in
 								? "Continue quiz" 
 								: "Play quiz"}
 						</motion.button>
-						<Tooltip.Provider delayDuration={300}>
+						<Tooltip.Provider delayDuration={100}>
 							<div className="flex items-center gap-2">
 								{/* PDF Download Button - Premium Only */}
 								{canDownloadPDF && (
@@ -532,6 +532,7 @@ export function QuizCard({ quiz, isNewest = false, index = 0, completionData: in
 												side="top"
 												align="center"
 												sideOffset={8}
+												style={{ transform: 'rotate(-2deg)' }}
 											>
 												Download PDF
 												<Tooltip.Arrow className="fill-black/95" />
@@ -571,6 +572,7 @@ export function QuizCard({ quiz, isNewest = false, index = 0, completionData: in
 												side="top"
 												align="center"
 												sideOffset={8}
+												style={{ transform: 'rotate(2deg)' }}
 											>
 												Download PDF (Premium)
 												<Tooltip.Arrow className="fill-black/95" />
@@ -611,6 +613,7 @@ export function QuizCard({ quiz, isNewest = false, index = 0, completionData: in
 												side="top"
 												align="center"
 												sideOffset={8}
+												style={{ transform: 'rotate(-1.5deg)' }}
 											>
 												Share quiz
 												<Tooltip.Arrow className="fill-black/95" />

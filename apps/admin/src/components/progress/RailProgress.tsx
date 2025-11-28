@@ -3,84 +3,7 @@
 import React, { useMemo, useRef, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, X } from "lucide-react";
-
-// Tooltip component that adjusts position to stay on screen
-function TooltipPositioner({ cursorX, cursorY, content }: { cursorX: number; cursorY: number; content: string }) {
-	// Calculate position upfront based on estimated width to avoid bouncing
-	const position = useMemo(() => {
-		// Estimate tooltip height and width
-		const estimatedHeight = 45; // Approximate tooltip height
-		const estimatedWidth = Math.min(content.length * 8 + 32, 400); // ~8px per char + padding
-		const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1920;
-		const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 1080;
-		const padding = 16;
-		const verticalGap = 70; // Gap between cursor and tooltip - positioned higher above cursor
-		
-		// Position directly above cursor (due north), centered horizontally
-		// The tooltip's bottom edge should be `verticalGap` pixels above the cursor
-		// With translateY(-100%), the tooltip's bottom aligns with the `top` value
-		let left = cursorX;
-		let top = cursorY - verticalGap;
-		
-		// Adjust horizontal position to prevent overflow
-		const halfWidth = estimatedWidth / 2;
-		if (left - halfWidth < padding) {
-			// Too far left - align left edge
-			left = padding + halfWidth;
-		} else if (left + halfWidth > viewportWidth - padding) {
-			// Too far right - align right edge
-			left = viewportWidth - padding - halfWidth;
-		}
-		
-		// Adjust vertical position if tooltip would go off-screen
-		// Only adjust if it would actually go above the viewport (not just close to it)
-		if (top - estimatedHeight < padding) {
-			// Not enough room above - position below cursor instead
-			top = cursorY + verticalGap;
-			return {
-				left,
-				top,
-				transform: "translateX(-50%) translateY(0)"
-			};
-		}
-		
-		// Default: position directly above cursor (due north), centered
-		return {
-			left,
-			top,
-			transform: "translateX(-50%) translateY(-100%)"
-		};
-	}, [cursorX, cursorY, content]);
-
-	return (
-		<motion.div
-			initial={{ opacity: 0, scale: 0.8 }}
-			animate={{ 
-				opacity: 1, 
-				scale: 1,
-			}}
-			exit={{ opacity: 0, scale: 0.8 }}
-			transition={{
-				type: "spring",
-				stiffness: 260,
-				damping: 10,
-			}}
-			style={{
-				position: "fixed",
-				left: position.left,
-				top: position.top,
-				transform: position.transform,
-				pointerEvents: "none",
-				zIndex: 999999, // Very high z-index to overlay all elements
-			}}
-			className="flex flex-col items-center justify-center rounded-lg bg-black/95 backdrop-blur-sm shadow-xl px-4 py-2.5 border border-white/10 whitespace-nowrap"
-		>
-			<div className="font-medium text-white relative text-base" style={{ fontFamily: 'var(--app-font), system-ui, sans-serif' }}>
-				{content}
-			</div>
-		</motion.div>
-	);
-}
+import * as Tooltip from '@radix-ui/react-tooltip';
 
 export type RailProgressProps = {
 	total: number; // 1..n
@@ -122,8 +45,6 @@ export default function RailProgress({
 	isMouseActive = true,
 }: RailProgressProps) {
 	const steps = useMemo(() => Array.from({ length: total }, (_, i) => i + 1), [total]);
-	const [hoveredIndex, setHoveredIndex] = React.useState<number | null>(null);
-	const [tooltipPosition, setTooltipPosition] = React.useState<{ x: number; y: number } | null>(null);
 	const scrollContainerRef = useRef<HTMLDivElement>(null);
 	const questionRefs = useRef<Map<number, HTMLButtonElement>>(new Map());
 	const isUserScrollingRef = useRef(false);
@@ -310,7 +231,8 @@ export default function RailProgress({
 						scrollBehavior: 'smooth'
 					}}
 				>
-					{visibleQuestions.map((status) => {
+					<Tooltip.Provider delayDuration={100}>
+						{visibleQuestions.map((status) => {
 						const { n, isCurrent, isViewed, isAttempted, isCorrect, isIncorrect, roundColor } = status;
 
 						// Determine button style and content
@@ -378,8 +300,6 @@ export default function RailProgress({
 							tooltipContent = "Locked";
 						}
 
-						const isHovered = hoveredIndex === n;
-
 						// Determine aria-label based on state
 						let ariaLabel = `Question ${n}`;
 						if (isCurrent) {
@@ -392,121 +312,103 @@ export default function RailProgress({
 							ariaLabel = `Question ${n}, visited`;
 						}
 
-						const handleMouseEnter = (e: React.MouseEvent) => {
-							setHoveredIndex(n);
-							// Capture cursor position once when entering - position directly above cursor
-							setTooltipPosition({ x: e.clientX, y: e.clientY });
-						};
-
-						const handleMouseMove = (e: React.MouseEvent) => {
-							// Only update if user is not scrolling to avoid position issues
-							if (!isUserScrollingRef.current) {
-								setTooltipPosition({ x: e.clientX, y: e.clientY });
-							}
-						};
-
-						const handleMouseLeave = () => {
-							setHoveredIndex(null);
-							setTooltipPosition(null);
-						};
+						// Calculate rotation angle for tooltip (vary by question number for playful effect)
+						const tooltipRotation = (n % 3 === 0 ? -1.5 : n % 3 === 1 ? 1.5 : -1) * (n % 2 === 0 ? 1 : -1);
 
 						return (
-							<div 
-								key={`question-${n}`}
-								className="relative flex-shrink-0"
-								style={{ 
-									zIndex: isHovered ? 9999 : 1
-								}}
-								onMouseEnter={handleMouseEnter}
-								onMouseLeave={handleMouseLeave}
-								onMouseMove={handleMouseMove}
-							>
-								<button
-									ref={(el) => {
-										if (el) {
-											questionRefs.current.set(n, el);
-										} else {
-											questionRefs.current.delete(n);
-										}
-									}}
-									type="button"
-									data-step={n}
-									aria-label={ariaLabel}
-									aria-current={isCurrent ? "step" : undefined}
-									className={`inline-flex h-14 w-14 items-center justify-center rounded-full text-xl font-semibold leading-none tabular-nums tracking-tight focus:outline-none focus:ring-0 transition-all duration-200 ${isCurrent ? "opacity-100 scale-105" : "opacity-50 hover:opacity-80 scale-100"}`}
-									style={{
-										...buttonStyle,
-										fontFamily: 'var(--app-font), system-ui, sans-serif',
-										letterSpacing: '-0.015em',
-									}}
-									onClick={() => {
-										onSelect?.(n);
-										// Immediately scroll the clicked question into view
-										setTimeout(() => {
-											const questionButton = questionRefs.current.get(n);
-											if (questionButton) {
-												questionButton.scrollIntoView({
-													behavior: "smooth",
-													block: "nearest",
-													inline: "center"
-												});
-											}
-										}, 10);
-									}}
-								>
-									<span className="inline-flex items-center justify-center">
-										{displayContent}
-									</span>
-								</button>
-								
-								{/* Custom cursor-following tooltip */}
-								<AnimatePresence>
-									{isHovered && tooltipPosition && (
-										<TooltipPositioner
-											cursorX={tooltipPosition.x}
-											cursorY={tooltipPosition.y}
-											content={tooltipContent}
-										/>
-									)}
-								</AnimatePresence>
-
-								{/* +1 Animation above current question */}
-								<AnimatePresence>
-									{showPlusOne && isCurrent && (
-										<motion.div
-											initial={{ opacity: 0, scale: 0.5, y: 0, x: 0 }}
-											animate={{ 
-												opacity: [0, 1, 1, 0],
-												scale: [0.5, 1.2, 1.1, 0.8],
-												y: [0, -30, -40, -50],
-												x: [0, 5, -5, 0]
+							<Tooltip.Root key={`question-${n}`}>
+								<Tooltip.Trigger asChild>
+									<div className="relative flex-shrink-0">
+										<button
+											ref={(el) => {
+												if (el) {
+													questionRefs.current.set(n, el);
+												} else {
+													questionRefs.current.delete(n);
+												}
 											}}
-											exit={{ opacity: 0, scale: 0.8, y: -50 }}
-											transition={{
-												duration: 1,
-												ease: "easeOut",
-												times: [0, 0.2, 0.7, 1]
+											type="button"
+											data-step={n}
+											aria-label={ariaLabel}
+											aria-current={isCurrent ? "step" : undefined}
+											className={`inline-flex h-14 w-14 items-center justify-center rounded-full text-xl font-semibold leading-none tabular-nums tracking-tight focus:outline-none focus:ring-0 transition-all duration-200 ${isCurrent ? "opacity-100 scale-105" : "opacity-50 hover:opacity-80 scale-100"}`}
+											style={{
+												...buttonStyle,
+												fontFamily: 'var(--app-font), system-ui, sans-serif',
+												letterSpacing: '-0.015em',
 											}}
-											className="absolute -top-12 left-1/2 -translate-x-1/2 pointer-events-none z-20"
+											onClick={() => {
+												onSelect?.(n);
+												// Immediately scroll the clicked question into view
+												setTimeout(() => {
+													const questionButton = questionRefs.current.get(n);
+													if (questionButton) {
+														questionButton.scrollIntoView({
+															behavior: "smooth",
+															block: "nearest",
+															inline: "center"
+														});
+													}
+												}, 10);
+											}}
 										>
-											<span 
-												className="text-2xl font-bold whitespace-nowrap"
-												style={{ 
-													color: isDark ? "#fff" : "#000",
-													textShadow: isDark 
-														? "0 0 10px rgba(255, 255, 255, 0.5)" 
-														: "0 0 10px rgba(0, 0, 0, 0.3)",
-													fontFamily: 'var(--app-font), system-ui, sans-serif',
-												}}
-											>
-												+1
+											<span className="inline-flex items-center justify-center">
+												{displayContent}
 											</span>
-										</motion.div>
-									)}
-								</AnimatePresence>
-							</div>
+										</button>
+										
+										{/* +1 Animation above current question */}
+										<AnimatePresence>
+											{showPlusOne && isCurrent && (
+												<motion.div
+													initial={{ opacity: 0, scale: 0.5, y: 0, x: 0 }}
+													animate={{ 
+														opacity: [0, 1, 1, 0],
+														scale: [0.5, 1.2, 1.1, 0.8],
+														y: [0, -30, -40, -50],
+														x: [0, 5, -5, 0]
+													}}
+													exit={{ opacity: 0, scale: 0.8, y: -50 }}
+													transition={{
+														duration: 1,
+														ease: "easeOut",
+														times: [0, 0.2, 0.7, 1]
+													}}
+													className="absolute -top-12 left-1/2 -translate-x-1/2 pointer-events-none z-20"
+												>
+													<span 
+														className="text-2xl font-bold whitespace-nowrap"
+														style={{ 
+															color: isDark ? "#fff" : "#000",
+															textShadow: isDark 
+																? "0 0 10px rgba(255, 255, 255, 0.5)" 
+																: "0 0 10px rgba(0, 0, 0, 0.3)",
+															fontFamily: 'var(--app-font), system-ui, sans-serif',
+														}}
+													>
+														+1
+													</span>
+												</motion.div>
+											)}
+										</AnimatePresence>
+									</div>
+								</Tooltip.Trigger>
+								<Tooltip.Portal>
+									<Tooltip.Content
+										className="z-50 rounded-lg bg-black/95 backdrop-blur-sm px-4 py-2.5 text-sm font-medium text-white shadow-xl border border-white/10 whitespace-nowrap"
+										side="top"
+										align="center"
+										sideOffset={8}
+										style={{ transform: `rotate(${tooltipRotation}deg)` }}
+									>
+										{tooltipContent}
+										<Tooltip.Arrow className="fill-black/95" />
+									</Tooltip.Content>
+								</Tooltip.Portal>
+							</Tooltip.Root>
 						);
 					})}
+					</Tooltip.Provider>
 				</div>
 			</div>
 		</div>

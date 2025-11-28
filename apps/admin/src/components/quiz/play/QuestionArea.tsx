@@ -528,8 +528,8 @@ function PresenterNavigation({
           </motion.button>
         )}
         
-        {/* Finish Button - Always visible */}
-        {onFinish && (
+        {/* Finish Button - Only show at the end of the quiz */}
+        {isLastQuestion && onFinish && (
           <motion.button
             onClick={onFinish}
             animate={{
@@ -549,7 +549,7 @@ function PresenterNavigation({
           </motion.button>
         )}
         
-        {/* Last question: show flag only */}
+        {/* Last question: show flag only (fallback if onFinish not provided) */}
         {isLastQuestion && !onFinish && (
           <motion.button
             onClick={onNext}

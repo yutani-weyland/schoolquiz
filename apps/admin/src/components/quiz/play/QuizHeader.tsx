@@ -8,8 +8,8 @@ import { useTheme } from "@/contexts/ThemeContext";
 import Link from "next/link";
 import { logger } from "@/lib/logger";
 import { storage, getUserName } from "@/lib/storage";
-import { SimpleAnimatedTooltip } from "@/components/ui/animated-tooltip";
 import { applyTheme, Theme } from "@/lib/theme";
+import * as Tooltip from '@radix-ui/react-tooltip';
 
 interface QuizHeaderProps {
   quizLabel?: string;
@@ -105,8 +105,8 @@ export function QuizHeader({
   const logoColorClass = textColor === "white" ? "text-white" : "text-gray-900";
   const labelClass = isLightText ? "text-white/70" : "text-gray-600";
   const menuButtonClass = isLightText
-    ? "bg-white/15 text-white hover:bg-white/25 border border-white/20 backdrop-blur-sm"
-    : "bg-black/10 text-gray-900 hover:bg-black/15 border border-black/20 backdrop-blur-sm";
+    ? "bg-white/15 text-white hover:bg-white/25"
+    : "bg-black/5 text-gray-900 hover:bg-black/10";
 
   const menuPanelClass = "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700";
 
@@ -218,7 +218,7 @@ export function QuizHeader({
         transition: "background-color 300ms ease-in-out, color 300ms ease-in-out",
       }}
     >
-      <div className="flex items-center justify-between w-full gap-4">
+      <div className="flex items-center justify-between w-full gap-4 min-w-0">
         {showBranding ? (
           <div className="flex flex-col items-start gap-4 relative">
             <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.4 }}>
@@ -267,12 +267,12 @@ export function QuizHeader({
           <div className="flex-1" />
         )}
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-shrink-0 min-w-0">
           {/* Join for free button - show in presenter view for logged-out users */}
           {isVisitor && isPresenterView && (
-            <Link href="/sign-up">
+            <Link href="/sign-up" className="hidden md:block flex-shrink-0">
               <motion.button
-                className="hidden md:inline-flex items-center gap-2 px-6 py-3 rounded-full text-base font-medium bg-[#3B82F6] text-white hover:bg-[#2563EB] transition-colors"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-base font-medium bg-[#3B82F6] text-white hover:bg-[#2563EB] transition-colors"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 aria-label="Join for free"
@@ -283,9 +283,9 @@ export function QuizHeader({
           )}
           {/* Upgrade button - show in presenter view for logged-in free users */}
           {isFree && isPresenterView && (
-            <Link href="/upgrade">
+            <Link href="/upgrade" className="hidden md:block flex-shrink-0">
               <motion.button
-                className="hidden md:inline-flex items-center gap-2 px-6 py-3 rounded-full text-base font-medium bg-[#3B82F6] text-white hover:bg-[#2563EB] transition-colors"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-base font-medium bg-[#3B82F6] text-white hover:bg-[#2563EB] transition-colors"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 aria-label="Upgrade to Premium"
@@ -295,67 +295,129 @@ export function QuizHeader({
               </motion.button>
             </Link>
           )}
-          {onOpenPresenterView && (
-            <SimpleAnimatedTooltip content="Switch to presenter view" position="bottom" offsetY={12} preventFlip>
-              <motion.button
-                onClick={onOpenPresenterView}
-                className={`hidden sm:flex h-12 w-12 items-center justify-center rounded-full transition-colors duration-300 ease-out ${menuButtonClass}`}
-                whileHover={{ scale: 1.07 }}
-                whileTap={{ scale: 0.95 }}
-                aria-label="Switch to presenter view"
-              >
-                <MonitorPlay className="h-5 w-5" />
-              </motion.button>
-            </SimpleAnimatedTooltip>
-          )}
-          {onOpenGridView && (
-            <SimpleAnimatedTooltip content="Switch to card view" position="bottom" offsetY={12} offsetX={0} align="right">
-              <motion.button
-                onClick={onOpenGridView}
-                className={`hidden sm:flex h-12 w-12 items-center justify-center rounded-full transition-colors duration-300 ease-out ${menuButtonClass}`}
-                whileHover={{ scale: 1.07 }}
-                whileTap={{ scale: 0.95 }}
-                aria-label="Switch to card view"
-              >
-                <LayoutList className="h-5 w-5" />
-              </motion.button>
-            </SimpleAnimatedTooltip>
-          )}
-          {/* Show share button (hidden in presenter view and grid view) */}
-          {isPresenterView || isGridView ? null : (
-            <SimpleAnimatedTooltip content="Share quiz" position="bottom" offsetY={12} preventFlip>
-              <motion.button
-                onClick={handleShareQuiz}
-                className={`w-12 h-12 rounded-full transition-colors duration-300 ease-out flex items-center justify-center ${shareButtonClass}`}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                aria-label="Share quiz"
-              >
-                <Share2 className="h-5 w-5" />
-              </motion.button>
-            </SimpleAnimatedTooltip>
-          )}
-          <motion.button
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className={`w-12 h-12 rounded-full transition-colors duration-300 ease-out flex items-center justify-center relative ${menuButtonClass}`}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            aria-haspopup="menu"
-            aria-expanded={isMenuOpen}
-            aria-label={isMenuOpen ? "Close menu" : "Open menu"}
-          >
-            <AnimatePresence mode="wait">
-              {isMenuOpen ? (
-                <motion.div key="close" initial={{ opacity: 0, rotate: -90 }} animate={{ opacity: 1, rotate: 0 }} exit={{ opacity: 0, rotate: 90 }} transition={{ duration: 0.2 }}>
-                  <X className="h-5 w-5" />
-                </motion.div>
-              ) : (
-                <motion.div key="menu" initial={{ opacity: 0, rotate: 90 }} animate={{ opacity: 1, rotate: 0 }} exit={{ opacity: 0, rotate: -90 }} transition={{ duration: 0.2 }}>
-                  <Menu className="h-5 w-5" />
-                </motion.div>
+          <Tooltip.Provider delayDuration={100}>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {onOpenPresenterView && (
+                <Tooltip.Root>
+                  <Tooltip.Trigger asChild>
+                    <motion.button
+                      onClick={onOpenPresenterView}
+                      className={`hidden sm:flex h-12 w-12 items-center justify-center rounded-full ${menuButtonClass}`}
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.85 }}
+                      aria-label="Switch to presenter view"
+                    >
+                      <MonitorPlay className="h-6 w-6" />
+                    </motion.button>
+                  </Tooltip.Trigger>
+                  <Tooltip.Portal>
+                    <Tooltip.Content
+                      className="z-50 rounded-lg bg-black/95 backdrop-blur-sm px-4 py-2.5 text-sm font-medium text-white shadow-xl border border-white/10"
+                      side="bottom"
+                      align="center"
+                      sideOffset={8}
+                      style={{ transform: 'rotate(-1deg)' }}
+                    >
+                      Switch to presenter view
+                      <Tooltip.Arrow className="fill-black/95" />
+                    </Tooltip.Content>
+                  </Tooltip.Portal>
+                </Tooltip.Root>
               )}
-            </AnimatePresence>
-          </motion.button>
+              {onOpenGridView && (
+                <Tooltip.Root>
+                  <Tooltip.Trigger asChild>
+                    <motion.button
+                      onClick={onOpenGridView}
+                      className={`hidden sm:flex h-12 w-12 items-center justify-center rounded-full ${menuButtonClass}`}
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.85 }}
+                      aria-label="Switch to card view"
+                    >
+                      <LayoutList className="h-6 w-6" />
+                    </motion.button>
+                  </Tooltip.Trigger>
+                  <Tooltip.Portal>
+                    <Tooltip.Content
+                      className="z-50 rounded-lg bg-black/95 backdrop-blur-sm px-4 py-2.5 text-sm font-medium text-white shadow-xl border border-white/10"
+                      side="bottom"
+                      align="center"
+                      sideOffset={8}
+                      style={{ transform: 'rotate(1deg)' }}
+                    >
+                      Switch to card view
+                      <Tooltip.Arrow className="fill-black/95" />
+                    </Tooltip.Content>
+                  </Tooltip.Portal>
+                </Tooltip.Root>
+              )}
+              {/* Show share button (hidden in presenter view and grid view) */}
+              {!(isPresenterView || isGridView) && (
+                <Tooltip.Root>
+                  <Tooltip.Trigger asChild>
+                    <motion.button
+                      onClick={handleShareQuiz}
+                      className={`h-12 w-12 rounded-full flex items-center justify-center ${shareButtonClass}`}
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.85 }}
+                      aria-label="Share quiz"
+                    >
+                      <Share2 className="h-6 w-6" />
+                    </motion.button>
+                  </Tooltip.Trigger>
+                  <Tooltip.Portal>
+                    <Tooltip.Content
+                      className="z-50 rounded-lg bg-black/95 backdrop-blur-sm px-4 py-2.5 text-sm font-medium text-white shadow-xl border border-white/10"
+                      side="bottom"
+                      align="center"
+                      sideOffset={8}
+                      style={{ transform: 'rotate(-1.5deg)' }}
+                    >
+                      Share quiz
+                      <Tooltip.Arrow className="fill-black/95" />
+                    </Tooltip.Content>
+                  </Tooltip.Portal>
+                </Tooltip.Root>
+              )}
+              <Tooltip.Root>
+                <Tooltip.Trigger asChild>
+                  <motion.button
+                    onClick={() => setIsMenuOpen(!isMenuOpen)}
+                    className={`h-12 w-12 rounded-full flex items-center justify-center relative ${menuButtonClass}`}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.85 }}
+                    aria-haspopup="menu"
+                    aria-expanded={isMenuOpen}
+                    aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+                  >
+                    <AnimatePresence mode="wait">
+                      {isMenuOpen ? (
+                        <motion.div key="close" initial={{ opacity: 0, rotate: -90 }} animate={{ opacity: 1, rotate: 0 }} exit={{ opacity: 0, rotate: 90 }} transition={{ duration: 0.2 }}>
+                          <X className="h-6 w-6" />
+                        </motion.div>
+                      ) : (
+                        <motion.div key="menu" initial={{ opacity: 0, rotate: 90 }} animate={{ opacity: 1, rotate: 0 }} exit={{ opacity: 0, rotate: -90 }} transition={{ duration: 0.2 }}>
+                          <Menu className="h-6 w-6" />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.button>
+                </Tooltip.Trigger>
+                <Tooltip.Portal>
+                  <Tooltip.Content
+                    className="z-50 rounded-lg bg-black/95 backdrop-blur-sm px-4 py-2.5 text-sm font-medium text-white shadow-xl border border-white/10"
+                    side="bottom"
+                    align="center"
+                    sideOffset={8}
+                    style={{ transform: 'rotate(1deg)' }}
+                  >
+                    {isMenuOpen ? "Close menu" : "Open menu"}
+                    <Tooltip.Arrow className="fill-black/95" />
+                  </Tooltip.Content>
+                </Tooltip.Portal>
+              </Tooltip.Root>
+            </div>
+          </Tooltip.Provider>
         </div>
       </div>
 

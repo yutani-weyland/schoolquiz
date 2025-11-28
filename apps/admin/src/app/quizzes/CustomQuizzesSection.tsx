@@ -8,8 +8,7 @@
 import React, { useState, useEffect, useRef } from "react"
 import { motion } from "framer-motion"
 import { QuizCard, Quiz } from "@/components/quiz/QuizCard"
-import { Plus, Sparkles, Loader2 } from 'lucide-react'
-import Link from 'next/link'
+import { Loader2 } from 'lucide-react'
 import { getQuizColor } from '@/lib/colors'
 import { loadMoreCustomQuizzes } from './quizzes-actions'
 import type { CustomQuiz, QuizzesPageData } from './quizzes-server'
@@ -76,35 +75,13 @@ export function CustomQuizzesSection({ initialData, pageAnimationKey }: CustomQu
     return null
   }
 
+  if (customQuizzes.length === 0) {
+    return null
+  }
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8 md:gap-6">
-      {customQuizzes.length === 0 ? (
-        <div className="col-span-full">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-            className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-3xl p-12 text-center"
-          >
-            <Sparkles className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-              No custom quizzes yet
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
-              Create your first custom quiz to get started
-            </p>
-            <Link
-              href="/premium/create-quiz"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-            >
-              <Plus className="w-4 h-4" />
-              Create Your First Quiz
-            </Link>
-          </motion.div>
-        </div>
-      ) : (
-        <>
-          {customQuizzes.map((quiz, index) => {
+      {customQuizzes.map((quiz, index) => {
             const quizCard: Quiz = {
               id: parseInt(quiz.id.slice(-2)) || 0,
               slug: quiz.slug,
@@ -133,18 +110,16 @@ export function CustomQuizzesSection({ initialData, pageAnimationKey }: CustomQu
               </motion.div>
             )
           })}
-          
-          {customQuizzesHasMore && (
-            <div ref={customLoadMoreRef} className="col-span-full flex justify-center mt-6 min-h-[100px]">
-              {loadingMoreCustom && (
-                <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  <span>Loading more quizzes...</span>
-                </div>
-              )}
+      
+      {customQuizzesHasMore && (
+        <div ref={customLoadMoreRef} className="col-span-full flex justify-center mt-6 min-h-[100px]">
+          {loadingMoreCustom && (
+            <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+              <Loader2 className="w-5 h-5 animate-spin" />
+              <span>Loading more quizzes...</span>
             </div>
           )}
-        </>
+        </div>
       )}
     </div>
   )
