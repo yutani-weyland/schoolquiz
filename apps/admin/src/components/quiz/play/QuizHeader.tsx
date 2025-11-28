@@ -205,23 +205,40 @@ export function QuizHeader({
   const showBranding = !(isMobile && isScrolled) && !(isGridView && isScrolled);
   // Use neutral background during SSR to prevent hydration mismatch
   // After mount, use the actual backgroundColor
+  // Make background semi-transparent so sparkles show through on People's Round
   const headerBackground = showBranding 
     ? (mounted ? backgroundColor : "transparent")
     : "transparent";
+  
+  // Convert hex color to rgba with transparency so sparkles show through
+  const headerBackgroundWithTransparency = (() => {
+    if (headerBackground === "transparent") return "transparent";
+    if (headerBackground.startsWith("rgba")) return headerBackground;
+    if (headerBackground.startsWith("rgb")) {
+      // Convert rgb to rgba with 0.8 opacity
+      return headerBackground.replace("rgb", "rgba").replace(")", ", 0.8)");
+    }
+    // Hex color - convert to rgba with 0.8 opacity
+    const hex = headerBackground.replace("#", "");
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, 0.8)`;
+  })();
 
   return (
     <div
       className="fixed top-0 left-0 right-0 z-50 py-3 px-6 transition-colors duration-300 ease-out"
       style={{
         pointerEvents: "auto",
-        backgroundColor: headerBackground,
+        backgroundColor: headerBackgroundWithTransparency,
         transition: "background-color 300ms ease-in-out, color 300ms ease-in-out",
       }}
     >
-      <div className="flex items-center justify-between w-full gap-4 min-w-0">
+      <div className="flex items-center justify-between w-full gap-4 min-w-0 relative z-10">
         {showBranding ? (
-          <div className="flex flex-col items-start gap-4 relative">
-            <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.4 }}>
+          <div className="flex flex-col items-start gap-4 relative z-10">
+            <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.4 }} className="relative z-10">
               <motion.a
                 href="/"
                 onClick={(event) => {
@@ -230,7 +247,7 @@ export function QuizHeader({
                     window.location.href = isLoggedIn ? "/quizzes" : "/";
                   }
                 }}
-                className={`text-2xl font-bold tracking-tight transition-opacity duration-300 hover:opacity-80 cursor-pointer ${logoColorClass}`}
+                className={`text-2xl font-bold tracking-tight transition-opacity duration-300 hover:opacity-80 cursor-pointer relative z-10 ${logoColorClass}`}
               >
                 The School Quiz
               </motion.a>
@@ -383,7 +400,7 @@ export function QuizHeader({
                 <Tooltip.Trigger asChild>
                   <motion.button
                     onClick={() => setIsMenuOpen(!isMenuOpen)}
-                    className={`h-12 w-12 rounded-full flex items-center justify-center relative ${menuButtonClass}`}
+                    className={`h-12 w-12 rounded-full flex items-center justify-center relative z-10 ${menuButtonClass}`}
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.85 }}
                     aria-haspopup="menu"

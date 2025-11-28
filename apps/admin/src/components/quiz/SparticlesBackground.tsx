@@ -205,7 +205,8 @@ export function SparticlesBackground({ isActive }: SparticlesBackgroundProps) {
   if (!isActive) return null;
 
   // Sparticles expects a container element - it will create the canvas inside
-  // Use z-[45] to appear above status bar (z-40) and navigation (z-30/z-40) but below modals (z-50)
+  // Use z-46 to appear just below header (z-50) so sparkles show through semi-transparent header background
+  // Logo and menu button have z-10 relative within header, so they appear above sparkles
   // pointer-events-none ensures it doesn't block interactions
   return (
     <div
@@ -218,7 +219,7 @@ export function SparticlesBackground({ isActive }: SparticlesBackgroundProps) {
         left: 0,
         right: 0,
         bottom: 0,
-        zIndex: 45, // Above status bar and navigation so particles appear on top of them
+        zIndex: 46, // Just below header (z-50) so sparkles appear on header background
         position: 'fixed',
       }}
     />
