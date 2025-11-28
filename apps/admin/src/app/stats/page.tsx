@@ -74,13 +74,15 @@ async function StatsData() {
     )
   }
 
-  // Fetch critical stats for first paint (fast)
+  // Phase 2: Optimize streaming - fetch critical data immediately
+  // Deferred data is passed as a Promise to enable React streaming
   const criticalStats = await getStatsDataCritical()
+  const deferredDataPromise = getStatsDataDeferred() // Don't await - let React stream it
 
   return (
     <StatsClient 
       initialCriticalData={criticalStats || undefined}
-      deferredDataPromise={getStatsDataDeferred()}
+      deferredDataPromise={deferredDataPromise}
       isPremium={isPremium}
     />
   )

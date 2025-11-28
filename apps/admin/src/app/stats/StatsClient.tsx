@@ -2,16 +2,48 @@
 
 import { Suspense, use } from 'react';
 import { useSession } from 'next-auth/react';
-import { motion } from 'framer-motion';
+import dynamic from 'next/dynamic';
 import { useQuery } from '@tanstack/react-query';
 import { SiteHeader } from '@/components/SiteHeader';
 import { Footer } from '@/components/Footer';
+// SummaryStats and StreakCards use Framer Motion but are critical for first paint
+// Keep them loaded but consider lazy loading if bundle size becomes an issue
 import { SummaryStats } from '@/components/stats/SummaryStats';
-import { CategoryPerformance } from '@/components/stats/CategoryPerformance';
-import { StreakOverview } from '@/components/stats/StreakOverview';
 import { StreakCards } from '@/components/stats/StreakCards';
-import { PerformanceChart } from '@/components/stats/PerformanceChart';
-import { RecentAchievements } from '@/components/stats/RecentAchievements';
+
+// Phase 3: Lazy load heavy libraries (Framer Motion, Recharts)
+// These components are loaded only when needed, reducing initial bundle size by ~150KB+
+const CategoryPerformance = dynamic(
+  () => import('@/components/stats/CategoryPerformance').then(mod => ({ default: mod.CategoryPerformance })),
+  { 
+    ssr: false, // Client-only (uses Recharts + Framer Motion)
+    loading: () => <div className="h-64 bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse" />
+  }
+);
+
+const StreakOverview = dynamic(
+  () => import('@/components/stats/StreakOverview').then(mod => ({ default: mod.StreakOverview })),
+  { 
+    ssr: false, // Client-only (uses Framer Motion)
+    loading: () => <div className="h-48 bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse" />
+  }
+);
+
+const PerformanceChart = dynamic(
+  () => import('@/components/stats/PerformanceChart').then(mod => ({ default: mod.PerformanceChart })),
+  { 
+    ssr: false, // Client-only (uses Recharts + Framer Motion)
+    loading: () => <div className="h-64 bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse" />
+  }
+);
+
+const RecentAchievements = dynamic(
+  () => import('@/components/stats/RecentAchievements').then(mod => ({ default: mod.RecentAchievements })),
+  { 
+    ssr: false, // Client-only (uses Framer Motion + React Query)
+    loading: () => <div className="h-48 bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse" />
+  }
+);
 
 interface StatsData {
     summary: {

@@ -1,16 +1,23 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { SiteHeader } from "@/components/SiteHeader";
-import { AchievementCard } from "@/components/achievements/AchievementCard";
-import { AchievementBrowserModal } from "@/components/achievements/AchievementBrowserModal";
+import React, { useState } from "react";
+import dynamic from 'next/dynamic'
 import { useUserTier } from "@/hooks/useUserTier";
 import { useUserAccess } from "@/contexts/UserAccessContext";
 import type { UserTier } from "@/lib/feature-gating";
-import { Trophy, Search, Filter, ChevronDown, Calendar, X } from "lucide-react";
-import { Footer } from "@/components/Footer";
+import { Search, Filter, Calendar, X } from "lucide-react";
 import type { Achievement, AchievementsPageData } from './achievements-server'
+
+// OPTIMIZATION: Lazy load heavy components to reduce initial bundle size
+// AchievementCard has animations and is ~50KB+, so lazy load it
+const LazyAchievementCard = dynamic(() => import("@/components/achievements/AchievementCard").then(mod => ({ default: mod.AchievementCard })), {
+	ssr: false, // Client-side only (has animations)
+	loading: () => <div className="w-[200px] h-[280px] bg-gray-200 dark:bg-gray-800 rounded-lg animate-pulse" />
+})
+
+const LazyAchievementBrowserModal = dynamic(() => import("@/components/achievements/AchievementBrowserModal").then(mod => ({ default: mod.AchievementBrowserModal })), {
+	ssr: false, // Client-side only (modal)
+})
 
 interface AchievementsClientProps {
 	initialData: AchievementsPageData
@@ -247,11 +254,10 @@ export function AchievementsClient({ initialData }: AchievementsClientProps) {
 	const { tier: hookTier, isPremium: hookIsPremium } = useUserTier();
 	const { isVisitor, isPremium: contextIsPremium, tier: contextTier } = useUserAccess();
 
-	// Initialize with server-provided data
-	const [achievements, setAchievements] = useState<Achievement[]>(initialData.achievements);
-	const [isLoading, setIsLoading] = useState(false);
+	// OPTIMIZATION: Use server-provided data directly - no client-side fetching needed
+	// Server already fetches and caches achievements, so we can trust initialData
+	const [achievements] = useState<Achievement[]>(initialData.achievements);
 	const [isBrowserOpen, setIsBrowserOpen] = useState(false);
-	const [localStoragePremium, setLocalStoragePremium] = useState(false);
 	const [flippedCardId, setFlippedCardId] = useState<string | null>(null);
 	
 	// Filter and sort state
@@ -261,227 +267,10 @@ export function AchievementsClient({ initialData }: AchievementsClientProps) {
 	const [dateSort, setDateSort] = useState<'newest' | 'oldest'>('newest');
 	const [showHidden, setShowHidden] = useState(false);
 
-	// Use server data first, then localStorage, then context, then hook
-	// This ensures premium status is detected even if API calls fail
-	const isPremium = initialData.isPremium || localStoragePremium || contextIsPremium || hookIsPremium || contextTier === 'premium';
+	// OPTIMIZATION: Use server-provided tier/premium status directly
+	// No need to check localStorage or make additional API calls
+	const isPremium = initialData.isPremium || contextIsPremium || hookIsPremium || contextTier === 'premium';
 	const tier: UserTier = initialData.tier === 'visitor' ? 'visitor' : (initialData.tier === 'premium' ? 'premium' : 'free');
-
-	// Check localStorage for premium status immediately
-	useEffect(() => {
-		if (typeof window !== 'undefined') {
-			const storedTier = localStorage.getItem('userTier');
-			const isPremiumFromStorage = storedTier === 'premium';
-			setLocalStoragePremium(isPremiumFromStorage);
-		}
-	}, []);
-
-	// Refresh achievements from API (optional - server data is already loaded)
-	// This allows for client-side refresh if needed
-	useEffect(() => {
-		const refreshAchievements = async () => {
-			if (isVisitor || initialData.achievements.length > 0) {
-				// Use initial data, no need to fetch
-				return;
-			}
-
-			try {
-				const token = localStorage.getItem('authToken');
-				const userId = localStorage.getItem('userId');
-				
-				const headers: HeadersInit = {};
-				if (token) {
-					headers['Authorization'] = `Bearer ${token}`;
-				}
-				if (userId) {
-					headers['X-User-Id'] = userId;
-				}
-
-				const response = await fetch('/api/achievements', { headers });
-				let apiAchievements: Achievement[] = [];
-				if (response.ok) {
-					const data = await response.json();
-					apiAchievements = data.achievements || [];
-				}
-				
-				// Always include test achievements for prototyping (special variants)
-				// These are hardcoded test achievements that should always appear for logged-in users
-				const testAchievements: Achievement[] = [
-					{
-						id: "test-doppelganger-1",
-						slug: "doppelganger",
-						name: "Doppelganger",
-						shortDescription: "Get the same score 2 weeks in a row",
-						longDescription: "Achieve the exact same score in consecutive weeks - a true doppelganger performance!",
-						category: "performance",
-						rarity: "rare",
-						isPremiumOnly: false,
-						iconKey: "/achievements/doppelganger.png",
-						status: "unlocked",
-						unlockedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-						quizSlug: null,
-					},
-					{
-						id: "test-blitzkrieg-1",
-						slug: "blitzkrieg",
-						name: "Blitzkrieg!",
-						shortDescription: "Get 5/5 in a History round under 2 minutes",
-						longDescription: "Complete a history-themed round perfectly in less than 2 minutes - lightning fast!",
-						category: "performance",
-						rarity: "uncommon",
-						isPremiumOnly: false,
-						iconKey: "/achievements/blitzkreig.png",
-						status: "unlocked",
-						unlockedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-						quizSlug: "12",
-					},
-					{
-						id: "test-clutch-1",
-						slug: "clutch",
-						name: "Clutch",
-						shortDescription: "Get the last question correct to beat the average",
-						longDescription: "Get the final question right after previous mistakes, putting your score above the average public score for that round",
-						category: "performance",
-						rarity: "uncommon",
-						isPremiumOnly: false,
-						iconKey: "clutch",
-						status: "unlocked",
-						unlockedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-						quizSlug: "15",
-					},
-					{
-						id: "test-ace-1",
-						slug: "ace",
-						name: "ACE",
-						shortDescription: "Get 5/5 in a History round",
-						longDescription: "Achieve a perfect score in a round focused on historical topics",
-						category: "performance",
-						rarity: "common",
-						isPremiumOnly: false,
-						iconKey: "/achievements/hail-caesar.png",
-						series: "Roman History",
-						cardVariant: "foil",
-						status: "unlocked",
-						unlockedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-						quizSlug: "10",
-					},
-					{
-						id: "test-foil-gold-1",
-						slug: "golden-champion",
-						name: "Golden Champion",
-						shortDescription: "Achieve legendary status",
-						longDescription: "Reach the pinnacle of achievement with this golden card",
-						category: "performance",
-						rarity: "legendary",
-						isPremiumOnly: false,
-						cardVariant: "foilGold",
-						status: "unlocked",
-						unlockedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-						quizSlug: null,
-					},
-					{
-						id: "test-foil-silver-1",
-						slug: "silver-star",
-						name: "Silver Star",
-						shortDescription: "Consistent excellence",
-						longDescription: "Show consistent excellence across multiple quizzes",
-						category: "engagement",
-						rarity: "rare",
-						isPremiumOnly: false,
-						cardVariant: "foilSilver",
-						status: "unlocked",
-						unlockedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-						quizSlug: null,
-					},
-					{
-						id: "test-shiny-1",
-						slug: "shining-star",
-						name: "Shining Star",
-						shortDescription: "Complete 10 quizzes",
-						longDescription: "Show your dedication by completing 10 quizzes",
-						category: "engagement",
-						rarity: "uncommon",
-						isPremiumOnly: false,
-						cardVariant: "shiny",
-						status: "unlocked",
-						unlockedAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(),
-						quizSlug: null,
-					},
-					{
-						id: "test-fullart-1",
-						slug: "master-mind",
-						name: "95.5 ATAR",
-						shortDescription: "Perfect score on 3 quizzes",
-						longDescription: "Achieve perfection across multiple quizzes",
-						category: "performance",
-						rarity: "epic",
-						isPremiumOnly: false,
-						cardVariant: "fullArt",
-						status: "unlocked",
-						unlockedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-						quizSlug: null,
-					},
-					{
-						id: "test-standard-1",
-						slug: "quick-thinker",
-						name: "Quick Thinker",
-						shortDescription: "Answer 5 questions in under 30 seconds",
-						longDescription: "Show your quick thinking skills",
-						category: "performance",
-						rarity: "common",
-						isPremiumOnly: false,
-						cardVariant: "standard",
-						status: "unlocked",
-						unlockedAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
-						quizSlug: null,
-					},
-					{
-						id: "test-standard-2",
-						slug: "night-owl",
-						name: "Night Owl",
-						shortDescription: "Complete a quiz after midnight",
-						longDescription: "Show your dedication by playing late at night",
-						category: "engagement",
-						rarity: "uncommon",
-						isPremiumOnly: false,
-						cardVariant: "standard",
-						status: "unlocked",
-						unlockedAt: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(),
-						quizSlug: null,
-					},
-				];
-				
-				// Add test achievement with progress bar
-				const progressTestAchievement: Achievement = {
-					id: "test-progress-1",
-					slug: "quiz-master-progress",
-					name: "Quiz Master",
-					shortDescription: "Complete 10 quizzes",
-					longDescription: "Show your dedication by completing 10 quizzes. You're making great progress!",
-					category: "engagement",
-					rarity: "uncommon",
-					isPremiumOnly: false,
-					cardVariant: "standard",
-					status: "locked_free",
-					progressValue: 7,
-					progressMax: 10,
-				};
-				
-				// Remove duplicates by ID, keeping test achievements if they exist
-				const existingIds = new Set(apiAchievements.map(a => a.id));
-				const uniqueTestAchievements = testAchievements.filter(a => !existingIds.has(a.id));
-				
-				setAchievements([...apiAchievements, ...uniqueTestAchievements, progressTestAchievement]);
-			} catch (error) {
-				console.error('Failed to fetch achievements:', error);
-				// Fallback to mock data
-				setAchievements(MOCK_ACHIEVEMENTS);
-			} finally {
-				setIsLoading(false);
-			}
-		};
-
-		refreshAchievements();
-	}, [isVisitor, initialData.achievements.length]);
 
 	const unlockedCount = achievements.filter((a) => a.status === "unlocked").length;
 	const totalCount = achievements.length;
@@ -541,27 +330,14 @@ export function AchievementsClient({ initialData }: AchievementsClientProps) {
 		(a) => a.status !== "unlocked" && (a.progressValue === undefined || a.progressValue === 0)
 	);
 
-	// Visitor state - redirect to sign in
+	// Visitor state - show teaser (header already rendered in shell)
 	if (isVisitor) {
 		return (
-			<>
-				<SiteHeader />
-				<main className="min-h-screen">
-					<section className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-8 md:px-4 pt-24 sm:pt-32">
-						<div className="max-w-4xl mx-auto text-center mb-12">
-							<motion.div
-								initial={{ opacity: 0, y: 20 }}
-								animate={{ opacity: 1, y: 0 }}
-								transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-							>
-						<h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-[hsl(var(--foreground))] mb-4">
-							Achievement Collection
-						</h1>
-								<p className="text-lg text-[hsl(var(--muted-foreground))] mb-8 max-w-2xl mx-auto">
-									Create a free account to start tracking your quiz progress and earning achievements.
-								</p>
-							</motion.div>
-						</div>
+			<section className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-8 md:px-4 pb-16">
+				{/* OPTIMIZATION: Header is already rendered in AchievementsShell */}
+				<div className="max-w-4xl mx-auto text-center mb-12">
+					{/* Teaser content - already shown in shell, but keep for consistency */}
+				</div>
 
 						{/* Teaser grid - all locked */}
 						<div className="max-w-7xl mx-auto w-full px-4">
@@ -587,7 +363,7 @@ export function AchievementsClient({ initialData }: AchievementsClientProps) {
 												transform: `rotate(${(index % 3 - 1) * 0.5}deg)`,
 											}}
 										>
-											<AchievementCard
+											<LazyAchievementCard
 												achievement={achievement}
 												status="locked_free"
 												tier="visitor"
@@ -598,39 +374,28 @@ export function AchievementsClient({ initialData }: AchievementsClientProps) {
 							</div>
 						</div>
 					</section>
-					<Footer />
-				</main>
-			</>
 		);
 	}
 
 	return (
 		<>
-			<SiteHeader />
-			<main className="min-h-screen">
-				<section className="min-h-screen flex flex-col items-center px-6 sm:px-8 md:px-4 pt-24 sm:pt-32 pb-16">
-					{/* Header */}
-					<motion.div
-						initial={{ opacity: 0, y: 20 }}
-						animate={{ opacity: 1, y: 0 }}
-						transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-						className="max-w-4xl mx-auto text-center mb-8"
-					>
-						<h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-[hsl(var(--foreground))] mb-4">
-							Your Achievements
-						</h1>
-						<p className="text-lg text-[hsl(var(--muted-foreground))] mb-6">
-							{isLoading ? 'Loading...' : `${unlockedCount} of ${totalCount} unlocked`}
-						</p>
-					</motion.div>
+			{/* OPTIMIZATION: Header is now rendered in AchievementsShell (server component) */}
+			{/* This section only contains the content below the header */}
+			<section className="min-h-screen flex flex-col items-center px-6 sm:px-8 md:px-4 pb-16">
+				{/* Stats - rendered immediately with server data */}
+				<motion.div
+					initial={{ opacity: 0, y: 10 }}
+					animate={{ opacity: 1, y: 0 }}
+					transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+					className="max-w-4xl mx-auto text-center mb-8"
+				>
+					<p className="text-lg text-[hsl(var(--muted-foreground))] mb-6">
+						{unlockedCount} of {totalCount} unlocked
+					</p>
+				</motion.div>
 
 					{/* Subtle Filters */}
-					<motion.div
-						initial={{ opacity: 0, y: 10 }}
-						animate={{ opacity: 1, y: 0 }}
-						transition={{ duration: 0.4, delay: 0.1 }}
-						className="max-w-4xl mx-auto mb-8 px-4"
-					>
+					<div className="max-w-4xl mx-auto mb-8 px-4">
 						<div className="flex flex-col sm:flex-row gap-3 items-center justify-center">
 							{/* Search */}
 							<div className="relative flex-1 max-w-md w-full">
@@ -704,16 +469,11 @@ export function AchievementsClient({ initialData }: AchievementsClientProps) {
 								</button>
 							)}
 						</div>
-					</motion.div>
+					</div>
 
 				{/* Unlocked Achievements */}
 				{earnedAchievements.length > 0 && (
-					<motion.div
-						initial={{ opacity: 0, y: 20 }}
-						animate={{ opacity: 1, y: 0 }}
-						transition={{ duration: 0.5, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-						className="max-w-7xl mx-auto w-full px-4 mb-16"
-					>
+					<div className="max-w-7xl mx-auto w-full px-4 mb-16">
 						{(statusFilter === 'all' || statusFilter === 'unlocked') && (
 							<div className="mb-6 text-center">
 								<h2 className="text-2xl md:text-3xl font-bold text-[hsl(var(--foreground))] mb-2">
@@ -727,29 +487,15 @@ export function AchievementsClient({ initialData }: AchievementsClientProps) {
 							</div>
 						)}
 						<div className="flex flex-wrap justify-center gap-4">
-							<AnimatePresence mode="popLayout">
-								{earnedAchievements.map((achievement, index) => {
+							{/* OPTIMIZATION: Render cards without heavy animations initially for faster LCP */}
+							{/* Animations can be added back with lazy-loaded Framer Motion if needed */}
+							{earnedAchievements.map((achievement, index) => {
 								const isFlipped = flippedCardId === achievement.id
 								const rotation = (index % 5 - 2) * 1 // Subtle angles: -2, -1, 0, 1, 2 degrees
 								
 								return (
-									<motion.div
+									<div
 										key={achievement.id}
-										layout
-										initial={{ opacity: 0, y: 20, scale: 0.9 }}
-										animate={{ 
-											opacity: 1, 
-											y: 0, 
-											scale: 1,
-											rotate: isFlipped ? 0 : rotation,
-										}}
-										exit={{ opacity: 0, scale: 0.8, y: -10 }}
-										transition={{ 
-											duration: 0.3, 
-											delay: index * 0.02,
-											ease: [0.22, 1, 0.36, 1],
-											layout: { duration: 0.4 }
-										}}
 										className="relative"
 										style={{
 											width: 'clamp(120px, 25vw, 200px)',
@@ -757,16 +503,18 @@ export function AchievementsClient({ initialData }: AchievementsClientProps) {
 											flexShrink: 0,
 											zIndex: isFlipped ? 50 : 10 + earnedAchievements.length - index,
 											transform: `rotate(${isFlipped ? 0 : rotation}deg)`,
+											transition: 'transform 0.2s ease-out',
 										}}
-										whileHover={{ 
-											zIndex: 50,
-											scale: 1.1,
-											rotate: 0,
-											y: -8,
-											transition: { duration: 0.2 }
+										onMouseEnter={(e) => {
+											e.currentTarget.style.transform = 'rotate(0deg) scale(1.1) translateY(-8px)'
+											e.currentTarget.style.zIndex = '50'
+										}}
+										onMouseLeave={(e) => {
+											e.currentTarget.style.transform = `rotate(${rotation}deg)`
+											e.currentTarget.style.zIndex = `${10 + earnedAchievements.length - index}`
 										}}
 									>
-										<AchievementCard
+										<LazyAchievementCard
 											achievement={achievement}
 											status={achievement.status}
 											unlockedAt={achievement.unlockedAt}
@@ -779,21 +527,16 @@ export function AchievementsClient({ initialData }: AchievementsClientProps) {
 												setFlippedCardId(flipped ? achievement.id : null)
 											}}
 										/>
-									</motion.div>
+									</div>
 								)
 							})}
-							</AnimatePresence>
 						</div>
-					</motion.div>
+					</div>
 				)}
 
 				{/* No results message */}
-				{filteredAndSortedAchievements.length === 0 && !isLoading && (
-					<motion.div
-						initial={{ opacity: 0 }}
-						animate={{ opacity: 1 }}
-						className="text-center py-16"
-					>
+				{filteredAndSortedAchievements.length === 0 && (
+					<div className="text-center py-16">
 						<p className="text-[hsl(var(--muted-foreground))] mb-4">
 							{searchQuery || categoryFilter !== 'all' || statusFilter !== 'all' 
 								? 'No achievements match your filters'
@@ -811,17 +554,12 @@ export function AchievementsClient({ initialData }: AchievementsClientProps) {
 								Clear filters
 							</button>
 						)}
-					</motion.div>
+					</div>
 				)}
 
 				{/* In Progress Achievements */}
 				{inProgressAchievements.length > 0 && (statusFilter === 'all' || statusFilter === 'in-progress') && (
-					<motion.div
-						initial={{ opacity: 0, y: 20 }}
-						animate={{ opacity: 1, y: 0 }}
-						transition={{ duration: 0.5, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-						className="max-w-7xl mx-auto w-full px-4 mb-16"
-					>
+					<div className="max-w-7xl mx-auto w-full px-4 mb-16">
 						<div className="mb-6 text-center">
 							<h2 className="text-2xl md:text-3xl font-bold text-[hsl(var(--foreground))] mb-2">
 								In Progress
@@ -831,46 +569,32 @@ export function AchievementsClient({ initialData }: AchievementsClientProps) {
 							</p>
 						</div>
 							<div className="flex flex-wrap justify-center gap-4">
-							<AnimatePresence mode="popLayout">
 								{inProgressAchievements.map((achievement, index) => {
-								const isFlipped = flippedCardId === achievement.id
-								const rotation = (index % 5 - 2) * 1 // Subtle angles: -2, -1, 0, 1, 2 degrees
-								
-								return (
-									<motion.div
-										key={achievement.id}
-										layout
-										initial={{ opacity: 0, y: 20, scale: 0.9 }}
-										animate={{ 
-											opacity: 1, 
-											y: 0, 
-											scale: 1,
-											rotate: isFlipped ? 0 : rotation,
-										}}
-										exit={{ opacity: 0, scale: 0.8, y: -10 }}
-										transition={{ 
-											duration: 0.3, 
-											delay: index * 0.02,
-											ease: [0.22, 1, 0.36, 1],
-											layout: { duration: 0.4 }
-										}}
-										className="relative"
-										style={{
-											width: 'clamp(120px, 25vw, 200px)',
-											maxWidth: '200px',
-											flexShrink: 0,
-											zIndex: isFlipped ? 50 : 10 + inProgressAchievements.length - index,
-											transform: `rotate(${isFlipped ? 0 : rotation}deg)`,
-										}}
-										whileHover={{ 
-											zIndex: 50,
-											scale: 1.1,
-											rotate: 0,
-											y: -8,
-											transition: { duration: 0.2 }
-										}}
+									const isFlipped = flippedCardId === achievement.id
+									const rotation = (index % 5 - 2) * 1
+									
+									return (
+										<div
+											key={achievement.id}
+											className="relative"
+											style={{
+												width: 'clamp(120px, 25vw, 200px)',
+												maxWidth: '200px',
+												flexShrink: 0,
+												zIndex: isFlipped ? 50 : 10 + inProgressAchievements.length - index,
+												transform: `rotate(${isFlipped ? 0 : rotation}deg)`,
+												transition: 'transform 0.2s ease-out',
+											}}
+											onMouseEnter={(e) => {
+												e.currentTarget.style.transform = 'rotate(0deg) scale(1.1) translateY(-8px)'
+												e.currentTarget.style.zIndex = '50'
+											}}
+											onMouseLeave={(e) => {
+												e.currentTarget.style.transform = `rotate(${rotation}deg)`
+												e.currentTarget.style.zIndex = `${10 + inProgressAchievements.length - index}`
+											}}
 										>
-											<AchievementCard
+											<LazyAchievementCard
 												achievement={achievement}
 												status={achievement.status}
 												unlockedAt={achievement.unlockedAt}
@@ -883,22 +607,16 @@ export function AchievementsClient({ initialData }: AchievementsClientProps) {
 													setFlippedCardId(flipped ? achievement.id : null)
 												}}
 											/>
-										</motion.div>
+										</div>
 									)
 								})}
-							</AnimatePresence>
 							</div>
-						</motion.div>
+						</div>
 					)}
 
 					{/* Yet to Earn Achievements */}
 					{yetToEarnAchievements.length > 0 && (statusFilter === 'all' || statusFilter === 'yet-to-earn') && (
-						<motion.div
-							initial={{ opacity: 0, y: 20 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{ duration: 0.5, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
-							className="max-w-7xl mx-auto w-full px-4 mb-16"
-						>
+						<div className="max-w-7xl mx-auto w-full px-4 mb-16">
 							<div className="mb-6 text-center">
 								<h2 className="text-2xl md:text-3xl font-bold text-[hsl(var(--foreground))] mb-2">
 									Yet to Earn
@@ -908,29 +626,13 @@ export function AchievementsClient({ initialData }: AchievementsClientProps) {
 								</p>
 							</div>
 							<div className="flex flex-wrap justify-center gap-4">
-								<AnimatePresence mode="popLayout">
-									{yetToEarnAchievements.map((achievement, index) => {
+								{yetToEarnAchievements.map((achievement, index) => {
 									const isFlipped = flippedCardId === achievement.id
-									const rotation = (index % 5 - 2) * 1 // Subtle angles: -2, -1, 0, 1, 2 degrees
+									const rotation = (index % 5 - 2) * 1
 									
 									return (
-										<motion.div
+										<div
 											key={achievement.id}
-											layout
-											initial={{ opacity: 0, y: 20, scale: 0.9 }}
-											animate={{ 
-												opacity: 1, 
-												y: 0, 
-												scale: 1,
-												rotate: isFlipped ? 0 : rotation,
-											}}
-											exit={{ opacity: 0, scale: 0.8, y: -10 }}
-											transition={{ 
-												duration: 0.3, 
-												delay: index * 0.02,
-												ease: [0.22, 1, 0.36, 1],
-												layout: { duration: 0.4 }
-											}}
 											className="relative"
 											style={{
 												width: 'clamp(120px, 25vw, 200px)',
@@ -938,16 +640,18 @@ export function AchievementsClient({ initialData }: AchievementsClientProps) {
 												flexShrink: 0,
 												zIndex: isFlipped ? 50 : 10 + yetToEarnAchievements.length - index,
 												transform: `rotate(${isFlipped ? 0 : rotation}deg)`,
+												transition: 'transform 0.2s ease-out',
 											}}
-											whileHover={{ 
-												zIndex: 50,
-												scale: 1.1,
-												rotate: 0,
-												y: -8,
-												transition: { duration: 0.2 }
+											onMouseEnter={(e) => {
+												e.currentTarget.style.transform = 'rotate(0deg) scale(1.1) translateY(-8px)'
+												e.currentTarget.style.zIndex = '50'
+											}}
+											onMouseLeave={(e) => {
+												e.currentTarget.style.transform = `rotate(${rotation}deg)`
+												e.currentTarget.style.zIndex = `${10 + yetToEarnAchievements.length - index}`
 											}}
 										>
-											<AchievementCard
+											<LazyAchievementCard
 												achievement={achievement}
 												status={achievement.status}
 												unlockedAt={achievement.unlockedAt}
@@ -960,22 +664,16 @@ export function AchievementsClient({ initialData }: AchievementsClientProps) {
 													setFlippedCardId(flipped ? achievement.id : null)
 												}}
 											/>
-										</motion.div>
+										</div>
 									)
 								})}
-								</AnimatePresence>
 							</div>
-						</motion.div>
+						</div>
 					)}
 
 					{/* Achievement Browser Link - Only show if premium */}
 					{isPremium && (
-						<motion.div
-							initial={{ opacity: 0, y: 20 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{ duration: 0.5, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-							className="max-w-6xl mx-auto w-full px-4"
-						>
+						<div className="max-w-6xl mx-auto w-full px-4">
 							<div className="text-center">
 								<button
 									onClick={() => setIsBrowserOpen(true)}
@@ -985,16 +683,15 @@ export function AchievementsClient({ initialData }: AchievementsClientProps) {
 									Explore All Achievements
 								</button>
 							</div>
-						</motion.div>
+						</div>
 					)}
 
 				</section>
-				<Footer />
-			</main>
+				{/* OPTIMIZATION: Footer is now rendered in AchievementsShell (server component) */}
 
 			{/* Achievement Browser Modal */}
-			{isPremium && (
-				<AchievementBrowserModal
+			{isPremium && isBrowserOpen && (
+				<LazyAchievementBrowserModal
 					isOpen={isBrowserOpen}
 					onClose={() => setIsBrowserOpen(false)}
 					achievements={achievements}

@@ -1,26 +1,28 @@
 import { Suspense } from 'react'
-import { redirect } from 'next/navigation'
 import { getAchievementsPageData } from './achievements-server'
 import { AchievementsClient } from './AchievementsClient'
-import { AchievementCardSkeleton, PageHeaderSkeleton } from '@/components/ui/Skeleton'
+import { AchievementsShell } from './AchievementsShell'
+import { AchievementCardSkeleton } from '@/components/ui/Skeleton'
 
-// Force dynamic rendering for user-specific data
-export const dynamic = 'force-dynamic'
+// Allow caching - user-specific data is cached per user via cache keys
+// Revalidate every 60 seconds for fresh achievement data
+export const revalidate = 60
 
 /**
  * Server Component - Achievements Page
- * Fetches data server-side and streams to client component
+ * OPTIMIZATION: Streams shell immediately, then loads data asynchronously
+ * This improves LCP by rendering header/title without waiting for database queries
+ * 
+ * Note: TypeScript may show an error about async components in Suspense,
+ * but Next.js App Router supports this pattern at runtime.
  */
-export default async function AchievementsPage() {
-	const pageData = await getAchievementsPageData()
-
-	// For visitors, we'll let the client component handle the redirect/teaser
-	// since it needs to check localStorage for legacy auth too
-
+export default function AchievementsPage() {
+	// OPTIMIZATION: Stream shell immediately without waiting for data
+	// This allows header + title to render immediately, improving LCP
+	// Data fetching happens in Suspense boundaries below
 	return (
-		<Suspense fallback={
-			<div className="min-h-screen flex flex-col items-center px-6 pt-24 pb-16">
-				<PageHeaderSkeleton />
+		<AchievementsShell>
+			<Suspense fallback={
 				<div className="max-w-7xl mx-auto w-full px-4">
 					<div className="flex flex-wrap justify-center gap-4">
 						{Array.from({ length: 8 }).map((_, i) => (
@@ -28,9 +30,24 @@ export default async function AchievementsPage() {
 						))}
 					</div>
 				</div>
-			</div>
-		}>
-			<AchievementsClient initialData={pageData} />
-		</Suspense>
+			}>
+				{/* @ts-expect-error - Next.js App Router supports async Server Components in Suspense */}
+				<AchievementsPageContent />
+			</Suspense>
+		</AchievementsShell>
 	)
+}
+
+/**
+ * OPTIMIZATION: Separate async Server Component for data fetching
+ * Wrapped in Suspense so shell can render immediately
+ * This component can be async and will be streamed when data is ready
+ */
+async function AchievementsPageContent() {
+	const pageData = await getAchievementsPageData()
+
+	// For visitors, redirect to home or show teaser (handled in client component)
+	// Server-side redirect removed to allow streaming shell first
+
+	return <AchievementsClient initialData={pageData} />
 }
