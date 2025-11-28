@@ -786,7 +786,11 @@ export async function getStatsSummaryCritical(userId: string): Promise<Pick<Stat
           SELECT 
             w.week,
             w.date::text as date,
-            c."completedAt" as completed_at,
+            CASE 
+              WHEN c."completedAt" IS NOT NULL 
+              THEN c."completedAt"::text
+              ELSE NULL
+            END as completed_at,
             c."quizSlug" as quiz_slug
           FROM weeks w
           LEFT JOIN completions_by_week c ON w.week = c.week
