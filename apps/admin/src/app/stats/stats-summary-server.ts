@@ -662,26 +662,41 @@ export async function getStatsSummaryCritical(userId: string): Promise<Pick<Stat
   const fiftyTwoWeeksAgo = new Date()
   fiftyTwoWeeksAgo.setDate(fiftyTwoWeeksAgo.getDate() - (52 * 7))
   
-  // Execute ALL critical queries in parallel for maximum performance
-  const [summary, streaks, categoryStats, completionsWithScores] = await Promise.all([
-    getSummaryStats(userId),
-    getStreaks(userId),
-    getCategoryPerformance(userId), // Function will use pre-computed table first
-    prisma.quizCompletion.findMany({
-      where: { 
-        userId,
-        completedAt: { gte: fiftyTwoWeeksAgo },
-      },
-      select: {
-        completedAt: true,
-        quizSlug: true,
-        score: true,
-        totalQuestions: true,
-      },
-      orderBy: { completedAt: 'desc' },
-      take: 100, // Limit to 100 most recent (more than enough for 52 weeks)
-    }),
-  ])
+  // OPTIMIZATION: Use cached version for 30 seconds (stats don't change that frequently)
+  // This dramatically reduces database load for repeated requests
+  const getCachedStats = unstable_cache(
+    async () => {
+      // Execute ALL critical queries in parallel for maximum performance
+      const [summaryAndStreaks, categoryStats, completionsWithScores] = await Promise.all([
+        getSummaryStatsAndStreaks(userId), // Combined query (saves 1 round trip)
+        getCategoryPerformance(userId), // Function will use pre-computed table first
+        prisma.quizCompletion.findMany({
+          where: { 
+            userId,
+            completedAt: { gte: fiftyTwoWeeksAgo },
+          },
+          select: {
+            completedAt: true,
+            quizSlug: true,
+            score: true,
+            totalQuestions: true,
+          },
+          orderBy: { completedAt: 'desc' },
+          take: 52, // Only need 52 records max (one per week)
+        }),
+      ])
+      
+      return { summaryAndStreaks, categoryStats, completionsWithScores }
+    },
+    [`stats-critical-${userId}`],
+    {
+      revalidate: 30, // Cache for 30 seconds
+      tags: [`stats-${userId}`], // Can be invalidated when user completes a quiz
+    }
+  )
+  
+  const { summaryAndStreaks, categoryStats, completionsWithScores } = await getCachedStats()
+  const { summary, streaks } = summaryAndStreaks
   
   // Calculate weekly streak from completions (in-memory, fast)
   const weeklyStreak = calculateWeeklyStreakData(completionsWithScores.map(c => ({
