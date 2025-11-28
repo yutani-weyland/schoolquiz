@@ -220,20 +220,31 @@ export function StatsClient({ initialCriticalData, deferredDataPromise, isPremiu
                         <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400 px-4">Track your progress, analyze your performance, and see how you compare</p>
                     </div>
 
-                    {/* Summary Stats */}
+                    {/* Summary Stats - Critical for first paint */}
                     <SummaryStats summary={criticalStats.summary} />
 
-                    {/* Streak Cards */}
+                    {/* Streak Cards - Critical for first paint */}
                     <StreakCards streaks={criticalStats.streaks} />
 
-                    {/* Category Performance - FIRST PAINT */}
-                    <CategoryPerformance
-                        strongest={criticalStats.categories.strongest}
-                        weakest={criticalStats.categories.weakest}
-                    />
+                    {/* Category Performance - Lazy loaded (Recharts + Framer Motion) */}
+                    <Suspense fallback={
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-8">
+                            <div className="h-64 bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse" />
+                            <div className="h-64 bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse" />
+                        </div>
+                    }>
+                        <CategoryPerformance
+                            strongest={criticalStats.categories.strongest}
+                            weakest={criticalStats.categories.weakest}
+                        />
+                    </Suspense>
 
-                    {/* Weekly Streak Overview - MOVED UP */}
-                    <StreakOverview weeklyStreak={criticalStats.weeklyStreak} />
+                    {/* Weekly Streak Overview - Lazy loaded (Framer Motion) */}
+                    <Suspense fallback={
+                        <div className="h-48 bg-gray-100 dark:bg-gray-800 rounded-2xl animate-pulse mb-8" />
+                    }>
+                        <StreakOverview weeklyStreak={criticalStats.weeklyStreak} />
+                    </Suspense>
 
                     {/* Deferred Data (Performance Chart) - Loads after first paint */}
                     {deferredDataPromise && (
