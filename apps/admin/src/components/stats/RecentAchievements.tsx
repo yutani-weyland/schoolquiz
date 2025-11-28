@@ -276,7 +276,7 @@ export function RecentAchievements() {
     );
   }
 
-  if (recentAchievements.length === 0 && inProgressAchievements.length === 0) {
+  if (displayRecentAchievements.length === 0 && inProgressAchievements.length === 0) {
     return null;
   }
 
@@ -287,7 +287,7 @@ export function RecentAchievements() {
       className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm mb-8"
     >
       {/* Recent Achievements Section */}
-      {recentAchievements.length > 0 && (
+      {displayRecentAchievements.length > 0 && (
         <>
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
@@ -313,7 +313,7 @@ export function RecentAchievements() {
             <motion.div 
               className="flex gap-4 min-w-max"
               animate={{
-                x: [0, -(180 + 16) * recentAchievements.length],
+                x: [0, -(180 + 16) * displayRecentAchievements.length],
               }}
               transition={{
                 x: {
@@ -325,7 +325,7 @@ export function RecentAchievements() {
               }}
             >
               {/* Duplicate cards for seamless loop */}
-              {[...recentAchievements, ...recentAchievements, ...recentAchievements].map((achievement, index) => {
+              {[...displayRecentAchievements, ...displayRecentAchievements, ...displayRecentAchievements].map((achievement, index) => {
                 // Slight rotation angles for each card
                 const rotations = [-0.5, 0.75, -0.75, 0.5, -1, 0.5, -0.5, 1, -0.75, 0.5];
                 const rotation = rotations[index % rotations.length] || 0;
@@ -335,7 +335,7 @@ export function RecentAchievements() {
                     key={`${achievement.id}-${index}`}
                     initial={{ opacity: 0, y: 10, rotate: 0 }}
                     animate={{ opacity: 1, y: 0, rotate: rotation }}
-                    transition={{ delay: (index % recentAchievements.length) * 0.05, type: 'spring', stiffness: 200, damping: 15 }}
+                        transition={{ delay: (index % displayRecentAchievements.length) * 0.05, type: 'spring', stiffness: 200, damping: 15 }}
                     whileHover={{ rotate: rotation + (rotation > 0 ? 0.5 : -0.5), scale: 1.05 }}
                     className="flex-shrink-0 w-[180px] sm:w-[190px]"
                   >

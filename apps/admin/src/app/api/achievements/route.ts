@@ -270,7 +270,7 @@ export async function GET(request: NextRequest) {
       async (uid: string | null, t: 'visitor' | 'free' | 'premium') => getAchievementsDataUncached(uid, t),
       [`achievements-${cacheKey}`],
       { 
-        revalidate: 60, // Cache for 60 seconds
+        revalidate: 180, // Cache for 3 minutes (achievements don't change frequently)
         tags: [`achievements-${cacheKey}`]
       }
     )

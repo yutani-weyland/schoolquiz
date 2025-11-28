@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
       async (uid: string) => getUserAchievementsUncached(uid),
       [`user-achievements-${user.id}`],
       { 
-        revalidate: 30, // Cache for 30 seconds
+        revalidate: 180, // Cache for 3 minutes (achievements don't change frequently)
         tags: [`user-achievements-${user.id}`]
       }
     )
