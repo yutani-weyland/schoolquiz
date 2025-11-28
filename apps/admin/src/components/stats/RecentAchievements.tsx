@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { motion } from 'framer-motion';
+import { useQuery } from '@tanstack/react-query';
 import { Trophy, ArrowRight, Target, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 import { AchievementCard } from '@/components/achievements/AchievementCard';
@@ -262,7 +262,7 @@ export function RecentAchievements() {
     return () => clearTimeout(timeoutId);
   }, []);
 
-  if (isLoading) {
+  if (finalIsLoading) {
     return (
       <motion.div
         initial={{ opacity: 0, y: 10 }}
@@ -276,7 +276,7 @@ export function RecentAchievements() {
     );
   }
 
-  if (displayRecentAchievements.length === 0 && inProgressAchievements.length === 0) {
+  if (finalRecentAchievements.length === 0 && finalInProgressAchievements.length === 0) {
     return null;
   }
 
@@ -287,7 +287,7 @@ export function RecentAchievements() {
       className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm mb-8"
     >
       {/* Recent Achievements Section */}
-      {displayRecentAchievements.length > 0 && (
+      {finalRecentAchievements.length > 0 && (
         <>
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
@@ -313,7 +313,7 @@ export function RecentAchievements() {
             <motion.div 
               className="flex gap-4 min-w-max"
               animate={{
-                x: [0, -(180 + 16) * displayRecentAchievements.length],
+                x: [0, -(180 + 16) * finalRecentAchievements.length],
               }}
               transition={{
                 x: {
@@ -325,7 +325,7 @@ export function RecentAchievements() {
               }}
             >
               {/* Duplicate cards for seamless loop */}
-              {[...displayRecentAchievements, ...displayRecentAchievements, ...displayRecentAchievements].map((achievement, index) => {
+              {[...finalRecentAchievements, ...finalRecentAchievements, ...finalRecentAchievements].map((achievement, index) => {
                 // Slight rotation angles for each card
                 const rotations = [-0.5, 0.75, -0.75, 0.5, -1, 0.5, -0.5, 1, -0.75, 0.5];
                 const rotation = rotations[index % rotations.length] || 0;
@@ -335,7 +335,7 @@ export function RecentAchievements() {
                     key={`${achievement.id}-${index}`}
                     initial={{ opacity: 0, y: 10, rotate: 0 }}
                     animate={{ opacity: 1, y: 0, rotate: rotation }}
-                        transition={{ delay: (index % displayRecentAchievements.length) * 0.05, type: 'spring', stiffness: 200, damping: 15 }}
+                        transition={{ delay: (index % finalRecentAchievements.length) * 0.05, type: 'spring', stiffness: 200, damping: 15 }}
                     whileHover={{ rotate: rotation + (rotation > 0 ? 0.5 : -0.5), scale: 1.05 }}
                     className="flex-shrink-0 w-[180px] sm:w-[190px]"
                   >
@@ -392,7 +392,7 @@ export function RecentAchievements() {
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">{inProgressAchievements.length}</div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">{finalInProgressAchievements.length}</div>
                 <div className="text-sm text-gray-600 dark:text-gray-400">achievements</div>
               </div>
             </div>
@@ -425,13 +425,13 @@ export function RecentAchievements() {
             </div>
 
             {/* Progress Summary */}
-            {inProgressAchievements.length > 0 && (
+            {finalInProgressAchievements.length > 0 && (
               <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
                 <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                   <TrendingUp className="w-4 h-4" />
                   <span>
                     {Math.round(
-                      (inProgressAchievements.reduce((sum, a) => {
+                      (finalInProgressAchievements.reduce((sum, a) => {
                         const percent = a.progressMax ? (a.progressValue || 0) / a.progressMax : 0;
                         return sum + percent;
                       }, 0) / inProgressAchievements.length) * 100
