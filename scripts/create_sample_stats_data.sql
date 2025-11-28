@@ -90,7 +90,6 @@ BEGIN
     END LOOP;
     
     RAISE NOTICE 'Created 20 sample quiz completions for user %', v_user_id;
-  END IF;
 END $$;
 
 -- Step 2: Populate summary tables from the completions
