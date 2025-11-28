@@ -196,11 +196,15 @@ export function RecentAchievements() {
           setIsLoading(false);
           return;
         }
-        // Use shared fetch utilities with automatic deduplication
+        // OPTIMIZATION: Fetch both in parallel instead of sequentially (saves ~50% load time)
         const { fetchUserAchievements, fetchAchievements } = await import('@/lib/achievement-fetch');
         
-        // Fetch recent unlocked achievements
-        const userData = await fetchUserAchievements(session.user.id, null);
+        // Fetch recent unlocked achievements AND all achievements in parallel
+        const [userData, allData] = await Promise.all([
+          fetchUserAchievements(session.user.id, null),
+          fetchAchievements(session.user.id, null),
+        ]);
+        
         const fetchedAchievements = userData.achievements || [];
         // If no achievements, use mock data for prototyping
         if (fetchedAchievements.length === 0) {
@@ -209,13 +213,6 @@ export function RecentAchievements() {
           // Get the most recent 10 achievements
           setRecentAchievements(fetchedAchievements.slice(0, 10));
         }
-
-        // Fetch all achievements to get in-progress ones
-        if (!session?.user?.id) {
-          setIsLoading(false);
-          return;
-        }
-        const allData = await fetchAchievements(session.user.id, null);
         // Filter for in-progress achievements (have progress but not unlocked)
         const inProgress = (allData.achievements || []).filter((achievement: AllAchievement) => {
           const hasProgress = achievement.progressValue !== undefined && 
