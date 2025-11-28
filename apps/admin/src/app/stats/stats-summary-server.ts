@@ -341,7 +341,7 @@ async function getPerformanceOverTime(userId: string) {
  */
 async function getCategoryPerformance(
   userId: string,
-  completions: Array<{ quizSlug: string; score: number; totalQuestions: number }>
+  completions?: Array<{ quizSlug: string; score: number; totalQuestions: number }>
 ) {
   const startTime = Date.now()
   
@@ -383,7 +383,7 @@ async function getCategoryPerformance(
   }
   
   // Fallback: Calculate from quiz structure
-  if (completions.length === 0) {
+  if (!completions || completions.length === 0) {
     return []
   }
   
@@ -657,43 +657,36 @@ async function getSeasonStats(userId: string) {
 export async function getStatsSummaryCritical(userId: string): Promise<Pick<StatsData, 'summary' | 'streaks' | 'categories' | 'weeklyStreak'>> {
   const startTime = Date.now()
   
-  // Execute critical queries in parallel
-  const [summary, streaks] = await Promise.all([
-    getSummaryStats(userId),
-    getStreaks(userId),
-  ])
-  
   // OPTIMIZATION: Fetch completions once with scores (limited to last 52 weeks for performance)
-  // This data is used for both weekly streak AND category performance fallback
+  // This data is used for weekly streak calculation
   const fiftyTwoWeeksAgo = new Date()
   fiftyTwoWeeksAgo.setDate(fiftyTwoWeeksAgo.getDate() - (52 * 7))
   
-  const completionsWithScores = await prisma.quizCompletion.findMany({
-    where: { 
-      userId,
-      completedAt: { gte: fiftyTwoWeeksAgo },
-    },
-    select: {
-      completedAt: true,
-      quizSlug: true,
-      score: true,
-      totalQuestions: true,
-    },
-    orderBy: { completedAt: 'desc' },
-    take: 100, // Limit to 100 most recent (more than enough for 52 weeks)
-  })
+  // Execute ALL critical queries in parallel for maximum performance
+  const [summary, streaks, categoryStats, completionsWithScores] = await Promise.all([
+    getSummaryStats(userId),
+    getStreaks(userId),
+    getCategoryPerformance(userId), // Function will use pre-computed table first
+    prisma.quizCompletion.findMany({
+      where: { 
+        userId,
+        completedAt: { gte: fiftyTwoWeeksAgo },
+      },
+      select: {
+        completedAt: true,
+        quizSlug: true,
+        score: true,
+        totalQuestions: true,
+      },
+      orderBy: { completedAt: 'desc' },
+      take: 100, // Limit to 100 most recent (more than enough for 52 weeks)
+    }),
+  ])
   
-  // Calculate weekly streak from completions
+  // Calculate weekly streak from completions (in-memory, fast)
   const weeklyStreak = calculateWeeklyStreakData(completionsWithScores.map(c => ({
     completedAt: c.completedAt,
     quizSlug: c.quizSlug,
-  })))
-  
-  // Get category performance - uses pre-computed table if available (fast), otherwise uses completions
-  const categoryStats = await getCategoryPerformance(userId, completionsWithScores.map(c => ({
-    quizSlug: c.quizSlug,
-    score: c.score,
-    totalQuestions: c.totalQuestions,
   })))
   
   const totalTime = Date.now() - startTime
