@@ -5,6 +5,7 @@
 
 import { prisma } from '@schoolquiz/db'
 import { StatsData } from './stats-server'
+import { unstable_cache } from 'next/cache'
 
 /**
  * Get summary stats from pre-computed summary table (ultra-fast single SELECT)
