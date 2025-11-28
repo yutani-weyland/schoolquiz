@@ -127,13 +127,13 @@ export function QuizStatusBar({
           <div
             className={`relative rounded-full font-semibold flex items-center transition-colors duration-300 ease-in-out whitespace-nowrap ${scorePillClass} backdrop-blur-sm`}
             style={{
-              gap: "clamp(0.75rem, 1.5vw, 1rem)",
-              padding: "clamp(0.75rem, 1.5vw, 1.5rem) clamp(1.5rem, 3vw, 3rem)",
+              gap: "clamp(0.5rem, min(1.5vw, 2vh), 1rem)",
+              padding: "clamp(0.5rem, min(1.5vw, 2.5vh), 1.5rem) clamp(1rem, min(3vw, 4vh), 3rem)",
             }}
             aria-label={`Score: ${score} out of ${totalQuestions}`}
           >
-            <span className="font-medium opacity-90" style={{ fontSize: "clamp(1rem, 2vw, 1.5rem)" }}>Score:</span>
-            <span className="font-bold tabular-nums leading-none" style={{ fontSize: "clamp(1.75rem, 4vw, 3rem)", letterSpacing: "-0.045em" }}>
+            <span className="font-medium opacity-90" style={{ fontSize: "clamp(0.875rem, min(2vw, 3vh), 1.5rem)" }}>Score:</span>
+            <span className="font-bold tabular-nums leading-none" style={{ fontSize: "clamp(1.25rem, min(4vw, 5vh), 3rem)", letterSpacing: "-0.045em" }}>
               {score} / {totalQuestions}
             </span>
           </div>

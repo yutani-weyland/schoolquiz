@@ -148,8 +148,8 @@ function RoundIntro({ round, textColor, onStart, finaleRoundNumber }: RoundIntro
             textColor === "white" ? "bg-white text-gray-900 hover:bg-white/90" : "bg-gray-900 text-white hover:bg-gray-800"
           }`}
           style={{
-            fontSize: "clamp(1rem, 2vw, 1.5rem)",
-            padding: "clamp(0.75rem, 1.5vw, 1.25rem) clamp(2rem, 4vw, 2.5rem)",
+            fontSize: "clamp(0.875rem, min(2vw, 3vh), 1.5rem)",
+            padding: "clamp(0.625rem, min(1.5vw, 2.5vh), 1.25rem) clamp(1.5rem, min(4vw, 6vh), 2.5rem)",
           }}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}

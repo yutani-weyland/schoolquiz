@@ -37,14 +37,18 @@ export default function AnswerReveal({
 	className,
 }: Props) {
 	const isCompact = size === "compact";
-	const BUTTON_HEIGHT = isCompact ? 56 : 68;
-	const BUTTON_RADIUS = BUTTON_HEIGHT / 2;
-	const CIRCLE_SIZE = isCompact ? 42 : 48; // Circle size for the X/Check buttons - fits inside button
-	const CIRCLE_PADDING = isCompact ? 8 : 10; // Padding from the edge inside the button
-	const buttonFontSize = isCompact ? "1.35rem" : "1.5rem";
-	const encouragementFontSize = isCompact ? "1rem" : "1.25rem";
-	const encouragementPaddingX = isCompact ? 18 : 24;
-	const encouragementPaddingY = isCompact ? 12 : 16;
+	
+	// Use CSS-based responsive sizing instead of JavaScript scaling
+	// This ensures the button scales properly with both width and height constraints
+	const baseButtonHeight = isCompact ? 56 : 68;
+	const BUTTON_HEIGHT = `clamp(${baseButtonHeight * 0.7}px, min(${baseButtonHeight * 0.1}vw, ${baseButtonHeight * 0.15}vh), ${baseButtonHeight}px)`;
+	const BUTTON_RADIUS = isCompact ? "clamp(19.6px, min(2.8vw, 4.2vh), 28px)" : "clamp(23.8px, min(3.4vw, 5.1vh), 34px)";
+	const CIRCLE_SIZE = isCompact ? "clamp(29.4px, min(4.2vw, 6.3vh), 42px)" : "clamp(33.6px, min(4.8vw, 7.2vh), 48px)";
+	const CIRCLE_PADDING = isCompact ? "clamp(5.6px, min(0.8vw, 1.2vh), 8px)" : "clamp(7px, min(1vw, 1.5vh), 10px)";
+	const buttonFontSize = isCompact ? "clamp(0.945rem, min(1.35vw, 2.025vh), 1.35rem)" : "clamp(1.05rem, min(1.5vw, 2.25vh), 1.5rem)";
+	const encouragementFontSize = isCompact ? "clamp(0.7rem, min(1vw, 1.5vh), 1rem)" : "clamp(0.875rem, min(1.25vw, 1.875vh), 1.25rem)";
+	const encouragementPaddingX = isCompact ? "clamp(12.6px, min(1.8vw, 2.7vh), 18px)" : "clamp(16.8px, min(2.4vw, 3.6vh), 24px)";
+	const encouragementPaddingY = isCompact ? "clamp(8.4px, min(1.2vw, 1.8vh), 12px)" : "clamp(11.2px, min(1.6vw, 2.4vh), 16px)";
 
 	const buttonBg = "#111111";
 	const buttonColor = "#FFFFFF";
@@ -294,7 +298,14 @@ export default function AnswerReveal({
 	// Get the button width - use initial estimate if available, otherwise use calculated
 	const resolvedWidth = isMobileViewport ? "100%" : `${Math.round(targetWidth)}px`;
 	
-	const minHorizontalPadding = Math.max(CIRCLE_SIZE + CIRCLE_PADDING + 12, 32);
+	// Calculate min horizontal padding using CSS clamp - need to ensure it's large enough for circles
+	const minHorizontalPadding = isCompact 
+		? "clamp(32px, min(calc(29.4px + 5.6px + 12px), calc(4.2vw + 0.8vw + 12px), calc(6.3vh + 1.2vh + 12px)), 62px)"
+		: "clamp(32px, min(calc(33.6px + 7px + 12px), calc(4.8vw + 1vw + 12px), calc(7.2vh + 1.5vh + 12px)), 68px)";
+	const buttonPaddingY = isCompact 
+		? "clamp(8px, min(1.2vw, 1.8vh), 16px)"
+		: "clamp(10px, min(1.4vw, 2.1vh), 16px)";
+	
 	const buttonContent = (
 		<motion.button
 					ref={buttonRef}
@@ -310,15 +321,16 @@ export default function AnswerReveal({
 					style={{
 						alignSelf: "flex-start",
 						marginLeft: 0,
-						borderRadius: isMobileViewport ? "32px" : `${BUTTON_RADIUS}px`,
+						borderRadius: isMobileViewport ? "32px" : BUTTON_RADIUS,
 						height: BUTTON_HEIGHT,
 						width: resolvedWidth,
 						minWidth: isMobileViewport ? "auto" : resolvedWidth,
 						maxWidth: "100%", // Allow button to shrink to fit container
 						paddingLeft: minHorizontalPadding,
 						paddingRight: minHorizontalPadding,
-						paddingTop: 16,
-						paddingBottom: 16,
+						paddingTop: buttonPaddingY,
+						paddingBottom: buttonPaddingY,
+						fontSize: buttonFontSize,
 						color: buttonColor,
 						boxShadow: "none",
 						backgroundColor: buttonBg,
@@ -326,8 +338,8 @@ export default function AnswerReveal({
 						overflow: 'visible', // Allow buttons to be visible
 						lineHeight: 1.1,
 						textAlign: 'center',
-						// Smooth transition if width needs to adjust
-						transition: 'width 0.2s ease-out, max-width 0.2s ease-out, transform 0.35s cubic-bezier(0.22,1,0.36,1), box-shadow 0.35s ease',
+						// Smooth transition if width/height needs to adjust
+						transition: 'width 0.2s ease-out, max-width 0.2s ease-out, height 0.2s ease-out, padding 0.2s ease-out, font-size 0.2s ease-out, transform 0.35s cubic-bezier(0.22,1,0.36,1), box-shadow 0.35s ease',
 						willChange: 'transform',
 					}}
 					animate={{
@@ -401,10 +413,11 @@ export default function AnswerReveal({
 							}}
 							className="absolute flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 cursor-pointer"
 							style={{
-								left: `${CIRCLE_PADDING}px`,
-								top: `${(BUTTON_HEIGHT - CIRCLE_SIZE) / 2}px`,
-								width: `${CIRCLE_SIZE}px`,
-								height: `${CIRCLE_SIZE}px`,
+								left: CIRCLE_PADDING,
+								top: '50%',
+								transform: 'translateY(-50%)',
+								width: CIRCLE_SIZE,
+								height: CIRCLE_SIZE,
 								borderRadius: '50%',
 								background: 'var(--color-wrong)',
 								border: textColor === "white" ? '2px solid rgba(255,255,255,0.55)' : '2px solid rgba(17,17,17,0.12)',
@@ -416,8 +429,9 @@ export default function AnswerReveal({
 							animate={{ 
 								scale: hasShownEncouragement && !isMarkedCorrect ? [1, 1.08, 1] : 1, 
 								opacity: showGreenFlash ? [1, 0, 0, 1] : 1, // Hide when green flash is active
-								left: `${CIRCLE_PADDING}px`,
-								top: `${(BUTTON_HEIGHT - CIRCLE_SIZE) / 2}px`,
+								left: CIRCLE_PADDING,
+								top: '50%',
+								transform: 'translateY(-50%)',
 								boxShadow: hasShownEncouragement && !isMarkedCorrect 
 									? ['0 0 0px rgba(239, 68, 68, 0)', '0 0 12px rgba(239, 68, 68, 0.4)', '0 0 0px rgba(239, 68, 68, 0)']
 									: 'none',
@@ -599,10 +613,11 @@ export default function AnswerReveal({
 							}}
 							className="absolute flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 cursor-pointer"
 							style={{
-								right: `${CIRCLE_PADDING}px`,
-								top: `${(BUTTON_HEIGHT - CIRCLE_SIZE) / 2}px`,
-								width: `${CIRCLE_SIZE}px`,
-								height: `${CIRCLE_SIZE}px`,
+								right: CIRCLE_PADDING,
+								top: '50%',
+								transform: 'translateY(-50%)',
+								width: CIRCLE_SIZE,
+								height: CIRCLE_SIZE,
 								borderRadius: '50%',
 								background: 'var(--color-correct)',
 								border: textColor === "white" ? '2px solid rgba(255,255,255,0.55)' : '2px solid rgba(17,17,17,0.12)',
@@ -614,8 +629,9 @@ export default function AnswerReveal({
 							animate={{ 
 								scale: hasShownEncouragement && !isMarkedCorrect ? [1, 1.08, 1] : 1, 
 								opacity: showRedFlash ? [1, 0, 0, 1] : 1, // Hide when red flash is active
-								right: `${CIRCLE_PADDING}px`,
-								top: `${(BUTTON_HEIGHT - CIRCLE_SIZE) / 2}px`,
+								right: CIRCLE_PADDING,
+								top: '50%',
+								transform: 'translateY(-50%)',
 								boxShadow: hasShownEncouragement && !isMarkedCorrect 
 									? ['0 0 0px rgba(16, 185, 129, 0)', '0 0 12px rgba(16, 185, 129, 0.4)', '0 0 0px rgba(16, 185, 129, 0)']
 									: 'none',
@@ -715,8 +731,8 @@ export default function AnswerReveal({
 						}}
 						className="absolute pointer-events-none whitespace-nowrap"
 						style={{
-							left: `${CIRCLE_PADDING + CIRCLE_SIZE / 2}px`,
-							top: `${(BUTTON_HEIGHT - CIRCLE_SIZE) / 2 + CIRCLE_SIZE / 2}px`,
+							left: `calc(${CIRCLE_PADDING} + ${CIRCLE_SIZE} / 2)`,
+							top: '50%',
 							transformOrigin: 'center center',
 							zIndex: 100 // Highest z-index so messages appear above everything
 						}}
@@ -739,7 +755,7 @@ export default function AnswerReveal({
 									? "0 12px 28px rgba(0, 0, 0, 0.35)"
 									: "0 12px 28px rgba(17, 17, 17, 0.14)",
 								fontSize: encouragementFontSize,
-								padding: `${encouragementPaddingY}px ${encouragementPaddingX}px`
+								padding: `${encouragementPaddingY} ${encouragementPaddingX}`
 							}}
 						>
 							{msg.message}
