@@ -376,7 +376,7 @@ function PresenterMode({
       role="main"
       aria-label="Quiz presenter"
     >
-      {/* Sparticles background for People's Round */}
+      {/* Sparticles background for People's Round - appears on top of everything */}
       {isPeoplesRoundQuestion && <SparticlesBackground isActive={true} />}
       <PresenterNavigation
         textColor={textColor}
@@ -403,7 +403,7 @@ function PresenterMode({
         aria-live="polite"
       >
         <div
-          className="fixed left-0 right-0 flex justify-center z-30"
+          className="fixed left-0 right-0 flex justify-center z-50"
           style={{ top: "46%", transform: "translateY(-50%)", padding: "0 1.5rem" }}
         >
           <div className="max-w-[92ch] md:max-w-[108ch] lg:max-w-[128ch] xl:max-w-[150ch] text-center [text-wrap:balance] w-full mx-16 sm:mx-20 md:mx-24 lg:mx-28 px-4 sm:px-6 pt-16 sm:pt-20">
@@ -429,7 +429,7 @@ function PresenterMode({
 
         {isPositionCalculated && (
           <motion.div
-            className="fixed flex justify-center z-30"
+            className="fixed flex justify-center z-50"
             style={{ 
               transform: "translateX(-50%)", 
               overflow: "visible",
@@ -498,7 +498,7 @@ function PresenterNavigation({
 
   return (
     <>
-      <div className="fixed left-4 sm:left-8 z-40" style={{ top: "45%", transform: "translateY(-50%)" }}>
+      <div className="fixed left-4 sm:left-8 z-50" style={{ top: "45%", transform: "translateY(-50%)" }}>
         <AnimatePresence>
           {canGoPrevious && (
             <motion.button
@@ -520,7 +520,7 @@ function PresenterNavigation({
         </AnimatePresence>
       </div>
 
-      <div className="fixed right-4 sm:right-8 z-40 flex flex-col gap-3" style={{ top: "45%", transform: "translateY(-50%)" }}>
+      <div className="fixed right-4 sm:right-8 z-50 flex flex-col gap-3" style={{ top: "45%", transform: "translateY(-50%)" }}>
         {/* Next/Finish Button */}
         {!isLastQuestion && (
           <motion.button

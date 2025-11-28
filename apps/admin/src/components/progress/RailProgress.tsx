@@ -193,7 +193,7 @@ export default function RailProgress({
 			aria-valuemax={total}
 			aria-valuenow={current}
 			aria-label="Quiz progress"
-			className={`fixed bottom-0 left-0 right-0 z-40 w-full pb-safe pt-2 pb-4 sm:pt-3 sm:pb-5 transition-all duration-500 ease-in-out ${isMouseActive ? "opacity-100" : "opacity-35"} ${className}`}
+			className={`fixed bottom-0 left-0 right-0 z-50 w-full pb-safe pt-2 pb-4 sm:pt-3 sm:pb-5 transition-all duration-500 ease-in-out ${isMouseActive ? "opacity-100" : "opacity-35"} ${className}`}
 			style={{
 				backgroundColor: backgroundColor || "transparent",
 				transition: "background-color 300ms ease-in-out, opacity 500ms ease-in-out"

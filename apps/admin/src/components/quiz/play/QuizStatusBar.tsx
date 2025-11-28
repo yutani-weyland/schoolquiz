@@ -125,7 +125,7 @@ export function QuizStatusBar({
 
   return (
     <>
-      <div className="fixed top-0 left-1/2 -translate-x-1/2 z-40 pt-24 pb-3 px-4 sm:px-6">
+      <div className="fixed top-0 left-1/2 -translate-x-1/2 z-50 pt-24 pb-3 px-4 sm:px-6">
         <div className="flex flex-col gap-2 items-center">
           {/* Top row: Round title, Score, Timer */}
           <div className="flex flex-row gap-3 sm:gap-4 items-center justify-center flex-nowrap">

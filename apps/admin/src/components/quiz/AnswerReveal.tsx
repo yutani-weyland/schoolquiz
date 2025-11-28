@@ -436,7 +436,7 @@ export default function AnswerReveal({
 								background: 'var(--color-wrong)',
 								border: textColor === "white" ? '2px solid rgba(255,255,255,0.55)' : '2px solid rgba(17,17,17,0.12)',
 								cursor: 'pointer',
-								zIndex: 30,
+								zIndex: 50,
 								boxShadow: '0 16px 32px rgba(255,107,107,0.35)',
 							}}
 							initial={{ scale: 0, opacity: 0 }}
@@ -640,7 +640,7 @@ export default function AnswerReveal({
 								background: 'var(--color-correct)',
 								border: textColor === "white" ? '2px solid rgba(255,255,255,0.55)' : '2px solid rgba(17,17,17,0.12)',
 								cursor: 'pointer',
-								zIndex: 30,
+								zIndex: 50,
 								boxShadow: '0 16px 32px rgba(32,201,151,0.32)',
 							}}
 							initial={{ scale: 0, opacity: 0 }}

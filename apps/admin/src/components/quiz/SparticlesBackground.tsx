@@ -6,8 +6,17 @@ interface SparticlesBackgroundProps {
   isActive: boolean;
 }
 
+// Extend Window interface for sparticles
+declare global {
+  interface Window {
+    Sparticles?: any;
+    sparticles?: any;
+    SparticlesJS?: any;
+  }
+}
+
 export function SparticlesBackground({ isActive }: SparticlesBackgroundProps) {
-  const containerRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null); // Sparticles creates canvas inside this div
   const sparticlesInstanceRef = useRef<any>(null);
   const scriptLoadedRef = useRef<boolean>(false);
   const initializedRef = useRef<boolean>(false);
@@ -19,8 +28,6 @@ export function SparticlesBackground({ isActive }: SparticlesBackgroundProps) {
         try {
           if (typeof sparticlesInstanceRef.current.destroy === 'function') {
             sparticlesInstanceRef.current.destroy();
-          } else if (typeof sparticlesInstanceRef.current.stop === 'function') {
-            sparticlesInstanceRef.current.stop();
           }
         } catch (error) {
           console.warn('Error cleaning up sparticles:', error);
@@ -39,7 +46,6 @@ export function SparticlesBackground({ isActive }: SparticlesBackgroundProps) {
     // Load sparticles from CDN
     const loadSparticles = () => {
       // Check if already loaded
-      // @ts-ignore
       if (window.Sparticles && containerRef.current) {
         initializeSparticles();
         return;
@@ -47,15 +53,12 @@ export function SparticlesBackground({ isActive }: SparticlesBackgroundProps) {
 
       // Check if script is already being loaded
       if (scriptLoadedRef.current && document.querySelector('script[src*="sparticles"]')) {
-        // Wait for script to load
         const checkInterval = setInterval(() => {
-          // @ts-ignore
           if (window.Sparticles && containerRef.current) {
             clearInterval(checkInterval);
             initializeSparticles();
           }
         }, 100);
-
         setTimeout(() => clearInterval(checkInterval), 5000);
         return;
       }
@@ -65,7 +68,6 @@ export function SparticlesBackground({ isActive }: SparticlesBackgroundProps) {
       if (existingScript) {
         scriptLoadedRef.current = true;
         setTimeout(() => {
-          // @ts-ignore
           if (window.Sparticles) {
             initializeSparticles();
           }
@@ -76,25 +78,29 @@ export function SparticlesBackground({ isActive }: SparticlesBackgroundProps) {
       // Load script from CDN
       scriptLoadedRef.current = true;
       const script = document.createElement('script');
-      // Use jsdelivr CDN for sparticles
       script.src = 'https://cdn.jsdelivr.net/npm/sparticles@1.3.1/dist/sparticles.min.js';
       script.async = true;
       
       script.onload = () => {
+        console.log('Sparticles script loaded successfully from jsdelivr');
         scriptLoadedRef.current = true;
-        initializeSparticles();
+        setTimeout(() => {
+          initializeSparticles();
+        }, 100);
       };
 
       script.onerror = () => {
         console.warn('Failed to load sparticles from jsdelivr, trying unpkg');
         scriptLoadedRef.current = false;
-        // Try alternative CDN
         const altScript = document.createElement('script');
         altScript.src = 'https://unpkg.com/sparticles@1.3.1/dist/sparticles.min.js';
         altScript.async = true;
         altScript.onload = () => {
+          console.log('Sparticles script loaded successfully from unpkg');
           scriptLoadedRef.current = true;
-          initializeSparticles();
+          setTimeout(() => {
+            initializeSparticles();
+          }, 100);
         };
         altScript.onerror = () => {
           console.error('Failed to load sparticles from all CDNs. Background animation will not be available.');
@@ -107,22 +113,24 @@ export function SparticlesBackground({ isActive }: SparticlesBackgroundProps) {
     };
 
     const initializeSparticles = () => {
-      if (!containerRef.current) return;
-      if (initializedRef.current) return;
-
-      // Set canvas dimensions
-      const canvas = containerRef.current;
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      if (!containerRef.current) {
+        console.warn('Sparticles: containerRef.current is null');
+        return;
+      }
+      if (initializedRef.current) {
+        console.log('Sparticles: Already initialized, skipping');
+        return;
+      }
 
       try {
-        // @ts-ignore
-        const Sparticles = window.Sparticles || (window as any).sparticles;
+        const Sparticles = window.Sparticles;
+        
         if (!Sparticles) {
           console.error('Sparticles not available on window');
           return;
         }
 
+        // Config matching sparticlesjs.dev format from user's original request
         const config = {
           composition: "source-over",
           count: 500,
@@ -144,27 +152,24 @@ export function SparticlesBackground({ isActive }: SparticlesBackgroundProps) {
           drift: 1,
           glow: 0,
           twinkle: false,
-          color: ["random"],
+          color: "random", // Sparticles supports "random" as a string
           shape: "diamond",
           imageUrl: "",
         };
 
-        // Try different initialization methods
-        if (typeof Sparticles === 'function') {
-          sparticlesInstanceRef.current = new Sparticles(containerRef.current, config);
-          initializedRef.current = true;
-        } else if (Sparticles.default && typeof Sparticles.default === 'function') {
-          sparticlesInstanceRef.current = new Sparticles.default(containerRef.current, config);
-          initializedRef.current = true;
-        } else if (Sparticles.create && typeof Sparticles.create === 'function') {
-          sparticlesInstanceRef.current = Sparticles.create(containerRef.current, config);
-          initializedRef.current = true;
-        } else if (Sparticles.init && typeof Sparticles.init === 'function') {
-          sparticlesInstanceRef.current = Sparticles.init(containerRef.current, config);
-          initializedRef.current = true;
-        } else {
-          console.error('Sparticles API not recognized', Sparticles);
-        }
+        console.log('Initializing Sparticles with container element and config:', config);
+
+        // According to docs: new Sparticles(element, options)
+        // Sparticles will create a canvas inside the container element
+        const instance = new Sparticles(containerRef.current, config);
+        
+        sparticlesInstanceRef.current = instance;
+        initializedRef.current = true;
+        
+        console.log('Sparticles initialized successfully!', {
+          instance: instance,
+          container: containerRef.current,
+        });
       } catch (error) {
         console.error('Failed to initialize sparticles:', error);
       }
@@ -172,11 +177,10 @@ export function SparticlesBackground({ isActive }: SparticlesBackgroundProps) {
 
     loadSparticles();
 
-    // Handle window resize to update canvas dimensions
+    // Handle window resize - sparticles handles this internally, but we can call setCanvasSize if needed
     const handleResize = () => {
-      if (containerRef.current) {
-        containerRef.current.width = window.innerWidth;
-        containerRef.current.height = window.innerHeight;
+      if (sparticlesInstanceRef.current && typeof sparticlesInstanceRef.current.setCanvasSize === 'function') {
+        sparticlesInstanceRef.current.setCanvasSize(window.innerWidth, window.innerHeight);
       }
     };
 
@@ -188,8 +192,6 @@ export function SparticlesBackground({ isActive }: SparticlesBackgroundProps) {
         try {
           if (typeof sparticlesInstanceRef.current.destroy === 'function') {
             sparticlesInstanceRef.current.destroy();
-          } else if (typeof sparticlesInstanceRef.current.stop === 'function') {
-            sparticlesInstanceRef.current.stop();
           }
         } catch (error) {
           console.warn('Error cleaning up sparticles:', error);
@@ -198,14 +200,17 @@ export function SparticlesBackground({ isActive }: SparticlesBackgroundProps) {
         initializedRef.current = false;
       }
     };
-  }, [isActive]); // Only re-run when isActive changes
+  }, [isActive]);
 
   if (!isActive) return null;
 
+  // Sparticles expects a container element - it will create the canvas inside
+  // Use z-[45] to appear above status bar (z-40) and navigation (z-30/z-40) but below modals (z-50)
+  // pointer-events-none ensures it doesn't block interactions
   return (
-    <canvas
+    <div
       ref={containerRef}
-      className="fixed inset-0 z-0 pointer-events-none"
+      className="fixed inset-0 pointer-events-none"
       style={{
         width: '100vw',
         height: '100vh',
@@ -213,9 +218,9 @@ export function SparticlesBackground({ isActive }: SparticlesBackgroundProps) {
         left: 0,
         right: 0,
         bottom: 0,
-        display: 'block',
+        zIndex: 45, // Above status bar and navigation so particles appear on top of them
+        position: 'fixed',
       }}
     />
   );
 }
-
