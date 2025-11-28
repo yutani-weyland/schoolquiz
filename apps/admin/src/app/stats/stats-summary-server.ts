@@ -811,11 +811,12 @@ export async function getStatsSummaryCritical(userId: string): Promise<Pick<Stat
   const { summary, streaks } = summaryAndStreaks
   
   // Transform database weekly data (already calculated by SQL)
+  // Note: completed_at is already an ISO string from SQL (cast to text), so we use it directly
   const weeklyStreak = weeklyCompletions.map(w => ({
     week: w.week,
     date: w.date,
     completed: !!w.completed_at,
-    completedAt: w.completed_at?.toISOString(),
+    completedAt: w.completed_at || undefined, // Already an ISO string from SQL
     quizSlug: w.quiz_slug || undefined,
   }))
   
