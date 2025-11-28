@@ -399,7 +399,7 @@ export function RecentAchievements() {
 
             {/* In Progress Achievements Grid */}
             <div className="flex flex-wrap justify-center gap-4 sm:gap-6">
-              {inProgressAchievements.map((achievement, index) => (
+              {finalInProgressAchievements.map((achievement, index) => (
                 <motion.div
                   key={achievement.id}
                   initial={{ opacity: 0, scale: 0.9 }}
@@ -434,7 +434,7 @@ export function RecentAchievements() {
                       (finalInProgressAchievements.reduce((sum, a) => {
                         const percent = a.progressMax ? (a.progressValue || 0) / a.progressMax : 0;
                         return sum + percent;
-                      }, 0) / inProgressAchievements.length) * 100
+                      }, 0) / finalInProgressAchievements.length) * 100
                     )}% average progress across all achievements
                   </span>
                 </div>
