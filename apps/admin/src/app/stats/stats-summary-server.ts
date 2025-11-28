@@ -658,15 +658,21 @@ export async function getStatsSummaryCritical(userId: string): Promise<Pick<Stat
   const startTime = Date.now()
   
   // Execute critical queries in parallel
-  const [summary, streaks, completionWeeks] = await Promise.all([
+  const [summary, streaks] = await Promise.all([
     getSummaryStats(userId),
     getStreaks(userId),
-    getCompletionWeeks(userId),
   ])
   
-  // Fetch completions with scores for weekly streak and category performance
+  // OPTIMIZATION: Fetch completions once with scores (limited to last 52 weeks for performance)
+  // This data is used for both weekly streak AND category performance fallback
+  const fiftyTwoWeeksAgo = new Date()
+  fiftyTwoWeeksAgo.setDate(fiftyTwoWeeksAgo.getDate() - (52 * 7))
+  
   const completionsWithScores = await prisma.quizCompletion.findMany({
-    where: { userId },
+    where: { 
+      userId,
+      completedAt: { gte: fiftyTwoWeeksAgo },
+    },
     select: {
       completedAt: true,
       quizSlug: true,
@@ -674,13 +680,21 @@ export async function getStatsSummaryCritical(userId: string): Promise<Pick<Stat
       totalQuestions: true,
     },
     orderBy: { completedAt: 'desc' },
+    take: 100, // Limit to 100 most recent (more than enough for 52 weeks)
   })
   
-  // Calculate weekly streak
-  const weeklyStreak = calculateWeeklyStreakData(completionsWithScores)
+  // Calculate weekly streak from completions
+  const weeklyStreak = calculateWeeklyStreakData(completionsWithScores.map(c => ({
+    completedAt: c.completedAt,
+    quizSlug: c.quizSlug,
+  })))
   
-  // Get category performance
-  const categoryStats = await getCategoryPerformance(userId, completionsWithScores)
+  // Get category performance - uses pre-computed table if available (fast), otherwise uses completions
+  const categoryStats = await getCategoryPerformance(userId, completionsWithScores.map(c => ({
+    quizSlug: c.quizSlug,
+    score: c.score,
+    totalQuestions: c.totalQuestions,
+  })))
   
   const totalTime = Date.now() - startTime
   console.log(`[Stats Summary] Critical stats took ${totalTime}ms`)
