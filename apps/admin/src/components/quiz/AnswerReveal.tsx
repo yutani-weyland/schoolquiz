@@ -295,8 +295,13 @@ export default function AnswerReveal({
 
 	const tooltipContent = revealed ? "Click ✓ if you got it right, or ✗ if you got it wrong" : null;
 	
-	// Get the button width - use initial estimate if available, otherwise use calculated
-	const resolvedWidth = isMobileViewport ? "100%" : `${Math.round(targetWidth)}px`;
+	// Get the button width - use CSS clamp with min() to respect both width and height constraints
+	// This ensures the button scales down when vertical space is limited
+	const baseMinWidth = isCompact ? 280 : 320;
+	const baseMaxWidth = isCompact ? 420 : 450;
+	const resolvedWidth = isMobileViewport 
+		? "100%" 
+		: `clamp(${baseMinWidth}px, min(${baseMaxWidth * 0.6}vw, ${baseMaxWidth * 0.9}vh), ${baseMaxWidth}px)`;
 	
 	// Calculate min horizontal padding using CSS clamp - need to ensure it's large enough for circles
 	const minHorizontalPadding = isCompact 
@@ -324,7 +329,7 @@ export default function AnswerReveal({
 						borderRadius: isMobileViewport ? "32px" : BUTTON_RADIUS,
 						height: BUTTON_HEIGHT,
 						width: resolvedWidth,
-						minWidth: isMobileViewport ? "auto" : resolvedWidth,
+						minWidth: isMobileViewport ? "auto" : baseMinWidth + "px",
 						maxWidth: "100%", // Allow button to shrink to fit container
 						paddingLeft: minHorizontalPadding,
 						paddingRight: minHorizontalPadding,
@@ -693,7 +698,7 @@ export default function AnswerReveal({
 	);
 
 	return (
-		<div className="flex items-start justify-start gap-4 w-full max-w-2xl relative">
+		<div className="flex items-start justify-start gap-4 w-full max-w-2xl relative" style={{ padding: '2px' }}>
 			{/* Main Reveal Button */}
 			<div className="w-full flex items-center justify-start" style={{ overflow: 'visible' }}>
 				{buttonContent}

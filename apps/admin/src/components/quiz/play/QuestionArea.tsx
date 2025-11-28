@@ -258,6 +258,13 @@ function PresenterMode({
       spacing = Math.max(40, topSpacing);
     }
 
+    // Get RailProgress element to account for its height
+    const railProgressEl = document.querySelector('[role="progressbar"][aria-label="Quiz progress"]') as HTMLElement | null;
+    let railProgressHeight = 0;
+    if (railProgressEl) {
+      railProgressHeight = railProgressEl.getBoundingClientRect().height || 0;
+    }
+
     // Get actual button element if it exists to measure real dimensions
     const buttonEl = document.querySelector('[aria-pressed]') as HTMLElement | null;
     const isMobile = window.innerWidth < 768;
@@ -271,8 +278,12 @@ function PresenterMode({
     }
 
     // Calculate position with cached values
+    // Account for outline (2px) + container padding (2px) = 4px on each side
+    const outlineOffset = 4;
     const buttonPadding = 40;
-    const minBottomPadding = 20;
+    // Add RailProgress height + extra spacing (20px) to push button up slightly relative to progress bar
+    const railProgressSpacing = railProgressHeight > 0 ? railProgressHeight + 20 : 60;
+    const minBottomPadding = railProgressSpacing + outlineOffset;
     const viewportHeight = window.innerHeight;
     const viewportWidth = window.innerWidth;
     const maxTop = viewportHeight - buttonHeight - buttonPadding - minBottomPadding;
@@ -425,7 +436,7 @@ function PresenterMode({
               left: { type: "spring", stiffness: 260, damping: 28 },
             }}
           >
-            <div style={{ maxWidth: "100%", width: "auto" }}>
+            <div style={{ maxWidth: "100%", width: "auto", padding: "2px" }}>
               <AnswerReveal
                 answerText={question.answer}
                 revealed={isAnswerRevealed}

@@ -559,6 +559,10 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 	const [showTimer, setShowTimer] = useState(true);
 	const [isNarrowViewport, setIsNarrowViewport] = useState(false);
 	const [isMobileLayout, setIsMobileLayout] = useState(false);
+	const [viewportHeight, setViewportHeight] = useState(() => {
+		if (typeof window === "undefined") return 800;
+		return window.innerHeight;
+	});
 	const [trophies, setTrophies] = useState<string[]>([]);
 	const [notchNotifications, setNotchNotifications] = useState<Array<{ id: string; message: string; timestamp: number }>>([]);
 	const [isNotchLocked, setIsNotchLocked] = useState(false);
@@ -719,12 +723,17 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 		}
 	}, [currentScreen, isTimerRunning, startTimer]);
 
-	// Handle viewport width for notch
+	// Handle viewport width and height for layout switching
 	useEffect(() => {
 		const handleResize = () => {
 			const width = window.innerWidth;
+			const height = window.innerHeight;
 			setIsNarrowViewport(width < 1024);
-			setIsMobileLayout(width < 768);
+			// Lower width threshold (from 768 to 900) and add height-based condition
+			// Switch to grid if width < 900 OR height < 650 (balanced threshold)
+			const shouldUseGridLayout = width < 900 || height < 650;
+			setIsMobileLayout(shouldUseGridLayout);
+			setViewportHeight(height);
 		};
 		handleResize(); // Check on mount
 		window.addEventListener('resize', handleResize);
