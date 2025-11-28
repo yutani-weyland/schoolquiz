@@ -382,31 +382,40 @@ function getWeekKey(date: Date): string {
 }
 
 /**
- * Get performance over time (last 100 quizzes with minimal fields)
+ * Get performance over time (last 100 quizzes with database-level score calculation)
+ * OPTIMIZATION: Database calculates percentage score, reducing JavaScript processing
  */
 async function getPerformanceOverTime(userId: string) {
   const startTime = Date.now()
   
-  const performanceData = await prisma.quizCompletion.findMany({
-    where: { userId },
-    select: {
-      completedAt: true,
-      score: true,
-      totalQuestions: true,
-      quizSlug: true,
-    },
-    orderBy: { completedAt: 'asc' },
-    take: 100, // Limit to last 100 quizzes
-  })
+  // Use raw SQL to calculate score percentage in database (faster than JavaScript)
+  const performanceData = await prisma.$queryRaw<Array<{
+    date: string
+    score: number
+    quiz_slug: string
+  }>>`
+    SELECT 
+      "completedAt"::date::text as date,
+      CASE 
+        WHEN "totalQuestions" > 0 
+        THEN ROUND((score::decimal / "totalQuestions") * 100, 1)
+        ELSE 0
+      END as score,
+      "quizSlug" as quiz_slug
+    FROM quiz_completions
+    WHERE "userId" = ${userId}
+    ORDER BY "completedAt" ASC
+    LIMIT 100
+  `
   
   const queryTime = Date.now() - startTime
   console.log(`[Stats Summary] Performance over time query took ${queryTime}ms (${performanceData.length} records)`)
   
-  // Transform in TypeScript
+  // Minimal transformation (database already calculated score)
   return performanceData.map(c => ({
-    date: c.completedAt.toISOString().split('T')[0],
-    score: c.totalQuestions > 0 ? Math.round((c.score / c.totalQuestions) * 100 * 10) / 10 : 0,
-    quizSlug: c.quizSlug,
+    date: c.date,
+    score: Number(c.score),
+    quizSlug: c.quiz_slug,
   }))
 }
 
