@@ -378,7 +378,7 @@ export function RecentAchievements() {
       {/* In Progress Section */}
       {inProgressAchievements.length > 0 && (
         <>
-          <div className={cn(recentAchievements.length > 0 && "border-t border-gray-200 dark:border-gray-700 pt-6 mt-6")}>
+          <div className={cn(displayRecentAchievements.length > 0 && "border-t border-gray-200 dark:border-gray-700 pt-6 mt-6")}>
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-blue-50 dark:bg-blue-900/20 rounded-xl flex items-center justify-center">
