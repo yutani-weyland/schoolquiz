@@ -22,21 +22,13 @@ async function getSummaryStats(userId: string) {
       total_correct_answers: number
       perfect_scores: number
       average_score: number
-      current_question_streak: number
-      best_question_streak: number
-      current_quiz_streak: number
-      best_quiz_streak: number
     }>>`
       SELECT 
         total_quizzes_played,
         total_questions_attempted,
         total_correct_answers,
         perfect_scores,
-        average_score,
-        current_question_streak,
-        best_question_streak,
-        current_quiz_streak,
-        best_quiz_streak
+        average_score
       FROM user_stats_summary
       WHERE user_id = ${userId}
     `
