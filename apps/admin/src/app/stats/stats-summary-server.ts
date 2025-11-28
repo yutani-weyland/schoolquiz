@@ -745,39 +745,66 @@ export async function getStatsSummaryCritical(userId: string): Promise<Pick<Stat
       const [summaryAndStreaks, categoryStats, completionsWithScores] = await Promise.all([
         getSummaryStatsAndStreaks(userId), // Combined query (saves 1 round trip)
         getCategoryPerformance(userId), // Function will use pre-computed table first
-        prisma.quizCompletion.findMany({
-          where: { 
-            userId,
-            completedAt: { gte: fiftyTwoWeeksAgo },
-          },
-          select: {
-            completedAt: true,
-            quizSlug: true,
-            score: true,
-            totalQuestions: true,
-          },
-          orderBy: { completedAt: 'desc' },
-          take: 52, // Only need 52 records max (one per week)
-        }),
+        // OPTIMIZATION: Use raw SQL to get weekly completions (database calculates weeks)
+        // This is faster than fetching all records and calculating in JavaScript
+        prisma.$queryRaw<Array<{
+          week: string
+          date: string
+          completed_at: Date
+          quiz_slug: string | null
+        }>>`
+          WITH weeks AS (
+            SELECT 
+              TO_CHAR(date, 'IYYY-"W"IW') as week,
+              date::date as date
+            FROM generate_series(
+              CURRENT_DATE - INTERVAL '52 weeks',
+              CURRENT_DATE,
+              '1 week'::interval
+            ) as date
+          ),
+          completions_by_week AS (
+            SELECT DISTINCT ON (TO_CHAR("completedAt", 'IYYY-"W"IW'))
+              TO_CHAR("completedAt", 'IYYY-"W"IW') as week,
+              DATE_TRUNC('week', "completedAt")::date as week_start,
+              "completedAt",
+              "quizSlug"
+            FROM quiz_completions
+            WHERE "userId" = ${userId}
+              AND "completedAt" >= ${fiftyTwoWeeksAgo}
+            ORDER BY TO_CHAR("completedAt", 'IYYY-"W"IW'), "completedAt" ASC
+          )
+          SELECT 
+            w.week,
+            w.date::text as date,
+            COALESCE(c."completedAt", NULL) as completed_at,
+            c."quizSlug" as quiz_slug
+          FROM weeks w
+          LEFT JOIN completions_by_week c ON w.week = c.week
+          ORDER BY w.date DESC
+        `,
       ])
       
-      return { summaryAndStreaks, categoryStats, completionsWithScores }
+      return { summaryAndStreaks, categoryStats, weeklyCompletions }
     },
     [`stats-critical-${userId}`],
     {
-      revalidate: 30, // Cache for 30 seconds
+      revalidate: 60, // Cache for 60 seconds (stats don't change frequently)
       tags: [`stats-${userId}`], // Can be invalidated when user completes a quiz
     }
   )
   
-  const { summaryAndStreaks, categoryStats, completionsWithScores } = await getCachedStats()
+  const { summaryAndStreaks, categoryStats, weeklyCompletions } = await getCachedStats()
   const { summary, streaks } = summaryAndStreaks
   
-  // Calculate weekly streak from completions (in-memory, fast)
-  const weeklyStreak = calculateWeeklyStreakData(completionsWithScores.map(c => ({
-    completedAt: c.completedAt,
-    quizSlug: c.quizSlug,
-  })))
+  // Transform database weekly data (already calculated by SQL)
+  const weeklyStreak = weeklyCompletions.map(w => ({
+    week: w.week,
+    date: w.date,
+    completed: !!w.completed_at,
+    completedAt: w.completed_at?.toISOString(),
+    quizSlug: w.quiz_slug || undefined,
+  }))
   
   const totalTime = Date.now() - startTime
   console.log(`[Stats Summary] Critical stats took ${totalTime}ms`)
