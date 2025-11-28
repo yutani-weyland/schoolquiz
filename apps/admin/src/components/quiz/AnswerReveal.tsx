@@ -45,17 +45,23 @@ export default function AnswerReveal({
 	const BUTTON_RADIUS = isCompact ? "clamp(19.6px, min(2.8vw, 4.2vh), 28px)" : "clamp(23.8px, min(3.4vw, 5.1vh), 34px)";
 	const CIRCLE_SIZE = isCompact ? "clamp(29.4px, min(4.2vw, 6.3vh), 42px)" : "clamp(33.6px, min(4.8vw, 7.2vh), 48px)";
 	const CIRCLE_PADDING = isCompact ? "clamp(5.6px, min(0.8vw, 1.2vh), 8px)" : "clamp(7px, min(1vw, 1.5vh), 10px)";
-	const buttonFontSize = isCompact ? "clamp(0.945rem, min(1.35vw, 2.025vh), 1.35rem)" : "clamp(1.05rem, min(1.5vw, 2.25vh), 1.5rem)";
+	// Increased font size for better readability after button size modifications
+	const buttonFontSize = isCompact ? "clamp(1.05rem, min(1.5vw, 2.25vh), 1.5rem)" : "clamp(1.2rem, min(1.75vw, 2.625vh), 1.75rem)";
 	const encouragementFontSize = isCompact ? "clamp(0.7rem, min(1vw, 1.5vh), 1rem)" : "clamp(0.875rem, min(1.25vw, 1.875vh), 1.25rem)";
 	const encouragementPaddingX = isCompact ? "clamp(12.6px, min(1.8vw, 2.7vh), 18px)" : "clamp(16.8px, min(2.4vw, 3.6vh), 24px)";
 	const encouragementPaddingY = isCompact ? "clamp(8.4px, min(1.2vw, 1.8vh), 12px)" : "clamp(11.2px, min(1.6vw, 2.4vh), 16px)";
 
 	const buttonBg = "#111111";
 	const buttonColor = "#FFFFFF";
-	const buttonBorder = "1px solid rgba(17,17,17,0.25)";
+	// Border color should match textColor - white border for dark mode, dark border for light mode
+	const buttonBorder = textColor === "white" 
+		? "2px solid rgba(255,255,255,0.55)" 
+		: "1px solid rgba(17,17,17,0.25)";
 	const buttonShadow = "0 16px 32px rgba(17,17,17,0.24)";
-	const greenFlashColor = "var(--color-correct)";
-	const redFlashColor = "var(--color-wrong)";
+	// Resolve CSS variables to actual colors for animation (framer-motion can't animate CSS variables)
+	// These match the CSS variables defined in globals.css
+	const greenFlashColor = "#20C997"; // var(--color-correct) resolved
+	const redFlashColor = "#EF4444"; // var(--color-wrong) resolved
 	
 	const answerTextRef = useRef<HTMLDivElement>(null);
 	const answerSpanRef = useRef<HTMLSpanElement>(null);
@@ -63,6 +69,7 @@ export default function AnswerReveal({
 	const [needsScroll, setNeedsScroll] = useState(false);
 	const [scrollDistance, setScrollDistance] = useState(0);
 	const [xButtonKey, setXButtonKey] = useState(0); // Trigger animation on click
+	const [checkButtonKey, setCheckButtonKey] = useState(0); // Trigger animation on click
 	const [hasShownEncouragement, setHasShownEncouragement] = useState(false);
 	const [activeMessages, setActiveMessages] = useState<Array<{
 		id: number;
@@ -339,12 +346,12 @@ export default function AnswerReveal({
 						color: buttonColor,
 						boxShadow: "none",
 						backgroundColor: buttonBg,
-						border: buttonBorder,
+						border: buttonBorder, // Always use consistent border
 						overflow: 'visible', // Allow buttons to be visible
 						lineHeight: 1.1,
 						textAlign: 'center',
 						// Smooth transition if width/height needs to adjust
-						transition: 'width 0.2s ease-out, max-width 0.2s ease-out, height 0.2s ease-out, padding 0.2s ease-out, font-size 0.2s ease-out, transform 0.35s cubic-bezier(0.22,1,0.36,1), box-shadow 0.35s ease',
+						transition: 'width 0.2s ease-out, max-width 0.2s ease-out, height 0.2s ease-out, padding 0.2s ease-out, font-size 0.2s ease-out, transform 0.35s cubic-bezier(0.22,1,0.36,1), box-shadow 0.35s ease, border 0s', // No transition for border to keep it instant and consistent
 						willChange: 'transform',
 					}}
 					animate={{
@@ -357,6 +364,7 @@ export default function AnswerReveal({
 							: isMarkedIncorrect 
 							? redFlashColor
 							: buttonBg,
+						border: buttonBorder, // Always keep border consistent - explicitly set in animate
 						transform: [
 							`scale(${textColor === "white" ? 1 : 0.98})`,
 						],
@@ -370,6 +378,7 @@ export default function AnswerReveal({
 							duration: 0.4,
 							ease: "easeOut",
 						},
+						border: { duration: 0 }, // No transition for border - keep it instant
 					}}
 					whileHover={{ scale: 1.02 }}
 					whileTap={{ scale: 0.99 }}
@@ -439,7 +448,7 @@ export default function AnswerReveal({
 								transform: 'translateY(-50%)',
 								boxShadow: hasShownEncouragement && !isMarkedCorrect 
 									? ['0 0 0px rgba(239, 68, 68, 0)', '0 0 12px rgba(239, 68, 68, 0.4)', '0 0 0px rgba(239, 68, 68, 0)']
-									: 'none',
+									: '0 0 0px rgba(0, 0, 0, 0)', // Use transparent shadow instead of "none" for animation
 								transition: {
 									type: "spring",
 									stiffness: 400,
@@ -480,13 +489,15 @@ export default function AnswerReveal({
 						>
 							<motion.div
 								key={xButtonKey}
+								initial={{ scale: 0, rotate: 0 }}
 								animate={{
-									scale: [1, 1.15, 1],
-									rotate: [0, -5, 5, -3, 3, 0],
+									scale: [0, 1.2, 1],
+									rotate: [0, -10, 10, -5, 5, 0],
 								}}
 								transition={{
-									duration: 0.5,
+									duration: 0.6,
 									ease: [0.34, 1.56, 0.64, 1], // Playful bounce
+									times: [0, 0.5, 1],
 								}}
 							>
 								<X className="w-6 h-6 text-white" strokeWidth={3} />
@@ -602,6 +613,8 @@ export default function AnswerReveal({
 							tabIndex={0}
 							onClick={(e) => {
 								e.stopPropagation();
+								// Trigger animation
+								setCheckButtonKey(prev => prev + 1);
 								// Trigger green flash animation
 								setShowGreenFlash(true);
 								setTimeout(() => {
@@ -639,7 +652,7 @@ export default function AnswerReveal({
 								transform: 'translateY(-50%)',
 								boxShadow: hasShownEncouragement && !isMarkedCorrect 
 									? ['0 0 0px rgba(16, 185, 129, 0)', '0 0 12px rgba(16, 185, 129, 0.4)', '0 0 0px rgba(16, 185, 129, 0)']
-									: 'none',
+									: '0 0 0px rgba(0, 0, 0, 0)', // Use transparent shadow instead of "none" for animation
 								transition: {
 									type: "spring",
 									stiffness: 400,
@@ -679,15 +692,17 @@ export default function AnswerReveal({
 							aria-label="Mark as correct"
 						>
 							<motion.div
-								key={isMarkedCorrect ? 'check-marked' : 'check-unmarked'}
-								animate={isMarkedCorrect ? {
-									scale: [1, 1.15, 1],
-									rotate: [0, 5, -5, 3, -3, 0],
-								} : {}}
-								transition={isMarkedCorrect ? {
-									duration: 0.5,
+								key={`check-${checkButtonKey}-${isMarkedCorrect ? 'marked' : 'unmarked'}`}
+								initial={{ scale: 0, rotate: 0 }}
+								animate={{
+									scale: [0, 1.2, 1],
+									rotate: [0, 10, -10, 5, -5, 0],
+								}}
+								transition={{
+									duration: 0.6,
 									ease: [0.34, 1.56, 0.64, 1], // Playful bounce
-								} : {}}
+									times: [0, 0.5, 1],
+								}}
 								className="absolute inset-0 flex items-center justify-center"
 							>
 								<Check className="w-6 h-6 text-white" strokeWidth={3} style={{ opacity: isMarkedCorrect ? 1 : 0.9 }} />

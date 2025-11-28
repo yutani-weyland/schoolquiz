@@ -3,6 +3,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, Flag } from "lucide-react";
 import AnswerReveal from "../AnswerReveal";
 import { QuizQuestion, QuizRound } from "./types";
+import { SparticlesBackground } from "../SparticlesBackground";
+import { QUIZ_CONSTANTS } from "@/lib/quiz-constants";
 
 interface QuestionAreaProps {
   screen: "round-intro" | "question";
@@ -57,6 +59,10 @@ export function QuestionArea({
     return null;
   }
 
+  // Check if this is People's Round question (round 5)
+  // Round number is 1-indexed in the component, so round 5 = finaleRoundNumber
+  const isPeoplesRoundQuestion = question.roundNumber === finaleRoundNumber || round?.number === finaleRoundNumber;
+
   return (
     <AnimatePresence mode="wait">
       {screen === "round-intro" && round ? (
@@ -83,6 +89,7 @@ export function QuestionArea({
           isMouseMoving={isMouseMoving}
           finaleRoundNumber={finaleRoundNumber}
           onFinish={onFinish}
+          isPeoplesRoundQuestion={isPeoplesRoundQuestion}
         />
       )}
     </AnimatePresence>
@@ -97,7 +104,8 @@ interface RoundIntroProps {
 }
 
 function RoundIntro({ round, textColor, onStart, finaleRoundNumber }: RoundIntroProps) {
-  const heading = round.title;
+  // Always show "The People's Round" for round 5
+  const heading = round.number === finaleRoundNumber ? "The People's Round" : round.title;
   const description = round.blurb;
   const ctaLabel = "Let's go!";
 
@@ -181,6 +189,7 @@ interface PresenterModeProps {
   isMouseMoving: boolean;
   finaleRoundNumber: number;
   onFinish?: () => void;
+  isPeoplesRoundQuestion?: boolean;
 }
 
 function PresenterMode({
@@ -203,6 +212,7 @@ function PresenterMode({
   isMouseMoving,
   finaleRoundNumber,
   onFinish,
+  isPeoplesRoundQuestion = false,
 }: PresenterModeProps) {
   const [hasAnswered, setHasAnswered] = useState(false);
   const questionTextRef = useRef<HTMLParagraphElement>(null);
@@ -366,6 +376,8 @@ function PresenterMode({
       role="main"
       aria-label="Quiz presenter"
     >
+      {/* Sparticles background for People's Round */}
+      {isPeoplesRoundQuestion && <SparticlesBackground isActive={true} />}
       <PresenterNavigation
         textColor={textColor}
         canGoNext={canGoNext}

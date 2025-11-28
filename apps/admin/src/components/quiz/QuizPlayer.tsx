@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import confetti from "canvas-confetti";
+import confetti, { Options } from "canvas-confetti";
 import AnswerReveal from "./AnswerReveal";
 import RailProgress from "../progress/RailProgress";
 import { AchievementNotification, Achievement } from "./AchievementNotification";
@@ -417,6 +417,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 	// Destructure quiz play state and actions
 	const {
 		currentIndex,
+		displayIndex,
 		currentRound,
 		currentScreen,
 		viewMode: quizPlayViewMode,
@@ -861,7 +862,16 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 		const emojis = emojiSets[roundNumber] || ['🎉', '✨', '🎊', '🌟', '💫', '⭐'];
 
 		// Convert emojis to confetti shapes
-		return emojis.map(emoji => confetti.shapeFromText({ text: emoji, scalar }));
+		// Check if shapeFromText is available, fallback to default shapes if not
+		if (confetti && typeof confetti.shapeFromText === 'function') {
+			try {
+				return emojis.map(emoji => confetti.shapeFromText({ text: emoji, scalar }));
+			} catch (error) {
+				console.warn('Failed to create emoji shapes, using default confetti:', error);
+				return undefined; // Fallback to default confetti
+			}
+		}
+		return undefined; // Fallback to default confetti
 	};
 
 	const handleMarkCorrect = (id: number, event?: React.MouseEvent<HTMLButtonElement>) => {
@@ -885,16 +895,37 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 		// Get emoji shapes based on current round
 		const currentRoundNumber = currentQuestion?.roundNumber || 1;
 
+		// Ensure confetti is available - check both default export and named export
+		const confettiFn = typeof confetti === 'function' ? confetti : (confetti as any)?.default || confetti;
+		if (!confettiFn || typeof confettiFn !== 'function') {
+			console.error('Confetti is not available', { confetti, type: typeof confetti });
+			// Don't return - confetti might still work, just log the error
+		}
+
+		// Get emoji shapes (may be undefined if shapeFromText fails)
+		const scalar = event ? 1.8 : 2.2;
+		let emojiShapes: any[] | undefined;
+		try {
+			emojiShapes = getContextEmojis(currentRoundNumber, scalar);
+		} catch (error) {
+			console.warn('Failed to create emoji shapes, using default confetti:', error);
+			emojiShapes = undefined;
+		}
+
+		// Always try to fire confetti, even if confettiFn check failed
+		if (!confettiFn || typeof confettiFn !== 'function') {
+			console.warn('Confetti function not available, skipping confetti effect');
+			return;
+		}
+
 		if (event) {
 			// Confetti from button position (both grid and presenter mode)
 			const button = event.currentTarget;
 			const rect = button.getBoundingClientRect();
 			const x = (rect.left + rect.width / 2) / window.innerWidth;
 			const y = (rect.top + rect.height / 2) / window.innerHeight;
-			const scalar = 1.8;
-			const emojiShapes = getContextEmojis(currentRoundNumber, scalar);
 
-			confetti({
+			const confettiConfig: any = {
 				particleCount: 50,
 				spread: 60,
 				origin: { x, y },
@@ -902,16 +933,39 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 				gravity: 0.9,
 				ticks: 100,
 				decay: 0.94,
-				shapes: emojiShapes,
 				scalar: scalar,
 				drift: 0.1
-			});
+			};
+
+			// Only add shapes if we have them
+			if (emojiShapes && emojiShapes.length > 0) {
+				confettiConfig.shapes = emojiShapes;
+			}
+
+			try {
+				confettiFn(confettiConfig);
+			} catch (error) {
+				console.error('Failed to trigger confetti:', error);
+				// Try without shapes as final fallback
+				try {
+					confettiFn({
+						particleCount: 50,
+						spread: 60,
+						origin: { x, y },
+						startVelocity: 30,
+						gravity: 0.9,
+						ticks: 100,
+						decay: 0.94,
+						scalar: scalar,
+						drift: 0.1
+					});
+				} catch (fallbackError) {
+					console.error('Failed to trigger fallback confetti:', fallbackError);
+				}
+			}
 		} else {
 			// Fallback: big, spread out confetti (for backwards compatibility)
-			const scalar = 2.2;
-			const emojiShapes = getContextEmojis(currentRoundNumber, scalar);
-
-			confetti({
+			const confettiConfig: any = {
 				particleCount: 200,
 				spread: 180,
 				origin: { x: 0.5, y: 0.75 },
@@ -919,10 +973,36 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 				gravity: 0.8,
 				ticks: 150,
 				decay: 0.92,
-				shapes: emojiShapes,
 				scalar: scalar,
 				drift: 0.15
-			});
+			};
+
+			// Only add shapes if we have them
+			if (emojiShapes && emojiShapes.length > 0) {
+				confettiConfig.shapes = emojiShapes;
+			}
+
+			try {
+				confettiFn(confettiConfig);
+			} catch (error) {
+				console.error('Failed to trigger confetti:', error);
+				// Try without shapes as final fallback
+				try {
+					confettiFn({
+						particleCount: 200,
+						spread: 180,
+						origin: { x: 0.5, y: 0.75 },
+						startVelocity: 60,
+						gravity: 0.8,
+						ticks: 150,
+						decay: 0.92,
+						scalar: scalar,
+						drift: 0.15
+					});
+				} catch (fallbackError) {
+					console.error('Failed to trigger fallback confetti:', fallbackError);
+				}
+			}
 		}
 	};
 
@@ -1344,7 +1424,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 			{viewMode === "presenter" && finalQuestions && finalQuestions.length > 0 && (
 				<QuestionProgressBar
 					total={finalQuestions.length}
-					currentIndex={currentIndex}
+					currentIndex={displayIndex}
 					sections={sections}
 					roundColors={roundColorsArray}
 					isDarkText={textColor === "white"}
@@ -1374,6 +1454,10 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 				<QuizStatusBar
 					currentScreen={currentScreen}
 					currentRound={currentRoundDetails}
+					currentQuestion={currentQuestion ? {
+						submittedBy: currentQuestion.submittedBy,
+						roundNumber: currentQuestion.roundNumber,
+					} : undefined}
 					textColor={textColor}
 					score={correctAnswers.size}
 					totalQuestions={finalQuestions.length}

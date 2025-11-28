@@ -300,7 +300,10 @@ export function MobileGridLayout({
               const status = getQuestionStatus(question);
               const round = roundLookup[question.roundNumber];
               const accentColor = getRoundAccent(question.roundNumber);
-              const roundLabel = round ? round.title || `Round ${question.roundNumber}` : `Round ${question.roundNumber}`;
+              // Always show "The People's Round" for round 5
+              const roundLabel = question.roundNumber === 5 
+                ? "The People's Round"
+                : (round ? round.title || `Round ${question.roundNumber}` : `Round ${question.roundNumber}`);
               const isFinale = question.roundNumber === finaleRoundNumber;
               const showRoundIntro =
                 index === 0 || questions[index - 1].roundNumber !== question.roundNumber;
@@ -390,7 +393,9 @@ export function MobileGridLayout({
                             lineHeight: '0.9',
                           }}
                         >
-                          Round {round.number}: {round.title || `Round ${round.number}`}
+                          {round.number === 5 
+                            ? "The People's Round"
+                            : `Round ${round.number}: ${round.title || `Round ${round.number}`}`}
                         </h2>
                         {round.blurb && (
                           <p 
@@ -512,7 +517,9 @@ export function MobileGridLayout({
                 const currentRound = rounds.find(r => r.number === visibleRoundTitle);
                 const roundAccent = getRoundAccent(visibleRoundTitle || 1);
                 const roundLabel = currentRound 
-                  ? `Round ${currentRound.number}: ${currentRound.title || `Round ${currentRound.number}`}`
+                  ? (currentRound.number === 5 
+                      ? "The People's Round"
+                      : `Round ${currentRound.number}: ${currentRound.title || `Round ${currentRound.number}`}`)
                   : `Round ${visibleRoundTitle}`;
                 
                 return (

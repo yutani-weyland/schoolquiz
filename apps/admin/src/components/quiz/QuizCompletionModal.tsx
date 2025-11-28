@@ -1,9 +1,11 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Share2, UserPlus, Trophy, Target, CheckCircle, RotateCcw, Home } from 'lucide-react';
+import { X, Share2, UserPlus, Trophy, Target, CheckCircle, RotateCcw, Home, Star } from 'lucide-react';
 import { useUserAccess } from '@/contexts/UserAccessContext';
 import Link from 'next/link';
+import { useState } from 'react';
+import { PeoplesRoundSubmissionModal, SubmissionData } from './PeoplesRoundSubmissionModal';
 
 interface QuizCompletionModalProps {
   isOpen: boolean;
@@ -24,7 +26,8 @@ export function QuizCompletionModal({
   quizTitle,
   onReviewAnswers,
 }: QuizCompletionModalProps) {
-  const { isVisitor } = useUserAccess();
+  const { isVisitor, isPremium } = useUserAccess();
+  const [showSubmissionModal, setShowSubmissionModal] = useState(false);
   const percentage = totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0;
 
   const handleShare = async () => {
@@ -50,6 +53,32 @@ export function QuizCompletionModal({
       } catch (err) {
         console.error('Failed to copy:', err);
       }
+    }
+  };
+
+  const handleSubmitToPeoplesRound = async (data: SubmissionData) => {
+    try {
+      const response = await fetch('/api/peoples-round/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          quizSlug,
+          ...data,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to submit');
+      }
+
+      // Show success message or close modal
+      alert('Thank you for your submission! Your question will be reviewed.');
+    } catch (error: any) {
+      throw error;
     }
   };
 
@@ -220,6 +249,20 @@ export function QuizCompletionModal({
                       <span className="relative z-10">Share Quiz</span>
                     </motion.button>
 
+                    {isPremium && (
+                      <motion.button
+                        onClick={() => setShowSubmissionModal(true)}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-full font-medium transition-all shadow-[0_2px_4px_0_rgba(0,0,0,0.1),0_4px_6px_-1px_rgba(0,0,0,0.1)] dark:shadow-[0_2px_4px_0_rgba(0,0,0,0.3),0_4px_6px_-1px_rgba(0,0,0,0.2)] hover:shadow-[0_4px_6px_0_rgba(0,0,0,0.15),0_8px_12px_-2px_rgba(0,0,0,0.15)] dark:hover:shadow-[0_4px_6px_0_rgba(0,0,0,0.4),0_8px_12px_-2px_rgba(0,0,0,0.3)] relative overflow-hidden"
+                      >
+                        {/* Light highlight on top */}
+                        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent pointer-events-none" />
+                        <Star className="w-5 h-5 relative z-10" />
+                        <span className="relative z-10">Submit to People's Round</span>
+                      </motion.button>
+                    )}
+
                     {isVisitor && (
                       <Link
                         href="/sign-up"
@@ -244,6 +287,14 @@ export function QuizCompletionModal({
           </div>
         </>
       )}
+      
+      {/* People's Round Submission Modal */}
+      <PeoplesRoundSubmissionModal
+        isOpen={showSubmissionModal}
+        onClose={() => setShowSubmissionModal(false)}
+        onSubmit={handleSubmitToPeoplesRound}
+        quizSlug={quizSlug}
+      />
     </AnimatePresence>
   );
 }

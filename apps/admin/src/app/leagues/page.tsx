@@ -502,7 +502,7 @@ export default function LeaguesPage() {
           <div className="mb-8 sm:mb-12 md:mb-16">
             <PageHeader
               title="Private Leagues"
-              subtitle={userName ? `G'day ${userName}!` : 'Create, join & administrate your private leagues'}
+              subtitle="Create leagues, invite members, and compete together"
               centered
               maxWidth="4xl"
             />

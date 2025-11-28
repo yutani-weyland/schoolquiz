@@ -26,7 +26,8 @@ const nextConfig = {
     // Build Content Security Policy directives
     const cspDirectives = [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // 'unsafe-eval' needed for Next.js dev mode, 'unsafe-inline' for inline scripts
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' cdn.jsdelivr.net unpkg.com", // Allow sparticles CDN scripts
+      "worker-src 'self' blob:", // Allow web workers from same origin and blob URLs (needed for canvas-confetti)
       "style-src 'self' 'unsafe-inline' fonts.googleapis.com", // Allow inline styles and Google Fonts CSS
       "font-src 'self' fonts.gstatic.com data:", // Google Fonts and data URIs for fonts
       "img-src 'self' data: blob: https:", // Allow images from same origin, data URIs, blobs, and HTTPS

@@ -23,6 +23,7 @@ export interface UseQuizPlayOptions {
 export interface UseQuizPlayResult {
 	// State
 	currentIndex: number;
+	displayIndex: number; // Question number to display at bottom (stays same on round-intro screens)
 	currentRound: number;
 	currentScreen: ScreenType;
 	viewMode: ViewMode;
@@ -76,6 +77,7 @@ export function useQuizPlay({
 	onDemoComplete,
 }: UseQuizPlayOptions): UseQuizPlayResult {
 	const [currentIndex, setCurrentIndex] = useState(0);
+	const [displayIndex, setDisplayIndex] = useState(0); // Question number displayed at bottom
 	const [currentRound, setCurrentRound] = useState(1);
 	const [currentScreen, setCurrentScreen] = useState<ScreenType>('round-intro');
 	const [viewMode, setViewMode] = useState<ViewMode>('presenter');
@@ -91,6 +93,10 @@ export function useQuizPlay({
 		QuizSessionService.getProgress(quizSlug).then((progress) => {
 			if (progress) {
 				setCurrentIndex(progress.currentIndex);
+				// Initialize displayIndex: if we're on a question screen, it should match currentIndex
+				// If we're on round-intro (which we can't know from progress), it will be set correctly
+				// when navigation happens. For now, assume we're on a question screen.
+				setDisplayIndex(progress.currentIndex);
 				setCorrectAnswers(new Set(progress.correctAnswers));
 				setIncorrectAnswers(new Set(progress.incorrectAnswers));
 				setViewedQuestions(new Set(progress.viewedQuestions));
@@ -167,8 +173,10 @@ export function useQuizPlay({
 	}, []);
 
 	const startRound = useCallback(() => {
+		// When moving from round-intro to question, increment displayIndex to show the new question number
+		setDisplayIndex(currentIndex);
 		setCurrentScreen('question');
-	}, []);
+	}, [currentIndex]);
 
 	const goToNext = useCallback(() => {
 		const nextIndex = currentIndex + 1;
@@ -186,12 +194,18 @@ export function useQuizPlay({
 			const nextQuestion = questions[nextIndex];
 			// Check if we're moving to a new round
 			if (nextQuestion.roundNumber !== currentQuestion?.roundNumber) {
+				// Moving to a new round - show round-intro, but keep displayIndex the same
+				// (it will increment when startRound is called)
 				setCurrentRound(nextQuestion.roundNumber);
 				setCurrentScreen('round-intro');
+				setCurrentIndex(nextIndex);
+				// displayIndex stays the same - will be updated when startRound is called
 			} else {
+				// Moving to next question in same round - increment both indices
 				setCurrentScreen('question');
+				setCurrentIndex(nextIndex);
+				setDisplayIndex(nextIndex);
 			}
-			setCurrentIndex(nextIndex);
 			setViewedQuestions((prev) => new Set([...prev, nextQuestion.id]));
 		} else if (isDemo && onDemoComplete) {
 			// Reached end of demo questions
@@ -226,6 +240,7 @@ export function useQuizPlay({
 			setCurrentRound(prevQuestion.roundNumber);
 			setCurrentScreen('question');
 			setCurrentIndex(prevIndex);
+			setDisplayIndex(prevIndex); // Update display index to match previous question
 			setViewedQuestions((prev) => new Set([...prev, prevQuestion.id]));
 		}
 	}, [currentIndex, questions]);
@@ -236,6 +251,7 @@ export function useQuizPlay({
 			setCurrentRound(question.roundNumber);
 			setCurrentScreen('question');
 			setCurrentIndex(index);
+			setDisplayIndex(index); // Update display index to match selected question
 			setViewedQuestions((prev) => new Set([...prev, question.id]));
 		}
 	}, [questions]);
@@ -279,6 +295,7 @@ export function useQuizPlay({
 
 	const reset = useCallback(() => {
 		setCurrentIndex(0);
+		setDisplayIndex(0);
 		setCurrentRound(1);
 		setCurrentScreen('round-intro');
 		setViewedQuestions(new Set());
@@ -291,6 +308,7 @@ export function useQuizPlay({
 	return {
 		// State
 		currentIndex,
+		displayIndex,
 		currentRound,
 		currentScreen,
 		viewMode,

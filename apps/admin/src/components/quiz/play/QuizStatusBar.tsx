@@ -5,6 +5,7 @@ import { QuizRound } from "./types";
 interface QuizStatusBarProps {
   currentScreen: "round-intro" | "question";
   currentRound?: QuizRound;
+  currentQuestion?: { submittedBy?: string; roundNumber?: number };
   textColor: string;
   score: number;
   totalQuestions: number;
@@ -87,6 +88,7 @@ function TimerPill({
 export function QuizStatusBar({
   currentScreen,
   currentRound,
+  currentQuestion,
   textColor,
   score,
   totalQuestions,
@@ -99,6 +101,23 @@ export function QuizStatusBar({
 }: QuizStatusBarProps) {
   const [isTimerHidden, setIsTimerHidden] = useState(false);
 
+  // Format submission text
+  const formatSubmissionText = (submittedBy?: string): string | null => {
+    if (!submittedBy) return null;
+    // Format: "Submitted by '[Teacher Name]' from '[School Name]'"
+    const parts = submittedBy.split(',').map(p => p.trim());
+    if (parts.length >= 2) {
+      return `Submitted by '${parts[0]}' from '${parts.slice(1).join(', ')}'`;
+    }
+    return `Submitted by '${submittedBy}'`;
+  };
+
+  const submissionText = currentQuestion?.submittedBy 
+    ? formatSubmissionText(currentQuestion.submittedBy)
+    : null;
+  
+  const isPeoplesRound = currentQuestion?.roundNumber === 5;
+
   // Score pill styling - matches other pills for consistency
   const scorePillClass = textColor === "white"
     ? "bg-white/20 text-white hover:bg-white/28 backdrop-blur-sm"
@@ -107,22 +126,26 @@ export function QuizStatusBar({
   return (
     <>
       <div className="fixed top-0 left-1/2 -translate-x-1/2 z-40 pt-24 pb-3 px-4 sm:px-6">
-        <div className="flex flex-row gap-3 sm:gap-4 items-center justify-center flex-nowrap">
-          {currentScreen === "question" && currentRound && (
-            <div
-              className={`relative rounded-full font-semibold flex items-center gap-3 transition-colors duration-300 ease-in-out ${
-                textColor === "white"
-                  ? "bg-white/20 text-white hover:bg-white/28"
-                  : "bg-black/10 text-gray-900 hover:bg-black/15"
-              } backdrop-blur-sm`}
-              style={{
-                fontSize: "clamp(0.875rem, 1.5vw, 1.125rem)",
-                padding: "clamp(0.5rem, 1.2vw, 0.875rem) clamp(1rem, 2vw, 1.5rem)",
-              }}
-            >
-              <span className="whitespace-nowrap">{currentRound.title}</span>
-            </div>
-          )}
+        <div className="flex flex-col gap-2 items-center">
+          {/* Top row: Round title, Score, Timer */}
+          <div className="flex flex-row gap-3 sm:gap-4 items-center justify-center flex-nowrap">
+            {currentScreen === "question" && currentRound && (
+              <div
+                className={`relative rounded-full font-semibold flex items-center gap-3 transition-colors duration-300 ease-in-out ${
+                  textColor === "white"
+                    ? "bg-white/20 text-white hover:bg-white/28"
+                    : "bg-black/10 text-gray-900 hover:bg-black/15"
+                } backdrop-blur-sm`}
+                style={{
+                  fontSize: "clamp(0.875rem, 1.5vw, 1.125rem)",
+                  padding: "clamp(0.5rem, 1.2vw, 0.875rem) clamp(1rem, 2vw, 1.5rem)",
+                }}
+              >
+                <span className="whitespace-nowrap">
+                  {isPeoplesRound ? "The People's Round" : currentRound.title}
+                </span>
+              </div>
+            )}
 
           <div
             className={`relative rounded-full font-semibold flex items-center transition-colors duration-300 ease-in-out whitespace-nowrap ${scorePillClass} backdrop-blur-sm`}
@@ -138,14 +161,32 @@ export function QuizStatusBar({
             </span>
           </div>
 
-          {isTimerRunning && (
-            <TimerPill
-              isTimerHidden={isTimerHidden}
-              onToggleHidden={setIsTimerHidden}
-              timer={timer}
-              formatTime={formatTime}
-              textColor={textColor}
-            />
+            {isTimerRunning && (
+              <TimerPill
+                isTimerHidden={isTimerHidden}
+                onToggleHidden={setIsTimerHidden}
+                timer={timer}
+                formatTime={formatTime}
+                textColor={textColor}
+              />
+            )}
+          </div>
+
+          {/* Submission pill - below timer, only for People's Round */}
+          {isPeoplesRound && submissionText && (
+            <div
+              className={`relative rounded-full font-medium flex items-center transition-colors duration-300 ease-in-out ${
+                textColor === "white"
+                  ? "bg-white/15 text-white"
+                  : "bg-black/8 text-gray-700"
+              } backdrop-blur-sm`}
+              style={{
+                fontSize: "clamp(0.75rem, 1.2vw, 1rem)",
+                padding: "clamp(0.375rem, 1vw, 0.625rem) clamp(0.75rem, 1.5vw, 1.25rem)",
+              }}
+            >
+              <span className="whitespace-nowrap">{submissionText}</span>
+            </div>
           )}
         </div>
       </div>
