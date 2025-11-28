@@ -8,6 +8,88 @@ import { StatsData } from './stats-server'
 import { unstable_cache } from 'next/cache'
 
 /**
+ * Get summary stats AND streaks in a single query (optimized - saves 1 round trip)
+ * Falls back to separate queries if needed
+ */
+async function getSummaryStatsAndStreaks(userId: string): Promise<{
+  summary: {
+    averageScore: number
+    totalQuestionsAttempted: number
+    totalQuizzesPlayed: number
+    totalCorrectAnswers: number
+    perfectScores: number
+  }
+  streaks: {
+    currentQuestionStreak: number
+    bestQuestionStreak: number
+    currentQuizStreak: number
+    bestQuizStreak: number
+  }
+}> {
+  const startTime = Date.now()
+  
+  try {
+    // Single query to get both summary and streaks (saves 1 database round trip)
+    const result = await prisma.$queryRaw<Array<{
+      total_quizzes_played: number
+      total_questions_attempted: number
+      total_correct_answers: number
+      perfect_scores: number
+      average_score: number
+      current_question_streak: number
+      best_question_streak: number
+      current_quiz_streak: number
+      best_quiz_streak: number
+    }>>`
+      SELECT 
+        total_quizzes_played,
+        total_questions_attempted,
+        total_correct_answers,
+        perfect_scores,
+        average_score,
+        current_question_streak,
+        best_question_streak,
+        current_quiz_streak,
+        best_quiz_streak
+      FROM user_stats_summary
+      WHERE user_id = ${userId}
+    `
+    
+    if (result.length > 0) {
+      const data = result[0]
+      const queryTime = Date.now() - startTime
+      console.log(`[Stats Summary] Summary + streaks combined query took ${queryTime}ms`)
+      
+      return {
+        summary: {
+          averageScore: Number(data.average_score),
+          totalQuestionsAttempted: data.total_questions_attempted,
+          totalQuizzesPlayed: data.total_quizzes_played,
+          totalCorrectAnswers: data.total_correct_answers,
+          perfectScores: data.perfect_scores,
+        },
+        streaks: {
+          currentQuestionStreak: data.current_question_streak,
+          bestQuestionStreak: data.best_question_streak,
+          currentQuizStreak: data.current_quiz_streak,
+          bestQuizStreak: data.best_quiz_streak,
+        },
+      }
+    }
+  } catch (error: any) {
+    console.warn('[Stats Summary] Pre-computed table not available, using fallback:', error?.message || 'Unknown error')
+  }
+  
+  // Fallback: Use separate functions
+  const [summary, streaks] = await Promise.all([
+    getSummaryStats(userId),
+    getStreaks(userId),
+  ])
+  
+  return { summary, streaks }
+}
+
+/**
  * Get summary stats from pre-computed summary table (ultra-fast single SELECT)
  * Falls back to aggregation if summary table doesn't exist yet
  */
