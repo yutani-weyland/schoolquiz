@@ -115,9 +115,9 @@ FROM user_category_stats
 UNION ALL
 SELECT 
   'public_stats_summary' as table_name,
-  COUNT(*) as record_count,
-  total_quizzes_played,
-  total_questions_attempted
+  1::bigint as record_count,
+  COALESCE(total_quizzes_played, 0)::bigint as total_quizzes,
+  COALESCE(total_questions_attempted, 0)::bigint as total_questions
 FROM public_stats_summary WHERE id = 'global';
 
 -- Step 4: Show populated user stats
