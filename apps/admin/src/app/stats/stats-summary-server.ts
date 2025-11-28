@@ -747,10 +747,11 @@ export async function getStatsSummaryCritical(userId: string): Promise<Pick<Stat
         getCategoryPerformance(userId), // Function will use pre-computed table first
         // OPTIMIZATION: Use raw SQL to get weekly completions (database calculates weeks)
         // This is faster than fetching all records and calculating in JavaScript
+        // Database does the week grouping and ISO week calculation
         prisma.$queryRaw<Array<{
           week: string
           date: string
-          completed_at: Date
+          completed_at: Date | null
           quiz_slug: string | null
         }>>`
           WITH weeks AS (
@@ -766,7 +767,6 @@ export async function getStatsSummaryCritical(userId: string): Promise<Pick<Stat
           completions_by_week AS (
             SELECT DISTINCT ON (TO_CHAR("completedAt", 'IYYY-"W"IW'))
               TO_CHAR("completedAt", 'IYYY-"W"IW') as week,
-              DATE_TRUNC('week', "completedAt")::date as week_start,
               "completedAt",
               "quizSlug"
             FROM quiz_completions
@@ -777,7 +777,7 @@ export async function getStatsSummaryCritical(userId: string): Promise<Pick<Stat
           SELECT 
             w.week,
             w.date::text as date,
-            COALESCE(c."completedAt", NULL) as completed_at,
+            c."completedAt" as completed_at,
             c."quizSlug" as quiz_slug
           FROM weeks w
           LEFT JOIN completions_by_week c ON w.week = c.week
