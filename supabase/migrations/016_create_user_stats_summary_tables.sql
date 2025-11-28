@@ -106,7 +106,7 @@ BEGIN
     MAX(completed_at) as last_completed
   INTO v_summary
   FROM quiz_completions
-  WHERE user_id = p_user_id;
+  WHERE "userId" = p_user_id;
   
   -- Calculate streaks (simplified - can be enhanced)
   SELECT 
@@ -189,17 +189,17 @@ BEGIN
     percentage
   )
   SELECT 
-    qc.user_id,
+    qc."userId" as user_id,
     c.id as category_id,
     c.name as category_name,
     -- Estimate: distribute score evenly across categories
     -- In production, you'd calculate actual category performance
     SUM(qc.score / 5)::INTEGER as correct_answers,
-    SUM(qc.total_questions / 5)::INTEGER as total_questions,
-    COUNT(DISTINCT qc.quiz_slug)::INTEGER as quizzes_count,
+    SUM(qc."totalQuestions" / 5)::INTEGER as total_questions,
+    COUNT(DISTINCT qc."quizSlug")::INTEGER as quizzes_count,
     CASE 
-      WHEN SUM(qc.total_questions / 5) > 0
-      THEN ROUND((SUM(qc.score / 5)::DECIMAL / SUM(qc.total_questions / 5)) * 100, 2)
+      WHEN SUM(qc."totalQuestions" / 5) > 0
+      THEN ROUND((SUM(qc.score / 5)::DECIMAL / SUM(qc."totalQuestions" / 5)) * 100, 2)
       ELSE 0
     END as percentage
   FROM quiz_completions qc
@@ -207,8 +207,8 @@ BEGIN
     -- Get first 5 categories (simplified - in production use actual quiz structure)
     SELECT id, name FROM categories LIMIT 5
   ) c
-  WHERE qc.user_id = p_user_id
-  GROUP BY qc.user_id, c.id, c.name;
+  WHERE qc."userId" = p_user_id
+  GROUP BY qc."userId", c.id, c.name;
 END;
 $$;
 
@@ -255,7 +255,8 @@ LANGUAGE plpgsql
 AS $$
 BEGIN
   -- Update user stats for the affected user
-  PERFORM update_user_stats_summary(COALESCE(NEW.user_id, OLD.user_id));
+  -- Note: quiz_completions uses camelCase column names ("userId")
+  PERFORM update_user_stats_summary(COALESCE(NEW."userId", OLD."userId"));
   
   -- Also update public stats (can be debounced in production)
   PERFORM update_public_stats_summary();
@@ -285,7 +286,7 @@ AS $$
 DECLARE
   v_user_id TEXT;
 BEGIN
-  FOR v_user_id IN SELECT DISTINCT user_id FROM quiz_completions
+  FOR v_user_id IN SELECT DISTINCT "userId" FROM quiz_completions
   LOOP
     PERFORM update_user_stats_summary(v_user_id);
     PERFORM update_user_category_stats(v_user_id);
