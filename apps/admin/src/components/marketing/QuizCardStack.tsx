@@ -138,7 +138,7 @@ function QuizCardStackContent({ quizzes }: QuizCardStackProps) {
                     "lg:p-9",
                     "xl:p-9",
                     "2xl:p-9",
-                    "aspect-[5/8]",
+                    "aspect-[3/4]",
                     // Clickability cues - only for top card
                     isTopCard && "cursor-pointer transition-shadow duration-300 hover:shadow-xl hover:ring-2 hover:ring-white/30",
                     !isTopCard && "pointer-events-none"

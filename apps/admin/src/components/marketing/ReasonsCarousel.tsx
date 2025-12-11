@@ -194,9 +194,7 @@ export function ReasonsCarousel() {
                                 const rotations = [-2.5, 2, -1.8];
                                 const baseRotation = rotations[idx] || (idx % 2 === 0 ? -2 : 1.5);
                                 // Determine text color based on background
-                                const textColor = reason.hasFlag || reason.aboriginalTheme
-                                    ? (reason.hasFlag ? "white" : textOn(reason.colorHex))
-                                    : textOn(reason.colorHex);
+                                const textColor = textOn(reason.colorHex);
                                 const isLightText = textColor === "white";
                                 return (
                                     <motion.div
@@ -206,34 +204,12 @@ export function ReasonsCarousel() {
                                         exit={{ opacity: 0, x: -20 }}
                                         whileHover={{ rotate: baseRotation * 0.3, scale: 1.02, y: -4 }}
                                         transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1], delay: idx * 0.05 }}
-                                        className={cn(
-                                            "flex flex-col p-7 md:p-8 rounded-2xl border relative overflow-hidden",
-                                            reason.hasFlag || reason.aboriginalTheme
-                                                ? "border-white/20"
-                                                : "border-white/30"
-                                        )}
+                                        className="flex flex-col p-7 md:p-8 rounded-2xl border border-white/20"
                                         style={{
                                             backgroundColor: reason.colorHex,
                                         }}
                                     >
-                                        {/* Australian flag background overlay for Aussie card */}
-                                        {reason.hasFlag && (
-                                            <>
-                                                {/* Gradient overlay on top of colorful background */}
-                                                <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-white to-red-600 opacity-60 pointer-events-none" />
-                                                {/* Dark overlay for better text visibility */}
-                                                <div className="absolute inset-0 bg-black/30 pointer-events-none" />
-                                            </>
-                                        )}
-                                        {/* Aboriginal flag colors overlay for cultural events card */}
-                                        {reason.aboriginalTheme && (
-                                            <div className="absolute inset-0 opacity-70 pointer-events-none">
-                                                <div className="absolute top-0 left-0 w-full h-1/2 bg-red-600" />
-                                                <div className="absolute bottom-0 left-0 w-full h-1/2 bg-black" />
-                                                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full bg-yellow-400" />
-                                            </div>
-                                        )}
-                                        <div className="relative z-10">
+                                        <div>
                                             {/* Heading */}
                                             <h3 className={cn(
                                                 "text-lg md:text-xl font-semibold mb-3 leading-tight",
@@ -333,9 +309,7 @@ export function ReasonsCarousel() {
                                 const mobileRotations = [-2.5, 2, -1.8, 1.5, -2, 1.8, -1.5, 2.2, -2.2, 1.2, -1.2];
                                 const mobileRotation = mobileRotations[currentIndex % mobileRotations.length] || (currentIndex % 2 === 0 ? -2 : 1.5);
                                 // Determine text color based on background
-                                const textColor = reason.hasFlag || reason.aboriginalTheme
-                                    ? (reason.hasFlag ? "white" : textOn(reason.colorHex))
-                                    : textOn(reason.colorHex);
+                                const textColor = textOn(reason.colorHex);
                                 const isLightText = textColor === "white";
                                 return (
                                     <motion.div
@@ -345,34 +319,12 @@ export function ReasonsCarousel() {
                                         exit={{ opacity: 0, x: -20 }}
                                         whileHover={{ rotate: mobileRotation * 0.3, scale: 1.02, y: -4 }}
                                         transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                                        className={cn(
-                                            "flex flex-col p-7 md:p-8 rounded-2xl border relative overflow-hidden",
-                                            reason.hasFlag || reason.aboriginalTheme
-                                                ? "border-white/20"
-                                                : "border-white/30"
-                                        )}
+                                        className="flex flex-col p-7 md:p-8 rounded-2xl border border-white/20"
                                         style={{
                                             backgroundColor: reason.colorHex,
                                         }}
                                     >
-                                        {/* Australian flag background overlay for Aussie card */}
-                                        {reason.hasFlag && (
-                                            <>
-                                                {/* Gradient overlay on top of colorful background */}
-                                                <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-white to-red-600 opacity-60 pointer-events-none" />
-                                                {/* Dark overlay for better text visibility */}
-                                                <div className="absolute inset-0 bg-black/30 pointer-events-none" />
-                                            </>
-                                        )}
-                                        {/* Aboriginal flag colors overlay for cultural events card */}
-                                        {reason.aboriginalTheme && (
-                                            <div className="absolute inset-0 opacity-70 pointer-events-none">
-                                                <div className="absolute top-0 left-0 w-full h-1/2 bg-red-600" />
-                                                <div className="absolute bottom-0 left-0 w-full h-1/2 bg-black" />
-                                                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full bg-yellow-400" />
-                                            </div>
-                                        )}
-                                        <div className="relative z-10">
+                                        <div>
                                             {/* Heading */}
                                             <h3 className={cn(
                                                 "text-lg md:text-xl font-semibold mb-3 leading-tight",

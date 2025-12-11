@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, User, Settings, Wallet, Users, Pencil, Plus, LogOut, Sun, Moon, Trophy, BarChart3, Crown, Info, Play, BookOpen, FileEdit } from 'lucide-react';
+import { Menu, X, User, Settings, Wallet, Users, Pencil, Plus, LogOut, Sun, Moon, Trophy, BarChart3, Crown, Info, Play, BookOpen, FileEdit, Sparkles, CreditCard, UserPlus, LogIn } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
 import { useUserAccess } from '@/contexts/UserAccessContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -346,9 +346,9 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
                   )}
 
                   {/* Menu Items - Tier-specific */}
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     {effectiveIsVisitor ? (
-                      // Visitor menu - Play Quiz, Sign In, Sign Up, divider, About, Dark Mode
+                      // Visitor menu - optimized for conversion
                       <>
                         <Link
                           href="/quizzes/12/intro"
@@ -363,6 +363,22 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
                           <Play className="w-5 h-5" />
                           Play the quiz
                         </Link>
+                        <Link
+                          href="/#features"
+                          onClick={handleLinkClick}
+                          className="flex items-center gap-3 px-4 py-2.5 rounded-full text-base text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        >
+                          <Sparkles className="w-5 h-5" />
+                          How it works
+                        </Link>
+                        <Link
+                          href="/#pricing"
+                          onClick={handleLinkClick}
+                          className="flex items-center gap-3 px-4 py-2.5 rounded-full text-base text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        >
+                          <CreditCard className="w-5 h-5" />
+                          Pricing
+                        </Link>
                         <div className="border-t border-gray-200 dark:border-gray-700 my-3"></div>
                         <Link
                           href="/sign-in"
@@ -374,8 +390,8 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
                               : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                           )}
                         >
-                          <User className="w-5 h-5" />
-                          Log In
+                          <LogIn className="w-5 h-5" />
+                          Log in
                         </Link>
                         <Link
                           href="/sign-up"
@@ -387,8 +403,8 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
                               : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                           )}
                         >
-                          <User className="w-5 h-5" />
-                          Sign Up
+                          <UserPlus className="w-5 h-5" />
+                          Sign up
                         </Link>
                         <div className="border-t border-gray-200 dark:border-gray-700 my-3"></div>
                         <Link
@@ -402,7 +418,7 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
                           )}
                         >
                           <Info className="w-5 h-5" />
-                          About The School Quiz
+                          About
                         </Link>
                       </>
                     ) : effectiveIsFree ? (

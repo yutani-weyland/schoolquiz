@@ -9,6 +9,7 @@ const publicRoutes = [
   '/forgot-password',
   '/about',
   '/pricing',
+  '/upgrade', // Pricing/upgrade page - accessible to everyone
   '/quizzes', // Allow /quizzes - the page itself handles auth and redirects visitors
   '/printable' // Allow /printable - used for PDF generation without auth
 ]

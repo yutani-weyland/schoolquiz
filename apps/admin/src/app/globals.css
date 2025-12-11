@@ -418,3 +418,51 @@ body[data-menu-open="true"] .achievement-container {
   width: calc(100% - 60px);
 }
 
+/* Landing page CSS animations - replaces framer-motion for initial render */
+@keyframes landing-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.landing-fade-in {
+  animation: landing-fade-in 0.5s ease-out forwards;
+}
+
+.landing-delay-100 {
+  animation-delay: 100ms;
+  opacity: 0;
+}
+
+.landing-delay-200 {
+  animation-delay: 200ms;
+  opacity: 0;
+}
+
+.landing-delay-300 {
+  animation-delay: 300ms;
+  opacity: 0;
+}
+
+.landing-delay-400 {
+  animation-delay: 400ms;
+  opacity: 0;
+}
+
+/* Intersection observer fade-in for lazy sections */
+.landing-section-hidden {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.landing-section-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+

@@ -87,7 +87,7 @@ function CardItem({ children, index, totalCards, spreadProgress }: CardItemProps
         "lg:w-[400px] lg:-ml-[200px]",
         "xl:w-[380px] xl:-ml-[190px]",
         "2xl:w-[380px] 2xl:-ml-[190px]",
-        "aspect-[5/8]"
+        "aspect-[3/4]"
       )}
     >
       {children}
@@ -129,9 +129,9 @@ export function CardStack({ children, className = "" }: CardStackProps) {
         // Scale height proportionally with width using aspect ratio
         // Base aspect ratio maintains proportions as width changes
         "w-full max-w-[95vw] md:max-w-[1000px] lg:max-w-[1050px] xl:max-w-[1100px] 2xl:max-w-[1100px]",
-        "aspect-[2/1.5] min-h-[400px]",
-        "sm:min-h-[450px] md:min-h-[500px] lg:min-h-[520px]",
-        "max-h-[600px] lg:max-h-[650px] xl:max-h-[600px]",
+        "aspect-[2/1.2] min-h-[340px]",
+        "sm:min-h-[380px] md:min-h-[420px] lg:min-h-[440px]",
+        "max-h-[500px] lg:max-h-[520px] xl:max-h-[500px]",
         "flex items-center justify-center",
         className
       )}

@@ -367,6 +367,23 @@ export default function SignUpForm() {
           </Link>
         </p>
       </div>
+
+      {/* Premium path CTA */}
+      <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-700/50 text-center">
+        <p className="text-sm text-gray-600 dark:text-gray-300 mb-1.5 font-medium">
+          Running this with multiple classes?
+        </p>
+        <Link
+          href="/upgrade"
+          className="inline-flex items-center gap-1.5 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-semibold transition-colors"
+        >
+          Start with Premium
+          <ArrowRight className="w-4 h-4" />
+        </Link>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">
+          Class teams, printable PDFs and every quiz ever made.
+        </p>
+      </div>
     </ContentCard>
   );
 }

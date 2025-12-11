@@ -4,7 +4,8 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { motion, LayoutGroup, AnimatePresence } from "framer-motion";
-import { Calendar, Share2, Copy, Check, X, FileText } from "lucide-react";
+import { Calendar, Share2, Copy, Check, X, FileText, Crown } from "lucide-react";
+import Link from "next/link";
 import { formatWeek } from "@/lib/format";
 import { useUserTier } from "@/hooks/useUserTier";
 import { hasExceededFreeQuizzes, getRemainingFreeQuizzes } from "@/lib/quizAttempts";
@@ -394,7 +395,27 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 						<Logo className="h-7 w-auto" />
 					</motion.a>
 					
-					<div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+					<div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+						{/* Upgrade button for non-premium users */}
+						{!isPremium && (
+							<Link href="/upgrade">
+								<motion.button
+									initial={{ opacity: 0, scale: 0.8 }}
+									animate={{ opacity: 1, scale: 1 }}
+									transition={{ delay: 0.15 }}
+									className={`hidden sm:flex items-center justify-center gap-2 h-14 px-5 rounded-full font-medium text-sm transition flex-shrink-0 ${
+										tone === "white" 
+											? "bg-white text-gray-900 hover:bg-white/90" 
+											: "bg-gray-900 text-white hover:bg-gray-800"
+									}`}
+									whileHover={{ scale: 1.03 }}
+									whileTap={{ scale: 0.97 }}
+								>
+									<Crown className="h-4 w-4" />
+									Get Premium
+								</motion.button>
+							</Link>
+						)}
 						<motion.button
 							initial={{ opacity: 0, scale: 0.8 }}
 							animate={{ opacity: 1, scale: 1 }}
@@ -620,46 +641,60 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 							
 							{/* PDF and Share Buttons */}
 							<div className="flex items-center gap-2" style={{ flexShrink: 0 }}>
-								{/* PDF Button - Premium Only */}
-								{isPremium && (
-									<div className="relative">
-										<motion.button
-											onClick={handleDownloadPDF}
-											onMouseEnter={() => setShowPdfTooltip(true)}
-											onMouseLeave={() => setShowPdfTooltip(false)}
-											className={`rounded-full cursor-pointer transition-colors ${
-												tone === "white" ? "bg-white/15 text-white hover:bg-white/25" : "bg-white/20 text-gray-900 hover:bg-white/30"
-											}`}
-											style={{
-												paddingTop: 'clamp(0.75rem, min(1.25rem, 3vh), 1.5rem)',
-												paddingBottom: 'clamp(0.75rem, min(1.25rem, 3vh), 1.5rem)',
-												paddingLeft: 'clamp(0.75rem, min(1.25rem, 3vh), 1.5rem)',
-												paddingRight: 'clamp(0.75rem, min(1.25rem, 3vh), 1.5rem)',
-											}}
-											whileHover={{ scale: 1.05 }}
-											whileTap={{ scale: 0.95 }}
-											aria-label="Download PDF"
-										>
-											<FileText className="h-5 w-5 sm:h-6 sm:w-6" />
-										</motion.button>
-										
-										{/* PDF Tooltip */}
-										<AnimatePresence>
-											{showPdfTooltip && (
-												<motion.div
-													initial={{ opacity: 0, y: 5 }}
-													animate={{ opacity: 1, y: 0 }}
-													exit={{ opacity: 0, y: 5 }}
-													transition={{ duration: 0.2 }}
-													className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 dark:bg-gray-800 text-white text-sm rounded-lg shadow-lg whitespace-nowrap z-50 pointer-events-none"
-												>
-													Download PDF
-													<div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900 dark:border-t-gray-800" />
-												</motion.div>
-											)}
-										</AnimatePresence>
-									</div>
-								)}
+								{/* PDF Button - Available to all, but greyed out for non-premium */}
+								<div className="relative">
+									<motion.button
+										onClick={isPremium ? handleDownloadPDF : undefined}
+										onMouseEnter={() => setShowPdfTooltip(true)}
+										onMouseLeave={() => setShowPdfTooltip(false)}
+										className={`rounded-full transition-colors relative ${
+											isPremium
+												? tone === "white" 
+													? "bg-white/15 text-white hover:bg-white/25 cursor-pointer" 
+													: "bg-white/20 text-gray-900 hover:bg-white/30 cursor-pointer"
+												: tone === "white"
+													? "bg-white/10 text-white/40 cursor-not-allowed"
+													: "bg-black/5 text-gray-900/40 cursor-not-allowed"
+										}`}
+										style={{
+											paddingTop: 'clamp(0.75rem, min(1.25rem, 3vh), 1.5rem)',
+											paddingBottom: 'clamp(0.75rem, min(1.25rem, 3vh), 1.5rem)',
+											paddingLeft: 'clamp(0.75rem, min(1.25rem, 3vh), 1.5rem)',
+											paddingRight: 'clamp(0.75rem, min(1.25rem, 3vh), 1.5rem)',
+										}}
+										whileHover={isPremium ? { scale: 1.05 } : {}}
+										whileTap={isPremium ? { scale: 0.95 } : {}}
+										aria-label={isPremium ? "Download PDF" : "Download PDF (Premium)"}
+									>
+										<FileText className="h-5 w-5 sm:h-6 sm:w-6" />
+										{/* Premium badge for non-premium users */}
+										{!isPremium && (
+											<span className={`absolute -top-1 -right-1 px-1.5 py-0.5 text-[10px] font-bold rounded-full ${
+												tone === "white" 
+													? "bg-amber-400 text-gray-900" 
+													: "bg-amber-400 text-gray-900"
+											}`}>
+												PRO
+											</span>
+										)}
+									</motion.button>
+									
+									{/* PDF Tooltip */}
+									<AnimatePresence>
+										{showPdfTooltip && (
+											<motion.div
+												initial={{ opacity: 0, y: 5 }}
+												animate={{ opacity: 1, y: 0 }}
+												exit={{ opacity: 0, y: 5 }}
+												transition={{ duration: 0.2 }}
+												className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 dark:bg-gray-800 text-white text-sm rounded-lg shadow-lg whitespace-nowrap z-50 pointer-events-none"
+											>
+												{isPremium ? "Download PDF" : "Download PDF — Premium feature"}
+												<div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900 dark:border-t-gray-800" />
+											</motion.div>
+										)}
+									</AnimatePresence>
+								</div>
 								
 								{/* Share Button */}
 								<div className="relative">
