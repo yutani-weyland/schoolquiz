@@ -109,7 +109,6 @@ export async function GET(
               id: qrq.question.id,
               text: qrq.question.text,
               answer: qrq.question.answer,
-              explanation: qrq.question.explanation,
               order: qrq.order,
             })),
           })),

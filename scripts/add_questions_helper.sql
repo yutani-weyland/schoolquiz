@@ -35,3 +35,9 @@ LIMIT 5;
 --   {CATEGORY_ID} with id from query 2
 --   {TEACHER_ID} with id from query 3
 
+
+
+
+
+
+

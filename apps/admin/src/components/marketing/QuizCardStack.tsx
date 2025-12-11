@@ -336,7 +336,7 @@ function QuizCardStackContent({ quizzes }: QuizCardStackProps) {
             href={quizzes.length > 0 ? `/quizzes/${quizzes[quizzes.length - 1].slug}/intro` : "/quizzes"}
             className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-white dark:bg-gray-900 text-gray-900 dark:text-white font-medium border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
           >
-            Play the latest
+            Play this week's quiz
           </Link>
         </motion.div>
         </div>

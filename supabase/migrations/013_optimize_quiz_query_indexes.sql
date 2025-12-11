@@ -75,3 +75,9 @@ END $$;
 ANALYZE quizzes;
 ANALYZE quiz_completions;
 
+
+
+
+
+
+

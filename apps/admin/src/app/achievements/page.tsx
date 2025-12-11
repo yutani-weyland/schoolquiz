@@ -21,20 +21,23 @@ export default function AchievementsPage() {
 	// This allows header + title to render immediately, improving LCP
 	// Data fetching happens in Suspense boundaries below
 	return (
-		<AchievementsShell>
-			<Suspense fallback={
-				<div className="max-w-7xl mx-auto w-full px-4">
-					<div className="flex flex-wrap justify-center gap-4">
-						{Array.from({ length: 8 }).map((_, i) => (
-							<AchievementCardSkeleton key={i} />
-						))}
+		<>
+			{/* @ts-expect-error - Next.js App Router supports async Server Components */}
+			<AchievementsShell>
+				<Suspense fallback={
+					<div className="max-w-7xl mx-auto w-full px-4">
+						<div className="flex flex-wrap justify-center gap-4">
+							{Array.from({ length: 8 }).map((_, i) => (
+								<AchievementCardSkeleton key={i} />
+							))}
+						</div>
 					</div>
-				</div>
-			}>
-				{/* @ts-expect-error - Next.js App Router supports async Server Components in Suspense */}
-				<AchievementsPageContent />
-			</Suspense>
-		</AchievementsShell>
+				}>
+					{/* @ts-expect-error - Next.js App Router supports async Server Components in Suspense */}
+					<AchievementsPageContent />
+				</Suspense>
+			</AchievementsShell>
+		</>
 	)
 }
 

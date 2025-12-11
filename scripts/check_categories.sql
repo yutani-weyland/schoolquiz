@@ -24,3 +24,9 @@ SELECT
 FROM categories
 GROUP BY category_type;
 
+
+
+
+
+
+

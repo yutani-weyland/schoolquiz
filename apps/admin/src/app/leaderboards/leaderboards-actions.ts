@@ -196,9 +196,9 @@ export async function loadMoreLeaderboards(
 	})
 
 	return {
-		orgWide: result.orgWide,
-		group: result.group,
-		adHoc: result.adHoc,
+		orgWide: result.orgWide as any,
+		group: result.group as any,
+		adHoc: result.adHoc as any,
 		hasMore: result.hasMore || false,
 	}
 }

@@ -11,6 +11,9 @@ export interface QuizCompletion {
   score: number
   totalQuestions: number
   completedAt: string
+  teamId?: string | null
+  teamName?: string | null
+  teamColor?: string | null
 }
 
 export interface CustomQuiz {
@@ -36,7 +39,7 @@ export interface OfficialQuiz {
 }
 
 export interface QuizzesPageData {
-  completions: Record<string, QuizCompletion>
+  completions: Record<string, QuizCompletion[]> // Array of completions per quiz (one per team)
   customQuizzes: CustomQuiz[]
   customQuizzesTotal: number // Total count for pagination
   customQuizzesHasMore: boolean // Whether there are more quizzes to load
@@ -51,11 +54,11 @@ export interface QuizzesPageData {
  * We'll match to the static quiz list client-side. This avoids querying for
  * all 12 quiz slugs when user may only have completed 1-2 quizzes.
  */
-async function fetchCompletions(userId: string): Promise<Record<string, QuizCompletion>> {
+async function fetchCompletions(userId: string): Promise<Record<string, QuizCompletion[]>> {
   try {
-    // OPTIMIZATION: Fetch all user completions without slug filter
-    // This is much faster - only returns completions that exist
-    // The IN clause with 12 slugs is wasteful if user completed 2 quizzes
+    // OPTIMIZATION: Fetch all user completions with team info
+    // Returns completions grouped by quizSlug (array of completions per quiz)
+    // This allows showing best score per team or filtering by selected team
     const completions = await prisma.quizCompletion.findMany({
       where: {
         userId,
@@ -65,25 +68,40 @@ async function fetchCompletions(userId: string): Promise<Record<string, QuizComp
         score: true,
         totalQuestions: true,
         completedAt: true,
+        teamId: true,
+        team: {
+          select: {
+            name: true,
+            color: true,
+          },
+        },
       },
-      // OPTIMIZATION: Limit to reasonable number (most users won't complete >20 quizzes)
-      take: 20,
+      // OPTIMIZATION: Limit to reasonable number (most users won't complete >50 quizzes total)
+      take: 50,
       orderBy: {
         completedAt: 'desc',
       },
     })
 
-    // OPTIMIZATION: Build map using reduce (more functional, slightly faster)
-    // Only includes completions that exist (no empty entries)
-    return completions.reduce<Record<string, QuizCompletion>>((acc, completion) => {
-      acc[completion.quizSlug] = {
+    // Group completions by quizSlug - each quiz can have multiple completions (one per team)
+    const completionsByQuiz = completions.reduce<Record<string, QuizCompletion[]>>((acc, completion) => {
+      const slug = completion.quizSlug
+      if (!acc[slug]) {
+        acc[slug] = []
+      }
+      acc[slug].push({
         quizSlug: completion.quizSlug,
         score: completion.score,
         totalQuestions: completion.totalQuestions,
         completedAt: completion.completedAt.toISOString(),
-      }
+        teamId: completion.teamId || null,
+        teamName: completion.team?.name || null,
+        teamColor: completion.team?.color || null,
+      })
       return acc
     }, {})
+
+    return completionsByQuiz
   } catch (error) {
     console.error('Error fetching completions:', error)
     // Return empty map if there's an error (table might not exist)

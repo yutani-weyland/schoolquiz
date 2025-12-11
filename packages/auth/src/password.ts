@@ -117,3 +117,9 @@ export function isOldSHA256Hash(hash: string): boolean {
   return sha256Regex.test(hash)
 }
 
+
+
+
+
+
+

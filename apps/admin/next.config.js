@@ -5,8 +5,8 @@ const nextConfig = {
   // Enable experimental features for better performance
   experimental: {
     optimizePackageImports: [
-      'framer-motion', 
-      'lucide-react', 
+      'framer-motion',
+      'lucide-react',
       '@radix-ui/react-icons',
       'recharts', // Optimize recharts imports for better tree-shaking
       '@tanstack/react-table', // Optimize react-table imports
@@ -91,7 +91,7 @@ const nextConfig = {
   },
 
   // OPTIMIZATION: Enable CSS minification (saves ~5.7 KiB according to Lighthouse)
-  swcMinify: true,
+
 
   // OPTIMIZATION: Don't transpile modern JavaScript features (saves ~9 KiB)
   // Modern browsers support ES6+ features natively, no need to transpile

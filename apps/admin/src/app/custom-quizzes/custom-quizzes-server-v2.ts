@@ -13,6 +13,12 @@ import {
 } from './custom-quizzes-summary-server'
 import type { UsageData } from './custom-quizzes-server'
 
+// Extended type to handle cache serialization (dates become strings)
+type CustomQuizSummaryWithSerializedDates = Omit<CustomQuizSummary, 'createdAt' | 'updatedAt'> & {
+	createdAt: Date | string
+	updatedAt: Date | string
+}
+
 export interface CustomQuizV2 {
 	id: string
 	slug: string
@@ -30,6 +36,13 @@ export interface CustomQuizV2 {
 	hasUserShares: boolean
 	hasGroupShares: boolean
 	isShared?: boolean
+	creator?: {
+		id: string
+		name?: string
+		email: string
+	}
+	isCreatorInSameOrg?: boolean
+	playCount?: number
 	sharedBy?: {
 		id: string
 		name?: string
@@ -46,9 +59,70 @@ export interface CustomQuizzesPageDataV2 {
 }
 
 /**
+ * Helper: Safely convert date to ISO string
+ * Handles Date objects, strings, numbers (timestamps), and other formats after cache serialization
+ */
+function toISOString(date: Date | string | number | null | undefined | any): string {
+	// Handle null/undefined
+	if (date == null) {
+		return new Date().toISOString() // Fallback to now if missing
+	}
+	
+	// If it's a Date object, use toISOString directly
+	if (date instanceof Date) {
+		// Check if it's a valid date
+		if (isNaN(date.getTime())) {
+			return new Date().toISOString() // Invalid date, fallback
+		}
+		return date.toISOString()
+	}
+	
+	// If it's a number (timestamp), convert to Date
+	if (typeof date === 'number') {
+		const d = new Date(date)
+		if (!isNaN(d.getTime())) {
+			return d.toISOString()
+		}
+		return new Date().toISOString() // Invalid timestamp, fallback
+	}
+	
+	// If it's a string, try to parse it
+	if (typeof date === 'string') {
+		// Check if it's already an ISO string
+		if (date.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)) {
+			return date // Already ISO format
+		}
+		// Try to parse and convert
+		const parsed = new Date(date)
+		if (!isNaN(parsed.getTime())) {
+			return parsed.toISOString()
+		}
+		// Can't parse, return as-is (might be invalid but at least won't crash)
+		return date
+	}
+	
+	// Last resort: try to convert to Date
+	try {
+		const d = new Date(date)
+		if (!isNaN(d.getTime())) {
+			return d.toISOString()
+		}
+	} catch {
+		// Ignore errors
+	}
+	
+	// Ultimate fallback: return current date
+	return new Date().toISOString()
+}
+
+/**
  * OPTIMIZATION: Transform summary to CustomQuizV2 format
  */
-function transformSummaryToQuiz(summary: CustomQuizSummary, userId: string): CustomQuizV2 {
+function transformSummaryToQuiz(summary: CustomQuizSummaryWithSerializedDates, userId: string): CustomQuizV2 {
+	// Handle createdAt/updatedAt - may be Date object or string (after cache serialization)
+	const createdAt = toISOString(summary.createdAt)
+	const updatedAt = toISOString(summary.updatedAt)
+
 	return {
 		id: summary.id,
 		slug: summary.slug,
@@ -56,8 +130,8 @@ function transformSummaryToQuiz(summary: CustomQuizSummary, userId: string): Cus
 		blurb: summary.blurb,
 		colorHex: summary.colorHex,
 		status: summary.status,
-		createdAt: summary.createdAt.toISOString(),
-		updatedAt: summary.updatedAt.toISOString(),
+		createdAt,
+		updatedAt,
 		roundCount: summary.roundCount,
 		questionCount: summary.questionCount,
 		isOrgWide: summary.isOrgWide,
@@ -66,6 +140,9 @@ function transformSummaryToQuiz(summary: CustomQuizSummary, userId: string): Cus
 		hasUserShares: summary.hasUserShares,
 		hasGroupShares: summary.hasGroupShares,
 		isShared: summary.createdByUserId !== userId,
+		creator: summary.creator,
+		isCreatorInSameOrg: summary.isCreatorInSameOrg,
+		playCount: summary.playCount,
 		sharedBy: summary.sharedBy,
 	}
 }
@@ -126,7 +203,42 @@ export async function getCustomQuizzesPageDataV2(
 	// OPTIMIZATION: Single query - no usage data needed (removed widget)
 	const summariesData = await getCachedSummaries()
 
-	const quizzes = summariesData.summaries.map(s => transformSummaryToQuiz(s, user.id))
+	const quizzes = summariesData.summaries.map(s => {
+		try {
+			return transformSummaryToQuiz(s, user.id)
+		} catch (error) {
+			console.error('[Custom Quizzes V2] Error transforming quiz summary:', error)
+			console.error('[Custom Quizzes V2] Summary data:', {
+				id: s.id,
+				createdAt: s.createdAt,
+				createdAtType: typeof s.createdAt,
+				createdAtIsDate: s.createdAt instanceof Date,
+				updatedAt: s.updatedAt,
+				updatedAtType: typeof s.updatedAt,
+				updatedAtIsDate: s.updatedAt instanceof Date,
+			})
+			// Return a fallback quiz object to prevent complete failure
+			return {
+				id: s.id,
+				slug: s.slug || '',
+				title: s.title || 'Untitled Quiz',
+				blurb: s.blurb,
+				colorHex: s.colorHex,
+				status: s.status || 'draft',
+				createdAt: new Date().toISOString(),
+				updatedAt: new Date().toISOString(),
+				roundCount: s.roundCount || 0,
+				questionCount: s.questionCount || 0,
+				isOrgWide: s.isOrgWide || false,
+				isTemplate: s.isTemplate || false,
+				shareCount: s.shareCount || 0,
+				hasUserShares: s.hasUserShares || false,
+				hasGroupShares: s.hasGroupShares || false,
+				isShared: s.createdByUserId !== user.id,
+				sharedBy: s.sharedBy,
+			}
+		}
+	})
 
 	return {
 		quizzes,

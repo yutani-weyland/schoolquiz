@@ -182,13 +182,14 @@ export async function GET(
       // Build query promises - fetch stats WITHOUT user includes to avoid N+1
       const queries: Promise<any>[] = []
       
-      // Query 1: Get stats for the requested view (quiz-specific or overall) - NO USER INCLUDES
-      const statsQuery = (prisma as any).privateLeagueStats.findMany({
+      // Query 1: Get user stats for the requested view (quiz-specific or overall) - NO USER INCLUDES
+      const userStatsQuery = (prisma as any).privateLeagueStats.findMany({
         where: {
           leagueId: id,
           quizSlug: quizSlug,
+          userId: { not: null },
+          teamId: null,
         },
-        // Removed include to avoid slow joins - we'll fetch users separately
         orderBy: quizSlug
           ? [
               { score: 'desc' }, // For quiz-specific, sort by score
@@ -199,7 +200,27 @@ export async function GET(
               { bestStreak: 'desc' }, // Then by best streak
             ],
       })
-      queries.push(statsQuery)
+      queries.push(userStatsQuery)
+      
+      // Query 1b: Get team stats for the requested view
+      const teamStatsQuery = (prisma as any).privateLeagueStats.findMany({
+        where: {
+          leagueId: id,
+          quizSlug: quizSlug,
+          teamId: { not: null },
+          userId: null,
+        },
+        orderBy: quizSlug
+          ? [
+              { score: 'desc' },
+              { completedAt: 'asc' },
+            ]
+          : [
+              { totalCorrectAnswers: 'desc' },
+              { bestStreak: 'desc' },
+            ],
+      })
+      queries.push(teamStatsQuery)
       
       // Query 2: Get unique quiz slugs using groupBy (more efficient than findMany + distinct)
       const quizSlugsQuery = (prisma as any).privateLeagueStats.groupBy({
@@ -229,40 +250,74 @@ export async function GET(
       
       // Execute all queries in parallel
       const statsQueryTime = Date.now()
-      const [statsResults, quizSlugsResults, overallStatsResults] = await Promise.all(queries)
+      const [userStatsResults, teamStatsResults, quizSlugsResults, overallStatsResults] = await Promise.all(queries)
       const statsQueryDuration = Date.now() - statsQueryTime
       
-      // Extract unique user IDs from all stats
+      // Extract unique user IDs and team IDs from all stats
       const userIds = new Set<string>()
-      statsResults.forEach((s: any) => userIds.add(s.userId))
+      const teamIds = new Set<string>()
+      
+      userStatsResults.forEach((s: any) => {
+        if (s.userId) userIds.add(s.userId)
+      })
+      teamStatsResults.forEach((s: any) => {
+        if (s.teamId) teamIds.add(s.teamId)
+      })
       if (quizSlug && overallStatsResults.length > 0) {
-        overallStatsResults.forEach((s: any) => userIds.add(s.userId))
+        overallStatsResults.forEach((s: any) => {
+          if (s.userId) userIds.add(s.userId)
+          if (s.teamId) teamIds.add(s.teamId)
+        })
       }
       
-      // Batch fetch all users in a single query
+      // Batch fetch all users and teams in parallel
       const usersQueryTime = Date.now()
-      const users = userIds.size > 0
-        ? await (prisma as any).user.findMany({
-            where: {
-              id: { in: Array.from(userIds) },
-            },
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              teamName: true,
-            },
-          })
-        : []
+      const [users, teams] = await Promise.all([
+        userIds.size > 0
+          ? (prisma as any).user.findMany({
+              where: {
+                id: { in: Array.from(userIds) },
+              },
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                teamName: true,
+              },
+            })
+          : [],
+        teamIds.size > 0
+          ? (prisma as any).team.findMany({
+              where: {
+                id: { in: Array.from(teamIds) },
+              },
+              select: {
+                id: true,
+                name: true,
+                color: true,
+                userId: true,
+                user: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            })
+          : [],
+      ])
       const usersQueryDuration = Date.now() - usersQueryTime
       
-      // Create a map for O(1) user lookup
+      // Create maps for O(1) lookup
       const userMap = new Map(users.map((u: any) => [u.id, u]))
+      const teamMap = new Map(teams.map((t: any) => [t.id, t]))
       
-      // Map users back to stats
-      stats = statsResults.map((s: any) => ({
+      // Combine user and team stats, map users/teams back
+      const allStatsResults = [...userStatsResults, ...teamStatsResults]
+      stats = allStatsResults.map((s: any) => ({
         ...s,
-        user: userMap.get(s.userId) || null,
+        user: s.userId ? (userMap.get(s.userId) || null) : null,
+        team: s.teamId ? (teamMap.get(s.teamId) || null) : null,
       }))
       
       quizSlugs = quizSlugsResults
@@ -272,12 +327,13 @@ export async function GET(
       overallStats = quizSlug
         ? overallStatsResults.map((s: any) => ({
             ...s,
-            user: userMap.get(s.userId) || null,
+            user: s.userId ? (userMap.get(s.userId) || null) : null,
+            team: s.teamId ? (teamMap.get(s.teamId) || null) : null,
           }))
         : stats
       
       const totalQueryDuration = Date.now() - queryStart
-      console.log(`[Stats API] Queries took ${totalQueryDuration}ms (stats: ${statsQueryDuration}ms, users: ${usersQueryDuration}ms, total results: ${stats.length + overallStats.length})`)
+      console.log(`[Stats API] Queries took ${totalQueryDuration}ms (stats: ${statsQueryDuration}ms, users/teams: ${usersQueryDuration}ms, total results: ${stats.length + overallStats.length})`)
     } catch (statsError: any) {
       // If stats table doesn't exist or there's an error, return empty arrays
       const errorMsg = statsError.message || String(statsError)

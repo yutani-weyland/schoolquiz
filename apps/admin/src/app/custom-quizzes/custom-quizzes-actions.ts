@@ -23,7 +23,7 @@ export async function loadMoreCustomQuizzes(offset: number, limit: number = 12) 
 		}
 
 		// Check premium status
-		const isPremium = user.tier === 'premium' || 
+		const isPremium = user.tier === 'premium' ||
 			user.subscriptionStatus === 'ACTIVE' ||
 			user.subscriptionStatus === 'TRIALING' ||
 			(user.freeTrialUntil && new Date(user.freeTrialUntil) > new Date())
@@ -69,7 +69,7 @@ export async function loadMoreCustomQuizzes(offset: number, limit: number = 12) 
 		// Transform owned quizzes
 		const transformedOwned: CustomQuiz[] = ownedQuizzes.map(quiz => ({
 			id: quiz.id,
-			slug: quiz.slug,
+			slug: quiz.slug || '',
 			title: quiz.title,
 			blurb: quiz.blurb || undefined,
 			colorHex: quiz.colorHex || undefined,
@@ -91,4 +91,10 @@ export async function loadMoreCustomQuizzes(offset: number, limit: number = 12) 
 		return { quizzes: [], hasMore: false }
 	}
 }
+
+
+
+
+
+
 

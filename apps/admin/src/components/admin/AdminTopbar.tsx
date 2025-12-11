@@ -10,6 +10,7 @@ import { DraftIndicator } from './DraftIndicator'
 import { NotificationsBell } from './NotificationsBell'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import { getUserName, getUserEmail } from '@/lib/storage'
+import { Logo } from '@/components/Logo'
 
 export function AdminTopbar() {
   const pathname = usePathname()
@@ -92,10 +93,8 @@ export function AdminTopbar() {
       <div className="flex items-center justify-between px-6 py-3 gap-4 w-full">
         {/* Logo - Left side */}
         <div className="flex-1 flex items-center">
-          <Link href="/admin" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <span className="text-lg font-semibold text-[hsl(var(--foreground))] hidden sm:inline">
-              The School Quiz
-            </span>
+          <Link href="/admin" className="hover:opacity-80 transition-opacity">
+            <Logo className="h-6 w-auto" />
           </Link>
         </div>
 
@@ -176,14 +175,14 @@ export function AdminTopbar() {
                 className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] transition-colors"
               >
                 <Users className="w-4 h-4" />
-                Private Leagues
+                Leagues
               </Link>
               <Link
                 href="/stats"
                 className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] transition-colors"
               >
                 <BarChart3 className="w-4 h-4" />
-                Stats & Analytics
+                Insights
               </Link>
               <Link
                 href="/achievements"

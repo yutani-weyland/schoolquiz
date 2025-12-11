@@ -13,29 +13,22 @@ export type CustomQuizTab = TabType
 interface CustomQuizzesTabsProps {
 	activeTab: CustomQuizTab
 	onTabChange: (tab: CustomQuizTab) => void
-	hasGroups: boolean
-	hasOrganisation: boolean
 }
 
 export function CustomQuizzesTabs({ 
 	activeTab, 
-	onTabChange,
-	hasGroups,
-	hasOrganisation 
+	onTabChange
 }: CustomQuizzesTabsProps) {
-	const tabs: Array<{ id: CustomQuizTab; label: string; show: boolean }> = [
-		{ id: 'all', label: 'All', show: true },
-		{ id: 'mine', label: 'Mine', show: true },
-		{ id: 'shared', label: 'Shared', show: true },
-		{ id: 'groups', label: 'Groups', show: hasGroups },
-		{ id: 'organisation', label: 'Organisation', show: hasOrganisation },
+	const tabs: Array<{ id: CustomQuizTab; label: string }> = [
+		{ id: 'all', label: 'All' },
+		{ id: 'recent', label: 'Recent' },
+		{ id: 'shared', label: 'Shared with Me' },
+		{ id: 'drafts', label: 'Drafts' },
 	]
-
-	const visibleTabs = tabs.filter(t => t.show)
 
 	return (
 		<div className="mb-6 inline-flex rounded-full bg-gray-100 dark:bg-gray-800 p-1">
-			{visibleTabs.map((tab) => (
+			{tabs.map((tab) => (
 				<button
 					key={tab.id}
 					onClick={() => onTabChange(tab.id)}

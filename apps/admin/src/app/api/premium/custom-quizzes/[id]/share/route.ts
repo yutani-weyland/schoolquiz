@@ -63,29 +63,6 @@ export async function POST(
         )
       }
 
-      // Check usage limits
-      const currentMonth = new Date().toISOString().substring(0, 7)
-      let usage = await prisma.customQuizUsage.findUnique({
-        where: {
-          userId_monthYear: {
-            userId: user.id,
-            monthYear: currentMonth,
-          },
-        },
-      })
-
-      if (!usage) {
-        usage = await prisma.customQuizUsage.create({
-          data: {
-            id: generateId(),
-            userId: user.id,
-            monthYear: currentMonth,
-            quizzesCreated: 0,
-            quizzesShared: 0,
-          },
-        })
-      }
-
       // Count new shares (excluding already shared users)
       const existingShares = await prisma.customQuizShare.findMany({
         where: {
@@ -98,13 +75,6 @@ export async function POST(
       const existingUserIds = new Set(existingShares.map(s => s.userId))
       const newUserIds = userIds.filter(uid => !existingUserIds.has(uid))
       const newShareCount = newUserIds.length
-
-      if (usage.quizzesShared + newShareCount > 20) {
-        return NextResponse.json(
-          { error: `Monthly sharing limit reached. You can share up to 20 times per month. You have ${20 - usage.quizzesShared} shares remaining.` },
-          { status: 403 }
-        )
-      }
 
       // Verify all target users are premium
       const targetUsers = await prisma.user.findMany({
@@ -153,14 +123,6 @@ export async function POST(
           })
         )
       )
-
-      // Update usage counter
-      if (newShareCount > 0) {
-        await prisma.customQuizUsage.update({
-          where: { id: usage.id },
-          data: { quizzesShared: usage.quizzesShared + newShareCount },
-        })
-      }
 
       return NextResponse.json({
         success: true,

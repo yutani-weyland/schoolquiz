@@ -15,8 +15,12 @@ export async function GET(request: NextRequest) {
     // Get user ID from NextAuth session
     const userId = await requireApiUserId()
     
+    // Get optional teamId from query params
+    const { searchParams } = new URL(request.url)
+    const teamId = searchParams.get('teamId') || undefined
+    
     // Use optimized summary queries with parallel execution
-    const stats = await getStatsSummary(userId)
+    const stats = await getStatsSummary(userId, teamId)
     
     const totalTime = Date.now() - startTime
     console.log(`[Stats API] Stats fetched successfully in ${totalTime}ms`)

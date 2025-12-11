@@ -16,8 +16,9 @@ import {
   cacheLeagues,
   type League,
 } from '@/lib/leagues-fetch'
-import { LeaguesGrid } from '@/components/leagues/LeaguesGrid'
-import { LeaguesTabs, type LeagueTab } from '@/components/leagues/LeaguesTabs'
+import { LeaguesSections } from '@/components/leagues/LeaguesSections'
+import { OrganisationLeaguesSection } from '@/components/leagues/OrganisationLeaguesSection'
+import { LeaguesListSkeleton } from '@/components/leagues/LeaguesSkeleton'
 import { PageHeader } from '@/components/layout/PageHeader'
 
 // Lazy load SiteHeader
@@ -73,7 +74,6 @@ export default function LeaguesPage() {
   const { userName } = useUserAccess()
   const queryClient = useQueryClient()
 
-  const [activeTab, setActiveTab] = useState<LeagueTab>('created')
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showInviteModal, setShowInviteModal] = useState(false)
@@ -87,6 +87,9 @@ export default function LeaguesPage() {
   const [joining, setJoining] = useState(false)
   const [updating, setUpdating] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [removingMember, setRemovingMember] = useState<string | null>(null) // userId being removed
+  const [removingTeam, setRemovingTeam] = useState<string | null>(null) // teamId being removed
+  const [leavingLeagueId, setLeavingLeagueId] = useState<string | null>(null)
 
   const platformRole = typeof window !== 'undefined' ? localStorage.getItem('platformRole') : null
   const isAdmin = platformRole === 'PLATFORM_ADMIN' || platformRole === 'ORG_ADMIN'
@@ -213,7 +216,7 @@ export default function LeaguesPage() {
 
   // Create league mutation
   const createLeagueMutation = useMutation({
-    mutationFn: async (data: { name: string; description: string; color: string; organisationId?: string | null }) => {
+    mutationFn: async (data: { name: string; description: string; color: string; organisationId?: string | null; teamIds?: string[] }) => {
       const response = await fetch('/api/private-leagues', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -221,12 +224,38 @@ export default function LeaguesPage() {
         body: JSON.stringify(data),
       })
       if (!response.ok) {
-        const error = await response.json().catch(() => ({}))
-        throw new Error(error.error || 'Failed to create league')
+        let errorData: any = {}
+        try {
+          errorData = await response.json()
+        } catch {
+          // If response isn't JSON, use status text
+          throw new Error(`Failed to create league: ${response.statusText} (${response.status})`)
+        }
+        // Extract error message from various possible formats
+        const errorMessage = errorData.error || errorData.message || errorData.details || `Failed to create league (${response.status})`
+        const error = new Error(errorMessage)
+        // Attach additional details for debugging
+        ;(error as any).details = errorData
+        console.error('[Client] League creation error:', {
+          status: response.status,
+          errorData,
+          hint: errorData.hint,
+        })
+        throw error
       }
-      return response.json()
+      const result = await response.json()
+      // Ensure the response has the expected structure
+      if (!result.league) {
+        console.error('API response missing league:', result)
+        throw new Error('Invalid response from server: missing league data')
+      }
+      return result
     },
     onSuccess: (data) => {
+      if (!data || !data.league) {
+        console.error('Invalid league data received:', data)
+        return
+      }
       const newLeague = data.league
       queryClient.setQueryData(['private-leagues'], (old: League[] = []) => {
         const updated = [newLeague, ...old]
@@ -262,12 +291,25 @@ export default function LeaguesPage() {
     },
   })
 
-  const handleCreateLeague = async (data: { name: string; description: string; color: string; organisationId?: string | null }) => {
+  const handleCreateLeague = async (data: { name: string; description: string; color: string; organisationId?: string | null; teamIds?: string[] }) => {
     setCreating(true)
     try {
       await createLeagueMutation.mutateAsync(data)
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Failed to create league')
+      let errorMessage = 'Failed to create league'
+      if (error instanceof Error) {
+        errorMessage = error.message
+        // Include hint if available
+        const details = (error as any).details
+        if (details?.hint) {
+          errorMessage += `\n\n${details.hint}`
+        }
+        if (details?.message && details.message !== error.message) {
+          errorMessage += `\n\nDetails: ${details.message}`
+        }
+      }
+      console.error('Error creating league:', error)
+      alert(errorMessage)
     } finally {
       setCreating(false)
     }
@@ -309,12 +351,12 @@ export default function LeaguesPage() {
 
   // Join by code mutation
   const joinByCodeMutation = useMutation({
-    mutationFn: async (inviteCode: string) => {
+    mutationFn: async ({ inviteCode, teamId }: { inviteCode: string; teamId?: string }) => {
       const response = await fetch('/api/private-leagues/join-by-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ inviteCode }),
+        body: JSON.stringify({ inviteCode, teamId }),
       })
       if (!response.ok) {
         const error = await response.json().catch(() => ({}))
@@ -337,10 +379,10 @@ export default function LeaguesPage() {
     },
   })
 
-  const handleJoinByCode = async (code: string) => {
+  const handleJoinByCode = async (code: string, teamId?: string) => {
     setJoining(true)
     try {
-      await joinByCodeMutation.mutateAsync(code)
+      await joinByCodeMutation.mutateAsync({ inviteCode: code, teamId })
     } catch (error) {
       throw error // Let modal handle error display
     } finally {
@@ -423,27 +465,105 @@ export default function LeaguesPage() {
   }
 
   const handleKickMember = async (userId: string, userName: string) => {
-    if (!selectedLeagueId || !confirm(`Remove ${userName} from this league?`)) return
+    if (!selectedLeagueId) return
+    
+    // Confirmation dialog
+    if (!confirm(`Remove ${userName} from this league?`)) return
+    
+    setRemovingMember(userId)
     try {
       const response = await fetch(`/api/private-leagues/${selectedLeagueId}/members/${userId}`, {
         method: 'DELETE',
         credentials: 'include',
       })
-      if (!response.ok) throw new Error('Failed to remove member')
+      
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}))
+        throw new Error(error.error || 'Failed to remove member')
+      }
+      
+      // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['private-leagues'] })
       queryClient.invalidateQueries({ queryKey: ['league-details', selectedLeagueId] })
+      queryClient.invalidateQueries({ queryKey: ['league-members', selectedLeagueId] })
+      
+      // Show success message (could be replaced with toast notification)
+      // For now, the UI will update automatically via query invalidation
     } catch (error) {
-      alert('Failed to remove member')
+      const errorMessage = error instanceof Error ? error.message : 'Failed to remove member'
+      alert(errorMessage)
+    } finally {
+      setRemovingMember(null)
+    }
+  }
+
+  const handleRemoveTeam = async (teamId: string, teamName: string) => {
+    if (!selectedLeagueId) return
+    
+    // Confirmation dialog
+    if (!confirm(`Remove ${teamName} from this league?`)) return
+    
+    setRemovingTeam(teamId)
+    try {
+      const response = await fetch(`/api/private-leagues/${selectedLeagueId}/teams/${teamId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+      
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}))
+        throw new Error(error.error || 'Failed to remove team')
+      }
+      
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['private-leagues'] })
+      queryClient.invalidateQueries({ queryKey: ['league-details', selectedLeagueId] })
+      queryClient.invalidateQueries({ queryKey: ['league-teams', selectedLeagueId] })
+      
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to remove team'
+      alert(errorMessage)
+    } finally {
+      setRemovingTeam(null)
+    }
+  }
+
+  const handleLeaveLeague = async (leagueId: string) => {
+    const league = leagues.find(l => l.id === leagueId)
+    if (!league) return
+    
+    if (!confirm(`Leave ${league.name}? You can rejoin later using the invite code.`)) return
+    
+    setLeavingLeagueId(leagueId)
+    try {
+      const response = await fetch(`/api/private-leagues/${leagueId}/join`, {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+      
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}))
+        throw new Error(error.error || 'Failed to leave league')
+      }
+      
+      // Remove league from cache and invalidate queries
+      queryClient.setQueryData(['private-leagues'], (old: League[] = []) => {
+        const updated = old.filter(l => l.id !== leagueId)
+        cacheLeagues(updated)
+        return updated
+      })
+      queryClient.invalidateQueries({ queryKey: ['private-leagues'] })
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to leave league'
+      alert(errorMessage)
+    } finally {
+      setLeavingLeagueId(null)
     }
   }
 
   const isCreator = (league: League) => {
     return league.createdByUserId === currentUserId
   }
-
-  // Calculate counts for tabs
-  const createdCount = useMemo(() => leagues.filter(l => isCreator(l)).length, [leagues, currentUserId])
-  const joinedCount = useMemo(() => leagues.filter(l => !isCreator(l)).length, [leagues, currentUserId])
 
   // Loading state
   if (tierLoading) {
@@ -506,42 +626,36 @@ export default function LeaguesPage() {
               centered
               maxWidth="4xl"
             />
-            {/* Action Buttons */}
-            <div className="flex items-center justify-center gap-3 flex-wrap">
+            {/* League Requests Notification */}
+            <div className="flex items-center justify-center">
               <LazyLeagueRequestsNotification />
-              <button
-                onClick={() => setShowJoinByCodeModal(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-900 dark:text-white rounded-full font-medium transition-colors border border-gray-200 dark:border-gray-700"
-              >
-                <KeyRound className="w-4 h-4" />
-                Join by Code
-              </button>
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-full font-medium hover:bg-primary/90 transition-colors shadow-lg hover:shadow-xl"
-              >
-                <Plus className="w-5 h-5" />
-                Create League
-              </button>
             </div>
           </div>
 
-          {/* Tabs */}
-          <div className="mb-6 flex items-center justify-center">
-            <LeaguesTabs
-              activeTab={activeTab}
-              onTabChange={setActiveTab}
-              createdCount={createdCount}
-              joinedCount={joinedCount}
-            />
-          </div>
+          {/* Organisation Leagues Section */}
+          {userOrg && (
+            <div className="mb-8">
+              <OrganisationLeaguesSection
+                organisationName={userOrg.name}
+                onJoinByCode={() => setShowJoinByCodeModal(true)}
+              />
+            </div>
+          )}
 
-          {/* Leagues Grid */}
+          {/* My Leagues Section */}
           {leaguesLoading && leagues.length === 0 ? (
-            <div className="text-center py-16">
-              <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-              <p className="text-gray-600 dark:text-gray-400">Loading leagues...</p>
-            </div>
+            <section>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                  My Leagues
+                </h2>
+                <div className="flex items-center gap-2">
+                  <div className="h-10 w-24 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" />
+                  <div className="h-10 w-32 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" />
+                </div>
+              </div>
+              <LeaguesListSkeleton />
+            </section>
           ) : leaguesError ? (
             <div className="text-center py-16">
               <p className="text-red-600 dark:text-red-400 mb-4">
@@ -555,11 +669,11 @@ export default function LeaguesPage() {
               </button>
             </div>
           ) : (
-            <LeaguesGrid
+            <LeaguesSections
               leagues={leagues}
               currentUserId={currentUserId}
-              activeTab={activeTab}
               onCreateLeague={() => setShowCreateModal(true)}
+              onJoinByCode={() => setShowJoinByCodeModal(true)}
               onInvite={(leagueId) => {
                 setSelectedLeagueId(leagueId)
                 setShowInviteModal(true)
@@ -572,6 +686,8 @@ export default function LeaguesPage() {
                 setSelectedLeagueId(leagueId)
                 setShowMembersModal(true)
               }}
+              onLeaveLeague={handleLeaveLeague}
+              onDelete={handleDeleteLeague}
               isCreator={isCreator}
             />
           )}
@@ -620,6 +736,9 @@ export default function LeaguesPage() {
           currentUserId={currentUserId}
           isCreator={selectedLeague ? isCreator(selectedLeague) : false}
           onKickMember={handleKickMember}
+          removingMemberId={removingMember}
+          onRemoveTeam={handleRemoveTeam}
+          removingTeamId={removingTeam}
           onInvite={() => {
             setShowMembersModal(false)
             setShowInviteModal(true)

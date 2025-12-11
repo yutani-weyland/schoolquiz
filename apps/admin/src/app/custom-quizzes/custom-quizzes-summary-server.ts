@@ -10,7 +10,7 @@
 import { prisma } from '@schoolquiz/db'
 import type { CustomQuiz } from './custom-quizzes-server'
 
-export type TabType = 'all' | 'mine' | 'shared' | 'groups' | 'organisation'
+export type TabType = 'all' | 'shared' | 'recent' | 'drafts'
 
 export interface CustomQuizSummary {
 	id: string
@@ -31,6 +31,15 @@ export interface CustomQuizSummary {
 	hasGroupShares: boolean // Shared with groups
 	// Owner info
 	createdByUserId: string | null
+	creator?: {
+		id: string
+		name?: string
+		email: string
+	}
+	// Organisation info
+	isCreatorInSameOrg?: boolean
+	// Play count
+	playCount?: number
 	// For shared quizzes
 	isShared?: boolean
 	sharedBy?: {
@@ -114,15 +123,8 @@ async function buildTabQuery(
 	}
 
 	switch (tab) {
-		case 'mine':
-			return {
-				...baseWhere,
-				createdByUserId: userId,
-			}
-
 		case 'shared':
-			// OPTIMIZATION: Use legacy userId field until migration is run
-			// After migration, use: targetType: 'user', targetId: userId
+			// Quizzes shared with the user (not owned by them)
 			return {
 				...baseWhere,
 				shares: {
@@ -130,34 +132,37 @@ async function buildTabQuery(
 						userId: userId, // Legacy - only use this until migration
 					},
 				},
+				createdByUserId: { not: userId }, // Exclude quizzes owned by user
 			}
 
-		case 'groups':
-			// OPTIMIZATION: Return empty until migration is run
-			// After migration, use: targetType: 'group', targetId: { in: orgContext.groupIds }
+		case 'recent':
+			// Recently updated quizzes (owned or shared)
+			const recentConditions: any[] = [
+				{ createdByUserId: userId }, // Owned
+				{
+					shares: {
+						some: {
+							userId: userId, // Shared with user
+						},
+					},
+				},
+			]
 			return {
 				...baseWhere,
-				id: 'impossible-id', // Force empty result until migration
+				OR: recentConditions,
 			}
 
-		case 'organisation':
-			if (!orgContext.organisationId) {
-				// User has no organisation - return empty result
-				return {
-					...baseWhere,
-					id: 'impossible-id', // Force empty result
-				}
-			}
-			// OPTIMIZATION: For now, return empty until migration is run
-			// After migration, use: isOrgWide: true
+		case 'drafts':
+			// Draft quizzes owned by user
 			return {
 				...baseWhere,
-				id: 'impossible-id', // Force empty result until migration
+				createdByUserId: userId,
+				status: 'draft',
 			}
 
 		case 'all':
 		default:
-			// Union of: owned + shared + groups + org
+			// Union of: owned + shared
 			const conditions: any[] = [
 				{ createdByUserId: userId }, // Owned
 			]
@@ -170,12 +175,6 @@ async function buildTabQuery(
 					},
 				},
 			})
-
-			// Shared with groups - disabled until migration
-			// After migration, use: targetType: 'group', targetId: { in: orgContext.groupIds }
-
-			// Organisation-wide - disabled until migration
-			// After migration, use: isOrgWide: true
 
 			return {
 				...baseWhere,
@@ -207,6 +206,10 @@ export async function getCustomQuizSummariesForUser(
 
 	try {
 		const where = await buildTabQuery(userId, tab, searchQuery)
+		
+		// Get user's organisation ID for checking if creator is in same org
+		const userOrgContext = await getUserOrganisationContext(userId)
+		const userOrgId = userOrgContext.organisationId
 
 		// OPTIMIZATION: Fetch count and data in parallel
 		// Note: If migration hasn't been run, roundCount/questionCount/isOrgWide/isTemplate may not exist
@@ -224,6 +227,14 @@ export async function getCustomQuizSummariesForUser(
 					createdAt: true,
 					updatedAt: true,
 					createdByUserId: true,
+					// Fetch creator info
+					user: {
+						select: {
+							id: true,
+							name: true,
+							email: true,
+						},
+					},
 					// OPTIMIZATION: Pure aggregates - computed in DB, zero relation fetching
 					_count: {
 						select: {
@@ -248,16 +259,41 @@ export async function getCustomQuizSummariesForUser(
 						take: 3, // Fetch a few to find first non-null userId
 					},
 				},
-				orderBy: { updatedAt: 'desc' },
+				orderBy: tab === 'recent' 
+					? { updatedAt: 'desc' } 
+					: tab === 'drafts'
+					? { updatedAt: 'desc' }
+					: { updatedAt: 'desc' },
 				take: limit,
 				skip: offset,
 			}),
 			prisma.quiz.count({ where }),
 		])
 
+		// OPTIMIZATION: Fetch all completion counts in one query
+		const quizIds = quizzes.map(q => q.id)
+		const completionCounts = await prisma.quizCompletion.groupBy({
+			by: ['quizId'],
+			where: {
+				quizId: { in: quizIds },
+				quizType: 'CUSTOM',
+			},
+			_count: {
+				id: true,
+			},
+		}).catch(() => []) // Silently fail if query fails
+
+		// Create a map of quizId -> playCount
+		const playCountMap = new Map<string, number>()
+		completionCounts.forEach(item => {
+			if (item.quizId) {
+				playCountMap.set(item.quizId, item._count.id)
+			}
+		})
+
 		// OPTIMIZATION: Transform to summary format
 		// Handle missing fields gracefully (if migration not run)
-		const summaries: CustomQuizSummary[] = quizzes.map(quiz => {
+		const summaries: CustomQuizSummary[] = await Promise.all(quizzes.map(async (quiz) => {
 			// Determine if this quiz is shared (not owned by user)
 			const isShared = quiz.createdByUserId !== userId
 
@@ -265,6 +301,35 @@ export async function getCustomQuizSummariesForUser(
 			const userShares = quiz.shares.filter(s => s.userId !== null)
 			const hasUserShares = userShares.length > 0
 			const hasGroupShares = false // Will be true after migration when targetType exists
+
+			// Get creator info (from quiz.user relation)
+			let creator: CustomQuizSummary['creator'] | undefined
+			if (quiz.user) {
+				creator = {
+					id: quiz.user.id,
+					name: quiz.user.name || undefined,
+					email: quiz.user.email,
+				}
+			}
+
+			// Check if creator is in same organisation as current user
+			let isCreatorInSameOrg = false
+			if (userOrgId && quiz.createdByUserId && quiz.createdByUserId !== userId) {
+				try {
+					const creatorOrgMember = await prisma.organisationMember.findFirst({
+						where: {
+							userId: quiz.createdByUserId,
+							organisationId: userOrgId,
+							status: 'ACTIVE',
+						},
+						select: { id: true },
+					})
+					isCreatorInSameOrg = !!creatorOrgMember
+				} catch (error) {
+					// Silently fail - org check is optional
+					console.error('Error checking creator organisation:', error)
+				}
+			}
 
 			// Get sharedBy info if shared
 			let sharedBy: CustomQuizSummary['sharedBy'] | undefined
@@ -278,6 +343,9 @@ export async function getCustomQuizSummariesForUser(
 					}
 				}
 			}
+
+			// Get play count from the pre-fetched map
+			const playCount = playCountMap.get(quiz.id) || 0
 
 			return {
 				id: quiz.id,
@@ -298,10 +366,13 @@ export async function getCustomQuizSummariesForUser(
 				hasUserShares,
 				hasGroupShares,
 				createdByUserId: quiz.createdByUserId,
+				creator,
+				isCreatorInSameOrg,
+				playCount,
 				isShared,
 				sharedBy,
 			}
-		})
+		}))
 
 		const hasMore = offset + limit < total
 

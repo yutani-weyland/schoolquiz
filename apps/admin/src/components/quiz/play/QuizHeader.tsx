@@ -10,6 +10,7 @@ import { logger } from "@/lib/logger";
 import { storage, getUserName } from "@/lib/storage";
 import { applyTheme, Theme } from "@/lib/theme";
 import * as Tooltip from '@radix-ui/react-tooltip';
+import { Logo } from "@/components/Logo";
 
 interface QuizHeaderProps {
   quizLabel?: string;
@@ -247,9 +248,9 @@ export function QuizHeader({
                     window.location.href = isLoggedIn ? "/quizzes" : "/";
                   }
                 }}
-                className={`text-2xl font-bold tracking-tight transition-opacity duration-300 hover:opacity-80 cursor-pointer relative z-10 ${logoColorClass}`}
+                className={`transition-opacity duration-300 hover:opacity-80 cursor-pointer relative z-10 ${logoColorClass}`}
               >
-                The School Quiz
+                <Logo className="h-7 w-auto" />
               </motion.a>
               <div className="flex items-center gap-2 mt-0.5">
                 {quizLabel && <span className={`text-xs font-medium ${labelClass}`}>{quizLabel}</span>}

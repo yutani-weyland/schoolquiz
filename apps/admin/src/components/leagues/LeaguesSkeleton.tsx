@@ -3,18 +3,39 @@
  */
 
 export function LeaguesListSkeleton() {
+  const colors = ['#3B82F6', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444', '#EC4899']
+  
   return (
     <div className="space-y-2">
-      {[...Array(3)].map((_, i) => (
+      {[...Array(6)].map((_, i) => (
         <div
           key={i}
-          className="h-20 bg-gray-100 dark:bg-gray-700/50 rounded-xl animate-pulse"
+          className="relative rounded-xl border border-white/20 shadow-sm animate-pulse"
+          style={{ backgroundColor: colors[i % colors.length] }}
         >
-          <div className="h-full p-4 flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-600/50" />
-            <div className="flex-1 space-y-2">
-              <div className="h-4 bg-gray-200 dark:bg-gray-600/50 rounded w-3/4" />
-              <div className="h-3 bg-gray-200 dark:bg-gray-600/50 rounded w-1/2" />
+          <div className="flex items-center gap-4 p-4">
+            {/* League Info */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="h-4 bg-white/30 rounded w-32" />
+                <div className="w-4 h-4 bg-white/30 rounded-full" />
+              </div>
+              {/* Member preview skeleton */}
+              <div className="flex items-center gap-2 mb-1.5">
+                <div className="w-16 h-5 bg-white/20 rounded-full" />
+                <div className="w-16 h-5 bg-white/20 rounded-full" />
+                <div className="w-12 h-5 bg-white/20 rounded-full" />
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="h-3 bg-white/30 rounded w-20" />
+                <div className="h-3 bg-white/30 rounded w-40" />
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <div className="w-8 h-8 bg-white/20 rounded-lg" />
+              <div className="w-8 h-8 bg-white/20 rounded-lg" />
             </div>
           </div>
         </div>

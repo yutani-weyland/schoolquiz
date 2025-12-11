@@ -16,16 +16,15 @@
 
 import { prisma } from '@schoolquiz/db'
 import { notFound } from 'next/navigation'
-import { unstable_cache } from 'next/cache'
 
 // Mark as dynamic route since we're fetching data
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-// Round accent colors matching the grid mode design
+// Round accent colors matching the example design
 const ROUND_COLORS = [
-  '#2DD4BF', // Round 1 - teal
-  '#F97316', // Round 2 - orange
+  '#6FE8C8', // Round 1 - light teal/turquoise (hsl(165, 68%, 67%))
+  '#F1983F', // Round 2 - orange (hsl(30, 80%, 60%))
   '#FACC15', // Round 3 - yellow
   '#8B5CF6', // Round 4 - purple
   '#C084FC', // Finale - lavender
@@ -75,16 +74,17 @@ async function getQuizForPrintable(id: string) {
       },
     },
   })
-  
+
   return quiz
 }
 
 async function getQuiz(id: string) {
-  return unstable_cache(
-    async () => getQuizForPrintable(id),
-    [`quiz-printable-${id}`],
-    { revalidate: 60 }
-  )()
+  try {
+    return await getQuizForPrintable(id)
+  } catch (error: any) {
+    console.error('[Printable Page] Error fetching quiz:', error)
+    throw error
+  }
 }
 
 export default async function PrintableQuizPage({
@@ -92,52 +92,98 @@ export default async function PrintableQuizPage({
 }: {
   params: Promise<{ id: string }>
 }) {
+  let id: string = ''
+  let quiz: Awaited<ReturnType<typeof getQuizForPrintable>> | null = null
+  let error: Error | null = null
+
   try {
-    const { id } = await params
-    
+    const resolvedParams = await params
+    id = resolvedParams.id
+
     if (!id) {
       console.error('[Printable Page] No quiz ID provided')
-      notFound()
+      error = new Error('No quiz ID provided')
+    } else {
+      console.log('[Printable Page] Fetching quiz:', id)
+      quiz = await getQuiz(id)
+
+      if (!quiz) {
+        console.error('[Printable Page] Quiz not found:', id)
+        error = new Error(`Quiz not found: ${id}`)
+      } else {
+        console.log('[Printable Page] Quiz found:', quiz.title, 'Rounds:', quiz.rounds.length)
+      }
     }
-    
-    const quiz = await getQuiz(id)
+  } catch (err: any) {
+    console.error('[Printable Page] Error:', err)
+    error = err instanceof Error ? err : new Error(String(err))
+  }
 
-    if (!quiz) {
-      console.error('[Printable Page] Quiz not found:', id)
-      notFound()
-    }
-
-    // Flatten questions from rounds for numbering
-    let questionNumber = 1
-    const allQuestions: Array<{
-      id: string
-      number: number
-    }> = []
-
-    quiz.rounds.forEach((round) => {
-      round.questions.forEach((qr) => {
-        if (qr.question?.text) {
-          allQuestions.push({
-            id: qr.question.id,
-            number: questionNumber++,
-          })
-        }
-      })
-    })
-
-    // Format date - use same format as example (15 Jan 2024)
-    const quizDate = quiz.publicationDate
-      ? new Date(quiz.publicationDate).toLocaleDateString('en-GB', {
-          day: 'numeric',
-          month: 'short',
-          year: 'numeric',
-        })
-      : null
-
+  // If there's an error, render an error page that the PDF generator can detect
+  if (error || !quiz) {
     return (
       <div className="printable-quiz bg-white p-10 max-w-[210mm] mx-auto" style={{ fontFamily: "'Atkinson Hyperlegible', 'Inter', system-ui, sans-serif", minHeight: '100vh' }}>
-        {/* Inline styles for print optimization */}
-        <style dangerouslySetInnerHTML={{ __html: `
+        <div className="text-center py-20">
+          <h1 className="text-3xl font-bold text-red-600 mb-4">Error Loading Quiz</h1>
+          <p className="text-lg text-gray-700 mb-2">
+            {error?.message || 'Quiz not found'}
+          </p>
+          {id && (
+            <p className="text-sm text-gray-500">Quiz ID: {id}</p>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // Flatten questions from rounds for numbering
+  let questionNumber = 1
+  const allQuestions: Array<{
+    id: string
+    number: number
+  }> = []
+
+  quiz.rounds.forEach((round) => {
+    round.questions.forEach((qr) => {
+      if (qr.question?.text) {
+        allQuestions.push({
+          id: qr.question.id,
+          number: questionNumber++,
+        })
+      }
+    })
+  })
+
+  // Check if we have any questions
+  if (allQuestions.length === 0) {
+    console.warn('[Printable Page] Quiz has no questions:', id)
+    return (
+      <div className="printable-quiz bg-white p-10 max-w-[210mm] mx-auto" style={{ fontFamily: "'Atkinson Hyperlegible', 'Inter', system-ui, sans-serif", minHeight: '100vh' }}>
+        <div className="text-center py-20">
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">{quiz.title}</h1>
+          <p className="text-lg text-gray-700">This quiz has no questions yet.</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Format date - use same format as example (15 Jan 2024)
+  const quizDate = quiz.publicationDate
+    ? new Date(quiz.publicationDate).toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    })
+    : null
+
+  // Extract quiz number from slug (e.g., "quiz-10" -> "10")
+  const quizNumber = quiz.slug?.replace(/[^0-9]/g, '') || ''
+
+  return (
+    <div className="printable-quiz bg-white" style={{ fontFamily: "'Atkinson Hyperlegible', 'Inter', system-ui, sans-serif", minHeight: '100vh', padding: '50px 50px', maxWidth: '210mm', margin: '0 auto' }}>
+      {/* Inline styles for print optimization */}
+      <style dangerouslySetInnerHTML={{
+        __html: `
           @page {
             size: A4;
             margin: 0;
@@ -146,45 +192,53 @@ export default async function PrintableQuizPage({
           @media print {
             body { padding: 0; margin: 0; height: auto !important; }
             html { height: auto !important; }
-            .printable-quiz { padding: 0; max-width: none; height: auto !important; min-height: auto !important; }
+            .printable-quiz { padding: 0 !important; max-width: none; height: auto !important; min-height: auto !important; }
+            .page-content { padding: 50px 50px 70px 50px; }
+            .questions-page { page-break-after: always; padding-top: 50px; }
+            .answers-page { page-break-before: always; padding-top: 30px; }
           }
           
           /* Ensure full height for PDF generation */
           body {
             height: auto !important;
             min-height: 100% !important;
+            margin: 0;
+            padding: 0;
           }
           html {
             height: auto !important;
+            margin: 0;
+            padding: 0;
           }
           .printable-quiz {
             height: auto !important;
           }
         ` }} />
-        
-        {/* Header */}
-        <div className="mb-8">
-          {/* Quiz title - large, bold, dark grey */}
-          <h1 className="text-[38px] font-bold leading-tight mb-3 text-gray-900 tracking-tight">
+
+      {/* QUESTIONS PAGE */}
+      <div className="questions-page page-content">
+        {/* Header Section - Centered */}
+        <div className="text-center mb-12">
+          {/* Main Quiz Title - Smaller, Bold, Centered, Black */}
+          <h1 className="text-black mb-4 leading-tight" style={{ fontSize: '32px', fontWeight: 700, fontFamily: "'Atkinson Hyperlegible', 'Inter', system-ui, sans-serif" }}>
             {quiz.title}
           </h1>
-          
-          {/* Quiz metadata - smaller, lighter grey */}
-          <div className="flex items-center gap-2 mb-4 text-sm text-gray-500">
-            {quiz.slug && <span>Quiz #{quiz.slug}</span>}
-            {quiz.slug && quizDate && <span>•</span>}
-            {quizDate && <span>{quizDate}</span>}
-          </div>
-          
-          {/* Horizontal light grey line separator */}
-          <div className="h-px bg-gray-300 mb-8"></div>
+
+          {/* Quiz # Badge - Light Gray Rounded Badge with Border */}
+          {quizNumber && (
+            <div className="inline-block">
+              <div className="bg-gray-100 border border-gray-300 rounded-lg px-4 py-1.5" style={{ borderRadius: '8px' }}>
+                <span className="text-sm font-medium text-black" style={{ fontSize: '13px', fontWeight: 500 }}>Quiz #{quizNumber}</span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Questions grouped by round */}
         <div className="questions">
           {quiz.rounds.map((round, roundIndex) => {
             const roundColor = getRoundColor(round.index, round.isPeoplesRound)
-            
+
             const roundQuestions = round.questions
               .filter(qr => qr.question?.text)
               .map((qr) => {
@@ -193,64 +247,92 @@ export default async function PrintableQuizPage({
                 return { ...qr, questionNumber: qNum }
               })
               .filter((qr): qr is NonNullable<typeof qr> => qr !== null)
-            
+
             if (roundQuestions.length === 0) return null
-            
+
+            // Format round title: "ROUND 1: BACK TO THE PAST"
             const roundTitle = round.isPeoplesRound
-              ? "People's Question"
-              : `Round ${round.index + 1}${round.title ? `: ${round.title}` : ''}`
-            
+              ? "PEOPLE'S QUESTION"
+              : `ROUND ${round.index + 1}${round.title ? `: ${round.title.toUpperCase()}` : ''}`
+
             return (
               <div key={round.id} className="mb-10">
-                {/* Round Title - bold, colored */}
-                <h2 
-                  className="text-[32px] font-bold leading-tight mb-2"
-                  style={{ color: roundColor }}
-                >
-                  {roundTitle}
-                </h2>
-                
-                {/* Round description - standard dark grey */}
-                {round.blurb && (
-                  <p className="text-base text-gray-700 mb-3">
-                    {round.blurb}
-                  </p>
-                )}
-                
-                {/* Horizontal colored line separator */}
-                <div 
-                  className="h-px mb-6"
-                  style={{ backgroundColor: roundColor }}
-                ></div>
+                {/* Round Title Badge - Left Aligned, Colored Background, White Text, Very Rounded Pills */}
+                <div className="mb-6">
+                  <div
+                    className="inline-block px-6 py-2.5"
+                    style={{
+                      backgroundColor: roundColor,
+                      borderRadius: '9999px'
+                    }}
+                  >
+                    <h2 className="text-white font-bold uppercase tracking-wide" style={{ fontSize: '16px', fontWeight: 700, letterSpacing: '0.3px' }}>
+                      {roundTitle}
+                    </h2>
+                  </div>
+                </div>
 
                 {/* Questions in this round */}
-                {roundQuestions.map((qr) => {
-                  return (
-                    <div
-                      key={qr.id}
-                      className="mb-6"
-                      style={{ pageBreakInside: 'avoid' }}
-                    >
-                      {/* Question - bold label */}
-                      <div className="text-base font-bold text-gray-900 mb-2">
-                        <strong>Question {qr.questionNumber}:</strong> {qr.question?.text}
+                <div className="space-y-5">
+                  {roundQuestions.map((qr) => {
+                    return (
+                      <div
+                        key={qr.id}
+                        className="mb-5"
+                        style={{ pageBreakInside: 'avoid' }}
+                      >
+                        {/* Question - Numbered, Bold, Black */}
+                        <div className="mb-2">
+                          <span className="text-black font-bold" style={{ fontSize: '16px', fontWeight: 700, fontFamily: "'Atkinson Hyperlegible', 'Inter', system-ui, sans-serif" }}>
+                            {qr.questionNumber}. {qr.question?.text}
+                          </span>
+                        </div>
+
+                        {/* Single Answer Line - Thin, Light Gray Line (not a box) */}
+                        <div className="mt-2">
+                          <div className="border-b border-gray-300" style={{ borderWidth: '1px', borderColor: '#D1D5DB', height: '1px' }}></div>
+                        </div>
                       </div>
-                      
-                      {/* Answer lines */}
-                      <div className="mt-3 ml-4">
-                        <div className="h-6 border-b border-gray-300 mb-2"></div>
-                        <div className="h-6 border-b border-gray-300 mb-2"></div>
-                      </div>
-                    </div>
-                  )
-                })}
+                    )
+                  })}
+                </div>
               </div>
             )
           })}
         </div>
 
-        {/* Answers Section */}
-        <div className="answers-section mt-12 pt-8" style={{ pageBreakBefore: 'always' }}>
+        {/* Footer on questions page */}
+        <div className="mt-12 pt-4 text-center" style={{ fontSize: '11px', color: '#6B7280', fontFamily: "'Atkinson Hyperlegible', 'Inter', system-ui, sans-serif" }}>
+          theschoolquiz.com.au
+        </div>
+      </div>
+
+      {/* ANSWERS PAGE */}
+      <div className="answers-page page-content">
+        {/* Header Section - Centered */}
+        <div className="text-center mb-12">
+          {/* Main Quiz Title - Smaller, Bold, Centered, Black */}
+          <h1 className="text-black mb-4 leading-tight" style={{ fontSize: '32px', fontWeight: 700, fontFamily: "'Atkinson Hyperlegible', 'Inter', system-ui, sans-serif" }}>
+            {quiz.title}
+          </h1>
+
+          {/* Quiz # Badge - Light Gray Rounded Badge with Border */}
+          {quizNumber && (
+            <div className="inline-block">
+              <div className="bg-gray-100 border border-gray-300 rounded-lg px-4 py-1.5" style={{ borderRadius: '8px' }}>
+                <span className="text-sm font-medium text-black" style={{ fontSize: '13px', fontWeight: 500 }}>Quiz #{quizNumber}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Answers Heading */}
+          <div className="mt-8 mb-10">
+            <h2 className="text-black font-bold" style={{ fontSize: '24px', fontWeight: 700 }}>Answers</h2>
+          </div>
+        </div>
+
+        {/* Answers grouped by round */}
+        <div className="answers">
           {quiz.rounds.map((round, roundIndex) => {
             const roundColor = getRoundColor(round.index, round.isPeoplesRound)
             const roundQuestions = round.questions
@@ -261,74 +343,52 @@ export default async function PrintableQuizPage({
                 return { ...qr, questionNumber: qNum }
               })
               .filter((qr): qr is NonNullable<typeof qr> => qr !== null)
-            
+
             if (roundQuestions.length === 0) return null
-            
+
+            // Format round title: "ROUND 1: BACK TO THE PAST"
             const roundTitle = round.isPeoplesRound
-              ? "People's Question"
-              : `Round ${round.index + 1}${round.title ? `: ${round.title}` : ''}`
-            
+              ? "PEOPLE'S QUESTION"
+              : `ROUND ${round.index + 1}${round.title ? `: ${round.title.toUpperCase()}` : ''}`
+
             return (
               <div key={`answers-${round.id}`} className="mb-8">
-                {/* Round Title - bold, colored */}
-                <h3 
-                  className="text-[32px] font-bold mb-2"
-                  style={{ color: roundColor }}
-                >
-                  {roundTitle}
-                </h3>
-                
-                {/* Round description */}
-                {round.blurb && (
-                  <p className="text-base text-gray-700 mb-3">
-                    {round.blurb}
-                  </p>
-                )}
-                
-                {/* Horizontal colored line separator */}
-                <div 
-                  className="h-px mb-4"
-                  style={{ backgroundColor: roundColor }}
-                ></div>
-                
-                {/* Answers with colored vertical line */}
-                {roundQuestions.map((qr) => (
-                  <div key={`answer-${qr.id}`} className="mb-4">
-                    <div className="flex">
-                      {/* Colored vertical line */}
-                      <div 
-                        className="w-0.5 mr-3 flex-shrink-0"
-                        style={{ backgroundColor: roundColor }}
-                      ></div>
-                      
-                      {/* Answer content */}
-                      <div className="flex-1">
-                        <div className="text-base">
-                          <span className="font-bold">{qr.questionNumber}.</span>{' '}
-                          <span>{qr.question?.answer || ''}</span>
-                        </div>
-                        {qr.question?.explanation && (
-                          <div className="text-sm text-gray-600 italic mt-1 ml-6">
-                            {qr.question.explanation}
-                          </div>
-                        )}
+                {/* Round Title Badge - Left Aligned, Colored Background, White Text, Very Rounded Pills */}
+                <div className="mb-5">
+                  <div
+                    className="inline-block px-6 py-2.5"
+                    style={{
+                      backgroundColor: roundColor,
+                      borderRadius: '9999px'
+                    }}
+                  >
+                    <h2 className="text-white font-bold uppercase tracking-wide" style={{ fontSize: '16px', fontWeight: 700, letterSpacing: '0.3px' }}>
+                      {roundTitle}
+                    </h2>
+                  </div>
+                </div>
+
+                {/* Answers */}
+                <div className="space-y-3">
+                  {roundQuestions.map((qr) => (
+                    <div key={`answer-${qr.id}`} className="mb-3">
+                      <div className="text-base" style={{ fontSize: '16px', fontFamily: "'Atkinson Hyperlegible', 'Inter', system-ui, sans-serif" }}>
+                        <span className="font-bold">{qr.questionNumber}.</span>{' '}
+                        <span>{qr.question?.answer || ''}</span>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             )
           })}
         </div>
-        
-        {/* Footer */}
-        <div className="mt-12 pt-6 border-t border-gray-200 text-center text-xs text-gray-500">
-          Generated by The School Quiz
+
+        {/* Footer on answers page */}
+        <div className="mt-12 pt-4 text-center" style={{ fontSize: '11px', color: '#6B7280', fontFamily: "'Atkinson Hyperlegible', 'Inter', system-ui, sans-serif" }}>
+          theschoolquiz.com.au
         </div>
       </div>
-    )
-  } catch (error: any) {
-    console.error('[Printable Page] Error rendering page:', error)
-    throw error
-  }
+    </div>
+  )
 }

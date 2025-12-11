@@ -27,7 +27,6 @@ const RoundSchema = z.object({
     z.object({
       text: z.string().min(10).max(500),
       answer: z.string().min(1).max(200),
-      explanation: z.string().max(500).optional(),
     })
   ).min(1).max(20),
 })
@@ -227,81 +226,22 @@ export async function POST(request: NextRequest) {
 
     const data = validationResult.data
 
-    // Check usage limits
-    const currentMonth = new Date().toISOString().substring(0, 7) // "2025-01"
-    let usage = await prisma.customQuizUsage.findUnique({
-      where: {
-        userId_monthYear: {
-          userId: user.id,
-          monthYear: currentMonth,
-        },
-      },
-    })
-
-    if (!usage) {
-      usage = await prisma.customQuizUsage.create({
-        data: {
-          id: generateId(),
-          userId: user.id,
-          monthYear: currentMonth,
-          quizzesCreated: 0,
-          quizzesShared: 0,
-        },
-      })
-    }
-
-    if (usage.quizzesCreated >= 10) {
-      return NextResponse.json(
-        { error: 'Monthly limit reached. You can create up to 10 custom quizzes per month.' },
-        { status: 403 }
-      )
-    }
-
-    // Check total stored quizzes
-    const totalQuizzes = await prisma.quiz.count({
-      where: {
-        quizType: 'CUSTOM',
-        createdByUserId: user.id,
-      },
-    })
-
-    if (totalQuizzes >= 50) {
-      return NextResponse.json(
-        { error: 'Storage limit reached. You can store up to 50 custom quizzes. Please delete some before creating new ones.' },
-        { status: 403 }
-      )
-    }
-
     try {
-      // Create quiz
-      const slug = generateSlug(data.title, user.id)
-      const quiz = await prisma.quiz.create({
-        data: {
-          id: generateId(),
-          slug,
-          title: data.title,
-          blurb: data.blurb || null,
-          colorHex: data.colorHex,
-          quizType: 'CUSTOM',
-          createdByUserId: user.id,
-          status: 'draft',
-          // Create a default category for custom quizzes or use null
-          // For now, we'll create rounds without requiring categories
-        } as any,
-      }) as any
-
       // Find or create a "Custom" category for custom quiz rounds
+      // Need to do this first since Quiz creation might need it
       let customCategory = await prisma.category.findFirst({
         where: { name: 'Custom' },
       })
 
       if (!customCategory) {
         // Create a default "Custom" category if it doesn't exist
-        // Note: createdBy is required, so we'll use a system user or the first teacher
+        // Note: createdBy is required (Teacher ID), so we'll use a system user or the first teacher
         const firstTeacher = await prisma.teacher.findFirst()
         if (!firstTeacher) {
+          // If no teacher exists, we can't create the category
+          // This is a system configuration issue
           return NextResponse.json(
-            { error: 'System error: No teacher found for category creation' },
+            { error: 'System error: No teacher found for category creation. Please contact support.' },
             { status: 500 }
           )
         }
@@ -316,6 +256,56 @@ export async function POST(request: NextRequest) {
           },
         })
       }
+
+      // Find or create a Teacher record for this user (required for Quiz.createdBy)
+      // Quiz model requires createdBy (Teacher ID) for backward compatibility
+      let teacher = await prisma.teacher.findFirst({
+        where: { email: user.email || '' },
+      })
+
+      if (!teacher) {
+        // Create a teacher record for this user if it doesn't exist
+        // First, we need a school - find or create a default school
+        let defaultSchool = await prisma.school.findFirst({
+          where: { name: 'Default School' },
+        })
+
+        if (!defaultSchool) {
+          defaultSchool = await prisma.school.create({
+            data: {
+              id: generateId(),
+              name: 'Default School',
+            },
+          })
+        }
+
+        // Create teacher record for this user
+        teacher = await prisma.teacher.create({
+          data: {
+            id: generateId(),
+            schoolId: defaultSchool.id,
+            email: user.email || `${user.id}@schoolquiz.app`,
+            name: user.name || 'User',
+            role: 'teacher',
+          },
+        })
+      }
+
+      // Create quiz
+      const slug = generateSlug(data.title, user.id)
+      const quiz = await prisma.quiz.create({
+        data: {
+          id: generateId(),
+          slug,
+          title: data.title,
+          blurb: data.blurb || null,
+          colorHex: data.colorHex,
+          quizType: 'CUSTOM',
+          createdBy: teacher.id, // Required: Teacher ID for backward compatibility
+          createdByUserId: user.id, // User ID for custom quizzes
+          status: 'draft',
+        },
+      })
 
       // Create rounds and questions
       for (let roundIndex = 0; roundIndex < data.rounds.length; roundIndex++) {
@@ -345,7 +335,7 @@ export async function POST(request: NextRequest) {
               categoryId: null, // Custom quiz questions don't need categories
               text: questionData.text,
               answer: questionData.answer,
-              explanation: questionData.explanation || null,
+              explanation: null,
               difficulty: 0.5,
               status: 'published',
               createdByUserId: user.id,
@@ -366,12 +356,6 @@ export async function POST(request: NextRequest) {
           })
         }
       }
-
-      // Update usage counter
-      await prisma.customQuizUsage.update({
-        where: { id: usage.id },
-        data: { quizzesCreated: usage.quizzesCreated + 1 },
-      })
 
       // Fetch created quiz with relations
       const createdQuiz = await prisma.quiz.findUnique({
@@ -409,13 +393,18 @@ export async function POST(request: NextRequest) {
               id: qrq.question.id,
               text: qrq.question.text,
               answer: qrq.question.answer,
-              explanation: qrq.question.explanation,
             })),
           })),
         },
       }, { status: 201 })
     } catch (dbError: any) {
       console.error('Database error creating quiz:', dbError)
+      console.error('Error details:', {
+        code: dbError.code,
+        message: dbError.message,
+        meta: dbError.meta,
+      })
+      
       // Handle schema not migrated
       if (dbError.message?.includes('does not exist') ||
         dbError.message?.includes('column') ||
@@ -425,12 +414,36 @@ export async function POST(request: NextRequest) {
           { status: 500 }
         )
       }
-      throw dbError
+      
+      // Handle foreign key constraint errors
+      if (dbError.code === 'P2003') {
+        return NextResponse.json(
+          { error: 'Database constraint error. Please ensure all required relationships exist.', details: dbError.meta },
+          { status: 500 }
+        )
+      }
+      
+      // Handle unique constraint errors
+      if (dbError.code === 'P2002') {
+        return NextResponse.json(
+          { error: 'A quiz with this title already exists. Please choose a different title.', details: dbError.meta },
+          { status: 409 }
+        )
+      }
+      
+      // Re-throw with more context
+      throw new Error(`Database error: ${dbError.message || 'Unknown error'}`)
     }
   } catch (error: any) {
     console.error('Error creating custom quiz:', error)
+    console.error('Error stack:', error.stack)
     return NextResponse.json(
-      { error: 'Failed to create custom quiz', details: error.message },
+      { 
+        error: 'Failed to create custom quiz', 
+        details: error.message,
+        // Include error code if available for debugging
+        ...(error.code && { code: error.code }),
+      },
       { status: 500 }
     )
   }

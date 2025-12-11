@@ -20,12 +20,13 @@ export default function QuizzesPage() {
 	// This allows header + title to render immediately, improving LCP
 	// Data fetching happens in Suspense boundaries below
 	return (
+		// @ts-expect-error - Async Server Component
 		<QuizzesShell>
 			<Suspense fallback={<QuizCardGridSkeleton count={6} />}>
 				{/* @ts-expect-error - Next.js App Router supports async Server Components in Suspense */}
 				<QuizzesPageContent />
 			</Suspense>
-		</QuizzesShell>
+		</QuizzesShell >
 	)
 }
 

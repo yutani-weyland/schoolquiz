@@ -19,3 +19,9 @@ CREATE INDEX IF NOT EXISTS idx_private_league_stats_league_quiz_optimized
 ON private_league_stats("leagueId", "quizSlug", score DESC NULLS LAST, "completedAt" ASC NULLS LAST)
 WHERE "quizSlug" IS NOT NULL;
 
+
+
+
+
+
+

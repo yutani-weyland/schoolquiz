@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@schoolquiz/db'
+import { validateRequest } from '@/lib/api-validation'
+import { JoinLeagueSchema } from '@/lib/validation/schemas'
 
 async function getUserFromToken(request: NextRequest) {
   const authHeader = request.headers.get('Authorization')
@@ -36,8 +38,6 @@ async function getUserFromToken(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const user = await getUserFromToken(request)
-    const body = await request.json()
-    const { inviteCode } = body
     
     if (!user) {
       return NextResponse.json(
@@ -46,12 +46,9 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    if (!inviteCode || !inviteCode.trim()) {
-      return NextResponse.json(
-        { error: 'Invite code is required' },
-        { status: 400 }
-      )
-    }
+    // Validate request body
+    const body = await validateRequest(request, JoinLeagueSchema)
+    const { inviteCode, teamId } = body
     
     // Check if user is premium
     if (user.tier !== 'premium') {
@@ -71,6 +68,28 @@ export async function POST(request: NextRequest) {
         members: {
           where: {
             leftAt: null,
+          },
+        },
+        teams: {
+          where: {
+            leftAt: null,
+          },
+          include: {
+            team: {
+              select: {
+                id: true,
+                name: true,
+                color: true,
+                userId: true,
+                user: {
+                  select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                  },
+                },
+              },
+            },
           },
         },
         creator: {
@@ -93,6 +112,11 @@ export async function POST(request: NextRequest) {
                 leftAt: null,
               },
             },
+            teams: {
+              where: {
+                leftAt: null,
+              },
+            },
           },
         },
       },
@@ -105,52 +129,139 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // Check if user is already a member
-    const existingMember = league.members.find((m: any) => m.userId === user.id)
-    if (existingMember) {
-      return NextResponse.json(
-        { error: 'You are already a member of this league' },
-        { status: 400 }
-      )
-    }
-    
-    // Check if league is full
-    if (league.maxMembers && league.members.length >= league.maxMembers) {
-      return NextResponse.json(
-        { error: 'This league is full' },
-        { status: 400 }
-      )
-    }
-    
-    // Add user as member
-    await (prisma as any).privateLeagueMember.create({
-      data: {
-        leagueId: league.id,
-        userId: user.id,
-        joinedAt: new Date(),
-      },
-    })
-    
-    // Initialize stats for this user in this league
-    try {
-      await (prisma as any).privateLeagueStats.upsert({
+    // If teamId is provided, join with a team
+    if (teamId) {
+      // Verify team belongs to user
+      const team = await (prisma as any).team.findFirst({
         where: {
-          leagueId_userId_quizSlug: {
+          id: teamId,
+          userId: user.id,
+        },
+      })
+      
+      if (!team) {
+        return NextResponse.json(
+          { error: 'Team not found or does not belong to you' },
+          { status: 404 }
+        )
+      }
+      
+      // Check if team is already in league
+      const existingTeam = await (prisma as any).privateLeagueTeam.findFirst({
+        where: {
+          leagueId: league.id,
+          teamId: teamId,
+          leftAt: null,
+        },
+      })
+      
+      if (existingTeam) {
+        return NextResponse.json(
+          { error: 'This team is already in this league' },
+          { status: 400 }
+        )
+      }
+      
+      // Check if league is full (count both members and teams)
+      const [memberCount, teamCount] = await Promise.all([
+        (prisma as any).privateLeagueMember.count({
+          where: {
+            leagueId: league.id,
+            leftAt: null,
+          },
+        }),
+        (prisma as any).privateLeagueTeam.count({
+          where: {
+            leagueId: league.id,
+            leftAt: null,
+          },
+        }),
+      ])
+      
+      if (league.maxMembers && (memberCount + teamCount) >= league.maxMembers) {
+        return NextResponse.json(
+          { error: 'This league is full' },
+          { status: 400 }
+        )
+      }
+      
+      // Add team to league
+      await (prisma as any).privateLeagueTeam.create({
+        data: {
+          leagueId: league.id,
+          teamId: teamId,
+          addedByUserId: user.id,
+          joinedAt: new Date(),
+        },
+      })
+      
+      // Also add user as member if not already (for access control)
+      const existingMember = league.members.find((m: any) => m.userId === user.id)
+      if (!existingMember) {
+        await (prisma as any).privateLeagueMember.create({
+          data: {
             leagueId: league.id,
             userId: user.id,
-            quizSlug: null, // Overall stats
+            joinedAt: new Date(),
           },
+        })
+      }
+    } else {
+      // Join as user (legacy behavior)
+      // Check if user is already a member
+      const existingMember = league.members.find((m: any) => m.userId === user.id)
+      if (existingMember) {
+        return NextResponse.json(
+          { error: 'You are already a member of this league' },
+          { status: 400 }
+        )
+      }
+      
+      // Check if league is full
+      const memberCount = await (prisma as any).privateLeagueMember.count({
+        where: {
+          leagueId: league.id,
+          leftAt: null,
         },
-        create: {
+      })
+      
+      if (league.maxMembers && memberCount >= league.maxMembers) {
+        return NextResponse.json(
+          { error: 'This league is full' },
+          { status: 400 }
+        )
+      }
+      
+      // Add user as member
+      await (prisma as any).privateLeagueMember.create({
+        data: {
           leagueId: league.id,
           userId: user.id,
-          quizSlug: null,
+          joinedAt: new Date(),
         },
-        update: {},
       })
-    } catch (statsError: any) {
-      // Stats might not exist yet, that's okay
-      console.warn('Could not create league stats:', statsError.message)
+      
+      // Initialize stats for this user in this league
+      try {
+        await (prisma as any).privateLeagueStats.upsert({
+          where: {
+            private_league_stats_leagueId_userId_quizSlug_key: {
+              leagueId: league.id,
+              userId: user.id,
+              quizSlug: null, // Overall stats
+            },
+          },
+          create: {
+            leagueId: league.id,
+            userId: user.id,
+            quizSlug: null,
+          },
+          update: {},
+        })
+      } catch (statsError: any) {
+        // Stats might not exist yet, that's okay
+        console.warn('Could not create league stats:', statsError.message)
+      }
     }
     
     // Return the league details with color (default to blue if not set)
@@ -182,6 +293,7 @@ export async function POST(request: NextRequest) {
         organisation: league.organisation,
         _count: league._count,
         members: league.members || [],
+        teams: league.teams || [],
       },
     })
   } catch (error: any) {

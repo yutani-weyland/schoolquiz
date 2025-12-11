@@ -91,7 +91,7 @@ export function VirtualizedAchievementGrid({
 
 					return (
 						<div
-							key={virtualRow.key}
+							key={String(virtualRow.key)}
 							data-index={virtualRow.index}
 							ref={rowVirtualizer.measureElement}
 							style={{

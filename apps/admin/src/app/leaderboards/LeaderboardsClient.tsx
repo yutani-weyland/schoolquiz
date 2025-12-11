@@ -24,7 +24,7 @@ import { LeaderboardCardGridSkeleton } from '@/components/ui/LeaderboardCardSkel
 // Framer Motion (~50KB+) is only loaded when this section is rendered
 const LazyLeaderboardsList = dynamic(
 	() => import('./LeaderboardsListSection').then(mod => ({ default: mod.LeaderboardsListSection })),
-	{ 
+	{
 		ssr: false, // Client-side only (animations)
 		loading: () => <LeaderboardCardGridSkeleton count={6} /> // Skeleton for initial load
 	}
@@ -139,7 +139,7 @@ export function LeaderboardsClient({ initialData }: LeaderboardsClientProps) {
 		}
 	}
 
-	const filterLeaderboards = (list: LeaderboardSummary[]) => {
+	const filterLeaderboards = <T extends LeaderboardSummary>(list: T[]): T[] => {
 		if (!searchQuery) return list
 		const query = searchQuery.toLowerCase()
 		return list.filter(
@@ -181,22 +181,20 @@ export function LeaderboardsClient({ initialData }: LeaderboardsClientProps) {
 					<button
 						onClick={() => setFilter('all')}
 						disabled={isPending}
-						className={`px-4 py-2 rounded-full text-sm font-medium transition-colors disabled:opacity-50 ${
-							filter === 'all'
+						className={`px-4 py-2 rounded-full text-sm font-medium transition-colors disabled:opacity-50 ${filter === 'all'
 								? 'bg-blue-600 text-white'
 								: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-						}`}
+							}`}
 					>
 						All
 					</button>
 					<button
 						onClick={() => setFilter('orgWide')}
 						disabled={isPending}
-						className={`px-4 py-2 rounded-full text-sm font-medium transition-colors disabled:opacity-50 ${
-							filter === 'orgWide'
+						className={`px-4 py-2 rounded-full text-sm font-medium transition-colors disabled:opacity-50 ${filter === 'orgWide'
 								? 'bg-blue-600 text-white'
 								: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-						}`}
+							}`}
 					>
 						Org-wide
 					</button>
@@ -205,22 +203,20 @@ export function LeaderboardsClient({ initialData }: LeaderboardsClientProps) {
 							<button
 								onClick={() => setFilter('group')}
 								disabled={isPending}
-								className={`px-4 py-2 rounded-full text-sm font-medium transition-colors disabled:opacity-50 ${
-									filter === 'group'
+								className={`px-4 py-2 rounded-full text-sm font-medium transition-colors disabled:opacity-50 ${filter === 'group'
 										? 'bg-blue-600 text-white'
 										: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-								}`}
+									}`}
 							>
 								Group
 							</button>
 							<button
 								onClick={() => setFilter('adHoc')}
 								disabled={isPending}
-								className={`px-4 py-2 rounded-full text-sm font-medium transition-colors disabled:opacity-50 ${
-									filter === 'adHoc'
+								className={`px-4 py-2 rounded-full text-sm font-medium transition-colors disabled:opacity-50 ${filter === 'adHoc'
 										? 'bg-blue-600 text-white'
 										: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-								}`}
+									}`}
 							>
 								Ad-hoc
 							</button>

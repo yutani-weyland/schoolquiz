@@ -27,3 +27,9 @@ export default async function QuizzesPageContent() {
 	return <QuizzesClient initialData={pageData} quizzes={quizzes} />
 }
 
+
+
+
+
+
+

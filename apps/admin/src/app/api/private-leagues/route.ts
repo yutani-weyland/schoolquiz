@@ -194,6 +194,36 @@ export async function GET(request: NextRequest) {
             joinedAt: 'asc',
           },
         }
+        
+        // Include teams preview
+        includeStructure.teams = {
+          where: {
+            leftAt: null,
+          },
+          take: 10,
+          select: {
+            id: true,
+            teamId: true,
+            joinedAt: true,
+            team: {
+              select: {
+                id: true,
+                name: true,
+                color: true,
+                userId: true,
+                user: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+          orderBy: {
+            joinedAt: 'asc',
+          },
+        }
       }
       
       // Query 1: Leagues where user is creator (uses index on createdByUserId)
@@ -373,8 +403,23 @@ export async function POST(request: NextRequest) {
     }
     
     // Validate request body with Zod
-    const body = await validateRequest(request, CreatePrivateLeagueSchema)
-    const { name, description, color, organisationId } = body
+    let body: any
+    try {
+      body = await validateRequest(request, CreatePrivateLeagueSchema)
+    } catch (validationError: any) {
+      console.error('[API] Validation error:', validationError)
+      return NextResponse.json(
+        { 
+          error: 'Invalid request data',
+          details: validationError.message || String(validationError),
+        },
+        { status: 400 }
+      )
+    }
+    const { name, description, color, organisationId, teamIds } = body
+    
+    // Normalize empty description to null
+    const normalizedDescription = description && description.trim() ? description.trim() : null
     
     // Get user's organization if organisationId not provided but user is in an org
     let finalOrganisationId = organisationId
@@ -419,7 +464,7 @@ export async function POST(request: NextRequest) {
       const league = {
         id: leagueId,
         name: name.trim(),
-        description: description?.trim() || null,
+        description: normalizedDescription,
         inviteCode,
         createdByUserId: user.id,
         creator: {
@@ -484,6 +529,7 @@ export async function POST(request: NextRequest) {
     
     // Create league
     let league: any
+    let leagueData: any = null // Initialize outside try block for error handling
     try {
       // Build the include object conditionally
       const includeObj: any = {
@@ -541,9 +587,9 @@ export async function POST(request: NextRequest) {
       }
       
       // Build data object without color (field doesn't exist in schema)
-      const leagueData: any = {
+      leagueData = {
         name: name.trim(),
-        description: description?.trim() || null,
+        description: normalizedDescription,
         createdByUserId: user.id,
         inviteCode,
         organisationId: finalOrganisationId || null,
@@ -555,18 +601,189 @@ export async function POST(request: NextRequest) {
         },
       }
       
-      league = await (prisma as any).privateLeague.create({
-        data: leagueData,
-        include: includeObj,
-      }) as any
+      // Add teams if provided
+      if (teamIds && Array.isArray(teamIds) && teamIds.length > 0) {
+        try {
+          // Check if teams table exists first
+          try {
+            // Verify all teams belong to the user
+            const userTeams = await (prisma as any).team.findMany({
+              where: {
+                id: { in: teamIds },
+                userId: user.id,
+              },
+              select: { id: true },
+            })
+            
+            const validTeamIds = userTeams.map((t: any) => t.id)
+            const invalidTeamIds = teamIds.filter((id: string) => !validTeamIds.includes(id))
+            
+            if (invalidTeamIds.length > 0) {
+              return NextResponse.json(
+                { error: `Invalid team IDs: ${invalidTeamIds.join(', ')}. Teams must belong to you.` },
+                { status: 400 }
+              )
+            }
+            
+            // Add teams to league data using the correct relation name
+            if (validTeamIds.length > 0) {
+              leagueData.teams = {
+                create: validTeamIds.map((teamId: string) => ({
+                  teamId,
+                  addedByUserId: user.id,
+                  joinedAt: new Date(),
+                })),
+              }
+              
+              // Include teams in response
+              includeObj.teams = {
+                where: {
+                  leftAt: null,
+                },
+                include: {
+                  team: {
+                    select: {
+                      id: true,
+                      name: true,
+                      color: true,
+                      userId: true,
+                      user: {
+                        select: {
+                          id: true,
+                          name: true,
+                          email: true,
+                        },
+                      },
+                    },
+                  },
+                  addedBy: {
+                    select: {
+                      id: true,
+                      name: true,
+                    },
+                  },
+                },
+              }
+              
+              // Add teams count to _count
+              if (includeObj._count && includeObj._count.select) {
+                includeObj._count.select.teams = {
+                  where: {
+                    leftAt: null,
+                  },
+                }
+              }
+            }
+          } catch (teamQueryError: any) {
+            // If teams table doesn't exist, skip teams feature
+            const errorMsg = teamQueryError.message || String(teamQueryError)
+            if (errorMsg.includes('does not exist') || 
+                errorMsg.includes('Unknown model') ||
+                errorMsg.includes('team') ||
+                errorMsg.includes('relation') ||
+                errorMsg.includes('P2021')) {
+              console.warn('[API] Teams feature not available, creating league without teams:', errorMsg)
+              // Don't add teams - continue without them
+            } else {
+              throw teamQueryError
+            }
+          }
+        } catch (teamError: any) {
+          // If teams feature isn't available (migration not run), continue without teams
+          const errorMsg = teamError.message || String(teamError)
+          console.warn('[API] Teams error, continuing without teams:', errorMsg)
+          // Remove teams from leagueData if it was added
+          delete leagueData.teams
+          // Remove teams from includeObj if it was added
+          if (includeObj.teams) {
+            delete includeObj.teams
+          }
+          if (includeObj._count?.select?.teams) {
+            delete includeObj._count.select.teams
+          }
+          // Don't throw - continue creating league without teams
+        }
+      }
+      
+      // Final check: if teams relation exists but teams feature might not be available,
+      // try to detect this before creating
+      if (leagueData.teams) {
+        // Double-check that teams relation is valid by checking if the table exists
+        try {
+          // Quick check: try to query teams table
+          await (prisma as any).team.findFirst({ take: 1 })
+        } catch (teamsCheckError: any) {
+          const errorMsg = teamsCheckError.message || String(teamsCheckError)
+          if (errorMsg.includes('does not exist') || 
+              errorMsg.includes('Unknown model') ||
+              errorMsg.includes('team') ||
+              errorMsg.includes('relation')) {
+            console.warn('[API] Teams table not available, removing teams from league data')
+            delete leagueData.teams
+            if (includeObj.teams) delete includeObj.teams
+            if (includeObj._count?.select?.teams) delete includeObj._count.select.teams
+          }
+        }
+      }
+      
+      console.log('[API] Creating league with data:', {
+        name: leagueData.name,
+        hasTeams: !!leagueData.teams,
+        teamCount: leagueData.teams?.create?.length || 0,
+        hasOrganisation: !!finalOrganisationId,
+        inviteCode,
+      })
+      
+      try {
+        league = await (prisma as any).privateLeague.create({
+          data: leagueData,
+          include: includeObj,
+        }) as any
+        
+        console.log('[API] League created successfully:', league.id)
+      } catch (createError: any) {
+        console.error('[API] Prisma create error:', {
+          message: createError.message,
+          code: createError.code,
+          meta: createError.meta,
+          cause: createError.cause,
+        })
+        
+        // If error is related to teams, try again without teams
+        const errorMsg = createError.message || String(createError)
+        if ((errorMsg.includes('teams') || errorMsg.includes('team')) && leagueData.teams) {
+          console.warn('[API] Retrying league creation without teams due to teams error')
+          delete leagueData.teams
+          if (includeObj.teams) delete includeObj.teams
+          if (includeObj._count?.select?.teams) delete includeObj._count.select.teams
+          
+          try {
+            league = await (prisma as any).privateLeague.create({
+              data: leagueData,
+              include: includeObj,
+            }) as any
+            console.log('[API] League created successfully without teams:', league.id)
+          } catch (retryError: any) {
+            // If retry also fails, throw the original error
+            throw createError
+          }
+        } else {
+          throw createError
+        }
+      }
     } catch (dbError: any) {
       // Only check for specific migration-related errors
       const errorMsg = dbError.message || String(dbError)
-      console.error('Database error creating league:', {
+      console.error('[API] Database error creating league:', {
         message: dbError.message,
         code: dbError.code,
         meta: dbError.meta,
         stack: dbError.stack,
+        leagueData: leagueData ? {
+          name: leagueData.name,
+          hasTeams: !!leagueData.teams,
+          teamCount: leagueData.teams?.create?.length || 0,
+        } : 'not initialized',
       })
       
       // Check for schema mismatch errors (missing columns)
@@ -597,11 +814,15 @@ export async function POST(request: NextRequest) {
       // Return more detailed error for debugging
       const errorDetails = {
         error: 'Failed to create league',
-        details: dbError.message || String(dbError),
+        message: dbError.message || String(dbError),
         code: dbError.code,
         meta: dbError.meta,
+        // Include helpful context
+        hint: errorMsg.includes('teams') || errorMsg.includes('team') 
+          ? 'Teams feature may not be available. Try creating the league without teams.'
+          : 'Check server logs for more details.',
       }
-      console.error('Returning error response:', errorDetails)
+      console.error('[API] Returning error response:', errorDetails)
       return NextResponse.json(errorDetails, { status: 500 })
     }
     

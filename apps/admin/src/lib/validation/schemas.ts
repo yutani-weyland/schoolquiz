@@ -76,9 +76,11 @@ export const RoundInputSchema = z.object({
 export const CreateQuizSchema = z.object({
   number: z.number().int().positive('Quiz number must be positive'),
   title: z.string().min(1, 'Quiz title is required').max(200),
-  description: z.string().optional(),
+  blurb: z.string().optional(),
   status: z.enum(['draft', 'scheduled', 'published']),
-  scheduledDate: z.string().optional(), // Accept ISO date string or any string, will be validated when parsed
+  colorHex: ColorHexSchema.optional(),
+  weekISO: z.string().optional(),
+  publicationDate: z.string().datetime().optional().nullable(),
   rounds: z.array(RoundInputSchema).min(1, 'Quiz must have at least one round'),
 });
 
@@ -221,7 +223,6 @@ export const CustomQuizRoundSchema = z.object({
     z.object({
       text: z.string().min(10).max(500),
       answer: z.string().min(1).max(200),
-      explanation: z.string().max(500).optional(),
     })
   ).min(1).max(20),
 });
@@ -245,14 +246,16 @@ export const CreateCustomQuizSchema = z.object({
 
 export const CreatePrivateLeagueSchema = z.object({
   name: z.string().min(1, 'League name is required').max(100),
-  description: z.string().max(500).optional(),
+  description: z.string().max(500).optional().or(z.literal('')),
   color: z.string().optional(),
-  organisationId: z.string().optional(),
-  isPublic: z.boolean().default(false),
+  organisationId: z.string().optional().nullable(),
+  isPublic: z.boolean().optional().default(false),
+  teamIds: z.array(z.string()).optional(), // Optional array of team IDs to add when creating
 });
 
 export const JoinLeagueSchema = z.object({
   inviteCode: z.string().min(1, 'Invite code is required').toUpperCase(),
+  teamId: z.string().optional(), // Optional team ID to join with (if not provided, joins as user)
 });
 
 // ============================================================================
@@ -344,6 +347,20 @@ export const ContactSuggestionSchema = z.object({
 // ============================================================================
 // Profile Schemas
 // ============================================================================
+
+// ============================================================================
+// Team Schemas (Premium Feature)
+// ============================================================================
+
+export const CreateTeamSchema = z.object({
+  name: z.string().min(1, 'Team name is required').max(50, 'Team name must be 50 characters or less').trim(),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Invalid color hex format').optional(),
+});
+
+export const UpdateTeamSchema = z.object({
+  name: z.string().min(1, 'Team name is required').max(50, 'Team name must be 50 characters or less').trim().optional(),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Invalid color hex format').optional().nullable(),
+});
 
 export const UpdateProfileSchema = z.object({
   name: z.string().min(1).max(100).optional(),

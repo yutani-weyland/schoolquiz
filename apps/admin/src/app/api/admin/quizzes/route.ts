@@ -24,6 +24,7 @@ function generateId(): string {
 
 
 export async function GET(request: NextRequest) {
+  const searchParams = request.nextUrl.searchParams;
   try {
     // Require admin access (with fallback for development)
     await requireAdmin(request).catch(() => {
@@ -250,7 +251,7 @@ export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser();
 
-    if (!user || !can(user, 'create', 'quiz')) {
+    if (!user || !can(user as any, 'create', 'quiz')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
@@ -302,14 +303,14 @@ export async function POST(request: NextRequest) {
         id: generateId(),
         slug,
         title: body.title,
-        blurb: body.description || null,
+        blurb: body.blurb || null,
         status: body.status,
         colorHex: '#FFE135', // Default yellow, can be customized later
         createdBy: user.id,
-        weekISO: body.scheduledDate
-          ? new Date(body.scheduledDate).toISOString().split('T')[0]
-          : new Date().toISOString().split('T')[0],
-        publicationDate: body.scheduledDate ? new Date(body.scheduledDate) : null,
+        weekISO: body.weekISO || (body.publicationDate
+          ? new Date(body.publicationDate).toISOString().split('T')[0]
+          : new Date().toISOString().split('T')[0]),
+        publicationDate: body.publicationDate ? new Date(body.publicationDate) : null,
       },
     });
     console.log(`  ✅ Created quiz: ${quiz.id} (slug: ${quiz.slug})`);

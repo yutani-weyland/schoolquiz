@@ -199,13 +199,13 @@ export function RecentAchievements() {
         }
         // OPTIMIZATION: Fetch both in parallel instead of sequentially (saves ~50% load time)
         const { fetchUserAchievements, fetchAchievements } = await import('@/lib/achievement-fetch');
-        
+
         // Fetch recent unlocked achievements AND all achievements in parallel
         const [userData, allData] = await Promise.all([
           fetchUserAchievements(session.user.id, null),
           fetchAchievements(session.user.id, null),
         ]);
-        
+
         const fetchedAchievements = userData.achievements || [];
         // If no achievements, use mock data for prototyping
         if (fetchedAchievements.length === 0) {
@@ -216,14 +216,14 @@ export function RecentAchievements() {
         }
         // Filter for in-progress achievements (have progress but not unlocked)
         const inProgress = (allData.achievements || []).filter((achievement: AllAchievement) => {
-          const hasProgress = achievement.progressValue !== undefined && 
-                            achievement.progressValue !== null &&
-                            achievement.progressMax !== undefined && 
-                            achievement.progressMax !== null;
+          const hasProgress = achievement.progressValue !== undefined &&
+            achievement.progressValue !== null &&
+            achievement.progressMax !== undefined &&
+            achievement.progressMax !== null;
           const isInProgress = hasProgress &&
-                            (achievement.progressValue ?? 0) > 0 &&
-                            (achievement.progressValue ?? 0) < (achievement.progressMax ?? 0) &&
-                            achievement.status !== 'unlocked';
+            (achievement.progressValue ?? 0) > 0 &&
+            (achievement.progressValue ?? 0) < (achievement.progressMax ?? 0) &&
+            achievement.status !== 'unlocked';
           return isInProgress;
         });
 
@@ -299,14 +299,14 @@ export function RecentAchievements() {
   // Filter for in-progress achievements (have progress but not unlocked)
   const queryInProgressAchievements = queryAllAchievements
     .filter((achievement: AllAchievement) => {
-      const hasProgress = achievement.progressValue !== undefined && 
-                        achievement.progressValue !== null &&
-                        achievement.progressMax !== undefined && 
-                        achievement.progressMax !== null;
+      const hasProgress = achievement.progressValue !== undefined &&
+        achievement.progressValue !== null &&
+        achievement.progressMax !== undefined &&
+        achievement.progressMax !== null;
       const isInProgress = hasProgress &&
-                        (achievement.progressValue ?? 0) > 0 &&
-                        (achievement.progressValue ?? 0) < (achievement.progressMax ?? 0) &&
-                        achievement.status !== 'unlocked';
+        (achievement.progressValue ?? 0) > 0 &&
+        (achievement.progressValue ?? 0) < (achievement.progressMax ?? 0) &&
+        achievement.status !== 'unlocked';
       return isInProgress;
     })
     .sort((a: AllAchievement, b: AllAchievement) => {
@@ -317,8 +317,8 @@ export function RecentAchievements() {
     .slice(0, 6);
 
   // Use React Query data if available, otherwise fall back to useEffect data
-  const finalRecentAchievements = queryRecentAchievements.length > 0 
-    ? queryRecentAchievements 
+  const finalRecentAchievements = queryRecentAchievements.length > 0
+    ? queryRecentAchievements
     : (recentAchievements.length > 0 ? recentAchievements : getMockAchievements());
   const finalInProgressAchievements = queryInProgressAchievements.length > 0
     ? queryInProgressAchievements
@@ -373,7 +373,7 @@ export function RecentAchievements() {
 
           {/* Scrolling Achievements Container */}
           <div className="overflow-hidden pb-4 -mx-2 px-2 relative mb-8">
-            <motion.div 
+            <motion.div
               className="flex gap-4 min-w-max"
               animate={{
                 x: [0, -(180 + 16) * finalRecentAchievements.length],
@@ -398,37 +398,37 @@ export function RecentAchievements() {
                     key={`${achievement.id}-${index}`}
                     initial={{ opacity: 0, y: 10, rotate: 0 }}
                     animate={{ opacity: 1, y: 0, rotate: rotation }}
-                        transition={{ delay: (index % finalRecentAchievements.length) * 0.05, type: 'spring', stiffness: 200, damping: 15 }}
+                    transition={{ delay: (index % finalRecentAchievements.length) * 0.05, type: 'spring', stiffness: 200, damping: 15 }}
                     whileHover={{ rotate: rotation + (rotation > 0 ? 0.5 : -0.5), scale: 1.05 }}
                     className="flex-shrink-0 w-[180px] sm:w-[190px]"
                   >
                     <div className="scale-[0.85] sm:scale-[0.9] origin-left">
                       <AchievementCard
-                      achievement={{
-                        id: achievement.achievementId,
-                        slug: achievement.achievementSlug,
-                        name: achievement.achievementName,
-                        shortDescription: achievement.achievementDescription,
-                        category: achievement.achievementCategory,
-                        rarity: achievement.achievementRarity,
-                        isPremiumOnly: false,
-                        iconKey: achievement.achievementIconKey,
-                        // Add card variants for visual variety
-                        cardVariant: 
-                          achievement.achievementSlug === 'ace' ? 'foil' :
-                          achievement.achievementSlug === 'addicted-shiny' ? 'shiny' :
-                          achievement.achievementSlug === 'perfect-fullart' ? 'fullArt' :
-                          achievement.achievementSlug === 'golden-champion' ? 'foilGold' :
-                          achievement.achievementSlug === 'silver-star' ? 'foilSilver' :
-                          'standard',
-                      }}
-                      status="unlocked"
-                      unlockedAt={achievement.unlockedAt}
-                      quizSlug={achievement.quizSlug}
-                      progressValue={achievement.progressValue}
-                      progressMax={achievement.progressMax}
-                      tier={tier}
-                    />
+                        achievement={{
+                          id: achievement.achievementId,
+                          slug: achievement.achievementSlug,
+                          name: achievement.achievementName,
+                          shortDescription: achievement.achievementDescription,
+                          category: achievement.achievementCategory,
+                          rarity: achievement.achievementRarity,
+                          isPremiumOnly: false,
+                          iconKey: achievement.achievementIconKey,
+                          // Add card variants for visual variety
+                          cardVariant:
+                            achievement.achievementSlug === 'ace' ? 'foil' :
+                              achievement.achievementSlug === 'addicted-shiny' ? 'shiny' :
+                                achievement.achievementSlug === 'perfect-fullart' ? 'fullArt' :
+                                  achievement.achievementSlug === 'golden-champion' ? 'foilGold' :
+                                    achievement.achievementSlug === 'silver-star' ? 'foilSilver' :
+                                      'standard',
+                        }}
+                        status="unlocked"
+                        unlockedAt={achievement.unlockedAt}
+                        quizSlug={achievement.quizSlug}
+                        progressValue={achievement.progressValue}
+                        progressMax={achievement.progressMax}
+                        tier={tier}
+                      />
                     </div>
                   </motion.div>
                 );
@@ -462,7 +462,7 @@ export function RecentAchievements() {
 
             {/* In Progress Achievements Grid */}
             <div className="flex flex-wrap justify-center gap-4 sm:gap-6">
-              {finalInProgressAchievements.map((achievement, index) => (
+              {finalInProgressAchievements.map((achievement: AllAchievement, index: number) => (
                 <motion.div
                   key={achievement.id}
                   initial={{ opacity: 0, scale: 0.9 }}
@@ -494,7 +494,7 @@ export function RecentAchievements() {
                   <TrendingUp className="w-4 h-4" />
                   <span>
                     {Math.round(
-                      (finalInProgressAchievements.reduce((sum, a) => {
+                      (finalInProgressAchievements.reduce((sum: number, a: AllAchievement) => {
                         const percent = a.progressMax ? (a.progressValue || 0) / a.progressMax : 0;
                         return sum + percent;
                       }, 0) / finalInProgressAchievements.length) * 100

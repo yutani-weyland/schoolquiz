@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { QuizService } from '@/services/quizService';
 import { validateQuizStructure } from '@/lib/validation/quizValidation';
+import { requireAuth } from '@/lib/auth';
 
 /**
  * GET /api/quizzes/[slug]/data
@@ -15,8 +16,14 @@ export async function GET(
 	try {
 		const { slug } = await params;
 
+		// Require authentication
+		// Note: We might want to allow public access for published quizzes in the future,
+		// but for now we'll require auth for all API access to be safe.
+		// The QuizService will handle granular permissions (draft vs published).
+		const user = await requireAuth();
+
 		// Use QuizService which handles database + mock data fallback
-		const quizData = await QuizService.getQuizBySlug(slug);
+		const quizData = await QuizService.getQuizBySlug(slug, user);
 
 		// Validate quiz structure
 		const validation = validateQuizStructure(quizData);
@@ -29,7 +36,11 @@ export async function GET(
 		return NextResponse.json(quizData);
 	} catch (error) {
 		console.error('[Quiz API] Error fetching quiz data:', error);
-		
+
+		if (error instanceof Error && error.message === 'Unauthorized') {
+			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+		}
+
 		// Check if it's a "not found" error
 		if (error instanceof Error && error.message.includes('not found')) {
 			return NextResponse.json(
@@ -39,9 +50,9 @@ export async function GET(
 		}
 
 		return NextResponse.json(
-			{ 
-				error: 'Failed to fetch quiz data', 
-				details: error instanceof Error ? error.message : 'Unknown error' 
+			{
+				error: 'Failed to fetch quiz data',
+				details: error instanceof Error ? error.message : 'Unknown error'
 			},
 			{ status: 500 }
 		);

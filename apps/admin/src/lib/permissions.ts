@@ -70,7 +70,11 @@ export const PERMISSIONS: PermissionRules = {
  * @param resource - The resource to act upon
  * @returns boolean
  */
-export function can(user: User | null | undefined, action: Action, resource: Resource): boolean {
+export interface AppUser extends User {
+    platformRole?: string;
+}
+
+export function can(user: AppUser | null | undefined, action: Action, resource: Resource): boolean {
     if (!user || !user.platformRole) {
         return false;
     }

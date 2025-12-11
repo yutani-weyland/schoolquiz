@@ -9,6 +9,7 @@ export interface League {
   description: string | null
   inviteCode: string
   createdByUserId: string
+  createdAt: string
   color?: string
   organisationId?: string | null
   organisation?: {
@@ -31,14 +32,32 @@ export interface League {
       teamName: string | null
     }
   }>
+  teams?: Array<{
+    id: string
+    teamId: string
+    joinedAt: string
+    team: {
+      id: string
+      name: string
+      color: string | null
+      userId: string
+      user: {
+        id: string
+        name: string | null
+        email: string
+      }
+    }
+  }>
   _count: {
     members: number
+    teams?: number
   }
 }
 
 export interface LeagueStats {
   id: string
-  userId: string
+  userId: string | null
+  teamId: string | null
   quizSlug: string | null
   score: number | null
   totalQuestions: number | null
@@ -46,11 +65,23 @@ export interface LeagueStats {
   bestStreak: number
   currentStreak: number
   quizzesPlayed: number
-  user: {
+  completedAt?: string | null
+  user?: {
     id: string
     name: string | null
+    email?: string | null
     teamName: string | null
-  }
+  } | null
+  team?: {
+    id: string
+    name: string
+    color: string | null
+    userId: string
+    user: {
+      id: string
+      name: string | null
+    }
+  } | null
 }
 
 export interface LeagueStatsResponse {
@@ -177,9 +208,12 @@ export async function fetchLeagueMembers(
 /**
  * Fetch stats for a specific league
  */
-export async function fetchLeagueStats(leagueId: string): Promise<LeagueStatsResponse> {
+export async function fetchLeagueStats(leagueId: string, quizSlug?: string): Promise<LeagueStatsResponse> {
   const startTime = performance.now()
-  const response = await fetch(`/api/private-leagues/${leagueId}/stats`, {
+  const url = quizSlug
+    ? `/api/private-leagues/${leagueId}/stats?quizSlug=${encodeURIComponent(quizSlug)}`
+    : `/api/private-leagues/${leagueId}/stats`
+  const response = await fetch(url, {
     credentials: 'include', // Send session cookie
   })
 

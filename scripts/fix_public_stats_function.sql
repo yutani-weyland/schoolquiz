@@ -34,3 +34,9 @@ $$;
 
 SELECT 'update_public_stats_summary function fixed!' as status;
 
+
+
+
+
+
+

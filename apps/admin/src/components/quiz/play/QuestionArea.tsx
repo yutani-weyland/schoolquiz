@@ -29,6 +29,10 @@ interface QuestionAreaProps {
   onNext: () => void;
   onPrevious: () => void;
   onFinish?: () => void;
+  quizSlug?: string;
+  customQuizId?: string;
+  isPremium?: boolean;
+  isPresenterMode?: boolean;
 }
 
 export function QuestionArea({
@@ -54,6 +58,10 @@ export function QuestionArea({
   onNext,
   onPrevious,
   onFinish,
+  quizSlug,
+  customQuizId,
+  isPremium = false,
+  isPresenterMode = false,
 }: QuestionAreaProps) {
   if (!question) {
     return null;
@@ -66,7 +74,13 @@ export function QuestionArea({
   return (
     <AnimatePresence mode="wait">
       {screen === "round-intro" && round ? (
-        <RoundIntro key={`round-${round.number}`} round={round} textColor={textColor} onStart={onStartRound} finaleRoundNumber={finaleRoundNumber} />
+        <RoundIntro 
+          key={`round-${round.number}`} 
+          round={round} 
+          textColor={textColor} 
+          onStart={onStartRound} 
+          finaleRoundNumber={finaleRoundNumber}
+        />
       ) : (
         <PresenterMode
           key={`question-${currentIndex}`}
@@ -150,20 +164,22 @@ function RoundIntro({ round, textColor, onStart, finaleRoundNumber }: RoundIntro
           </motion.div>
         )}
 
-        <motion.button
-          onClick={onStart}
-          className={`rounded-full font-bold transition-colors duration-300 ease-in-out ${
-            textColor === "white" ? "bg-white text-gray-900 hover:bg-white/90" : "bg-gray-900 text-white hover:bg-gray-800"
-          }`}
-          style={{
-            fontSize: "clamp(0.875rem, min(2vw, 3vh), 1.5rem)",
-            padding: "clamp(0.625rem, min(1.5vw, 2.5vh), 1.25rem) clamp(1.5rem, min(4vw, 6vh), 2.5rem)",
-          }}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          {ctaLabel}
-        </motion.button>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <motion.button
+            onClick={onStart}
+            className={`rounded-full font-bold transition-colors duration-300 ease-in-out ${
+              textColor === "white" ? "bg-white text-gray-900 hover:bg-white/90" : "bg-gray-900 text-white hover:bg-gray-800"
+            }`}
+            style={{
+              fontSize: "clamp(0.875rem, min(2vw, 3vh), 1.5rem)",
+              padding: "clamp(0.625rem, min(1.5vw, 2.5vh), 1.25rem) clamp(1.5rem, min(4vw, 6vh), 2.5rem)",
+            }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            {ctaLabel}
+          </motion.button>
+        </div>
       </div>
     </motion.div>
   );

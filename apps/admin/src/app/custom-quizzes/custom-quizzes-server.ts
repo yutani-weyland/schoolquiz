@@ -120,8 +120,8 @@ export async function fetchUsageData(userId: string): Promise<UsageData | null> 
  * Returns quizzes, total count, and whether there are more to load
  */
 async function fetchCustomQuizzes(
-	userId: string, 
-	limit: number = 12, 
+	userId: string,
+	limit: number = 12,
 	offset: number = 0
 ): Promise<{ ownedQuizzes: CustomQuiz[]; sharedQuizzes: CustomQuiz[]; total: number; hasMore: boolean }> {
 	try {
@@ -191,7 +191,7 @@ async function fetchCustomQuizzes(
 		// Transform owned quizzes
 		const transformedOwned = ownedQuizzes.map(quiz => ({
 			id: quiz.id,
-			slug: quiz.slug,
+			slug: quiz.slug || '',
 			title: quiz.title,
 			blurb: quiz.blurb || undefined,
 			colorHex: quiz.colorHex || undefined,
@@ -205,7 +205,7 @@ async function fetchCustomQuizzes(
 		// Transform shared quizzes
 		const transformedShared = shares.map(share => ({
 			id: share.quiz.id,
-			slug: share.quiz.slug,
+			slug: share.quiz.slug || '',
 			title: share.quiz.title,
 			blurb: share.quiz.blurb || undefined,
 			colorHex: share.quiz.colorHex || undefined,
@@ -224,17 +224,17 @@ async function fetchCustomQuizzes(
 		const total = ownedCount + shares.length
 		const hasMore = offset + limit < ownedCount
 
-		return { 
-			ownedQuizzes: transformedOwned, 
+		return {
+			ownedQuizzes: transformedOwned,
 			sharedQuizzes: transformedShared as CustomQuiz[],
-			total, 
-			hasMore 
+			total,
+			hasMore
 		}
 	} catch (error) {
 		console.error('[Custom Quizzes Server] Error fetching quizzes:', error)
 		// If schema not migrated yet, return empty result
 		if (error instanceof Error && (
-			error.message?.includes('does not exist') || 
+			error.message?.includes('does not exist') ||
 			error.message?.includes('column') ||
 			(error as any).code === 'P2022'
 		)) {
@@ -263,7 +263,7 @@ export async function getCustomQuizzesPageData(limit?: number, offset: number = 
 	}
 
 	// Check premium status
-	const isPremium = user.tier === 'premium' || 
+	const isPremium = user.tier === 'premium' ||
 		user.subscriptionStatus === 'ACTIVE' ||
 		user.subscriptionStatus === 'TRIALING' ||
 		(user.freeTrialUntil && new Date(user.freeTrialUntil) > new Date())

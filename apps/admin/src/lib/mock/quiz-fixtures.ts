@@ -8,6 +8,7 @@
 import { QuizQuestion, QuizRound } from '@/components/quiz/play/types';
 
 export interface QuizFixtureData {
+	title?: string;
 	questions: QuizQuestion[];
 	rounds: QuizRound[];
 }
@@ -17,6 +18,7 @@ export interface QuizFixtureData {
  */
 export const MOCK_QUIZ_DATA: Record<string, QuizFixtureData> = {
 	"12": {
+		title: "General Knowledge Quiz #12",
 		rounds: [
 			{ number: 1, title: "Shape Up", blurb: "Time to get in shape! Questions about forms, figures, and geometry." },
 			{ number: 2, title: "Pumpkins", blurb: "Orange you glad? All about the beloved autumn squash." },
@@ -53,6 +55,7 @@ export const MOCK_QUIZ_DATA: Record<string, QuizFixtureData> = {
 		]
 	},
 	"279": {
+		title: "General Knowledge Quiz #279",
 		rounds: [
 			{ number: 1, title: "Shape Up", blurb: "Time to get in shape! Questions about forms, figures, and geometry." },
 			{ number: 2, title: "Pumpkins", blurb: "Orange you glad? All about the beloved autumn squash." },
@@ -89,6 +92,7 @@ export const MOCK_QUIZ_DATA: Record<string, QuizFixtureData> = {
 		]
 	},
 	"11": {
+		title: "General Knowledge Quiz #11",
 		rounds: [
 			{ number: 1, title: "Opposite Day", blurb: "Everything is backwards today! Can you flip your thinking?" },
 			{ number: 2, title: "Lights", blurb: "Let there be light! Questions about illumination and brightness." },
@@ -125,6 +129,7 @@ export const MOCK_QUIZ_DATA: Record<string, QuizFixtureData> = {
 		]
 	},
 	"10": {
+		title: "General Knowledge Quiz #10",
 		rounds: [
 			{ number: 1, title: "Back to the Past", blurb: "Journey through history's most memorable moments!" },
 			{ number: 2, title: "Name That Nation", blurb: "Test your geography and world knowledge." },
@@ -162,6 +167,7 @@ export const MOCK_QUIZ_DATA: Record<string, QuizFixtureData> = {
 	},
 	// Demo quiz (used for visitor preview)
 	"demo": {
+		title: "Demo Quiz",
 		rounds: [
 			{ number: 1, title: "Shape Up", blurb: "Time to get in shape! Questions about forms, figures, and geometry." },
 			{ number: 2, title: "Pumpkins", blurb: "Orange you glad? All about the beloved autumn squash." },

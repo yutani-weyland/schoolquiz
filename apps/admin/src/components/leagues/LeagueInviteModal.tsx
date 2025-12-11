@@ -1,9 +1,10 @@
 'use client'
 
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Mail, KeyRound, Building2, Users, Search, CheckCircle, XCircle, Loader2 } from 'lucide-react'
+import { X, Mail, KeyRound, Building2, Users, Search, Copy, Check, Loader2 } from 'lucide-react'
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useDebounce } from '@/hooks/useDebounce'
+import * as Tooltip from '@radix-ui/react-tooltip'
 
 interface LeagueInviteModalProps {
   isOpen: boolean
@@ -30,10 +31,10 @@ export function LeagueInviteModal({
   onInviteOrgMembers,
   inviting
 }: LeagueInviteModalProps) {
-  const [mode, setMode] = useState<'org' | 'email' | 'code'>('org')
   const [email, setEmail] = useState('')
   const [search, setSearch] = useState('')
   const [selectedMemberIds, setSelectedMemberIds] = useState<Set<string>>(new Set())
+  const [copied, setCopied] = useState(false)
   const debouncedSearch = useDebounce(search, 200)
 
   useEffect(() => {
@@ -41,9 +42,9 @@ export function LeagueInviteModal({
       setEmail('')
       setSearch('')
       setSelectedMemberIds(new Set())
-      setMode(userOrg ? 'org' : 'email')
+      setCopied(false)
     }
-  }, [isOpen, userOrg])
+  }, [isOpen])
 
   // OPTIMIZATION: Simplified filtering - no profile relation needed (already optimized in API)
   const filteredMembers = useMemo(() => {
@@ -79,18 +80,26 @@ export function LeagueInviteModal({
     }
   }, [filteredMembers, selectedMemberIds.size])
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleInviteByEmail = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (mode === 'email' && email.trim()) {
+    if (email.trim()) {
       await onInviteByEmail(email.trim())
-    } else if (mode === 'org' && selectedMemberIds.size > 0) {
+      setEmail('')
+    }
+  }
+
+  const handleInviteOrgMembers = async () => {
+    if (selectedMemberIds.size > 0) {
       await onInviteOrgMembers(Array.from(selectedMemberIds))
+      setSelectedMemberIds(new Set())
     }
   }
 
   const copyInviteCode = async () => {
     if (league?.inviteCode) {
       await navigator.clipboard.writeText(league.inviteCode)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
     }
   }
 
@@ -135,18 +144,13 @@ export function LeagueInviteModal({
 
               {/* Header */}
               <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-                <div className="flex items-center gap-3">
-                  <div>
-                    <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
-                      Invite to {league.name}
-                    </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                      Share this league with others
-                    </p>
-                  </div>
-                  {isLoading && (
-                    <Loader2 className="w-5 h-5 text-primary animate-spin" title="Loading..." />
-                  )}
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
+                    Invite to {league.name}
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    Share this league with others
+                  </p>
                 </div>
                 <button
                   onClick={onClose}
@@ -156,72 +160,94 @@ export function LeagueInviteModal({
                 </button>
               </div>
 
-              {/* Tabs */}
-              <div className="flex gap-2 px-6 pt-4 border-b border-gray-200 dark:border-gray-700">
-                {userOrg && orgMembers.length > 0 && (
-                  <button
-                    onClick={() => setMode('org')}
-                    className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
-                      mode === 'org'
-                        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                        : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                    }`}
-                  >
-                    <Building2 className="w-4 h-4 inline-block mr-2" />
-                    {userOrg.name}
-                  </button>
-                )}
-                <button
-                  onClick={() => setMode('email')}
-                  className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
-                    mode === 'email'
-                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                      : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                  }`}
-                >
-                  <Mail className="w-4 h-4 inline-block mr-2" />
-                  Email
-                </button>
-                <button
-                  onClick={() => setMode('code')}
-                  className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
-                    mode === 'code'
-                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                      : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                  }`}
-                >
-                  <KeyRound className="w-4 h-4 inline-block mr-2" />
-                  Invite Code
-                </button>
-              </div>
-
-              {/* Content */}
-              <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6">
-                {mode === 'code' ? (
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
-                        Share this code
-                      </label>
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl font-mono text-lg font-semibold text-gray-900 dark:text-white tracking-wider">
-                          {league.inviteCode}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={copyInviteCode}
-                          className="px-4 py-3 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 transition-colors"
-                        >
-                          <Copy className="w-5 h-5" />
-                        </button>
-                      </div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                        Anyone with this code can join your league
-                      </p>
-                    </div>
+              {/* Content - Three Sections */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                {/* Section 1: Invite Code */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <KeyRound className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                    <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
+                      Invite Code
+                    </h4>
                   </div>
-                ) : mode === 'org' ? (
-                  <div className="space-y-4">
+                  <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+                    <div className="flex-1 font-mono text-base font-semibold text-gray-900 dark:text-white">
+                      {league.inviteCode}
+                    </div>
+                    <Tooltip.Provider delayDuration={100}>
+                      <Tooltip.Root>
+                        <Tooltip.Trigger asChild>
+                          <button
+                            type="button"
+                            onClick={copyInviteCode}
+                            className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                          >
+                            {copied ? (
+                              <Check className="w-4 h-4 text-green-600" />
+                            ) : (
+                              <Copy className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                            )}
+                          </button>
+                        </Tooltip.Trigger>
+                        <Tooltip.Portal>
+                          <Tooltip.Content
+                            className="z-50 rounded-lg bg-black/95 backdrop-blur-sm px-3 py-1.5 text-xs font-medium text-white shadow-xl border border-white/10 whitespace-nowrap"
+                            side="top"
+                            sideOffset={5}
+                          >
+                            Copy invite code
+                            <Tooltip.Arrow className="fill-black/95" />
+                          </Tooltip.Content>
+                        </Tooltip.Portal>
+                      </Tooltip.Root>
+                    </Tooltip.Provider>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Share this code with anyone you want to invite
+                  </p>
+                </div>
+
+                {/* Section 2: Invite by Email */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Mail className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                    <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
+                      Invite by Email
+                    </h4>
+                  </div>
+                  <form onSubmit={handleInviteByEmail} className="flex gap-2">
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="friend@example.com"
+                      className="flex-1 px-4 py-2 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                    <button
+                      type="submit"
+                      disabled={inviting || !email.trim()}
+                      className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={league.color ? { backgroundColor: league.color } : {}}
+                    >
+                      {inviting ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        'Send'
+                      )}
+                    </button>
+                  </form>
+                </div>
+
+                {/* Section 3: Discover Users from Organisation */}
+                {userOrg && (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Building2 className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                      <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
+                        Discover Users from {userOrg.name}
+                      </h4>
+                    </div>
+                    
                     {/* Search */}
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -230,7 +256,7 @@ export function LeagueInviteModal({
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         placeholder="Search members..."
-                        className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                        className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
                       />
                     </div>
 
@@ -250,16 +276,16 @@ export function LeagueInviteModal({
                     )}
 
                     {/* Member List */}
-                    <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                    <div className="space-y-2 max-h-[250px] overflow-y-auto">
                       {loadingOrgMembers ? (
-                        <div className="text-center py-8">
-                          <Loader2 className="w-6 h-6 mx-auto mb-2 animate-spin text-gray-400" />
-                          <p className="text-sm text-gray-500">Loading members...</p>
+                        <div className="text-center py-6">
+                          <Loader2 className="w-5 h-5 mx-auto mb-2 animate-spin text-gray-400" />
+                          <p className="text-xs text-gray-500">Loading members...</p>
                         </div>
                       ) : filteredMembers.length === 0 ? (
-                        <div className="text-center py-8">
-                          <Users className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-                          <p className="text-sm text-gray-500">No members found</p>
+                        <div className="text-center py-6">
+                          <Users className="w-6 h-6 mx-auto mb-2 text-gray-300" />
+                          <p className="text-xs text-gray-500">No members found</p>
                         </div>
                       ) : (
                         filteredMembers.map((member: any) => {
@@ -268,7 +294,7 @@ export function LeagueInviteModal({
                           return (
                             <label
                               key={member.id}
-                              className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-xl cursor-pointer"
+                              className="flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg cursor-pointer"
                             >
                               <input
                                 type="checkbox"
@@ -276,12 +302,12 @@ export function LeagueInviteModal({
                                 onChange={() => handleToggleMember(member.user?.id)}
                                 className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
                               />
-                              <div className="flex-1">
-                                <div className="text-sm font-medium text-gray-900 dark:text-white">
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
                                   {displayName}
                                 </div>
                                 {member.user?.email && (
-                                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                                  <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
                                     {member.user.email}
                                   </div>
                                 )}
@@ -291,58 +317,29 @@ export function LeagueInviteModal({
                         })
                       )}
                     </div>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
-                        Email Address
-                      </label>
-                      <input
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="friend@example.com"
-                        required
-                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                      />
-                    </div>
-                  </div>
-                )}
-              </form>
 
-              {/* Footer */}
-              <div className="flex items-center justify-between p-6 border-t border-gray-200 dark:border-gray-700">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors"
-                >
-                  Cancel
-                </button>
-                {mode !== 'code' && (
-                  <button
-                    onClick={handleSubmit}
-                    disabled={
-                      inviting ||
-                      (mode === 'email' && !email.trim()) ||
-                      (mode === 'org' && selectedMemberIds.size === 0)
-                    }
-                    className="px-6 py-2 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                    style={league.color ? { backgroundColor: league.color } : {}}
-                  >
-                    {inviting ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Inviting...
-                      </>
-                    ) : (
-                      <>
-                        <Mail className="w-4 h-4" />
-                        {mode === 'org' ? `Invite ${selectedMemberIds.size} Member${selectedMemberIds.size !== 1 ? 's' : ''}` : 'Send Invite'}
-                      </>
+                    {/* Invite Selected Button */}
+                    {selectedMemberIds.size > 0 && (
+                      <button
+                        onClick={handleInviteOrgMembers}
+                        disabled={inviting}
+                        className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        style={league.color ? { backgroundColor: league.color } : {}}
+                      >
+                        {inviting ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Inviting...
+                          </>
+                        ) : (
+                          <>
+                            <Mail className="w-4 h-4" />
+                            Invite {selectedMemberIds.size} Member{selectedMemberIds.size !== 1 ? 's' : ''}
+                          </>
+                        )}
+                      </button>
                     )}
-                  </button>
+                  </div>
                 )}
               </div>
             </div>

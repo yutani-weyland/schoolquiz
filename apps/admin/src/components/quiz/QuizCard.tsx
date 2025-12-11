@@ -8,10 +8,12 @@ import React, { useState, useMemo, useCallback } from "react";
 import { textOn } from "@/lib/contrast";
 import { formatWeek } from "@/lib/format";
 import { useUserTier } from "@/hooks/useUserTier";
+import { useTeams } from "@/hooks/useTeams";
 import { UpgradeModal } from "@/components/premium/UpgradeModal";
 import { canAccessQuiz, canAccessFeature } from "@/lib/feature-gating";
 import { sessionStorage } from "@/lib/storage";
 import { logger } from "@/lib/logger";
+import { useQueryClient } from "@tanstack/react-query";
 import * as Tooltip from '@radix-ui/react-tooltip';
 
 export type Quiz = {
@@ -25,18 +27,28 @@ export type Quiz = {
 	tags?: string[];
 };
 
+interface TeamCompletion {
+	teamId: string | null;
+	teamName: string | null;
+	teamColor?: string | null; // Optional: color from server data
+	score: number;
+	totalQuestions: number;
+	completedAt?: string;
+}
+
 interface QuizCardProps {
 	quiz: Quiz;
 	isNewest?: boolean;
 	index?: number; // For rotation angle variation
-	completionData?: { score: number; totalQuestions: number; completedAt?: string } | null; // Optional: pre-fetched completion data
+	completionData?: { score: number; totalQuestions: number; completedAt?: string } | null; // Optional: pre-fetched completion data (for backward compatibility)
+	teamCompletions?: TeamCompletion[]; // Optional: all completions with team info for multi-team display
 }
 
-export function QuizCard({ quiz, isNewest = false, index = 0, completionData: initialCompletionData }: QuizCardProps) {
+export function QuizCard({ quiz, isNewest = false, index = 0, completionData: initialCompletionData, teamCompletions }: QuizCardProps) {
 	const { data: session } = useSession();
 	const router = useRouter();
-	// Random tilt angles for hover effect (in degrees) - creates varied interactivity
-	const hoverTilts = [-1.5, 1.2, -1.8, 1.5, -1.2, 1.8, -1.5, 1.2, -1.8, 1.5, -1.2, 1.8];
+	// Random tilt angles for hover effect (subtle - reduced severity)
+	const hoverTilts = [-0.8, 0.6, -0.9, 0.7, -0.6, 0.9, -0.8, 0.6, -0.9, 0.7, -0.6, 0.9];
 	const hoverTilt = hoverTilts[index % hoverTilts.length] || 0;
 	const [showShareMenu, setShowShareMenu] = useState(false);
 	const [copied, setCopied] = useState(false);
@@ -53,6 +65,24 @@ export function QuizCard({ quiz, isNewest = false, index = 0, completionData: in
 	const [isNavigating, setIsNavigating] = useState(false);
 	const [prefetchTimeout, setPrefetchTimeout] = useState<NodeJS.Timeout | null>(null);
 	const { tier, isPremium } = useUserTier();
+	const queryClient = useQueryClient();
+	const { teams } = useTeams();
+	
+	// Get team completions with colors (only teams, exclude null teamId)
+	const teamCompletionsWithColors = useMemo(() => {
+		if (!teamCompletions || teamCompletions.length === 0) return [];
+		
+		return teamCompletions
+			.filter(tc => tc.teamId !== null) // Only show team completions
+			.map(tc => {
+				// Use color from server data if available, otherwise try teams hook, fallback to default
+				const team = teams.find(t => t.id === tc.teamId);
+				return {
+					...tc,
+					teamColor: tc.teamColor || team?.color || '#6366f1', // Default to indigo if no color
+				};
+			});
+	}, [teamCompletions, teams]);
 	
 	// Format date on client only to avoid hydration errors
 	React.useEffect(() => {
@@ -107,11 +137,31 @@ export function QuizCard({ quiz, isNewest = false, index = 0, completionData: in
 				router.prefetch(`/quizzes/${quiz.slug}/intro`);
 				// Prefetch play page (likely next step)
 				router.prefetch(`/quizzes/${quiz.slug}/play`);
+				
+				// OPTIMIZATION: Prefetch teams data if premium (needed for quiz intro page)
+				if (isPremium) {
+					queryClient.prefetchQuery({
+						queryKey: ['user-teams'],
+						queryFn: async () => {
+							const response = await fetch('/api/user/teams', {
+								credentials: 'include',
+							});
+							if (!response.ok) {
+								if (response.status === 403) {
+									return { teams: [], count: 0, maxTeams: 10 };
+								}
+								throw new Error('Failed to fetch teams');
+							}
+							return response.json();
+						},
+						staleTime: 5 * 60 * 1000,
+					});
+				}
 			}
 		}, 300); // 300ms debounce
 		
 		setPrefetchTimeout(timeout);
-	}, [quiz.slug, quiz.status, tier, isNewest, router]);
+	}, [quiz.slug, quiz.status, tier, isNewest, isPremium, router, queryClient]);
 	
 	const handleMouseLeave = useCallback(() => {
 		setIsHovered(false);
@@ -261,8 +311,8 @@ export function QuizCard({ quiz, isNewest = false, index = 0, completionData: in
 				}}
 				whileHover={{ 
 					rotate: hoverTilt,
-					scale: 1.02,
-					y: -4,
+					scale: 1.01,
+					y: -2,
 				}}
 				whileTap={{ scale: 0.98 }}
 				transition={{ 
@@ -325,6 +375,63 @@ export function QuizCard({ quiz, isNewest = false, index = 0, completionData: in
 					animate={{ opacity: isHovered ? 1 : 0 }}
 					transition={{ duration: 0.3 }}
 				/>
+				
+				{/* Multi-team colored accents - bottom border with gradient */}
+				{teamCompletionsWithColors.length > 0 && (
+					<>
+						<div className="absolute bottom-0 left-0 right-0 h-1 rounded-b-3xl overflow-hidden pointer-events-none">
+							{teamCompletionsWithColors.length === 1 ? (
+								<div 
+									className="h-full w-full"
+									style={{ backgroundColor: teamCompletionsWithColors[0].teamColor }}
+								/>
+							) : (
+								<div className="flex h-full">
+									{teamCompletionsWithColors.map((tc, idx) => (
+										<div 
+											key={tc.teamId || idx}
+											className="h-full flex-1"
+											style={{ backgroundColor: tc.teamColor }}
+										/>
+									))}
+								</div>
+							)}
+						</div>
+						
+						{/* Hover tooltip showing all team completions */}
+						{teamCompletionsWithColors.length > 1 && (
+							<AnimatePresence>
+								{isHovered && (
+									<motion.div
+										initial={{ opacity: 0, y: 10 }}
+										animate={{ opacity: 1, y: 0 }}
+										exit={{ opacity: 0, y: 10 }}
+										transition={{ duration: 0.2 }}
+										className="absolute bottom-2 left-2 right-2 z-50 pointer-events-none"
+									>
+										<div className="bg-gray-900/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-lg px-3 py-2 shadow-xl border border-white/10">
+											<div className="text-xs font-semibold text-white mb-1.5">Completed with:</div>
+											<div className="space-y-1.5">
+												{teamCompletionsWithColors.map((tc, idx) => (
+													<div key={tc.teamId || idx} className="flex items-center justify-between gap-3">
+														<div className="flex items-center gap-2 flex-1 min-w-0">
+															<div 
+																className="w-2.5 h-2.5 rounded-full flex-shrink-0 border border-white/20"
+																style={{ backgroundColor: tc.teamColor }}
+															/>
+															<span className="text-xs text-white/90 truncate">{tc.teamName || 'No team'}</span>
+														</div>
+														<span className="text-xs font-semibold text-white flex-shrink-0">{tc.score}/{tc.totalQuestions}</span>
+													</div>
+												))}
+											</div>
+										</div>
+									</motion.div>
+								)}
+							</AnimatePresence>
+						)}
+					</>
+				)}
 				
 				{/* Loading overlay when navigating */}
 				<AnimatePresence>

@@ -367,3 +367,9 @@ See `docs/guides/TESTING_GUIDE.md` for integration testing setup.
 3. Add integration tests with authentication
 4. Add E2E tests for full user flows
 
+
+
+
+
+
+

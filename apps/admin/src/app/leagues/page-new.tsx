@@ -9,17 +9,18 @@ import { useUserAccess } from '@/contexts/UserAccessContext'
 import { UpgradeModal } from '@/components/premium/UpgradeModal'
 import dynamic from 'next/dynamic'
 import { Footer } from '@/components/Footer'
-import { 
-  fetchLeagues, 
-  fetchLeagueDetails, 
-  getCachedLeagues, 
-  cacheLeagues, 
+import {
+  fetchLeagues,
+  fetchLeagueDetails,
+  getCachedLeagues,
+  cacheLeagues,
+  type LeagueRequest,
   type League,
   fetchLeagueRequests,
-  respondToRequest,
-  type LeagueRequest
+  respondToRequest
 } from '@/lib/leagues-fetch'
 import { LeaguesGrid } from '@/components/leagues/LeaguesGrid'
+import { LeaguesTabs, type LeagueTab } from '@/components/leagues/LeaguesTabs'
 import { LeagueInviteModal } from '@/components/leagues/LeagueInviteModal'
 import { LeagueMembersModal } from '@/components/leagues/LeagueMembersModal'
 import { CreateLeagueModal } from '@/components/leagues/CreateLeagueModal'
@@ -28,7 +29,7 @@ import { LeagueRequestsNotification } from '@/components/leagues/LeagueRequestsN
 // Lazy load SiteHeader
 const LazySiteHeader = dynamic(
   () => import("@/components/SiteHeader").then(mod => ({ default: mod.SiteHeader })),
-  { 
+  {
     ssr: true,
     loading: () => (
       <header className="fixed top-0 left-0 right-0 z-50 h-16 bg-white dark:bg-[#0F1419] border-b border-gray-200 dark:border-gray-700" />
@@ -49,6 +50,7 @@ export default function LeaguesPage() {
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviting, setInviting] = useState(false)
   const [creating, setCreating] = useState(false)
+  const [activeTab, setActiveTab] = useState<LeagueTab>('created')
 
   const platformRole = typeof window !== 'undefined' ? localStorage.getItem('platformRole') : null
   const isAdmin = platformRole === 'PLATFORM_ADMIN' || platformRole === 'ORG_ADMIN'
@@ -332,6 +334,14 @@ export default function LeaguesPage() {
             </div>
           </div>
 
+          {/* Tabs */}
+          <LeaguesTabs
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            createdCount={leagues.filter(l => isCreator(l)).length}
+            joinedCount={leagues.filter(l => !isCreator(l)).length}
+          />
+
           {/* Leagues Grid */}
           {leaguesLoading && leagues.length === 0 ? (
             <div className="text-center py-16">
@@ -353,6 +363,7 @@ export default function LeaguesPage() {
           ) : (
             <LeaguesGrid
               leagues={leagues}
+              activeTab={activeTab}
               currentUserId={currentUserId}
               onCreateLeague={() => setShowCreateModal(true)}
               onInvite={(leagueId) => {
@@ -418,4 +429,10 @@ export default function LeaguesPage() {
     </>
   )
 }
+
+
+
+
+
+
 

@@ -179,3 +179,9 @@ if (args.length === 0) {
 const [quizSlug, categoryName, teacherEmail] = args;
 addQuestionsToQuiz(quizSlug, categoryName, teacherEmail);
 
+
+
+
+
+
+

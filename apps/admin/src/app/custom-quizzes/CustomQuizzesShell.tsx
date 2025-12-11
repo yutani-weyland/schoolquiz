@@ -40,10 +40,10 @@ export function CustomQuizzesShell({ children }: CustomQuizzesShellProps) {
 					<div className="mb-8 sm:mb-12 md:mb-16 text-center">
 						<div className="mx-auto max-w-2xl">
 							<h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 dark:text-white mb-4 md:mb-6">
-								My Custom Quizzes
+								My Quizzes
 							</h1>
 							<p className="text-lg md:text-xl text-gray-600 dark:text-gray-400 leading-relaxed">
-								Create, manage, and share your custom quizzes
+								Create, manage, and share your quizzes
 							</p>
 						</div>
 					</div>

@@ -11,7 +11,7 @@ import { unstable_cache } from 'next/cache'
  * Get summary stats AND streaks in a single query (optimized - saves 1 round trip)
  * Falls back to separate queries if needed
  */
-async function getSummaryStatsAndStreaks(userId: string): Promise<{
+async function getSummaryStatsAndStreaks(userId: string, teamId?: string): Promise<{
   summary: {
     averageScore: number
     totalQuestionsAttempted: number
@@ -82,8 +82,8 @@ async function getSummaryStatsAndStreaks(userId: string): Promise<{
   
   // Fallback: Use separate functions
   const [summary, streaks] = await Promise.all([
-    getSummaryStats(userId),
-    getStreaks(userId),
+    getSummaryStats(userId, teamId),
+    getStreaks(userId, teamId),
   ])
   
   return { summary, streaks }
@@ -93,7 +93,7 @@ async function getSummaryStatsAndStreaks(userId: string): Promise<{
  * Get summary stats from pre-computed summary table (ultra-fast single SELECT)
  * Falls back to aggregation if summary table doesn't exist yet
  */
-async function getSummaryStats(userId: string) {
+async function getSummaryStats(userId: string, teamId?: string) {
   const startTime = Date.now()
   
   try {
@@ -138,7 +138,10 @@ async function getSummaryStats(userId: string) {
   
   // Fallback: Aggregate query - compute in database
   const summary = await prisma.quizCompletion.aggregate({
-    where: { userId },
+    where: { 
+      userId,
+      ...(teamId ? { teamId } : {}),
+    },
     _count: { id: true },
     _sum: {
       totalQuestions: true,
@@ -147,11 +150,17 @@ async function getSummaryStats(userId: string) {
   })
   
   // Get perfect scores using raw query
-  const perfectScoresResult = await prisma.$queryRaw<Array<{ count: bigint }>>`
-    SELECT COUNT(*)::int as count
-    FROM quiz_completions
-    WHERE "userId" = ${userId} AND score = "totalQuestions"
-  `
+  const perfectScoresResult = teamId
+    ? await prisma.$queryRaw<Array<{ count: bigint }>>`
+        SELECT COUNT(*)::int as count
+        FROM quiz_completions
+        WHERE "userId" = ${userId} AND "teamId" = ${teamId} AND score = "totalQuestions"
+      `
+    : await prisma.$queryRaw<Array<{ count: bigint }>>`
+        SELECT COUNT(*)::int as count
+        FROM quiz_completions
+        WHERE "userId" = ${userId} AND score = "totalQuestions"
+      `
   const perfectScoresCount = Number(perfectScoresResult[0]?.count || 0)
   
   // Calculate average score
@@ -176,7 +185,7 @@ async function getSummaryStats(userId: string) {
 /**
  * Get completion weeks for streak calculation (minimal data, limited to last 52 weeks)
  */
-async function getCompletionWeeks(userId: string) {
+async function getCompletionWeeks(userId: string, teamId?: string) {
   const startTime = Date.now()
   
   // Only fetch completions from last 52 weeks (enough for weekly streak)
@@ -187,6 +196,7 @@ async function getCompletionWeeks(userId: string) {
     where: { 
       userId,
       completedAt: { gte: fiftyTwoWeeksAgo },
+      ...(teamId ? { teamId } : {}),
     },
     select: {
       completedAt: true,
@@ -206,7 +216,7 @@ async function getCompletionWeeks(userId: string) {
  * Get streaks from pre-computed summary table (ultra-fast)
  * Falls back to calculation if summary table doesn't exist
  */
-async function getStreaks(userId: string): Promise<{
+async function getStreaks(userId: string, teamId?: string): Promise<{
   currentQuestionStreak: number
   bestQuestionStreak: number
   currentQuizStreak: number
@@ -250,7 +260,10 @@ async function getStreaks(userId: string): Promise<{
   
   // Fallback: Calculate from completion data
   const completions = await prisma.quizCompletion.findMany({
-    where: { userId },
+    where: { 
+      userId,
+      ...(teamId ? { teamId } : {}),
+    },
     select: {
       completedAt: true,
       score: true,
@@ -385,28 +398,47 @@ function getWeekKey(date: Date): string {
  * Get performance over time (last 100 quizzes with database-level score calculation)
  * OPTIMIZATION: Database calculates percentage score, reducing JavaScript processing
  */
-async function getPerformanceOverTime(userId: string) {
+async function getPerformanceOverTime(userId: string, teamId?: string) {
   const startTime = Date.now()
   
   // Use raw SQL to calculate score percentage in database (faster than JavaScript)
-  const performanceData = await prisma.$queryRaw<Array<{
-    date: string
-    score: number
-    quiz_slug: string
-  }>>`
-    SELECT 
-      "completedAt"::date::text as date,
-      CASE 
-        WHEN "totalQuestions" > 0 
-        THEN ROUND((score::decimal / "totalQuestions") * 100, 1)
-        ELSE 0
-      END as score,
-      "quizSlug" as quiz_slug
-    FROM quiz_completions
-    WHERE "userId" = ${userId}
-    ORDER BY "completedAt" ASC
-    LIMIT 100
-  `
+  const performanceData = teamId
+    ? await prisma.$queryRaw<Array<{
+        date: string
+        score: number
+        quiz_slug: string
+      }>>`
+        SELECT 
+          "completedAt"::date::text as date,
+          CASE 
+            WHEN "totalQuestions" > 0 
+            THEN ROUND((score::decimal / "totalQuestions") * 100, 1)
+            ELSE 0
+          END as score,
+          "quizSlug" as quiz_slug
+        FROM quiz_completions
+        WHERE "userId" = ${userId} AND "teamId" = ${teamId}
+        ORDER BY "completedAt" ASC
+        LIMIT 100
+      `
+    : await prisma.$queryRaw<Array<{
+        date: string
+        score: number
+        quiz_slug: string
+      }>>`
+        SELECT 
+          "completedAt"::date::text as date,
+          CASE 
+            WHEN "totalQuestions" > 0 
+            THEN ROUND((score::decimal / "totalQuestions") * 100, 1)
+            ELSE 0
+          END as score,
+          "quizSlug" as quiz_slug
+        FROM quiz_completions
+        WHERE "userId" = ${userId}
+        ORDER BY "completedAt" ASC
+        LIMIT 100
+      `
   
   const queryTime = Date.now() - startTime
   console.log(`[Stats Summary] Performance over time query took ${queryTime}ms (${performanceData.length} records)`)
@@ -425,7 +457,8 @@ async function getPerformanceOverTime(userId: string) {
  */
 async function getCategoryPerformance(
   userId: string,
-  completions?: Array<{ quizSlug: string; score: number; totalQuestions: number }>
+  completions?: Array<{ quizSlug: string; score: number; totalQuestions: number }>,
+  teamId?: string
 ) {
   const startTime = Date.now()
   
@@ -693,7 +726,10 @@ async function getLeagueComparisons(userId: string) {
 /**
  * Get season stats
  */
-async function getSeasonStats(userId: string) {
+async function getSeasonStats(userId: string, teamId?: string) {
+  // Note: Season stats table may not have teamId column
+  // For now, we'll return season stats without team filtering
+  // TODO: Add teamId support to seasonStats table if needed
   const startTime = Date.now()
   
   try {
@@ -743,7 +779,7 @@ async function getSeasonStats(userId: string) {
  * Get critical stats for first paint (fast, essential data only)
  * This loads immediately to show content to users
  */
-export async function getStatsSummaryCritical(userId: string): Promise<Pick<StatsData, 'summary' | 'streaks' | 'categories' | 'weeklyStreak'>> {
+export async function getStatsSummaryCritical(userId: string, teamId?: string): Promise<Pick<StatsData, 'summary' | 'streaks' | 'categories' | 'weeklyStreak'>> {
   const startTime = Date.now()
   
   // OPTIMIZATION: Fetch completions once with scores (limited to last 52 weeks for performance)
@@ -753,62 +789,114 @@ export async function getStatsSummaryCritical(userId: string): Promise<Pick<Stat
   
   // OPTIMIZATION: Use cached version for 30 seconds (stats don't change that frequently)
   // This dramatically reduces database load for repeated requests
+  // Include teamId in cache key to cache per team
+  const cacheKey = teamId ? `stats-critical-${userId}-${teamId}` : `stats-critical-${userId}`
   const getCachedStats = unstable_cache(
     async () => {
+      // Fetch completions for category calculation if needed
+      const completionsForCategories = teamId
+        ? await prisma.quizCompletion.findMany({
+            where: { userId, teamId },
+            select: { quizSlug: true, score: true, totalQuestions: true },
+            take: 100,
+          })
+        : undefined
+
       // Execute ALL critical queries in parallel for maximum performance
       const [summaryAndStreaks, categoryStats, weeklyCompletions] = await Promise.all([
-        getSummaryStatsAndStreaks(userId), // Combined query (saves 1 round trip)
-        getCategoryPerformance(userId), // Function will use pre-computed table first
+        getSummaryStatsAndStreaks(userId, teamId), // Combined query (saves 1 round trip)
+        getCategoryPerformance(userId, completionsForCategories, teamId), // Function will use pre-computed table first
         // OPTIMIZATION: Use raw SQL to get weekly completions (database calculates weeks)
         // This is faster than fetching all records and calculating in JavaScript
         // Database does the week grouping and ISO week calculation
-        prisma.$queryRaw<Array<{
-          week: string
-          date: string
-          completed_at: string | null  // SQL returns as ISO string, not Date object
-          quiz_slug: string | null
-        }>>`
-          WITH weeks AS (
-            SELECT 
-              TO_CHAR(date, 'IYYY-"W"IW') as week,
-              date::date as date
-            FROM generate_series(
-              CURRENT_DATE - INTERVAL '52 weeks',
-              CURRENT_DATE,
-              '1 week'::interval
-            ) as date
-          ),
-          completions_by_week AS (
-            SELECT DISTINCT ON (TO_CHAR("completedAt", 'IYYY-"W"IW'))
-              TO_CHAR("completedAt", 'IYYY-"W"IW') as week,
-              "completedAt",
-              "quizSlug"
-            FROM quiz_completions
-            WHERE "userId" = ${userId}
-              AND "completedAt" >= ${fiftyTwoWeeksAgo}
-            ORDER BY TO_CHAR("completedAt", 'IYYY-"W"IW'), "completedAt" ASC
-          )
-          SELECT 
-            w.week,
-            w.date::text as date,
-            CASE 
-              WHEN c."completedAt" IS NOT NULL 
-              THEN c."completedAt"::text
-              ELSE NULL
-            END as completed_at,
-            c."quizSlug" as quiz_slug
-          FROM weeks w
-          LEFT JOIN completions_by_week c ON w.week = c.week
-          ORDER BY w.date DESC
-        `,
+        teamId
+          ? prisma.$queryRaw<Array<{
+              week: string
+              date: string
+              completed_at: string | null
+              quiz_slug: string | null
+            }>>`
+              WITH weeks AS (
+                SELECT 
+                  TO_CHAR(date, 'IYYY-"W"IW') as week,
+                  date::date as date
+                FROM generate_series(
+                  CURRENT_DATE - INTERVAL '52 weeks',
+                  CURRENT_DATE,
+                  '1 week'::interval
+                ) as date
+              ),
+              completions_by_week AS (
+                SELECT DISTINCT ON (TO_CHAR("completedAt", 'IYYY-"W"IW'))
+                  TO_CHAR("completedAt", 'IYYY-"W"IW') as week,
+                  "completedAt",
+                  "quizSlug"
+                FROM quiz_completions
+                WHERE "userId" = ${userId}
+                  AND "teamId" = ${teamId}
+                  AND "completedAt" >= ${fiftyTwoWeeksAgo}
+                ORDER BY TO_CHAR("completedAt", 'IYYY-"W"IW'), "completedAt" ASC
+              )
+              SELECT 
+                w.week,
+                w.date::text as date,
+                CASE 
+                  WHEN c."completedAt" IS NOT NULL 
+                  THEN c."completedAt"::text
+                  ELSE NULL
+                END as completed_at,
+                c."quizSlug" as quiz_slug
+              FROM weeks w
+              LEFT JOIN completions_by_week c ON w.week = c.week
+              ORDER BY w.date DESC
+            `
+          : prisma.$queryRaw<Array<{
+              week: string
+              date: string
+              completed_at: string | null
+              quiz_slug: string | null
+            }>>`
+              WITH weeks AS (
+                SELECT 
+                  TO_CHAR(date, 'IYYY-"W"IW') as week,
+                  date::date as date
+                FROM generate_series(
+                  CURRENT_DATE - INTERVAL '52 weeks',
+                  CURRENT_DATE,
+                  '1 week'::interval
+                ) as date
+              ),
+              completions_by_week AS (
+                SELECT DISTINCT ON (TO_CHAR("completedAt", 'IYYY-"W"IW'))
+                  TO_CHAR("completedAt", 'IYYY-"W"IW') as week,
+                  "completedAt",
+                  "quizSlug"
+                FROM quiz_completions
+                WHERE "userId" = ${userId}
+                  AND "completedAt" >= ${fiftyTwoWeeksAgo}
+                ORDER BY TO_CHAR("completedAt", 'IYYY-"W"IW'), "completedAt" ASC
+              )
+              SELECT 
+                w.week,
+                w.date::text as date,
+                CASE 
+                  WHEN c."completedAt" IS NOT NULL 
+                  THEN c."completedAt"::text
+                  ELSE NULL
+                END as completed_at,
+                c."quizSlug" as quiz_slug
+              FROM weeks w
+              LEFT JOIN completions_by_week c ON w.week = c.week
+              ORDER BY w.date DESC
+            `,
       ])
       
       return { summaryAndStreaks, categoryStats, weeklyCompletions }
     },
-    [`stats-critical-${userId}`],
+    [cacheKey],
     {
       revalidate: 60, // Cache for 60 seconds (stats don't change frequently)
-      tags: [`stats-${userId}`], // Can be invalidated when user completes a quiz
+      tags: teamId ? [`stats-${userId}-${teamId}`] : [`stats-${userId}`], // Can be invalidated when user completes a quiz
     }
   )
   
@@ -844,14 +932,14 @@ export async function getStatsSummaryCritical(userId: string): Promise<Pick<Stat
  * Get deferred stats (non-critical, can load after first paint)
  * This includes heavy queries like league comparisons
  */
-export async function getStatsSummaryDeferred(userId: string): Promise<Pick<StatsData, 'performanceOverTime' | 'comparisons' | 'seasonStats'>> {
+export async function getStatsSummaryDeferred(userId: string, teamId?: string): Promise<Pick<StatsData, 'performanceOverTime' | 'comparisons' | 'seasonStats'>> {
   const startTime = Date.now()
-  
+
   // Execute deferred queries in parallel
   const [performanceData, publicStats, seasonStats] = await Promise.all([
-    getPerformanceOverTime(userId),
-    getPublicStats(),
-    getSeasonStats(userId),
+    getPerformanceOverTime(userId, teamId),
+    getPublicStats(), // Public stats don't filter by team
+    getSeasonStats(userId, teamId), // Season stats can be filtered by team
   ])
   
   // League comparisons removed - too slow (4.3s)
@@ -877,10 +965,10 @@ export async function getStatsSummaryDeferred(userId: string): Promise<Pick<Stat
  * Get complete stats summary (for backward compatibility)
  * NOTE: Use getStatsSummaryCritical + getStatsSummaryDeferred for better performance
  */
-export async function getStatsSummary(userId: string): Promise<StatsData> {
+export async function getStatsSummary(userId: string, teamId?: string): Promise<StatsData> {
   const [critical, deferred] = await Promise.all([
-    getStatsSummaryCritical(userId),
-    getStatsSummaryDeferred(userId),
+    getStatsSummaryCritical(userId, teamId),
+    getStatsSummaryDeferred(userId, teamId),
   ])
   
   return {

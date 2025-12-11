@@ -17,7 +17,7 @@ export async function GET(
 		const user = await requireApiAuth()
 		const authDuration = Date.now() - apiStart
 		console.log(`[League Members API] Auth took ${authDuration}ms`)
-		
+
 		const { id } = await params
 		const { searchParams } = new URL(request.url)
 
@@ -39,7 +39,7 @@ export async function GET(
 		// OPTIMIZATION: Parallel queries with detailed timing to identify bottlenecks
 		const leagueQueryStart = Date.now()
 		const membershipQueryStart = Date.now()
-		
+
 		const [league, membership] = await Promise.all([
 			(prisma as any).privateLeague.findFirst({
 				where: { id, deletedAt: null },
@@ -47,7 +47,7 @@ export async function GET(
 					id: true,
 					createdByUserId: true,
 				},
-			}).then(result => {
+			}).then((result: any) => {
 				const duration = Date.now() - leagueQueryStart
 				console.log(`[League Members API] League query took ${duration}ms`)
 				return result
@@ -62,7 +62,7 @@ export async function GET(
 				select: {
 					id: true,
 				},
-			}).then(result => {
+			}).then((result: any) => {
 				const duration = Date.now() - membershipQueryStart
 				console.log(`[League Members API] Membership query took ${duration}ms`)
 				return result
@@ -75,22 +75,22 @@ export async function GET(
 
 		const accessCheckDuration = Date.now() - accessCheckStart
 		console.log(`[League Members API] Access check took ${accessCheckDuration}ms (total)`)
-		
+
 		const isMember = !!membership
 		if (!isMember && league.createdByUserId !== user.id) {
 			return NextResponse.json({ error: 'Access denied' }, { status: 403 })
 		}
 
 		const membersQueryStart = Date.now()
-		
+
 		// OPTIMIZATION: Fetch members with detailed timing to identify bottlenecks
 		// The join to users table might be slow - we'll measure it
 		const membersQueryStart1 = Date.now()
-		
+
 		// OPTIMIZATION: Check if ordering is needed (can be slow with OFFSET)
 		// For small datasets, ordering is fast. For large datasets, consider removing ORDER BY
 		const needsOrdering = searchParams.get('orderBy') !== 'none'
-		
+
 		const queryOptions: any = {
 			where: {
 				leagueId: id,
@@ -110,18 +110,18 @@ export async function GET(
 			take: limit,
 			skip: offset,
 		}
-		
+
 		// Only add ORDER BY if needed (can be slow with large OFFSET)
 		if (needsOrdering) {
 			queryOptions.orderBy = {
 				joinedAt: 'asc', // Uses idx_private_league_members_league_joined
 			}
 		}
-		
+
 		const members = await (prisma as any).privateLeagueMember.findMany(queryOptions)
 		const membersQueryDuration1 = Date.now() - membersQueryStart1
 		console.log(`[League Members API] Members query (with join${needsOrdering ? ', ordered' : ''}) took ${membersQueryDuration1}ms`)
-		
+
 		// OPTIMIZATION: Count query - can be slow with large datasets
 		// Consider making this optional or using an estimate for large leagues
 		const countQueryStart = Date.now()
@@ -133,7 +133,7 @@ export async function GET(
 		})
 		const countQueryDuration = Date.now() - countQueryStart
 		console.log(`[League Members API] Count query took ${countQueryDuration}ms`)
-		
+
 		const membersQueryDuration = Date.now() - membersQueryStart
 		const totalDuration = Date.now() - apiStart
 		console.log(`[League Members API] Total members fetch took ${membersQueryDuration}ms (members: ${membersQueryDuration1}ms, count: ${countQueryDuration}ms), total: ${totalDuration}ms (auth: ${authDuration}ms, access: ${accessCheckDuration}ms)`)

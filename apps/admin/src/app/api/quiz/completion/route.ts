@@ -27,9 +27,10 @@ interface CompletionRequest {
   categories?: string[];
   quizType?: string; // 'OFFICIAL' | 'CUSTOM'
   customQuizId?: string; // For custom quizzes
+  teamId?: string; // Optional - for premium users with teams
 }
 
-import { requireApiUserId } from '@/lib/api-auth';
+import { requireApiUserId, requireApiAuth } from '@/lib/api-auth';
 
 export async function GET(request: NextRequest) {
   try {
@@ -203,9 +204,10 @@ export async function POST(request: NextRequest) {
   try {
     // Get user ID from NextAuth session
     const userId = await requireApiUserId();
+    const user = await requireApiAuth(); // Need full user object for premium check
 
     const body: CompletionRequest = await request.json();
-    const { quizSlug, score, totalQuestions, completionTimeSeconds, roundScores, categories } = body;
+    const { quizSlug, score, totalQuestions, completionTimeSeconds, roundScores, categories, teamId } = body;
 
     // Validate required fields
     if (!quizSlug || score === undefined || totalQuestions === undefined) {
@@ -215,16 +217,39 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify user exists
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-    });
+    // Validate teamId if provided
+    let validatedTeamId: string | null = null;
+    if (teamId) {
+      // Check if user is premium (teams are premium-only)
+      const isPremium = 
+        user.tier === 'premium' ||
+        user.subscriptionStatus === 'ACTIVE' ||
+        user.subscriptionStatus === 'TRIALING' ||
+        (user.freeTrialUntil && new Date(user.freeTrialUntil) > new Date());
 
-    if (!user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
+      if (!isPremium) {
+        return NextResponse.json(
+          { error: 'Teams feature is only available to premium users' },
+          { status: 403 }
+        );
+      }
+
+      // Verify team exists and belongs to user
+      const team = await prisma.team.findFirst({
+        where: {
+          id: teamId,
+          userId: user.id,
+        },
+      });
+
+      if (!team) {
+        return NextResponse.json(
+          { error: 'Team not found or does not belong to user' },
+          { status: 404 }
+        );
+      }
+
+      validatedTeamId = teamId;
     }
 
     // Check if quiz exists
@@ -253,10 +278,12 @@ export async function POST(request: NextRequest) {
 
     // Check if completion already exists (upsert behavior)
     // For custom quizzes, also check by quizId
+    // Include teamId in the query to find the right completion
     const existingCompletion = await prisma.quizCompletion.findFirst({
       where: {
         userId,
         quizSlug: quizType === 'CUSTOM' ? (quiz.slug || undefined) : quizSlug,
+        teamId: validatedTeamId || null, // Match null teamId for legacy completions
         ...(quizType === 'CUSTOM' && customQuizId ? { customQuizId } : {}),
       },
     });
@@ -272,6 +299,7 @@ export async function POST(request: NextRequest) {
             totalQuestions,
             timeSeconds: completionTimeSeconds || null,
             completedAt: new Date(),
+            teamId: validatedTeamId || null,
             ...(quizType === 'CUSTOM' && customQuizId ? { customQuizId } : {}),
           },
         });
@@ -286,6 +314,7 @@ export async function POST(request: NextRequest) {
           userId,
           quizSlug: quiz.slug || quizSlug || '',
           quizType: quizType as any,
+          teamId: validatedTeamId || null,
           ...(quizType === 'CUSTOM' && (customQuizId || quiz.id) ? { customQuizId: customQuizId || quiz.id } : {}),
           score,
           totalQuestions,
@@ -333,7 +362,202 @@ export async function POST(request: NextRequest) {
       console.warn('Failed to update user streak:', streakError);
     }
 
-    console.log(`✅ Quiz completion saved: User ${userId}, Quiz ${quizSlug}, Score ${score}/${totalQuestions}`);
+    // Update private league stats for user and team (if applicable)
+    try {
+      // Find all leagues the user is a member of
+      const userLeagues = await (prisma as any).privateLeagueMember.findMany({
+        where: {
+          userId: user.id,
+          leftAt: null,
+        },
+        select: {
+          leagueId: true,
+        },
+      });
+
+      const leagueIds = userLeagues.map((m: any) => m.leagueId);
+
+      // If teamId is provided, also find leagues the team belongs to
+      let teamLeagueIds: string[] = [];
+      if (validatedTeamId) {
+        const teamLeagues = await (prisma as any).privateLeagueTeam.findMany({
+          where: {
+            teamId: validatedTeamId,
+            leftAt: null,
+          },
+          select: {
+            leagueId: true,
+          },
+        });
+        teamLeagueIds = teamLeagues.map((t: any) => t.leagueId);
+      }
+
+      // Combine and deduplicate league IDs
+      const allLeagueIds = [...new Set([...leagueIds, ...teamLeagueIds])];
+
+      if (allLeagueIds.length > 0) {
+        const quizSlugForStats = quizType === 'CUSTOM' ? (quiz.slug || quizSlug || '') : quizSlug;
+
+        // Update stats for each league
+        await Promise.all(
+          allLeagueIds.map(async (leagueId: string) => {
+            const isTeamLeague = teamLeagueIds.includes(leagueId);
+            const isUserLeague = leagueIds.includes(leagueId);
+
+            // Update quiz-specific stats
+            if (quizSlugForStats) {
+              if (isTeamLeague && validatedTeamId) {
+                // Update team stats for this quiz - use findFirst + create/update pattern
+                const existingTeamStats = await (prisma as any).privateLeagueStats.findFirst({
+                  where: {
+                    leagueId,
+                    teamId: validatedTeamId,
+                    quizSlug: quizSlugForStats,
+                    userId: null,
+                  },
+                });
+
+                if (existingTeamStats) {
+                  await (prisma as any).privateLeagueStats.update({
+                    where: { id: existingTeamStats.id },
+                    data: {
+                      score: Math.max(score, existingTeamStats.score || 0),
+                      totalQuestions: totalQuestions,
+                      completedAt: new Date(),
+                      totalCorrectAnswers: score,
+                      quizzesPlayed: { increment: 1 },
+                    },
+                  });
+                } else {
+                  await (prisma as any).privateLeagueStats.create({
+                    data: {
+                      leagueId,
+                      teamId: validatedTeamId,
+                      userId: null,
+                      quizSlug: quizSlugForStats,
+                      score: score,
+                      totalQuestions: totalQuestions,
+                      completedAt: new Date(),
+                      totalCorrectAnswers: score,
+                      quizzesPlayed: 1,
+                    },
+                  });
+                }
+              }
+
+              if (isUserLeague) {
+                // Update user stats for this quiz
+                const existingUserStats = await (prisma as any).privateLeagueStats.findFirst({
+                  where: {
+                    leagueId,
+                    userId: user.id,
+                    quizSlug: quizSlugForStats,
+                    teamId: null,
+                  },
+                });
+
+                if (existingUserStats) {
+                  await (prisma as any).privateLeagueStats.update({
+                    where: { id: existingUserStats.id },
+                    data: {
+                      score: Math.max(score, existingUserStats.score || 0),
+                      totalQuestions: totalQuestions,
+                      completedAt: new Date(),
+                      totalCorrectAnswers: score,
+                      quizzesPlayed: { increment: 1 },
+                    },
+                  });
+                } else {
+                  await (prisma as any).privateLeagueStats.create({
+                    data: {
+                      leagueId,
+                      userId: user.id,
+                      teamId: null,
+                      quizSlug: quizSlugForStats,
+                      score: score,
+                      totalQuestions: totalQuestions,
+                      completedAt: new Date(),
+                      totalCorrectAnswers: score,
+                      quizzesPlayed: 1,
+                    },
+                  });
+                }
+              }
+            }
+
+            // Update overall stats (quizSlug = null)
+            if (isTeamLeague && validatedTeamId) {
+              const existingOverallTeamStats = await (prisma as any).privateLeagueStats.findFirst({
+                where: {
+                  leagueId,
+                  teamId: validatedTeamId,
+                  quizSlug: null,
+                  userId: null,
+                },
+              });
+
+              if (existingOverallTeamStats) {
+                await (prisma as any).privateLeagueStats.update({
+                  where: { id: existingOverallTeamStats.id },
+                  data: {
+                    totalCorrectAnswers: { increment: score },
+                    quizzesPlayed: { increment: 1 },
+                  },
+                });
+              } else {
+                await (prisma as any).privateLeagueStats.create({
+                  data: {
+                    leagueId,
+                    teamId: validatedTeamId,
+                    userId: null,
+                    quizSlug: null,
+                    totalCorrectAnswers: score,
+                    quizzesPlayed: 1,
+                  },
+                });
+              }
+            }
+
+            if (isUserLeague) {
+              const existingOverallUserStats = await (prisma as any).privateLeagueStats.findFirst({
+                where: {
+                  leagueId,
+                  userId: user.id,
+                  quizSlug: null,
+                  teamId: null,
+                },
+              });
+
+              if (existingOverallUserStats) {
+                await (prisma as any).privateLeagueStats.update({
+                  where: { id: existingOverallUserStats.id },
+                  data: {
+                    totalCorrectAnswers: { increment: score },
+                    quizzesPlayed: { increment: 1 },
+                  },
+                });
+              } else {
+                await (prisma as any).privateLeagueStats.create({
+                  data: {
+                    leagueId,
+                    userId: user.id,
+                    teamId: null,
+                    quizSlug: null,
+                    totalCorrectAnswers: score,
+                    quizzesPlayed: 1,
+                  },
+                });
+              }
+            }
+          })
+        );
+      }
+    } catch (leagueStatsError: any) {
+      // Log but don't fail the request if league stats update fails
+      console.warn('Failed to update league stats:', leagueStatsError);
+    }
+
+    console.log(`✅ Quiz completion saved: User ${userId}, Quiz ${quizSlug}, Score ${score}/${totalQuestions}${validatedTeamId ? `, Team ${validatedTeamId}` : ''}`);
 
     return NextResponse.json({
       success: true,

@@ -13,6 +13,7 @@ import { storage, getUserId, getUserName } from '@/lib/storage';
 import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
 import { LeagueRequestsNotification } from '@/components/leagues/LeagueRequestsNotification';
+import { Logo } from '@/components/Logo';
 
 export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
   const router = useRouter();
@@ -217,13 +218,13 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
             id="site-logo"
             data-fade={fadeLogo ? 'true' : 'false'}
             href={isLoggedIn ? '/quizzes' : '/'}
-            className={`text-2xl font-bold text-gray-900 dark:text-white tracking-tight transition-all duration-300 hover:opacity-80 cursor-pointer ${
+            className={`transition-all duration-300 hover:opacity-80 cursor-pointer ${
               isScrolled 
                 ? 'opacity-0 pointer-events-none -translate-x-4 w-0 overflow-hidden' 
                 : 'opacity-100 translate-x-0'
             }`}
           >
-            The School Quiz
+            <Logo className="h-7 w-auto" />
           </Link>
           <div className="flex items-center gap-3 flex-shrink-0">
             {isOnQuizzesPage && isFreeUser && (
@@ -474,7 +475,7 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
                           )}
                         >
                           <FileEdit className="w-5 h-5" />
-                          Custom Quizzes
+                          Create Quiz
                         </Link>
                         <Link
                           href="/leagues"
@@ -487,7 +488,7 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
                           )}
                         >
                           <Users className="w-5 h-5" />
-                          Private Leagues
+                          Leagues
                         </Link>
                         <Link
                           href="/stats"
@@ -500,7 +501,7 @@ export function SiteHeader({ fadeLogo = false }: { fadeLogo?: boolean }) {
                           )}
                         >
                           <BarChart3 className="w-5 h-5" />
-                          Stats & Analytics
+                          Insights
                         </Link>
                         <Link
                           href="/achievements"

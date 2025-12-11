@@ -70,3 +70,37 @@ export function getColorGroup(baseIndex: number): string[] {
 export function getColorsByTrend(trend: 'futuristic' | 'pastel' | 'nostalgic' | 'neon' | 'gradient' | 'earthy' | 'warm2025'): string[] {
   return quizColors;
 }
+
+/**
+ * Generate initials from a league name
+ * Takes first letter of first word and first letter of last word (or just first two letters)
+ */
+export function getLeagueInitials(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean)
+  if (words.length === 0) return '??'
+  if (words.length === 1) {
+    const word = words[0]
+    if (word.length >= 2) {
+      return word.substring(0, 2).toUpperCase()
+    }
+    return word.charAt(0).toUpperCase() + word.charAt(0).toUpperCase()
+  }
+  return (words[0].charAt(0) + words[words.length - 1].charAt(0)).toUpperCase()
+}
+
+/**
+ * Get a deterministic color for a league based on its name/id
+ * Uses a simple hash function to consistently assign colors
+ */
+export function getLeagueColor(nameOrId: string, customColor?: string | null): string {
+  // If league has a custom color, use it
+  if (customColor) return customColor
+  
+  // Otherwise, deterministically assign from palette based on name/id hash
+  let hash = 0
+  for (let i = 0; i < nameOrId.length; i++) {
+    hash = nameOrId.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  const index = Math.abs(hash) % quizColors.length
+  return quizColors[index]
+}

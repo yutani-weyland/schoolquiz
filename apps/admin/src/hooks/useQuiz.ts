@@ -7,7 +7,7 @@
 
 import React from 'react';
 import { useApiQuery } from './useApiQuery';
-import { QuizData, QuizService } from '@/services/quizService';
+import type { QuizData } from '@/services/quizService';
 
 export interface UseQuizResult {
 	data: QuizData | null;
@@ -34,11 +34,23 @@ export function useQuiz(
 		if (!slug) {
 			throw new Error('Quiz slug is required');
 		}
-		const quizData = await QuizService.getQuizBySlug(slug);
-		if (!quizData) {
-			throw new Error(`Quiz not found: ${slug}`);
+
+		const response = await fetch(`/api/quizzes/${slug}/data`);
+
+		if (!response.ok) {
+			if (response.status === 404) {
+				throw new Error(`Quiz not found: ${slug}`);
+			}
+			if (response.status === 401) {
+				throw new Error('Unauthorized: Please sign in to view this quiz');
+			}
+			if (response.status === 403) {
+				throw new Error('Forbidden: You do not have permission to view this quiz');
+			}
+			throw new Error('Failed to fetch quiz data');
 		}
-		return quizData;
+
+		return response.json();
 	}, [slug]);
 
 	const enabled = React.useMemo(

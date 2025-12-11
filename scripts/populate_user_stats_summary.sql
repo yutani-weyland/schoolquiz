@@ -54,3 +54,9 @@ SELECT
   COUNT(*) as total_quizzes
 FROM quiz_completions;
 
+
+
+
+
+
+

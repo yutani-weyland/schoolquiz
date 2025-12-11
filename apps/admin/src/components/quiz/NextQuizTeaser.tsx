@@ -2,15 +2,13 @@
 
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Lock, Calendar, Bell } from "lucide-react";
+import { Lock, Calendar } from "lucide-react";
 import { textOn } from "@/lib/contrast";
-import { useUserAccess } from "@/contexts/UserAccessContext";
 
 export function NextQuizTeaser({ latestQuizId = 279 }: { latestQuizId?: number }) {
 	const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 	const [nextQuizDateLabel, setNextQuizDateLabel] = useState<string>("");
 	const [animationKey, setAnimationKey] = useState(0);
-	const { isLoggedIn } = useUserAccess();
 	
 	// Calculate next quiz ID (latest + 1)
 	const nextQuizId = latestQuizId + 1;
@@ -161,12 +159,12 @@ export function NextQuizTeaser({ latestQuizId = 279 }: { latestQuizId?: number }
 					Your next quiz is on the way!
 				</h3>
 
-				<p className={`text-sm sm:text-base ${sub} leading-relaxed mb-5 relative z-10`}>
+				<p className={`text-sm sm:text-base ${sub} leading-relaxed mb-8 relative z-10`}>
 					We're putting together something special for you. Check back Monday morning to dive in.
 				</p>
 
-				<div className="mb-7 relative z-10" aria-live="polite">
-					<div className="grid grid-cols-3 gap-2.5 mb-4">
+				<div className="mb-8 relative z-10" aria-live="polite">
+					<div className="grid grid-cols-3 gap-2.5 mb-6">
 						{countdownSegments.map((segment, index) => (
 							<motion.div
 								key={segment.label}
@@ -200,35 +198,6 @@ export function NextQuizTeaser({ latestQuizId = 279 }: { latestQuizId?: number }
 						<Lock className="h-4 w-4" aria-hidden />
 						It'll be ready for you automatically
 					</motion.p>
-				</div>
-
-				<div className="mt-auto relative z-10">
-					<div className="flex items-center justify-between">
-						{isLoggedIn ? (
-							<motion.button
-								className={`px-6 py-3 rounded-full text-base font-semibold transition whitespace-nowrap relative ${
-									text === "white"
-										? "bg-white text-gray-900 hover:bg-white/90"
-										: "bg-gray-900 text-white hover:bg-gray-800"
-								}`}
-								whileHover={{ scale: 1.04 }}
-								whileTap={{ scale: 0.96 }}
-								initial={{ opacity: 0 }}
-								animate={{ opacity: 1 }}
-								transition={{ delay: 0.4 }}
-							>
-								<div className="flex items-center justify-center gap-2">
-									<Bell className="w-4 h-4" />
-									Notify me when it drops
-								</div>
-							</motion.button>
-						) : (
-							<div></div>
-						)}
-						<div className="relative">
-							{/* Placeholder for share button alignment */}
-						</div>
-					</div>
 				</div>
 			</motion.div>
 		</motion.div>

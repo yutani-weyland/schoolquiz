@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import confetti, { Options } from "canvas-confetti";
+import { m, LazyMotion, domAnimation, AnimatePresence } from "framer-motion";
+// import confetti, { Options } from "canvas-confetti"; // Lazy loaded instead
 import AnswerReveal from "./AnswerReveal";
 import RailProgress from "../progress/RailProgress";
 import { AchievementNotification, Achievement } from "./AchievementNotification";
@@ -148,7 +148,7 @@ function CircularProgress({
 			{/* +1 Animation */}
 			<AnimatePresence>
 				{showPlusOne && (
-					<motion.div
+					<m.div
 						key={`plus-one-${plusOneKey}`}
 						initial={{
 							opacity: 0,
@@ -189,7 +189,7 @@ function CircularProgress({
 						>
 							+1
 						</span>
-					</motion.div>
+					</m.div>
 				)}
 			</AnimatePresence>
 		</div>
@@ -216,7 +216,7 @@ function CircularProgressButton({
 	const strokeDashoffset = circumference - (circumference * (progressPercentage / 100));
 
 	return (
-		<motion.div
+		<m.div
 			className={`pointer-events-none ${className}`}
 			style={{ width: size, height: size }}
 			initial={{ opacity: 0, scale: 0.8 }}
@@ -262,7 +262,7 @@ function CircularProgressButton({
 					}}
 				/>
 			</svg>
-		</motion.div>
+		</m.div>
 	);
 }
 
@@ -557,6 +557,14 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 		// Default to "colored" for quiz pages (quiz-specific default)
 		return "colored";
 	});
+
+	// Force colored mode when in presenter view
+	useEffect(() => {
+		if (viewMode === "presenter" && themeMode !== "colored") {
+			setThemeMode("colored");
+		}
+	}, [viewMode, themeMode]);
+
 	const [showTimer, setShowTimer] = useState(true);
 	const [isNarrowViewport, setIsNarrowViewport] = useState(false);
 	const [isMobileLayout, setIsMobileLayout] = useState(false);
@@ -652,6 +660,11 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 			setIsSubmittingCompletion(true);
 			setCompletionError(null);
 
+			// Get selected teamId from localStorage (set in QuizIntro)
+			const selectedTeamId = typeof window !== 'undefined'
+				? localStorage.getItem('selectedTeamId')
+				: null;
+
 			fetch('/api/quiz/completion', {
 				method: 'POST',
 				headers: {
@@ -665,43 +678,44 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 					completionTimeSeconds: timer,
 					roundScores,
 					categories,
+					...(selectedTeamId && { teamId: selectedTeamId }), // Include teamId if selected
 				}),
 			})
-					.then(async (res) => {
-						if (!res.ok) {
-							// Check if response is JSON before parsing
-							const contentType = res.headers.get('content-type');
-							let errorData = {};
-							if (contentType && contentType.includes('application/json')) {
-								try {
-									errorData = await res.json();
-								} catch {
-									// If JSON parsing fails, use default error
-								}
-							}
-							throw new Error((errorData as any).error || `Failed to save completion (${res.status})`);
-						}
-						// Verify response is JSON before parsing
+				.then(async (res) => {
+					if (!res.ok) {
+						// Check if response is JSON before parsing
 						const contentType = res.headers.get('content-type');
+						let errorData = {};
 						if (contentType && contentType.includes('application/json')) {
-							return res.json();
-						} else {
-							throw new Error('Unexpected response format from server');
+							try {
+								errorData = await res.json();
+							} catch {
+								// If JSON parsing fails, use default error
+							}
 						}
-					})
-					.then((data) => {
-						// Handle newly unlocked achievements
-						if (data.newlyUnlockedAchievements && data.newlyUnlockedAchievements.length > 0) {
-							console.log('New achievements unlocked:', data.newlyUnlockedAchievements);
-						}
-						setIsSubmittingCompletion(false);
-					})
-					.catch((error) => {
-						console.error('Error submitting quiz completion:', error);
-						setCompletionError(error.message || 'Failed to save quiz completion');
-						setIsSubmittingCompletion(false);
-						setHasSubmittedCompletion(false); // Allow retry
-					});
+						throw new Error((errorData as any).error || `Failed to save completion (${res.status})`);
+					}
+					// Verify response is JSON before parsing
+					const contentType = res.headers.get('content-type');
+					if (contentType && contentType.includes('application/json')) {
+						return res.json();
+					} else {
+						throw new Error('Unexpected response format from server');
+					}
+				})
+				.then((data) => {
+					// Handle newly unlocked achievements
+					if (data.newlyUnlockedAchievements && data.newlyUnlockedAchievements.length > 0) {
+						console.log('New achievements unlocked:', data.newlyUnlockedAchievements);
+					}
+					setIsSubmittingCompletion(false);
+				})
+				.catch((error) => {
+					console.error('Error submitting quiz completion:', error);
+					setCompletionError(error.message || 'Failed to save quiz completion');
+					setIsSubmittingCompletion(false);
+					setHasSubmittedCompletion(false); // Allow retry
+				});
 		}
 	}, [showCompletionModal, hasSubmittedCompletion, quizSlug, isDemo, correctAnswers, finalQuestions, rounds, timer]);
 	// Timer running state is now managed by useQuizTimer hook
@@ -849,10 +863,10 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 		// The hook's hideAnswer just hides the answer, doesn't mark incorrect
 	};
 
-	// Helper function to get context-based emoji shapes based on round
-	const getContextEmojis = (roundNumber: number, scalar: number) => {
-		const emojiSets: { [key: number]: string[] } = {
-			1: ['🔵', '⚪', '🔷', '🔹', '◼️', '⚫'], // Shape Up - geometric shapes
+	// Helper to get emoji shapes for confetti based on round context
+	const getContextEmojis = async (roundNumber: number, scalar: number) => {
+		const emojiSets: Record<number, string[]> = {
+			1: ['🇦🇺', '🦘', '🐨', '🌏', '🏖️', '🏏'], // Aussie - standard
 			2: ['🎃', '🍂', '🍁', '🍄', '🦃', '🌽'], // Pumpkins - autumn/harvest
 			3: ['📝', '✍️', '📜', '📚', '📖', '🖋️'], // Famous First Words - writing/text
 			4: ['🎮', '📱', '💻', '⌚', '📺', '🎧'], // Crazes - tech/trends
@@ -862,19 +876,26 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 		const emojis = emojiSets[roundNumber] || ['🎉', '✨', '🎊', '🌟', '💫', '⭐'];
 
 		// Convert emojis to confetti shapes
-		// Check if shapeFromText is available, fallback to default shapes if not
-		if (confetti && typeof confetti.shapeFromText === 'function') {
-			try {
-				return emojis.map(emoji => confetti.shapeFromText({ text: emoji, scalar }));
-			} catch (error) {
-				console.warn('Failed to create emoji shapes, using default confetti:', error);
-				return undefined; // Fallback to default confetti
+		try {
+			const confettiModule = await import("canvas-confetti");
+			const confetti = confettiModule.default;
+
+			// Check if shapeFromText is available, fallback to default shapes if not
+			if (confetti && typeof confetti.shapeFromText === 'function') {
+				try {
+					return emojis.map(emoji => confetti.shapeFromText({ text: emoji, scalar }));
+				} catch (error) {
+					console.warn('Failed to create emoji shapes, using default confetti:', error);
+					return undefined; // Fallback to default confetti
+				}
 			}
+		} catch (e) {
+			console.warn('Failed to load confetti module for shapes:', e);
 		}
 		return undefined; // Fallback to default confetti
 	};
 
-	const handleMarkCorrect = (id: number, event?: React.MouseEvent<HTMLButtonElement>) => {
+	const handleMarkCorrect = async (id: number, event?: React.MouseEvent<HTMLButtonElement>) => {
 		const wasAlreadyCorrect = correctAnswers.has(id);
 		markCorrect(id);
 		// Remove from incorrect if it was marked incorrect (handled by hook)
@@ -895,10 +916,18 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 		// Get emoji shapes based on current round
 		const currentRoundNumber = currentQuestion?.roundNumber || 1;
 
-		// Ensure confetti is available - check both default export and named export
-		const confettiFn = typeof confetti === 'function' ? confetti : (confetti as any)?.default || confetti;
+		// Load confetti dynamically
+		let confettiFn: any;
+		try {
+			const confettiModule = await import("canvas-confetti");
+			confettiFn = confettiModule.default;
+		} catch (e) {
+			console.error('Failed to load confetti module:', e);
+			return;
+		}
+
 		if (!confettiFn || typeof confettiFn !== 'function') {
-			console.error('Confetti is not available', { confetti, type: typeof confetti });
+			console.error('Confetti is not available');
 			// Don't return - confetti might still work, just log the error
 		}
 
@@ -906,7 +935,7 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 		const scalar = event ? 1.8 : 2.2;
 		let emojiShapes: any[] | undefined;
 		try {
-			emojiShapes = getContextEmojis(currentRoundNumber, scalar);
+			emojiShapes = await getContextEmojis(currentRoundNumber, scalar);
 		} catch (error) {
 			console.warn('Failed to create emoji shapes, using default confetti:', error);
 			emojiShapes = undefined;
@@ -1514,6 +1543,10 @@ export function QuizPlayer({ quizTitle, quizColor, quizSlug, questions, rounds, 
 						onNext={goToNext}
 						onPrevious={goToPrevious}
 						onFinish={!isDemo ? handleFinishQuiz : undefined}
+						quizSlug={quizSlug}
+						customQuizId={customQuizId}
+						isPremium={isPremium}
+						isPresenterMode={viewMode === "presenter"}
 					/>
 				) : (
 					<MobileGridLayout

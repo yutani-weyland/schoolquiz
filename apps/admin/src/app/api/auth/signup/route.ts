@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
     // Create user
     const user = await prisma.user.create({
       data: {
-        email: email?.trim().toLowerCase() || null,
+        email: email?.trim().toLowerCase() || `no-email-${Date.now()}-${Math.random().toString(36).substr(2, 9)}@placeholder.schoolquiz.com`,
         phone: phone?.trim() || null,
         passwordHash,
         signupCode: signupCode?.trim() || null,

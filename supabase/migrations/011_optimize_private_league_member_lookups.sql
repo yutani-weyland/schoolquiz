@@ -13,3 +13,9 @@ CREATE INDEX IF NOT EXISTS idx_private_leagues_creator_deleted
 ON private_leagues("createdByUserId", "deletedAt") 
 WHERE "deletedAt" IS NULL;
 
+
+
+
+
+
+

@@ -44,7 +44,7 @@ async function getQuizMetadata(slug: string): Promise<Quiz | null> {
 			blurb: quiz.blurb || '',
 			weekISO: quiz.weekISO || new Date().toISOString().split('T')[0],
 			colorHex: quiz.colorHex || getQuizColor(0),
-			status: quiz.status as 'available' | 'draft' | 'scheduled' | 'published' | 'archived',
+			status: (quiz.status === 'published' || quiz.status === 'archived') ? 'available' : 'coming_soon',
 		};
 	} catch (error) {
 		console.error(`[Quiz Intro] Error fetching quiz ${slug}:`, error);

@@ -224,8 +224,8 @@ export default function MyCustomQuizzesPage() {
     <PageLayout>
       <PageContainer maxWidth="6xl">
         <PageHeader
-          title={viewType === 'official' ? 'Weekly Quiz Drop' : 'My Custom Quizzes'}
-          subtitle={viewType === 'official' ? 'Access all official weekly quizzes' : 'Create, manage, and share your custom quizzes'}
+          title={viewType === 'official' ? 'Weekly Quiz Drop' : 'My Quizzes'}
+          subtitle={viewType === 'official' ? 'Access all official weekly quizzes' : 'Create, manage, and share your quizzes'}
           centered
         />
 
@@ -265,7 +265,7 @@ export default function MyCustomQuizzesPage() {
                     : 'text-gray-500 dark:text-gray-400'
                   }`}
               >
-                My Custom Quizzes
+                My Quizzes
               </span>
             </div>
           </div>
@@ -406,7 +406,7 @@ export default function MyCustomQuizzesPage() {
                       : 'Check back later for new weekly quizzes'
                     : searchQuery
                       ? 'Try adjusting your search or filters'
-                      : 'Create your first custom quiz to get started'}
+                      : 'Create your first quiz to get started'}
                 </p>
                 {viewType === 'custom' && !searchQuery && (
                   <Link

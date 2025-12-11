@@ -137,8 +137,6 @@ export function CustomQuizzesClient({
 				<CustomQuizzesTabs
 					activeTab={activeTab}
 					onTabChange={handleTabChange}
-					hasGroups={context.hasGroups}
-					hasOrganisation={context.hasOrganisation}
 				/>
 			</div>
 
@@ -177,28 +175,24 @@ export function CustomQuizzesClient({
 								<h3 className="text-xl font-bold text-[hsl(var(--foreground))] mb-2">
 									{searchQuery 
 										? 'No quizzes found' 
-										: activeTab === 'mine' 
-											? 'No quizzes created yet'
-											: activeTab === 'shared'
-												? 'No shared quizzes'
-												: activeTab === 'groups'
-													? 'No group quizzes'
-													: activeTab === 'organisation'
-														? 'No organisation quizzes'
-														: 'No custom quizzes yet'}
+										: activeTab === 'shared'
+											? 'No quizzes shared with you'
+											: activeTab === 'recent'
+												? 'No recent quizzes'
+												: activeTab === 'drafts'
+													? 'No drafts'
+													: 'No custom quizzes yet'}
 								</h3>
 								<p className="text-[hsl(var(--muted-foreground))] mb-6">
 									{searchQuery
 										? 'Try adjusting your search or filters'
-										: activeTab === 'mine'
-											? 'Create your first custom quiz to get started'
-											: activeTab === 'shared'
-												? 'Quizzes shared with you will appear here'
-												: activeTab === 'groups'
-													? 'Quizzes shared with your groups will appear here'
-													: activeTab === 'organisation'
-														? 'Organisation-wide quizzes will appear here'
-														: 'Create your first custom quiz to get started'}
+										: activeTab === 'shared'
+											? 'Quizzes shared with you will appear here'
+											: activeTab === 'recent'
+												? 'Your recently updated quizzes will appear here'
+												: activeTab === 'drafts'
+													? 'Your draft quizzes will appear here'
+													: 'Create your first quiz to get started'}
 								</p>
 								{!searchQuery && (
 									<Link

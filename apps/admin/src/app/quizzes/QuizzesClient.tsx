@@ -71,6 +71,7 @@ export function QuizzesClient({ initialData, quizzes }: QuizzesClientProps) {
           quizzes={quizzes}
           completions={initialData.completions}
           pageAnimationKey={pageAnimationKey}
+          isPremium={initialData.isPremium}
         />
       </Suspense>
 

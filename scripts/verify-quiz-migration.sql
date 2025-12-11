@@ -33,3 +33,9 @@ WHERE "quizType" = 'OFFICIAL'
 ORDER BY "createdAt" DESC
 LIMIT 20;
 
+
+
+
+
+
+

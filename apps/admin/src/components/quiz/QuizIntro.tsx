@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { motion, LayoutGroup, AnimatePresence } from "framer-motion";
-import { Calendar, Share2, Copy, Check, X } from "lucide-react";
+import { Calendar, Share2, Copy, Check, X, FileText } from "lucide-react";
 import { formatWeek } from "@/lib/format";
 import { useUserTier } from "@/hooks/useUserTier";
 import { hasExceededFreeQuizzes, getRemainingFreeQuizzes } from "@/lib/quizAttempts";
@@ -15,6 +15,10 @@ import { storage } from "@/lib/storage";
 import { logger } from "@/lib/logger";
 import { getQuizIntroStartLabel } from "@/lib/quizStartLabel";
 import { useUserAccess } from "@/contexts/UserAccessContext";
+import { Logo } from "@/components/Logo";
+import { TeamSelector } from "./TeamSelector";
+import { useQueryClient } from "@tanstack/react-query";
+import { useTeams } from "@/hooks/useTeams";
 
 interface Quiz {
 	id: number;
@@ -56,8 +60,13 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 	const [showLockoutModal, setShowLockoutModal] = useState(false);
 	const [isQuizCompleted, setIsQuizCompleted] = useState(false);
 	const [mounted, setMounted] = useState(false);
+	const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
+	const [showPdfTooltip, setShowPdfTooltip] = useState(false);
+	const [showShareTooltip, setShowShareTooltip] = useState(false);
 	const { isLoggedIn: userIsLoggedIn, isVisitor } = useUserAccess();
 	const { tier, isPremium, isLoading } = useUserTier();
+	const { teams, isLoading: teamsLoading } = useTeams();
+	const queryClient = useQueryClient();
 	const loggedIn = userIsLoggedIn;
 	
 	// Compute start label - use state to avoid hydration mismatch
@@ -89,6 +98,52 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 	useEffect(() => {
 		setFormattedDate(formatWeek(quiz.weekISO));
 	}, [quiz.weekISO]);
+
+	// Store selected team in localStorage when it changes
+	useEffect(() => {
+		if (selectedTeamId && typeof window !== 'undefined') {
+			localStorage.setItem('selectedTeamId', selectedTeamId);
+		}
+	}, [selectedTeamId]);
+
+	// Load selected team from localStorage on mount and auto-select default if needed
+	useEffect(() => {
+		if (typeof window !== 'undefined' && loggedIn && isPremium) {
+			const storedTeamId = localStorage.getItem('selectedTeamId');
+			if (storedTeamId) {
+				setSelectedTeamId(storedTeamId);
+			} else if (teams.length > 0 && !teamsLoading) {
+				// Auto-select default team if no team is selected
+				const defaultTeam = teams.find(t => t.isDefault) || teams[0];
+				if (defaultTeam) {
+					setSelectedTeamId(defaultTeam.id);
+				}
+			}
+		}
+	}, [loggedIn, isPremium, teams, teamsLoading]);
+
+	// Prefetch teams data early for faster loading
+	useEffect(() => {
+		if (loggedIn && isPremium && !isLoading) {
+			// Prefetch teams in background
+			queryClient.prefetchQuery({
+				queryKey: ['user-teams'],
+				queryFn: async () => {
+					const response = await fetch('/api/user/teams', {
+						credentials: 'include',
+					});
+					if (!response.ok) {
+						if (response.status === 403) {
+							return { teams: [], count: 0, maxTeams: 10 };
+						}
+						throw new Error('Failed to fetch teams');
+					}
+					return response.json();
+				},
+				staleTime: 5 * 60 * 1000,
+			});
+		}
+	}, [loggedIn, isPremium, isLoading, queryClient]);
 	
 	// Check if quiz is completed
 	React.useEffect(() => {
@@ -267,6 +322,12 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 		}
 	};
 
+	const handleDownloadPDF = useCallback(() => {
+		if (quiz.slug) {
+			window.open(`/api/quizzes/${quiz.slug}/pdf`, '_blank');
+		}
+	}, [quiz.slug]);
+
 	function onBack() {
 		if (typeof window !== 'undefined') {
 			// Use direct navigation instead of history.back() to ensure it always works
@@ -328,9 +389,9 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 						initial={{ opacity: 0, x: -10 }}
 						animate={{ opacity: 1, x: 0 }}
 						transition={{ duration: 0.4 }}
-						className={`text-2xl font-bold tracking-tight cursor-pointer hover:opacity-80 transition-opacity truncate ${text}`}
+						className={`cursor-pointer hover:opacity-80 transition-opacity ${tone === "white" ? "text-white" : "text-gray-900"}`}
 					>
-						The School Quiz
+						<Logo className="h-7 w-auto" />
 					</motion.a>
 					
 					<div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
@@ -449,11 +510,12 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 							}}
 							className="flex flex-row items-center justify-center gap-3 w-full px-4"
 							style={{ 
-								flexWrap: 'wrap',
 								maxWidth: '100%',
-								marginBottom: 'clamp(0.75rem, 2vh, 3rem)'
+								marginBottom: 'clamp(0.75rem, 2vh, 3rem)',
+								flexWrap: 'wrap'
 							}}
 						>
+							{/* Play Quiz Button */}
 							{!loggedIn ? (
 								<motion.a
 									href={`/quizzes/${quiz.slug}/play`}
@@ -556,45 +618,67 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 								</motion.a>
 							)}
 							
-							<div className="relative">
-								<motion.button
-									onClick={() => setShowShareMenu(!showShareMenu)}
-									className={`inline-flex items-center gap-1.5 sm:gap-2 rounded-full font-semibold cursor-pointer whitespace-nowrap ${
-										tone === "white" ? "bg-white/15 text-white hover:bg-white/25" : "bg-white/20 text-gray-900 hover:bg-white/30"
-									}`}
-									style={{
-										paddingTop: 'clamp(0.75rem, min(1.25rem, 3vh), 1.5rem)',
-										paddingBottom: 'clamp(0.75rem, min(1.25rem, 3vh), 1.5rem)',
-										paddingLeft: 'clamp(1.5rem, min(2.5rem, 4vw), 2.5rem)',
-										paddingRight: 'clamp(1.5rem, min(2.5rem, 4vw), 2.5rem)',
-										fontSize: 'clamp(0.875rem, min(1.125rem, 2.5vh), 1.25rem)',
-										boxShadow: tone === "white" 
-											? "0 4px 14px 0 rgba(0, 0, 0, 0.15)" 
-											: "0 4px 14px 0 rgba(0, 0, 0, 0.1)"
-									}}
-									whileHover={{ 
-										scale: 1.05,
-										transition: { 
-											type: "spring",
-											stiffness: 500,
-											damping: 20,
-											mass: 0.5
-										}
-									}}
-									transition={{
-										type: "spring",
-										stiffness: 600,
-										damping: 25,
-										mass: 0.3
-									}}
-									whileTap={{ 
-										scale: 0.98,
-										transition: { 
-											type: "spring",
-											stiffness: 500,
-											damping: 30
-										}
-									}}
+							{/* PDF and Share Buttons */}
+							<div className="flex items-center gap-2" style={{ flexShrink: 0 }}>
+								{/* PDF Button - Premium Only */}
+								{isPremium && (
+									<div className="relative">
+										<motion.button
+											onClick={handleDownloadPDF}
+											onMouseEnter={() => setShowPdfTooltip(true)}
+											onMouseLeave={() => setShowPdfTooltip(false)}
+											className={`rounded-full cursor-pointer transition-colors ${
+												tone === "white" ? "bg-white/15 text-white hover:bg-white/25" : "bg-white/20 text-gray-900 hover:bg-white/30"
+											}`}
+											style={{
+												paddingTop: 'clamp(0.75rem, min(1.25rem, 3vh), 1.5rem)',
+												paddingBottom: 'clamp(0.75rem, min(1.25rem, 3vh), 1.5rem)',
+												paddingLeft: 'clamp(0.75rem, min(1.25rem, 3vh), 1.5rem)',
+												paddingRight: 'clamp(0.75rem, min(1.25rem, 3vh), 1.5rem)',
+											}}
+											whileHover={{ scale: 1.05 }}
+											whileTap={{ scale: 0.95 }}
+											aria-label="Download PDF"
+										>
+											<FileText className="h-5 w-5 sm:h-6 sm:w-6" />
+										</motion.button>
+										
+										{/* PDF Tooltip */}
+										<AnimatePresence>
+											{showPdfTooltip && (
+												<motion.div
+													initial={{ opacity: 0, y: 5 }}
+													animate={{ opacity: 1, y: 0 }}
+													exit={{ opacity: 0, y: 5 }}
+													transition={{ duration: 0.2 }}
+													className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 dark:bg-gray-800 text-white text-sm rounded-lg shadow-lg whitespace-nowrap z-50 pointer-events-none"
+												>
+													Download PDF
+													<div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900 dark:border-t-gray-800" />
+												</motion.div>
+											)}
+										</AnimatePresence>
+									</div>
+								)}
+								
+								{/* Share Button */}
+								<div className="relative">
+									<motion.button
+										onClick={() => setShowShareMenu(!showShareMenu)}
+										onMouseEnter={() => setShowShareTooltip(true)}
+										onMouseLeave={() => setShowShareTooltip(false)}
+										className={`rounded-full cursor-pointer transition-colors ${
+											tone === "white" ? "bg-white/15 text-white hover:bg-white/25" : "bg-white/20 text-gray-900 hover:bg-white/30"
+										}`}
+										style={{
+											paddingTop: 'clamp(0.75rem, min(1.25rem, 3vh), 1.5rem)',
+											paddingBottom: 'clamp(0.75rem, min(1.25rem, 3vh), 1.5rem)',
+											paddingLeft: 'clamp(0.75rem, min(1.25rem, 3vh), 1.5rem)',
+											paddingRight: 'clamp(0.75rem, min(1.25rem, 3vh), 1.5rem)',
+										}}
+										whileHover={{ scale: 1.05 }}
+										whileTap={{ scale: 0.95 }}
+										aria-label="Share quiz"
 									>
 										<motion.div
 											whileHover={{ 
@@ -605,23 +689,47 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 												}
 											}}
 										>
-											<Share2 className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
+											<Share2 className="h-5 w-5 sm:h-6 sm:w-6" />
 										</motion.div>
-										<span>Share</span>
 									</motion.button>
-
-								<AnimatePresence>
-									{showShareMenu && (
-										<motion.div
-											initial={{ opacity: 0, scale: 0.9, y: -10 }}
-											animate={{ opacity: 1, scale: 1, y: 0 }}
-											exit={{ opacity: 0, scale: 0.9, y: -10 }}
-											transition={{ duration: 0.2 }}
-											className={`absolute top-full left-1/2 -translate-x-1/2 mt-2 rounded-xl shadow-2xl overflow-hidden z-50 ${
-												tone === "white" ? "bg-white text-gray-900" : "bg-gray-900 text-white"
-											}`}
-											style={{ minWidth: '180px' }}
-										>
+									
+									{/* Share Tooltip */}
+									<AnimatePresence>
+										{showShareTooltip && !showShareMenu && (
+											<motion.div
+												initial={{ opacity: 0, y: 5 }}
+												animate={{ opacity: 1, y: 0 }}
+												exit={{ opacity: 0, y: 5 }}
+												transition={{ duration: 0.2 }}
+												className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 dark:bg-gray-800 text-white text-sm rounded-lg shadow-lg whitespace-nowrap z-50 pointer-events-none"
+											>
+												Share quiz
+												<div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900 dark:border-t-gray-800" />
+											</motion.div>
+										)}
+									</AnimatePresence>
+									{/* Share Menu Dropdown */}
+									<AnimatePresence>
+										{showShareMenu && (
+											<>
+												{/* Backdrop */}
+												<motion.div
+													initial={{ opacity: 0 }}
+													animate={{ opacity: 1 }}
+													exit={{ opacity: 0 }}
+													onClick={() => setShowShareMenu(false)}
+													className="fixed inset-0 z-40"
+												/>
+												<motion.div
+													initial={{ opacity: 0, scale: 0.9, y: -10 }}
+													animate={{ opacity: 1, scale: 1, y: 0 }}
+													exit={{ opacity: 0, scale: 0.9, y: -10 }}
+													transition={{ duration: 0.2 }}
+													className={`absolute top-full left-1/2 -translate-x-1/2 mt-2 rounded-xl shadow-2xl overflow-hidden z-50 ${
+														tone === "white" ? "bg-white text-gray-900" : "bg-gray-900 text-white"
+													}`}
+													style={{ minWidth: '180px' }}
+												>
 											<div className="p-2">
 											{typeof navigator !== 'undefined' && typeof navigator.share === 'function' && (
 												<motion.button
@@ -657,11 +765,34 @@ export default function QuizIntro({ quiz, isNewest = false }: QuizIntroProps) {
 														</>
 													)}
 												</button>
-											</div>
-										</motion.div>
-									)}
-								</AnimatePresence>
+													</div>
+												</motion.div>
+											</>
+										)}
+									</AnimatePresence>
+								</div>
 							</div>
+							
+							{/* Team Selector - Premium Users Only - Shown before starting quiz */}
+							{loggedIn && isPremium && !isLoading && (
+								<motion.div
+									initial={{ opacity: 0, y: 6 }}
+									animate={{ opacity: 1, y: 0 }}
+									transition={{ 
+										duration: 0.4,
+										delay: 0.25
+									}}
+									className="w-full flex items-center justify-center mt-2"
+								>
+									<TeamSelector
+										selectedTeamId={selectedTeamId}
+										onTeamChange={setSelectedTeamId}
+										tone={tone}
+										variant="inline"
+										showDividers={false}
+									/>
+								</motion.div>
+							)}
 						</motion.div>
 					</motion.div>
 				</main>

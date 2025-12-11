@@ -9,7 +9,6 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { ContentCard } from '@/components/layout/ContentCard';
 import { QuizColorPicker } from '@/components/admin/QuizColorPicker';
 import { SchoolLogoUpload } from '@/components/premium/SchoolLogoUpload';
-import { CustomQuizUsageWidget } from '@/components/premium/CustomQuizUsageWidget';
 import { motion } from 'framer-motion';
 import { Plus, Trash2, Save, Eye, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
 import { useUserTier } from '@/hooks/useUserTier';
@@ -19,7 +18,6 @@ interface Question {
   id: string;
   text: string;
   answer: string;
-  explanation?: string;
 }
 
 interface Round {
@@ -72,7 +70,6 @@ export default function CreateQuizPage() {
   const [expandedRounds, setExpandedRounds] = useState<Set<string>>(new Set());
   const [organisation, setOrganisation] = useState<OrganisationBranding | null>(null);
   const [useOrgLogo, setUseOrgLogo] = useState(true); // Default to using org logo if available
-  const [usage, setUsage] = useState<any>(null);
 
   // Redirect if not premium
   useEffect(() => {
@@ -81,30 +78,12 @@ export default function CreateQuizPage() {
     }
   }, [tierLoading, isPremium, router]);
 
-  // Load user's organisation branding and usage
+  // Load user's organisation branding
   useEffect(() => {
     if (isPremium) {
       loadOrganisation();
-      loadUsage();
     }
   }, [isPremium]);
-
-  const loadUsage = async () => {
-    try {
-      if (!session?.user?.id) return;
-
-      const res = await fetch('/api/premium/custom-quizzes/usage', {
-        credentials: 'include', // Send session cookie
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setUsage(data);
-      }
-    } catch (error) {
-      console.error('Error loading usage:', error);
-    }
-  };
 
   // Load quiz for editing
   useEffect(() => {
@@ -167,7 +146,6 @@ export default function CreateQuizPage() {
               id: q.id,
               text: q.text,
               answer: q.answer,
-              explanation: q.explanation || '',
             })),
           })),
         });
@@ -228,9 +206,6 @@ export default function CreateQuizPage() {
         if (question.answer.length > 200) {
           newErrors[`round_${roundIndex}_q_${qIndex}_answer`] = 'Answer must be less than 200 characters';
         }
-        if (question.explanation && question.explanation.length > 500) {
-          newErrors[`round_${roundIndex}_q_${qIndex}_explanation`] = 'Explanation must be less than 500 characters';
-        }
       });
     });
 
@@ -258,7 +233,6 @@ export default function CreateQuizPage() {
           questions: round.questions.map(q => ({
             text: q.text.trim(),
             answer: q.answer.trim(),
-            explanation: q.explanation?.trim() || undefined,
           })),
         })),
       };
@@ -455,7 +429,7 @@ export default function CreateQuizPage() {
     <PageLayout>
       <PageContainer maxWidth="6xl">
         <PageHeader
-          title={editId ? 'Edit Custom Quiz' : 'Create Custom Quiz'}
+          title={editId ? 'Edit Quiz' : 'Create Quiz'}
           subtitle="Build your custom quiz with flexible rounds and questions"
           centered
         />
@@ -463,15 +437,6 @@ export default function CreateQuizPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Form */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Usage Widget - Compact */}
-            {usage && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-              >
-                <CustomQuizUsageWidget usage={usage} compact />
-              </motion.div>
-            )}
             {/* Quiz Metadata */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -517,7 +482,7 @@ export default function CreateQuizPage() {
                       onChange={(e) => setQuizData({ ...quizData, blurb: e.target.value })}
                       placeholder="Enter quiz description (optional)"
                       rows={3}
-                      className={`w-full px-4 py-2 border rounded-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                      className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                         errors.blurb ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
                       }`}
                       maxLength={500}
@@ -872,7 +837,7 @@ function RoundEditor({
               onChange={(e) => onUpdate({ blurb: e.target.value })}
               placeholder="Brief description of this round"
               rows={2}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               maxLength={300}
             />
           </div>
@@ -962,7 +927,7 @@ function QuestionEditor({
           onChange={(e) => onUpdate({ text: e.target.value })}
           placeholder="Enter your question"
           rows={2}
-          className={`w-full px-3 py-2 text-sm border rounded-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+          className={`w-full px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 ${
             errors[`round_${roundIndex}_q_${questionIndex}_text`]
               ? 'border-red-500'
               : 'border-gray-300 dark:border-gray-600'
@@ -998,29 +963,6 @@ function QuestionEditor({
         {errors[`round_${roundIndex}_q_${questionIndex}_answer`] && (
           <p className="mt-1 text-xs text-red-600 dark:text-red-400">
             {errors[`round_${roundIndex}_q_${questionIndex}_answer`]}
-          </p>
-        )}
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          Explanation (optional)
-        </label>
-        <textarea
-          value={question.explanation || ''}
-          onChange={(e) => onUpdate({ explanation: e.target.value })}
-          placeholder="Optional explanation for the answer"
-          rows={2}
-          className={`w-full px-3 py-2 text-sm border rounded-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-            errors[`round_${roundIndex}_q_${questionIndex}_explanation`]
-              ? 'border-red-500'
-              : 'border-gray-300 dark:border-gray-600'
-          }`}
-          maxLength={500}
-        />
-        {errors[`round_${roundIndex}_q_${questionIndex}_explanation`] && (
-          <p className="mt-1 text-xs text-red-600 dark:text-red-400">
-            {errors[`round_${roundIndex}_q_${questionIndex}_explanation`]}
           </p>
         )}
       </div>

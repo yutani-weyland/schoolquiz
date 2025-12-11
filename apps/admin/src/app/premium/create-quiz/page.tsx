@@ -356,7 +356,7 @@ export default function CreateQuizPage() {
     <PageLayout>
       <PageContainer maxWidth="6xl">
         <PageHeader
-          title={editId ? 'Edit Custom Quiz' : 'Create Custom Quiz'}
+          title={editId ? 'Edit Quiz' : 'Create Quiz'}
           subtitle="Build your custom quiz with flexible rounds and questions"
           centered
         />

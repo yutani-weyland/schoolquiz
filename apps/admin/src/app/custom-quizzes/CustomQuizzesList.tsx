@@ -104,7 +104,7 @@ export function CustomQuizzesList({
 						No custom quizzes yet
 					</h3>
 					<p className="text-[hsl(var(--muted-foreground))] mb-6">
-						Create your first custom quiz to get started
+						Create your first quiz to get started
 					</p>
 					<Link
 						href="/custom-quizzes/create"
@@ -218,4 +218,10 @@ export function CustomQuizzesList({
 		</>
 	)
 }
+
+
+
+
+
+
 

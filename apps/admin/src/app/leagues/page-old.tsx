@@ -300,7 +300,7 @@ export default function LeaguesPage() {
       // Optimistically update cache
       queryClient.setQueryData(['private-leagues'], (old: League[] = []) => {
         const updated = [newLeague, ...old]
-        cacheLeagues(updated)
+        cacheLeagues(updated as any)
         return updated
       })
       setSelectedLeagueId(newLeague.id)
@@ -407,7 +407,7 @@ export default function LeaguesPage() {
           return old
         }
         const updated = [newLeague, ...old]
-        cacheLeagues(updated)
+        cacheLeagues(updated as any)
         return updated
       })
       setSelectedLeagueId(data.league.id)
@@ -441,7 +441,7 @@ export default function LeaguesPage() {
       // Optimistically update cache
       queryClient.setQueryData(['private-leagues'], (old: League[] = []) => {
         const updated = old.filter(league => league.id !== deletedLeagueId)
-        cacheLeagues(updated)
+        cacheLeagues(updated as any)
 
         // Select first league if available, otherwise clear selection
         if (updated.length > 0) {
@@ -1049,8 +1049,8 @@ export default function LeaguesPage() {
                     onReorderLeagues={(newOrder) => {
                       // Optimistically update cache
                       queryClient.setQueryData(['private-leagues'], newOrder)
-                      cacheLeagues(newOrder)
-                      saveLeagueOrder(newOrder)
+                      cacheLeagues(newOrder as any)
+                      saveLeagueOrder(newOrder as any)
                     }}
                     leagueAccentColor={leagueAccentColor}
                   />

@@ -41,3 +41,9 @@ COMMENT ON INDEX idx_private_league_members_league_user_active IS
 COMMENT ON INDEX idx_private_league_members_league_joined IS 
 'Index for ordering members by join date. Optimizes ORDER BY joinedAt queries in member lists.';
 
+
+
+
+
+
+

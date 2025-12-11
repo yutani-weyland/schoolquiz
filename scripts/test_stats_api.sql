@@ -123,3 +123,9 @@ WHERE user_id IN (
 )
 GROUP BY user_id;
 
+
+
+
+
+
+

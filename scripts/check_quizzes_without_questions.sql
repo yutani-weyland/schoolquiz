@@ -16,3 +16,9 @@ GROUP BY q.id, q.slug, q.title, q.status, q."quizType"
 HAVING COUNT(DISTINCT qrq.id) = 0
 ORDER BY q."createdAt" DESC;
 
+
+
+
+
+
+

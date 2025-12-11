@@ -317,6 +317,12 @@ model User {
   customQuizShares     CustomQuizShare[]    @relation("CustomQuizShareUser")
   customQuizSharesReceived CustomQuizShare[] @relation("CustomQuizSharer")
 
+  // Teams (Premium Feature)
+  teams Team[]
+  
+  // Private League Teams (teams added to leagues by this user)
+  addedLeagueTeams PrivateLeagueTeam[] @relation("PrivateLeagueTeamAdder")
+
   // Billing & Support relations
   invoices             Invoice[]
   subscriptions        Subscription[]
@@ -721,16 +727,43 @@ model QuizCompletion {
   totalQuestions Int // Total questions in quiz
   completedAt    DateTime @default(now())
   timeSeconds    Int? // Time taken in seconds
+  teamId         String? // Optional - for premium users with teams
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team Team? @relation(fields: [teamId], references: [id], onDelete: SetNull)
 
-  @@unique([userId, quizSlug]) // One completion per quiz per user
+  @@unique([userId, quizSlug, teamId]) // One completion per quiz per user per team (teamId can be null)
   @@index([userId, completedAt])
   @@index([quizSlug])
   @@index([completedAt])
   @@index([quizType])
   @@index([quizId])
+  @@index([teamId])
   @@map("quiz_completions")
+}
+
+// ============================================================================
+// Teams (Premium Feature)
+// ============================================================================
+
+model Team {
+  id              String   @id @default(cuid())
+  userId          String
+  name            String
+  color           String?  // Optional color for UI (hex code)
+  isDefault       Boolean  @default(false) // One default team per user
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quizCompletions QuizCompletion[]
+  leagueTeams     PrivateLeagueTeam[]
+  leagueStats     PrivateLeagueStats[]
+
+  @@unique([userId, name]) // Unique team name per user
+  @@index([userId])
+  @@index([userId, isDefault])
+  @@map("teams")
 }
 
 // ============================================================================
@@ -755,6 +788,7 @@ model PrivateLeague {
   creator      User                    @relation("PrivateLeagueCreator", fields: [createdByUserId], references: [id], onDelete: Cascade)
   organisation Organisation?            @relation(fields: [organisationId], references: [id], onDelete: SetNull)
   members      PrivateLeagueMember[]
+  teams        PrivateLeagueTeam[]
   stats        PrivateLeagueStats[]
   requests     PrivateLeagueRequest[]
 
@@ -787,10 +821,35 @@ model PrivateLeagueMember {
   @@map("private_league_members")
 }
 
+model PrivateLeagueTeam {
+  id              String  @id @default(cuid())
+  leagueId        String
+  teamId          String
+  addedByUserId   String? // Who added this team to the league
+
+  joinedAt DateTime  @default(now())
+  leftAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  league    PrivateLeague @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  team      Team          @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  addedBy   User?         @relation("PrivateLeagueTeamAdder", fields: [addedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([leagueId, teamId])
+  @@index([leagueId])
+  @@index([teamId])
+  @@index([leagueId, leftAt])
+  @@index([teamId, leftAt])
+  @@map("private_league_teams")
+}
+
 model PrivateLeagueStats {
   id       String  @id @default(cuid())
   leagueId String
-  userId   String
+  userId   String? // Nullable - can track team stats without user
+  teamId   String? // Nullable - can track user stats without team
   quizSlug String? // Null for overall league stats
 
   // Quiz-specific stats (when quizSlug is set)
@@ -807,11 +866,13 @@ model PrivateLeagueStats {
   updatedAt DateTime @updatedAt
 
   league PrivateLeague @relation(fields: [leagueId], references: [id], onDelete: Cascade)
-  user   User          @relation("PrivateLeagueStats", fields: [userId], references: [id], onDelete: Cascade)
+  user   User?         @relation("PrivateLeagueStats", fields: [userId], references: [id], onDelete: Cascade)
+  team   Team?         @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
-  @@unique([leagueId, userId, quizSlug]) // One stat record per user per league per quiz (or overall)
   @@index([leagueId, quizSlug, score]) // For ranking queries
   @@index([userId])
+  @@index([teamId])
+  @@index([leagueId, teamId, quizSlug, score]) // For team-based ranking queries
   @@map("private_league_stats")
 }
 
@@ -1059,15 +1120,15 @@ model AuditLog {
 
 model Referral {
   id              String   @id @default(cuid())
-  referrerId      String
-  referredUserId  String   @unique
-  referralCode    String
+  referrerId      String   @map("referrer_id")
+  referredUserId  String   @unique @map("referred_user_id")
+  referralCode    String   @map("referral_code")
   status          String   @default("PENDING") // PENDING: user signed up, REWARDED: both users got free month
-  rewardGrantedAt DateTime? // When the reward was granted (when referred user became Premium)
-  referrerRewarded Boolean  @default(false) // Whether referrer got their free month
-  referredRewarded Boolean  @default(false) // Whether referred user got their free month
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  rewardGrantedAt DateTime? @map("reward_granted_at") // When the reward was granted (when referred user became Premium)
+  referrerRewarded Boolean  @default(false) @map("referrer_rewarded") // Whether referrer got their free month
+  referredRewarded Boolean  @default(false) @map("referred_rewarded") // Whether referred user got their free month
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
   referrer     User @relation("UserReferrals", fields: [referrerId], references: [id], onDelete: Cascade)
   referredUser User @relation("ReferredUser", fields: [referredUserId], references: [id], onDelete: Cascade)

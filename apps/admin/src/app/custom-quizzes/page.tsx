@@ -14,7 +14,7 @@ export const revalidate = 30
 /**
  * OPTIMIZATION: Server Component - Custom Quizzes Page
  * Uses summary queries for dramatically improved performance
- * Supports tab-based filtering (All/Mine/Shared/Groups/Organisation)
+ * Supports tab-based filtering (Shared with Me/Recent/Drafts/All)
  * OPTIMIZATION: Shell-first rendering - layout renders immediately, content streams in
  */
 export default async function MyCustomQuizzesPage({

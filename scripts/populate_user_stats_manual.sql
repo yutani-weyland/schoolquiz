@@ -25,3 +25,9 @@ SELECT
   COUNT(*) as total_category_records
 FROM user_category_stats;
 
+
+
+
+
+
+

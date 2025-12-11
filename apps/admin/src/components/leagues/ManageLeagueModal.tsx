@@ -1,7 +1,7 @@
 'use client'
 
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Loader2, Trash2, Edit2, Building2 } from 'lucide-react'
+import { X, Loader2, Trash2, Edit2, Building2, Users, Calendar, Users2 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import type { League } from '@/lib/leagues-fetch'
 
@@ -118,13 +118,14 @@ export function ManageLeagueModal({
                     </p>
                   </div>
                   {isLoading && (
-                    <Loader2 className="w-5 h-5 text-primary animate-spin" title="Loading..." />
+                    <Loader2 className="w-5 h-5 text-primary animate-spin" />
                   )}
                 </div>
                 <button
                   onClick={handleClose}
                   disabled={updating || deleting || isLoading}
                   className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+                  aria-label="Close manage league modal"
                 >
                   <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                 </button>
@@ -140,15 +141,57 @@ export function ManageLeagueModal({
                     <h4 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
                       Delete League?
                     </h4>
-                    <p className="text-gray-600 dark:text-gray-400">
+                    <p className="text-gray-600 dark:text-gray-400 mb-4">
                       Are you sure you want to delete <span className="font-semibold">{league.name}</span>? This action cannot be undone.
                     </p>
+
+                    {/* League Stats */}
+                    <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                          <Users className="w-4 h-4" />
+                          <span>Members</span>
+                        </div>
+                        <span className="font-semibold text-gray-900 dark:text-white">
+                          {league._count?.members || league.members?.length || 0}
+                        </span>
+                      </div>
+                      {(league._count?.teams || league.teams?.length || 0) > 0 && (
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                            <Users2 className="w-4 h-4" />
+                            <span>Teams</span>
+                          </div>
+                          <span className="font-semibold text-gray-900 dark:text-white">
+                            {league._count?.teams || league.teams?.length || 0}
+                          </span>
+                        </div>
+                      )}
+                      {league.createdAt && (
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                            <Calendar className="w-4 h-4" />
+                            <span>Created</span>
+                          </div>
+                          <span className="font-semibold text-gray-900 dark:text-white">
+                            {new Date(league.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                      <p className="text-sm text-amber-800 dark:text-amber-200">
+                        <strong>Warning:</strong> This will remove all {league._count?.members || league.members?.length || 0} member{((league._count?.members || league.members?.length || 0) !== 1) ? 's' : ''} and {league._count?.teams || league.teams?.length || 0} team{((league._count?.teams || league.teams?.length || 0) !== 1) ? 's' : ''} from the league and delete all league statistics and history.
+                      </p>
+                    </div>
                   </div>
                   <div className="flex gap-3">
                     <button
                       onClick={handleDelete}
                       disabled={deleting}
                       className="flex-1 inline-flex items-center justify-center gap-2 h-11 px-4 bg-red-600 text-white rounded-xl font-medium hover:bg-red-700 transition-colors disabled:opacity-50"
+                      aria-label="Delete league"
                     >
                       {deleting ? (
                         <>
@@ -158,7 +201,7 @@ export function ManageLeagueModal({
                       ) : (
                         <>
                           <Trash2 className="w-4 h-4" />
-                          Delete
+                          Delete League
                         </>
                       )}
                     </button>
@@ -231,11 +274,10 @@ export function ManageLeagueModal({
                           type="button"
                           onClick={() => setColor(c)}
                           disabled={updating}
-                          className={`w-10 h-10 rounded-xl border-2 transition-all ${
-                            color === c
+                          className={`w-10 h-10 rounded-xl border-2 transition-all ${color === c
                               ? 'border-gray-900 dark:border-white scale-110 ring-2 ring-offset-2'
                               : 'border-gray-200 dark:border-gray-600 hover:scale-105'
-                          }`}
+                            }`}
                           style={{ backgroundColor: c }}
                           aria-label={`Select color ${c}`}
                         />
@@ -250,6 +292,7 @@ export function ManageLeagueModal({
                       disabled={updating || !name.trim()}
                       className="flex-1 inline-flex items-center justify-center gap-2 h-11 px-4 rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-white"
                       style={{ backgroundColor: color }}
+                      aria-label="Save league changes"
                     >
                       {updating ? (
                         <>
@@ -268,6 +311,7 @@ export function ManageLeagueModal({
                       onClick={() => setShowDeleteConfirm(true)}
                       disabled={updating || deleting}
                       className="px-4 h-11 inline-flex items-center justify-center border border-red-300 dark:border-red-600 text-red-600 dark:text-red-400 rounded-xl font-medium hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
+                      aria-label="Delete league"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>

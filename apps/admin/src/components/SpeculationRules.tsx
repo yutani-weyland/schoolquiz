@@ -14,7 +14,7 @@ import { useEffect } from 'react'
  */
 interface SpeculationRule {
   source: 'list' | 'document'
-  urls: string[]
+  urls?: string[]
   requires?: string[]
   eagerness?: 'conservative' | 'moderate' | 'eager' | 'immediate'
 }
@@ -26,7 +26,7 @@ interface SpeculationRulesProps {
    * If not provided, will use document rules (prerender all same-origin links).
    */
   urls?: string[]
-  
+
   /**
    * Eagerness level:
    * - 'conservative': Only prerender on hover/focus (default)
@@ -35,7 +35,7 @@ interface SpeculationRulesProps {
    * - 'immediate': Prerender immediately when the page loads
    */
   eagerness?: 'conservative' | 'moderate' | 'eager' | 'immediate'
-  
+
   /**
    * Whether to use document rules instead of list rules.
    * Document rules prerender based on link patterns in the DOM.
@@ -45,17 +45,17 @@ interface SpeculationRulesProps {
   useDocumentRules?: boolean
 }
 
-export function SpeculationRules({ 
-  urls, 
+export function SpeculationRules({
+  urls,
   eagerness = 'conservative',
-  useDocumentRules 
+  useDocumentRules
 }: SpeculationRulesProps) {
   // If no URLs provided, default to document rules
   const shouldUseDocumentRules = useDocumentRules ?? (!urls || urls.length === 0)
   useEffect(() => {
     // Check if browser supports Speculation Rules API
-    if (typeof HTMLScriptElement.prototype.supports === 'function') {
-      const supportsSpeculationRules = HTMLScriptElement.prototype.supports('speculationrules')
+    if (typeof (HTMLScriptElement.prototype as any).supports === 'function') {
+      const supportsSpeculationRules = (HTMLScriptElement.prototype as any).supports('speculationrules')
       if (!supportsSpeculationRules) {
         return // Browser doesn't support Speculation Rules API
       }
@@ -66,7 +66,7 @@ export function SpeculationRules({
       const isChrome = /Chrome/.test(userAgent) && !/Edg/.test(userAgent)
       const isEdge = /Edg/.test(userAgent)
       const isSupported = isChrome || isEdge
-      
+
       if (!isSupported) {
         return // Browser likely doesn't support Speculation Rules API
       }
@@ -81,20 +81,20 @@ export function SpeculationRules({
     // Create speculation rules
     const rule: SpeculationRule = shouldUseDocumentRules
       ? {
-          source: 'document',
-          eagerness,
-        }
+        source: 'document',
+        eagerness,
+      }
       : {
-          source: 'list',
-          urls: (urls || []).map(url => {
-            // Convert relative URLs to absolute
-            if (url.startsWith('/')) {
-              return `${window.location.origin}${url}`
-            }
-            return url
-          }),
-          eagerness,
-        }
+        source: 'list',
+        urls: (urls || []).map(url => {
+          // Convert relative URLs to absolute
+          if (url.startsWith('/')) {
+            return `${window.location.origin}${url}`
+          }
+          return url
+        }),
+        eagerness,
+      }
 
     // Create and inject the script tag
     const script = document.createElement('script')
@@ -123,8 +123,8 @@ export function useSpeculationRules(
   eagerness: 'conservative' | 'moderate' | 'eager' | 'immediate' = 'conservative'
 ) {
   useEffect(() => {
-    if (typeof HTMLScriptElement.prototype.supports === 'function') {
-      const supportsSpeculationRules = HTMLScriptElement.prototype.supports('speculationrules')
+    if (typeof (HTMLScriptElement.prototype as any).supports === 'function') {
+      const supportsSpeculationRules = (HTMLScriptElement.prototype as any).supports('speculationrules')
       if (!supportsSpeculationRules) {
         return
       }

@@ -1,4 +1,6 @@
-'use client';
+
+
+export const dynamic = 'force-dynamic';
 
 import { Sidebar } from '@/components/admin/Sidebar';
 import { Topbar } from '@/components/admin/Topbar';
@@ -13,7 +15,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       <div className="flex">
         {/* Sidebar */}
         <Sidebar />
-        
+
         {/* Main Content */}
         <div className="flex-1 flex flex-col">
           <Topbar />

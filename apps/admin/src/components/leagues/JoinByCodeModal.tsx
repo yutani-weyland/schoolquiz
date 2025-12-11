@@ -1,13 +1,14 @@
 'use client'
 
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, KeyRound, Loader2, AlertCircle } from 'lucide-react'
+import { X, KeyRound, Loader2, AlertCircle, Users } from 'lucide-react'
 import { useState } from 'react'
+import { useTeams } from '@/hooks/useTeams'
 
 interface JoinByCodeModalProps {
   isOpen: boolean
   onClose: () => void
-  onJoin: (code: string) => Promise<void>
+  onJoin: (code: string, teamId?: string) => Promise<void>
   joining: boolean
 }
 
@@ -18,7 +19,10 @@ export function JoinByCodeModal({
   joining
 }: JoinByCodeModalProps) {
   const [code, setCode] = useState('')
+  const [selectedTeamId, setSelectedTeamId] = useState<string>('')
   const [error, setError] = useState<string | null>(null)
+  const { teams, isLoading: teamsLoading } = useTeams()
+  const hasTeams = teams.length > 0
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -33,8 +37,9 @@ export function JoinByCodeModal({
       return
     }
     try {
-      await onJoin(trimmedCode)
+      await onJoin(trimmedCode, selectedTeamId || undefined)
       setCode('')
+      setSelectedTeamId('')
       onClose()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to join league')
@@ -44,6 +49,7 @@ export function JoinByCodeModal({
   const handleClose = () => {
     if (!joining) {
       setCode('')
+      setSelectedTeamId('')
       setError(null)
       onClose()
     }
@@ -113,6 +119,32 @@ export function JoinByCodeModal({
                   </p>
                 </div>
 
+                {/* Team Selection */}
+                {hasTeams && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+                      <Users className="w-4 h-4 inline-block mr-2" />
+                      Join with Team (Optional)
+                    </label>
+                    <select
+                      value={selectedTeamId}
+                      onChange={(e) => setSelectedTeamId(e.target.value)}
+                      disabled={joining || teamsLoading}
+                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+                    >
+                      <option value="">Join as myself (individual)</option>
+                      {teams.map((team) => (
+                        <option key={team.id} value={team.id}>
+                          {team.name} {team.isDefault && '(Default)'}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                      Select a team to join with, or join as yourself. Your display name will be used if joining individually.
+                    </p>
+                  </div>
+                )}
+
                 {error && (
                   <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
                     <div className="flex items-center gap-2">
@@ -155,4 +187,10 @@ export function JoinByCodeModal({
     </AnimatePresence>
   )
 }
+
+
+
+
+
+
 

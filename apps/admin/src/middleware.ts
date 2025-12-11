@@ -9,7 +9,8 @@ const publicRoutes = [
   '/forgot-password',
   '/about',
   '/pricing',
-  '/quizzes' // Allow /quizzes - the page itself handles auth and redirects visitors
+  '/quizzes', // Allow /quizzes - the page itself handles auth and redirects visitors
+  '/printable' // Allow /printable - used for PDF generation without auth
 ]
 
 // Define routes that are always public (assets, api, etc)

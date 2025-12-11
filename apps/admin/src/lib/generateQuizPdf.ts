@@ -102,28 +102,61 @@ export async function generateQuizPdf(
         // Wait until we have actual quiz content, not just "Loading..."
         return text.includes('printable-quiz') ||
           (text.includes('Round') && text.includes('Question')) ||
-          (!text.includes('Loading...') && text.length > 500)
+          text.includes('Error Loading Quiz') ||
+          text.includes('Quiz not found') ||
+          (!text.includes('Loading...') && text.length > 100)
       },
       { timeout: 20000 }
     )
 
     // Wait for the main content to be visible
+    let hasContent = false
     try {
       await page.waitForSelector('.printable-quiz', { timeout: 10000, state: 'visible' })
       console.log('[PDF Generator] Found .printable-quiz selector')
+      hasContent = true
     } catch (selectorError) {
-      // Fallback: check if content exists in main
-      const hasContent = await page.evaluate(() => {
-        const main = document.querySelector('main')
-        return main && (main.textContent || '').length > 500
+      console.log('[PDF Generator] .printable-quiz selector not found, checking for content...')
+
+      // Check if content exists anywhere on the page
+      const contentCheck = await page.evaluate(() => {
+        const body = document.body
+        if (!body) return false
+
+        const text = body.textContent || ''
+        const hasPrintableQuiz = body.querySelector('.printable-quiz') !== null
+        const hasError = text.includes('Error Loading Quiz') || text.includes('Quiz not found')
+        const hasQuizContent = (text.includes('Round') && text.includes('Question')) || text.length > 500
+
+        return {
+          hasPrintableQuiz,
+          hasError,
+          hasQuizContent,
+          textLength: text.length,
+          preview: text.substring(0, 300)
+        }
       })
 
-      if (!hasContent) {
-        const bodyText = await page.evaluate(() => document.body.textContent?.substring(0, 500))
-        console.error('[PDF Generator] No content found. Body preview:', bodyText)
-        throw new Error(`Could not find quiz content. Page may have failed to load. URL: ${url}`)
+      console.log('[PDF Generator] Content check:', contentCheck)
+
+      if (typeof contentCheck === 'object' && contentCheck.hasError) {
+        const errorText = await page.evaluate(() => document.body.textContent?.substring(0, 1000))
+        throw new Error(`Quiz page returned an error. URL: ${url}\nError details: ${errorText}`)
       }
-      console.log('[PDF Generator] Using main content area (no .printable-quiz selector)')
+
+      if (typeof contentCheck === 'object' && (contentCheck.hasPrintableQuiz || contentCheck.hasQuizContent)) {
+        hasContent = true
+        console.log('[PDF Generator] Content found via fallback check')
+      } else {
+        const bodyText = await page.evaluate(() => document.body.textContent?.substring(0, 1000))
+        console.error('[PDF Generator] No content found. Body preview:', bodyText)
+        throw new Error(`Could not find quiz content. Page may have failed to load. URL: ${url}\nPage content: ${bodyText}`)
+      }
+    }
+
+    if (!hasContent) {
+      const bodyText = await page.evaluate(() => document.body.textContent?.substring(0, 1000))
+      throw new Error(`Could not find quiz content. Page may have failed to load. URL: ${url}\nPage content: ${bodyText}`)
     }
 
     // If we're in the admin layout, try to scroll to the content

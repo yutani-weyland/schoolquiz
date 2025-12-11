@@ -1,44 +1,44 @@
-import { can, type User, type Role } from './permissions';
+import { can, type AppUser, type Role } from './permissions';
 
-const mockUser = (role: Role): User => ({
+const mockUser = (role: Role): AppUser => ({
     id: 'user-1',
     email: 'test@example.com',
     name: 'Test User',
-    role,
+    platformRole: role,
 });
 
 const tests = [
     {
         name: 'Student cannot create quiz',
-        user: mockUser('student'),
+        user: mockUser('Student'),
         action: 'create',
         resource: 'quiz',
         expected: false,
     },
     {
         name: 'Teacher can create quiz',
-        user: mockUser('teacher'),
+        user: mockUser('Teacher'),
         action: 'create',
         resource: 'quiz',
         expected: true,
     },
     {
         name: 'OrgAdmin can manage users',
-        user: mockUser('org_admin'),
+        user: mockUser('OrgAdmin'),
         action: 'manage',
         resource: 'user',
         expected: true,
     },
     {
         name: 'PlatformAdmin can manage system',
-        user: mockUser('platform_admin'),
+        user: mockUser('PlatformAdmin'),
         action: 'manage',
         resource: 'system',
         expected: true,
     },
     {
         name: 'Teacher cannot manage system',
-        user: mockUser('teacher'),
+        user: mockUser('Teacher'),
         action: 'manage',
         resource: 'system',
         expected: false,

@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import { prisma } from '@schoolquiz/db'
+import { z } from 'zod'
+import { validateParams, validateRequest } from '@/lib/api-validation'
+import { AdminUpdateOrganisationSchema } from '@/lib/validation/schemas'
+import { handleApiError } from '@/lib/api-error'
 
 
 /**
